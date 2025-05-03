@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/hooks/useAuth";
 
 // Pages
 import Index from "./pages/Index";
@@ -19,6 +20,7 @@ import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Analysis from "./pages/Analysis";
 import Assistant from "./pages/Assistant";
+import Settings from "./pages/Settings";
 
 // Layout
 import AppLayout from "./components/layout/AppLayout";
@@ -29,28 +31,31 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="deepflow-theme">
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Index />} />
-            
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/habits" element={<Habits />} />
-              <Route path="/journal" element={<Journal />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/focus" element={<Focus />} />
-              <Route path="/analysis" element={<Analysis />} />
-              <Route path="/assistant" element={<Assistant />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={<Index />} />
+              
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/habits" element={<Habits />} />
+                <Route path="/journal" element={<Journal />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/focus" element={<Focus />} />
+                <Route path="/analysis" element={<Analysis />} />
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

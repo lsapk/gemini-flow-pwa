@@ -1,11 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuitIcon } from "@/components/icons/DeepFlowIcons";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
-import { SendIcon } from "lucide-react";
+import { SendIcon, PaperclipIcon, MicIcon } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { sendChatMessage } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   id: number;
@@ -23,9 +26,30 @@ const Assistant = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
+    
+    // Check authentication
+    if (!isAuthenticated) {
+      toast({
+        variant: "destructive",
+        title: "Non connecté",
+        description: "Veuillez vous connecter pour utiliser l'assistant IA."
+      });
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -33,20 +57,52 @@ const Assistant = () => {
       role: "user",
       content: input,
     };
-    setMessages([...messages, userMessage]);
+    
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      // Format chat history for the API
+      const chatHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Call the Gemini API via our Supabase Edge Function
+      const { data, error } = await sendChatMessage(input, chatHistory);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Add AI response
       const aiResponse: Message = {
         id: Date.now() + 1,
         role: "assistant",
-        content: "Je suis une version de démonstration de l'assistant IA. Je serai connecté à Gemini dans une version future pour vous fournir de véritables conseils personnalisés.",
+        content: data.response,
       };
-      setMessages((prevMessages) => [...prevMessages, aiResponse]);
+      
+      setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("Error calling AI assistant:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de contacter l'assistant IA. Veuillez réessayer."
+      });
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        role: "assistant",
+        content: "Je suis désolé, j'ai rencontré une erreur de connexion. Veuillez réessayer plus tard.",
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -77,6 +133,13 @@ const Assistant = () => {
                   message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
+                {message.role === "assistant" && (
+                  <Avatar className="h-8 w-8 mr-2">
+                    <div className="relative w-full h-full rounded-full bg-primary/20 flex items-center justify-center">
+                      <BrainCircuitIcon className="h-5 w-5 text-primary" />
+                    </div>
+                  </Avatar>
+                )}
                 <div
                   className={`max-w-[80%] rounded-2xl p-3 ${
                     message.role === "user"
@@ -86,10 +149,22 @@ const Assistant = () => {
                 >
                   {message.content}
                 </div>
+                {message.role === "user" && (
+                  <Avatar className="h-8 w-8 ml-2">
+                    <div className="relative w-full h-full rounded-full bg-primary flex items-center justify-center text-white">
+                      {isAuthenticated ? "U" : "?"}
+                    </div>
+                  </Avatar>
+                )}
               </div>
             ))}
             {isLoading && (
               <div className="flex justify-start">
+                <Avatar className="h-8 w-8 mr-2">
+                  <div className="relative w-full h-full rounded-full bg-primary/20 flex items-center justify-center">
+                    <BrainCircuitIcon className="h-5 w-5 text-primary" />
+                  </div>
+                </Avatar>
                 <div className="flex items-center space-x-2 bg-secondary rounded-2xl p-3">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse"></div>
@@ -99,6 +174,7 @@ const Assistant = () => {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
           <div className="p-4 border-t">
             <form
@@ -106,16 +182,45 @@ const Assistant = () => {
                 e.preventDefault();
                 handleSend();
               }}
-              className="flex space-x-2"
+              className="flex items-center space-x-2"
             >
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => toast({
+                  title: "Fonctionnalité en développement",
+                  description: "L'envoi de fichiers sera disponible prochainement."
+                })}
+              >
+                <PaperclipIcon className="h-4 w-4" />
+              </Button>
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Tapez votre message..."
-                className="flex-grow"
-                disabled={isLoading}
+                className="flex-grow rounded-full"
+                disabled={isLoading || !isAuthenticated}
               />
-              <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => toast({
+                  title: "Fonctionnalité en développement",
+                  description: "La saisie vocale sera disponible prochainement."
+                })}
+              >
+                <MicIcon className="h-4 w-4" />
+              </Button>
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="rounded-full" 
+                disabled={!input.trim() || isLoading || !isAuthenticated}
+              >
                 <SendIcon className="h-4 w-4" />
               </Button>
             </form>

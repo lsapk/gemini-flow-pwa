@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MailIcon, LockIcon } from "../components/icons/DeepFlowIcons";
+import { MailIcon, LockIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -14,38 +15,17 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
-  // This is a temporary login function until we integrate Supabase
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Temporary login logic - will be replaced with Supabase auth
-      if (email && password) {
-        // Set authentication state
-        localStorage.setItem("isAuthenticated", "true");
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue sur DeepFlow !",
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erreur de connexion",
-          description: "Veuillez vérifier vos identifiants.",
-        });
-      }
+      await signIn(email, password);
+      navigate("/dashboard");
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erreur de connexion",
-        description: "Une erreur s'est produite. Veuillez réessayer.",
-      });
+      console.error("Login failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -53,27 +33,33 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md animate-scale-in">
-        <Link to="/" className="flex items-center justify-center mb-8 space-x-2">
-          <div className="relative w-8 h-8">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-700"></div>
-            <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-900"></div>
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-600"></div>
-          </div>
-          <span className="text-xl font-bold font-heading bg-gradient-to-br from-deepflow-400 to-deepflow-700 text-transparent bg-clip-text">
+      <div className="w-full max-w-md">
+        <div className="flex flex-col items-center mb-10 animate-fade-in">
+          <Link to="/" className="flex items-center justify-center mb-4 space-x-2">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-700 animate-pulse"></div>
+              <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-900"></div>
+              <div className="absolute inset-2 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-600"></div>
+            </div>
+          </Link>
+          <span className="text-3xl font-bold font-heading bg-gradient-to-br from-deepflow-400 to-deepflow-700 text-transparent bg-clip-text mb-2">
             DeepFlow
           </span>
-        </Link>
+          <p className="text-muted-foreground text-center max-w-xs">
+            Productivité, habitudes, et développement personnel assistés par IA
+          </p>
+        </div>
 
-        <Card className="glass-card">
-          <CardHeader className="space-y-1">
+        <Card className="glass-card border-0 overflow-hidden animate-scale-in">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-xl"></div>
+          <CardHeader className="space-y-1 relative z-10">
             <CardTitle className="text-2xl font-bold text-center">Connexion</CardTitle>
             <CardDescription className="text-center">
               Entrez vos identifiants pour accéder à votre espace
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
+          <form onSubmit={handleLogin} className="relative z-10">
+            <CardContent className="space-y-4 pt-0">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -118,18 +104,31 @@ const Login = () => {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col">
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? "Connexion..." : "Se connecter"}
+              <Button className="w-full relative group" type="submit" disabled={isLoading}>
+                <span className={isLoading ? "opacity-0" : "group-hover:scale-105 transition-transform"}>
+                  Se connecter
+                </span>
+                {isLoading && (
+                  <Loader2 className="absolute animate-spin h-5 w-5" />
+                )}
               </Button>
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 Pas encore de compte?{" "}
-                <Link to="/register" className="text-primary hover:underline">
+                <Link to="/register" className="text-primary hover:underline font-medium">
                   S'inscrire
                 </Link>
               </p>
             </CardFooter>
           </form>
+          <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
         </Card>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          En vous connectant, vous acceptez nos {" "}
+          <Link to="/" className="hover:underline">conditions d'utilisation</Link>
+          {" "} et notre {" "}
+          <Link to="/" className="hover:underline">politique de confidentialité</Link>
+        </p>
       </div>
     </div>
   );

@@ -17,6 +17,8 @@ import {
 } from "../icons/DeepFlowIcons";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { Settings } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const { setTheme, theme } = useTheme();
+  const { signOut } = useAuth();
 
   // Toggle theme between light, dark, and system
   const toggleTheme = () => {
@@ -50,11 +53,16 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     { name: "Focus", to: "/focus", icon: <TimerIcon className="h-5 w-5" /> },
     { name: "Analyse IA", to: "/analysis", icon: <ChartLineIcon className="h-5 w-5" /> },
     { name: "Assistant IA", to: "/assistant", icon: <BrainCircuitIcon className="h-5 w-5" /> },
+    { name: "Paramètres", to: "/settings", icon: <Settings className="h-5 w-5" /> },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
