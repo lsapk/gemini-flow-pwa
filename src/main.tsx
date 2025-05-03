@@ -2,6 +2,12 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { initBillingOnLoad } from './services/billing'
+
+// Initialiser la facturation native si disponible
+document.addEventListener('DOMContentLoaded', () => {
+  initBillingOnLoad();
+});
 
 // Register service worker for PWA capabilities
 if ('serviceWorker' in navigator) {

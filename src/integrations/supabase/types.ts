@@ -1615,7 +1615,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      auth_user_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_authenticated: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

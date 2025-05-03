@@ -10,7 +10,7 @@ interface AuthProviderProps {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null;
-  loading: boolean; // This is the property that AppLayout is trying to use
+  loading: boolean;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -31,12 +31,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check user on mount
+  // Check user on mount and set up persistent session
   useEffect(() => {
+    // First set up the auth state listener to avoid race conditions
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        if (session) {
+          setIsAuthenticated(true);
+          setUser(session.user);
+          
+          // Get user profile data after small delay to prevent deadlock
+          setTimeout(async () => {
+            try {
+              const { data: userProfile } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+                
+              if (userProfile) {
+                setUser(prev => ({ ...prev, profile: userProfile }));
+              }
+            } catch (error) {
+              console.error("Error fetching user profile:", error);
+            }
+          }, 0);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Then check for existing session
     const checkUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
+          console.log("Existing session found");
           setIsAuthenticated(true);
           setUser(session.user);
           
@@ -50,6 +84,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (userProfile) {
             setUser(prev => ({ ...prev, profile: userProfile }));
           }
+        } else {
+          console.log("No session found");
         }
       } catch (error) {
         console.error('Error checking user:', error);
@@ -59,31 +95,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     checkUser();
-
-    // Set up listener for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          setIsAuthenticated(true);
-          setUser(session.user);
-          
-          // Get additional user profile data
-          const { data: userProfile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (userProfile) {
-            setUser(prev => ({ ...prev, profile: userProfile }));
-          }
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
 
     return () => {
       subscription.unsubscribe();
@@ -121,7 +132,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  // Sign in
+  // Sign in with persistent session
   const signIn = async (email: string, password: string) => {
     try {
       const { error, data } = await supabase.auth.signInWithPassword({
@@ -171,7 +182,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const value = {
     isAuthenticated,
     user,
-    loading, // Make sure to include this in the value object
+    loading,
     signUp,
     signIn,
     signOut,
