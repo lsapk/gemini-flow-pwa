@@ -135,19 +135,5 @@ export default {
 	},
 	plugins: [
 		require("tailwindcss-animate"),
-		function({ addUtilities }) {
-			const newUtilities = {
-				'.glass-morphism': {
-					'@apply': 'bg-white/10 dark:bg-black/20 backdrop-blur-lg border border-white/20 dark:border-white/10 rounded-xl shadow-lg',
-				},
-				'.glass-card': {
-					'@apply': 'bg-white/70 dark:bg-black/50 backdrop-blur-md border border-white/30 dark:border-white/5 rounded-xl shadow-md',
-				},
-				'.hover-scale': {
-					'@apply': 'transition-transform duration-200 hover:scale-105',
-				},
-			};
-			addUtilities(newUtilities);
-		},
 	],
 } satisfies Config;
