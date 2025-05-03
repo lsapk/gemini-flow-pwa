@@ -434,6 +434,39 @@ export type Database = {
           },
         ]
       }
+      focus_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          duration: number
+          id: string
+          started_at: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration: number
+          id?: string
+          started_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration?: number
+          id?: string
+          started_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       folder: {
         Row: {
           createdAt: string
@@ -505,6 +538,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      goals: {
+        Row: {
+          category: string | null
+          completed: boolean
+          created_at: string | null
+          description: string | null
+          id: string
+          progress: number | null
+          target_date: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          progress?: number | null
+          target_date?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          progress?: number | null
+          target_date?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       habits: {
         Row: {
@@ -906,6 +978,42 @@ export type Database = {
           id?: string
           name?: string
           updatedAt?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          completed: boolean
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

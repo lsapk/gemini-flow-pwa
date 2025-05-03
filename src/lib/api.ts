@@ -217,8 +217,39 @@ export const deleteGoal = async (id: string) => {
   return { error };
 };
 
+// Focus sessions
+export const getFocusSessions = async () => {
+  const { data, error } = await supabase
+    .from('focus_sessions')
+    .select('*')
+    .order('created_at', { ascending: false });
+    
+  return { data, error };
+};
+
+export const addFocusSession = async (sessionData: any) => {
+  const { data, error } = await supabase
+    .from('focus_sessions')
+    .insert(sessionData)
+    .select()
+    .single();
+    
+  return { data, error };
+};
+
+export const updateFocusSession = async (id: string, updates: any) => {
+  const { data, error } = await supabase
+    .from('focus_sessions')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+    
+  return { data, error };
+};
+
 // AI functions
-export const sendChatMessage = async (message: string, chatHistory: any[]) => {
+export const sendChatMessage = async (message: string, chatHistory: any[] = []) => {
   const { data, error } = await supabase.functions.invoke('gemini-chat', {
     body: { message, chatHistory }
   });
@@ -226,29 +257,49 @@ export const sendChatMessage = async (message: string, chatHistory: any[]) => {
   return { data, error };
 };
 
-export const getAIAnalysis = async () => {
-  const { data, error } = await supabase.functions.invoke('gemini-analysis');
+export const getAIAnalysis = async (userId: string) => {
+  const { data, error } = await supabase.functions.invoke('gemini-analysis', {
+    body: { userId }
+  });
   
   return { data, error };
 };
 
 // User settings
 export const getUserSettings = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { data: null, error: new Error('User not authenticated') };
+  
   const { data, error } = await supabase
     .from('user_settings')
     .select('*')
+    .eq('id', user.id)
     .single();
     
   return { data, error };
 };
 
 export const updateUserSettings = async (updates: any) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { data: null, error: new Error('User not authenticated') };
+  
   const { data, error } = await supabase
     .from('user_settings')
     .update(updates)
-    .eq('id', (await supabase.auth.getUser()).data.user?.id)
+    .eq('id', user.id)
     .select()
     .single();
     
+  return { data, error };
+};
+
+// Contact form
+export const sendContactEmail = async (name: string, email: string, message: string) => {
+  const { data, error } = await supabase.functions.invoke('send-contact', {
+    body: { name, email, message }
+  });
+  
   return { data, error };
 };

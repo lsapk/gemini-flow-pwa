@@ -1,107 +1,112 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuitIcon } from "@/components/icons/DeepFlowIcons";
 import { Input } from "@/components/ui/input";
-import { Avatar } from "@/components/ui/avatar";
-import { SendIcon, PaperclipIcon, MicIcon } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BrainCircuitIcon, SendIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
-interface Message {
-  id: number;
+// Define message type
+type Message = {
+  id: string;
   role: "user" | "assistant";
   content: string;
-}
+  timestamp: Date;
+};
 
 const Assistant = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      role: "assistant",
-      content: "Bonjour ! Je suis votre assistant IA DeepFlow. Comment puis-je vous aider aujourd'hui ?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
+  // Initial welcome message from assistant
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant",
+          content: "Bonjour, je suis DeepFlow AI, votre assistant personnel. Comment puis-je vous aider aujourd'hui ?",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  }, [messages.length]);
+
+  // Scroll to bottom of chat when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    
-    // Check authentication
-    if (!isAuthenticated) {
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!user) {
       toast({
+        title: "Authentification requise",
+        description: "Veuillez vous connecter pour utiliser l'assistant.",
         variant: "destructive",
-        title: "Non connecté",
-        description: "Veuillez vous connecter pour utiliser l'assistant IA."
       });
-      return;
+      navigate("/login");
     }
+  }, [user, toast, navigate]);
 
-    // Add user message
+  const handleSendMessage = async () => {
+    if (!input.trim() || isProcessing) return;
+
+    // Add user message to chat
     const userMessage: Message = {
-      id: Date.now(),
+      id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: input.trim(),
+      timestamp: new Date(),
     };
-    
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setIsLoading(true);
+    setIsProcessing(true);
 
     try {
       // Format chat history for the API
-      const chatHistory = messages.map(msg => ({
+      const chatHistory = messages.map((msg) => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
       }));
 
-      // Call the Gemini API via our Supabase Edge Function
-      const { data, error } = await sendChatMessage(input, chatHistory);
-      
+      // Send message to API
+      const { data, error } = await sendChatMessage(input.trim(), chatHistory);
+
       if (error) {
         throw new Error(error.message);
       }
 
-      // Add AI response
-      const aiResponse: Message = {
-        id: Date.now() + 1,
+      // Add assistant response to chat
+      const assistantMessage: Message = {
+        id: Date.now().toString() + "-assistant",
         role: "assistant",
         content: data.response,
+        timestamp: new Date(),
       };
-      
-      setMessages((prev) => [...prev, aiResponse]);
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Error calling AI assistant:", error);
       toast({
-        variant: "destructive",
         title: "Erreur",
-        description: "Impossible de contacter l'assistant IA. Veuillez réessayer."
+        description: "Impossible d'obtenir une réponse. Veuillez réessayer.",
+        variant: "destructive",
       });
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: Date.now() + 1,
-        role: "assistant",
-        content: "Je suis désolé, j'ai rencontré une erreur de connexion. Veuillez réessayer plus tard.",
-      };
-      
-      setMessages((prev) => [...prev, errorMessage]);
+      console.error("Error sending message:", error);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -113,19 +118,19 @@ const Assistant = () => {
           Assistant IA
         </h1>
         <p className="text-muted-foreground">
-          Discutez avec votre assistant personnel pour obtenir des conseils et de l'aide.
+          Votre assistant intelligent personnel pour vous aider dans votre quotidien.
         </p>
       </div>
 
-      <Card className="glass-card h-[calc(100vh-250px)] flex flex-col">
+      <Card className="glass-card shadow-md">
         <CardHeader>
-          <CardTitle>Conversation avec DeepFlow IA</CardTitle>
+          <CardTitle>DeepFlow AI</CardTitle>
           <CardDescription>
-            Posez vos questions sur la productivité, les habitudes ou la gestion du temps.
+            Posez vos questions ou demandez de l'aide pour votre productivité.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow flex flex-col overflow-hidden p-0">
-          <div className="flex-grow overflow-y-auto p-4 space-y-4">
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-4 mb-4 max-h-[60vh] overflow-y-auto p-2">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -133,97 +138,68 @@ const Assistant = () => {
                   message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                {message.role === "assistant" && (
-                  <Avatar className="h-8 w-8 mr-2">
-                    <div className="relative w-full h-full rounded-full bg-primary/20 flex items-center justify-center">
-                      <BrainCircuitIcon className="h-5 w-5 text-primary" />
-                    </div>
-                  </Avatar>
-                )}
                 <div
-                  className={`max-w-[80%] rounded-2xl p-3 ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary"
+                  className={`flex items-start space-x-2 max-w-[80%] ${
+                    message.role === "user" ? "flex-row-reverse space-x-reverse" : "flex-row"
                   }`}
                 >
-                  {message.content}
-                </div>
-                {message.role === "user" && (
-                  <Avatar className="h-8 w-8 ml-2">
-                    <div className="relative w-full h-full rounded-full bg-primary flex items-center justify-center text-white">
-                      {isAuthenticated ? "U" : "?"}
-                    </div>
+                  <Avatar className={`h-8 w-8 ${message.role === "user" ? "bg-primary" : "bg-secondary"}`}>
+                    <AvatarFallback>
+                      {message.role === "user" ? "U" : "AI"}
+                    </AvatarFallback>
                   </Avatar>
-                )}
+                  <div
+                    className={`rounded-lg p-3 text-sm ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
               </div>
             ))}
-            {isLoading && (
+            {isProcessing && (
               <div className="flex justify-start">
-                <Avatar className="h-8 w-8 mr-2">
-                  <div className="relative w-full h-full rounded-full bg-primary/20 flex items-center justify-center">
-                    <BrainCircuitIcon className="h-5 w-5 text-primary" />
-                  </div>
-                </Avatar>
-                <div className="flex items-center space-x-2 bg-secondary rounded-2xl p-3">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "0.4s" }}></div>
+                <div className="flex items-start space-x-2 max-w-[80%]">
+                  <Avatar className="h-8 w-8 bg-secondary">
+                    <AvatarFallback>AI</AvatarFallback>
+                  </Avatar>
+                  <div className="rounded-lg p-4 bg-secondary">
+                    <div className="flex space-x-1.5">
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0s" }}></div>
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                      <div className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div className="p-4 border-t">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSend();
+
+          <div className="flex space-x-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
               }}
-              className="flex items-center space-x-2"
+              placeholder="Tapez votre message..."
+              disabled={isProcessing}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={!input.trim() || isProcessing}
+              size="icon"
             >
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="rounded-full"
-                onClick={() => toast({
-                  title: "Fonctionnalité en développement",
-                  description: "L'envoi de fichiers sera disponible prochainement."
-                })}
-              >
-                <PaperclipIcon className="h-4 w-4" />
-              </Button>
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Tapez votre message..."
-                className="flex-grow rounded-full"
-                disabled={isLoading || !isAuthenticated}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="rounded-full"
-                onClick={() => toast({
-                  title: "Fonctionnalité en développement",
-                  description: "La saisie vocale sera disponible prochainement."
-                })}
-              >
-                <MicIcon className="h-4 w-4" />
-              </Button>
-              <Button 
-                type="submit" 
-                size="icon" 
-                className="rounded-full" 
-                disabled={!input.trim() || isLoading || !isAuthenticated}
-              >
-                <SendIcon className="h-4 w-4" />
-              </Button>
-            </form>
+              <SendIcon className="h-4 w-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>

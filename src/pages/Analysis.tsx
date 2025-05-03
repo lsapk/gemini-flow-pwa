@@ -1,215 +1,192 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { ChartLineIcon, ListTodoIcon, CalendarCheckIcon } from "@/components/icons/DeepFlowIcons";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartLineIcon } from "@/components/icons/DeepFlowIcons";
+import { useToast } from "@/hooks/use-toast";
 import { getAIAnalysis } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+type Stats = {
+  tasks: { total: number; completed: number; pending: number };
+  habits: { total: number };
+  goals: { total: number; completed: number; inProgress: number };
+  focus: { sessions: number; totalMinutes: number };
+};
 
 const Analysis = () => {
-  const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [stats, setStats] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(null);
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchAnalysis();
-    }
-  }, [isAuthenticated]);
-
-  const fetchAnalysis = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await getAIAnalysis();
-      
-      if (error) {
-        throw new Error(error.message);
+    const fetchAnalysis = async () => {
+      if (!user) {
+        toast({
+          title: "Authentification requise",
+          description: "Veuillez vous connecter pour voir vos analyses.",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
       }
-      
-      setAnalysis(data.analysis);
-      setStats(data.statistics);
-      
-    } catch (error) {
-      console.error("Error fetching analysis:", error);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Impossible de récupérer l'analyse. Veuillez réessayer."
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Colors for charts
-  const COLORS = ['#6077f5', '#7E69AB', '#a5bffd', '#1EAEDB'];
+      try {
+        setLoading(true);
+        const { data, error } = await getAIAnalysis(user.id);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        setAnalysis(data?.analysis || "Pas assez de données pour générer une analyse.");
+        setStats(data?.stats || null);
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger votre analyse.",
+          variant: "destructive",
+        });
+        console.error("Error fetching analysis:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalysis();
+  }, [user, toast, navigate]);
+
+  // Prepare chart data
+  const chartData = stats ? [
+    { name: 'Tâches', total: stats.tasks.total, complété: stats.tasks.completed, en_cours: stats.tasks.pending },
+    { name: 'Objectifs', total: stats.goals.total, complété: stats.goals.completed, en_cours: stats.goals.inProgress },
+  ] : [];
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <ChartLineIcon className="h-8 w-8" />
-            Analyse IA
-          </h1>
-          <p className="text-muted-foreground">
-            Obtenez des insights et des recommandations personnalisées basées sur vos données.
-          </p>
-        </div>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={fetchAnalysis} 
-          disabled={loading || !isAuthenticated}
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <ChartLineIcon className="h-8 w-8" />
+          Analyse IA
+        </h1>
+        <p className="text-muted-foreground">
+          Des insights personnalisés basés sur vos données et votre activité.
+        </p>
       </div>
 
-      {!isAuthenticated ? (
-        <Card className="glass-card">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="glass-card col-span-1 md:col-span-2">
           <CardHeader>
-            <CardTitle>Connexion requise</CardTitle>
+            <CardTitle>Analyse personnalisée</CardTitle>
             <CardDescription>
-              Connectez-vous pour accéder à vos analyses personnalisées.
+              Généré par DeepFlow AI en fonction de votre activité
             </CardDescription>
           </CardHeader>
+          <CardContent className="space-y-4">
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/6" />
+              </div>
+            ) : analysis ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                {analysis.split('\n').map((line, i) => (
+                  line.trim() ? <p key={i}>{line}</p> : <br key={i} />
+                ))}
+              </div>
+            ) : (
+              <p>Utilisez davantage l'application pour générer des analyses personnalisées.</p>
+            )}
+          </CardContent>
         </Card>
-      ) : (
-        <>
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Insights personnalisés</CardTitle>
-              <CardDescription>
-                L'IA analyse vos habitudes et performances pour vous aider à vous améliorer.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="prose prose-sm dark:prose-invert">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                  <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                  <p>Génération de votre analyse en cours...</p>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Statistiques</CardTitle>
+            <CardDescription>
+              Aperçu de votre activité
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ) : stats ? (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Tâches</p>
+                  <p className="text-2xl font-bold">{stats.tasks.total}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.tasks.completed} complétées, {stats.tasks.pending} en cours
+                  </p>
                 </div>
-              ) : analysis ? (
-                <div className="whitespace-pre-line">{analysis}</div>
-              ) : (
-                <div className="text-center py-8">
-                  <p>Commencez à utiliser DeepFlow pour obtenir des analyses personnalisées.</p>
+                
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Objectifs</p>
+                  <p className="text-2xl font-bold">{stats.goals.total}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.goals.completed} complétés, {stats.goals.inProgress} en cours
+                  </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Habitudes</p>
+                  <p className="text-2xl font-bold">{stats.habits.total}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Sessions Focus</p>
+                  <p className="text-2xl font-bold">{stats.focus.sessions}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.focus.totalMinutes} minutes au total
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune donnée disponible</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {stats && (
-            <div className="space-y-8">
-              <h2 className="text-xl font-semibold">Statistiques et Graphiques</h2>
-              
-              <Tabs defaultValue="tasks" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="tasks" className="flex items-center gap-1">
-                    <ListTodoIcon className="h-4 w-4" /> 
-                    Tâches
-                  </TabsTrigger>
-                  <TabsTrigger value="habits" className="flex items-center gap-1">
-                    <CalendarCheckIcon className="h-4 w-4" /> 
-                    Habitudes
-                  </TabsTrigger>
-                  <TabsTrigger value="productivity" className="flex items-center gap-1">
-                    <ChartLineIcon className="h-4 w-4" /> 
-                    Productivité
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="tasks" className="pt-4">
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle>Complétion des tâches (par jour)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.taskCompletion}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="day" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar name="Tâches terminées" dataKey="completed" fill="#6077f5" />
-                          <Bar name="Tâches totales" dataKey="total" fill="#a5bffd" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="habits" className="pt-4">
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle>Consistance des habitudes (%)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={stats.habitConsistency}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="completion"
-                            nameKey="name"
-                          >
-                            {stats.habitConsistency.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Legend />
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="productivity" className="pt-4">
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <CardTitle>Productivité par horaire</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={stats.productivityByHour}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="hour" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="score" 
-                            name="Productivité" 
-                            stroke="#6077f5" 
-                            strokeWidth={2}
-                            dot={{ stroke: '#6077f5', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+      {stats && chartData.length > 0 && (
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Visualisation des données</CardTitle>
+            <CardDescription>
+              Progression de vos tâches et objectifs
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="complété" stackId="a" fill="#4ADE80" />
+                  <Bar dataKey="en_cours" stackId="a" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          )}
-        </>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

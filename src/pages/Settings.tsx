@@ -1,112 +1,163 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/components/ui/use-toast";
-import { SettingsIcon, LogOutIcon, UserIcon, BellIcon, MoonIcon, SunIcon, MonitorIcon, MailIcon } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { SettingsIcon, UserCircle, BellIcon, Globe, CreditCard, MailIcon } from "lucide-react";
+import { getUserSettings, updateUserSettings, sendContactEmail } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 const Settings = () => {
+  const [loading, setLoading] = useState(true);
+  const [formState, setFormState] = useState({
+    theme: "system",
+    language: "fr",
+    notificationsEnabled: true,
+    soundEnabled: true,
+    clockFormat: "24h",
+    focusMode: false,
+  });
+  
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { setTheme, theme } = useTheme();
-  const { user, signOut, isAuthenticated } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [reminderTime, setReminderTime] = useState("09:00");
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [contactSubject, setContactSubject] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
-  const [contactLoading, setContactLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setEmail(user.email || "");
-      setDisplayName(user.user_metadata?.display_name || user.profile?.display_name || "");
+    if (!user) {
+      toast({
+        title: "Authentification requise",
+        description: "Veuillez vous connecter pour accéder aux paramètres.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
     }
-  }, [user]);
 
-  const handleUpdateProfile = async () => {
+    const fetchUserSettings = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await getUserSettings();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data) {
+          setFormState({
+            theme: data.theme || "system",
+            language: data.language || "fr",
+            notificationsEnabled: data.notifications_enabled !== false,
+            soundEnabled: data.sound_enabled !== false,
+            clockFormat: data.clock_format || "24h",
+            focusMode: data.focus_mode || false,
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos paramètres.",
+          variant: "destructive",
+        });
+        console.error("Error fetching user settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserSettings();
+  }, [user, toast, navigate]);
+
+  const handleSettingChange = async (key: string, value: any) => {
+    if (!user) return;
+    
+    const newFormState = { ...formState, [key]: value };
+    setFormState(newFormState);
+    
     try {
-      setLoading(true);
+      const updates = {
+        theme: newFormState.theme,
+        language: newFormState.language,
+        notifications_enabled: newFormState.notificationsEnabled,
+        sound_enabled: newFormState.soundEnabled,
+        clock_format: newFormState.clockFormat,
+        focus_mode: newFormState.focusMode,
+      };
       
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({ display_name: displayName })
-        .eq("id", user.id);
-        
-      if (error) throw error;
+      const { error } = await updateUserSettings(updates);
+      
+      if (error) throw new Error(error.message);
       
       toast({
-        title: "Profil mis à jour",
-        description: "Vos informations ont été enregistrées avec succès."
+        title: "Paramètres mis à jour",
+        description: "Vos préférences ont été enregistrées.",
       });
     } catch (error) {
-      console.error("Error updating profile:", error);
       toast({
-        variant: "destructive",
         title: "Erreur",
-        description: "Une erreur est survenue lors de la mise à jour du profil."
+        description: "Impossible d'enregistrer vos paramètres.",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      console.error("Error updating settings:", error);
     }
   };
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setContactLoading(true);
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      toast({
+        title: "Erreur",
+        description: "Tous les champs sont requis.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // For now, just simulate sending an email
-    setTimeout(() => {
+    try {
+      setContactSubmitting(true);
+      const { data, error } = await sendContactEmail(
+        contactForm.name,
+        contactForm.email,
+        contactForm.message
+      );
+      
+      if (error) throw new Error(error.message);
+      
       toast({
         title: "Message envoyé",
-        description: "Votre message a été envoyé à l'équipe DeepFlow."
+        description: "Votre message a été envoyé avec succès.",
       });
-      setContactSubject("");
-      setContactMessage("");
-      setContactLoading(false);
-    }, 1500);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate("/login");
+      
+      setContactForm({
+        name: "",
+        email: "",
+        message: "",
+      });
     } catch (error) {
-      console.error("Error signing out:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer votre message.",
+        variant: "destructive",
+      });
+      console.error("Error sending contact message:", error);
+    } finally {
+      setContactSubmitting(false);
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Connexion requise</CardTitle>
-            <CardDescription>
-              Veuillez vous connecter pour accéder à vos paramètres.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button className="w-full" onClick={() => navigate("/login")}>
-              Se connecter
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -116,310 +167,293 @@ const Settings = () => {
           Paramètres
         </h1>
         <p className="text-muted-foreground">
-          Personnalisez votre expérience DeepFlow.
+          Gérez vos préférences et votre compte.
         </p>
       </div>
 
-      <Tabs defaultValue="account" className="w-full">
-        <TabsList className="grid grid-cols-4 mb-8">
-          <TabsTrigger value="account"><UserIcon className="h-4 w-4 mr-2" /> Compte</TabsTrigger>
-          <TabsTrigger value="appearance"><SunIcon className="h-4 w-4 mr-2" /> Apparence</TabsTrigger>
-          <TabsTrigger value="notifications"><BellIcon className="h-4 w-4 mr-2" /> Notifications</TabsTrigger>
-          <TabsTrigger value="contact"><MailIcon className="h-4 w-4 mr-2" /> Contact</TabsTrigger>
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="grid grid-cols-4 md:grid-cols-4 lg:w-[400px]">
+          <TabsTrigger value="general">Général</TabsTrigger>
+          <TabsTrigger value="account">Compte</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="contact">Contact</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="account" className="space-y-6">
-          <Card>
+        <TabsContent value="general">
+          <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Profil</CardTitle>
+              <CardTitle>Paramètres généraux</CardTitle>
               <CardDescription>
-                Gérez vos informations personnelles.
+                Personnalisez l'apparence et le comportement de DeepFlow.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src="" alt={displayName} />
-                  <AvatarFallback className="text-2xl">{displayName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-1 text-center md:text-left">
-                  <h3 className="font-medium text-lg">{displayName}</h3>
-                  <p className="text-sm text-muted-foreground">{email}</p>
-                  <Button size="sm" variant="outline" className="mt-2">
-                    Changer la photo
-                  </Button>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="theme">Thème</Label>
+                  <Select 
+                    disabled={loading} 
+                    value={formState.theme} 
+                    onValueChange={(value) => handleSettingChange("theme", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez un thème" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Clair</SelectItem>
+                      <SelectItem value="dark">Sombre</SelectItem>
+                      <SelectItem value="system">Système</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="language">Langue</Label>
+                  <Select 
+                    disabled={loading} 
+                    value={formState.language} 
+                    onValueChange={(value) => handleSettingChange("language", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une langue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="clockFormat">Format d'horloge</Label>
+                  <Select 
+                    disabled={loading} 
+                    value={formState.clockFormat} 
+                    onValueChange={(value) => handleSettingChange("clockFormat", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Format d'horloge" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12h">12 heures (AM/PM)</SelectItem>
+                      <SelectItem value="24h">24 heures</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="focusMode">Mode Focus</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Réduire les distractions et les notifications
+                    </p>
+                  </div>
+                  <Switch
+                    id="focusMode"
+                    disabled={loading}
+                    checked={formState.focusMode}
+                    onCheckedChange={(checked) => handleSettingChange("focusMode", checked)}
+                  />
                 </div>
               </div>
-
-              <Separator />
-
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Nom d'affichage</Label>
-                  <Input 
-                    id="name" 
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="account">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Compte</CardTitle>
+              <CardDescription>
+                Gérez votre profil et vos informations personnelles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+                <UserCircle className="h-20 w-20 text-muted-foreground" />
+                <div className="space-y-1 text-center sm:text-left">
+                  <h3 className="text-lg font-medium">{user?.user_metadata?.display_name || user?.email}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
-                <div className="grid gap-2">
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Nom d'affichage</Label>
+                  <Input id="displayName" value={user?.user_metadata?.display_name || ""} disabled />
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={email}
-                    disabled
-                  />
+                  <Input id="email" value={user?.email || ""} disabled />
                 </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline">Changer de mot de passe</Button>
-              <Button onClick={handleUpdateProfile} disabled={loading}>
-                {loading ? "Enregistrement..." : "Enregistrer les changements"}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  signOut();
+                  navigate("/login");
+                }}
+              >
+                Se déconnecter
+              </Button>
+              <Button disabled>
+                Mettre à jour le profil
               </Button>
             </CardFooter>
           </Card>
-
-          <Card>
+          
+          <Card className="glass-card mt-6">
             <CardHeader>
-              <CardTitle>Abonnement</CardTitle>
+              <CardTitle>Plan d'abonnement</CardTitle>
               <CardDescription>
-                Gérez votre forfait DeepFlow.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Gratuit</h3>
-                    <p className="text-sm text-muted-foreground">Votre forfait actuel</p>
-                  </div>
-                  <Button variant="outline">Mettre à niveau</Button>
-                </div>
-              </div>
-
-              <div className="grid gap-4 mt-6">
-                <div className="grid gap-2">
-                  <h3 className="font-medium">Forfaits disponibles</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <Card className="border-primary">
-                      <CardHeader>
-                        <CardTitle>Premium</CardTitle>
-                        <CardDescription>€9.99/mois</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="list-disc ml-5 space-y-2 text-sm">
-                          <li>Analyses avancées</li>
-                          <li>Assistant IA illimité</li>
-                          <li>Stockage illimité</li>
-                          <li>Sauvegarde automatique</li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button className="w-full">S'abonner</Button>
-                      </CardFooter>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Pro</CardTitle>
-                        <CardDescription>€19.99/mois</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="list-disc ml-5 space-y-2 text-sm">
-                          <li>Toutes les fonctionnalités Premium</li>
-                          <li>Support prioritaire</li>
-                          <li>Outils d'équipe</li>
-                          <li>API personnalisée</li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button className="w-full" variant="outline">S'abonner</Button>
-                      </CardFooter>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Compte</CardTitle>
-              <CardDescription>
-                Options avancées de votre compte.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Exporter mes données</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Téléchargez toutes vos données en format JSON.
-                  </p>
-                </div>
-                <Button variant="outline">Exporter</Button>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="font-medium text-destructive">Zone de danger</h3>
-                <div className="flex items-center justify-between mt-4">
-                  <div>
-                    <h4 className="font-medium">Déconnexion</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Se déconnecter de l'application sur cet appareil.
-                    </p>
-                  </div>
-                  <Button variant="destructive" onClick={handleLogout}>
-                    <LogOutIcon className="h-4 w-4 mr-2" /> Déconnexion
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between mt-4">
-                  <div>
-                    <h4 className="font-medium">Supprimer mon compte</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Supprimer définitivement votre compte et toutes vos données.
-                    </p>
-                  </div>
-                  <Button variant="destructive">Supprimer</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="appearance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Thème</CardTitle>
-              <CardDescription>
-                Personnalisez l'apparence de DeepFlow.
+                Gérez votre abonnement et vos options de facturation.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
-                <Button
-                  variant={theme === "light" ? "default" : "outline"}
-                  className="flex flex-col items-center justify-center gap-2 h-24"
-                  onClick={() => setTheme("light")}
-                >
-                  <SunIcon className="h-5 w-5" />
-                  <span>Clair</span>
-                </Button>
-                
-                <Button
-                  variant={theme === "dark" ? "default" : "outline"}
-                  className="flex flex-col items-center justify-center gap-2 h-24"
-                  onClick={() => setTheme("dark")}
-                >
-                  <MoonIcon className="h-5 w-5" />
-                  <span>Sombre</span>
-                </Button>
-                
-                <Button
-                  variant={theme === "system" ? "default" : "outline"}
-                  className="flex flex-col items-center justify-center gap-2 h-24"
-                  onClick={() => setTheme("system")}
-                >
-                  <MonitorIcon className="h-5 w-5" />
-                  <span>Système</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Configurez comment et quand vous recevez des notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Notifications push</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Activez les notifications pour rester informé.
-                  </p>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium">Plan Gratuit</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Fonctionnalités de base avec des limitations.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    Actif
+                  </span>
                 </div>
-                <Switch
-                  checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="reminder-time">Heure de rappel quotidien</Label>
-                  <Input
-                    id="reminder-time"
-                    type="time"
-                    value={reminderTime}
-                    onChange={(e) => setReminderTime(e.target.value)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Nous vous enverrons un rappel quotidien à cette heure.
-                  </p>
-                </div>
+                <Separator className="my-4" />
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Suivi de tâches
+                  </li>
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Journal personnel
+                  </li>
+                  <li className="flex items-center">
+                    <span className="mr-2">✓</span> Mode Focus
+                  </li>
+                  <li className="flex items-center text-muted-foreground">
+                    <span className="mr-2">✗</span> Analyse IA avancée
+                  </li>
+                  <li className="flex items-center text-muted-foreground">
+                    <span className="mr-2">✗</span> Assistant IA illimité
+                  </li>
+                </ul>
               </div>
             </CardContent>
             <CardFooter>
-              <Button>Enregistrer les préférences</Button>
+              <Button className="w-full">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Passer à Premium
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>
         
-        <TabsContent value="contact" className="space-y-6">
-          <Card>
+        <TabsContent value="notifications">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>
+                Configurez les notifications et les alertes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notifications">Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Activer les notifications dans l'application
+                  </p>
+                </div>
+                <Switch
+                  id="notifications"
+                  disabled={loading}
+                  checked={formState.notificationsEnabled}
+                  onCheckedChange={(checked) => handleSettingChange("notificationsEnabled", checked)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="sound">Sons</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Activer les sons pour les notifications
+                  </p>
+                </div>
+                <Switch
+                  id="sound"
+                  disabled={loading || !formState.notificationsEnabled}
+                  checked={formState.soundEnabled && formState.notificationsEnabled}
+                  onCheckedChange={(checked) => handleSettingChange("soundEnabled", checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="contact">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>Contactez-nous</CardTitle>
               <CardDescription>
-                Envoyez un message à l'équipe DeepFlow.
+                Envoyez un message au créateur de DeepFlow.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleContactSubmit} className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="contact-subject">Sujet</Label>
-                  <Input
-                    id="contact-subject"
-                    placeholder="Sujet de votre message"
-                    value={contactSubject}
-                    onChange={(e) => setContactSubject(e.target.value)}
-                    required
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nom</Label>
+                  <Input 
+                    id="name" 
+                    value={contactForm.name} 
+                    onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
+                    placeholder="Votre nom" 
+                    required 
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="contact-message">Message</Label>
-                  <Textarea
-                    id="contact-message"
-                    placeholder="Comment pouvons-nous vous aider ?"
-                    className="min-h-[150px]"
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
-                    required
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={contactForm.email} 
+                    onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
+                    placeholder="votre@email.com" 
+                    required 
                   />
                 </div>
-                <div className="mt-4">
-                  <p className="text-sm">
-                    Vous pouvez également nous contacter directement à <a href="mailto:DeepFlow.ia@gmail.com" className="text-primary hover:underline">DeepFlow.ia@gmail.com</a>
-                  </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea 
+                    id="message" 
+                    value={contactForm.message} 
+                    onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
+                    placeholder="Écrivez votre message ici..." 
+                    required 
+                    rows={5} 
+                  />
                 </div>
-                <Button type="submit" className="w-full" disabled={contactLoading}>
-                  {contactLoading ? "Envoi en cours..." : "Envoyer le message"}
+                
+                <Button type="submit" className="w-full" disabled={contactSubmitting}>
+                  <MailIcon className="mr-2 h-4 w-4" />
+                  {contactSubmitting ? "Envoi en cours..." : "Envoyer le message"}
                 </Button>
               </form>
             </CardContent>
+            <CardFooter className="flex flex-col">
+              <p className="text-sm text-muted-foreground">
+                Votre message sera envoyé à : DeepFlow.ia@gmail.com
+              </p>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
