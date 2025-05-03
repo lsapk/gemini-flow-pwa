@@ -10,7 +10,7 @@ interface AuthProviderProps {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: any | null;
-  loading: boolean;
+  loading: boolean; // This is the property that AppLayout is trying to use
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -171,7 +171,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const value = {
     isAuthenticated,
     user,
-    loading,
+    loading, // Make sure to include this in the value object
     signUp,
     signIn,
     signOut,

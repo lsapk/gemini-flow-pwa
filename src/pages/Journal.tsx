@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Json } from "@/integrations/supabase/types";
 
 // Define mood options
 const moodOptions = [
@@ -28,12 +28,13 @@ const moodOptions = [
   { value: "terrible", label: "Terrible", icon: <Frown className="h-5 w-5 text-red-500" /> },
 ];
 
+// Updated interface to match the database structure
 interface JournalEntry {
   id: string;
   title: string;
   content: string;
   mood?: string;
-  tags?: string[];
+  tags?: Json | null; // Changed from string[] to Json | null to match Supabase's Json type
   created_at: string;
   updated_at?: string;
   user_id: string;
@@ -96,7 +97,8 @@ const Journal = () => {
       
       if (error) throw new Error(error.message);
       
-      setEntries(data || []);
+      // We need to type cast the data to match our JournalEntry interface
+      setEntries((data || []) as JournalEntry[]);
     } catch (error) {
       toast({
         title: "Erreur",
@@ -117,7 +119,8 @@ const Journal = () => {
       if (error) throw new Error(error.message);
       
       if (data) {
-        setViewEntry(data);
+        // Type cast the data to match our JournalEntry interface
+        setViewEntry(data as JournalEntry);
         setOpenViewDialog(true);
       }
     } catch (error) {
@@ -156,7 +159,10 @@ const Journal = () => {
       
       if (error) throw new Error(error.message);
       
-      setEntries([...(data ? [data] : []), ...entries]);
+      // Type cast and add the new entry to our entries state
+      if (data) {
+        setEntries([data as JournalEntry, ...entries]);
+      }
       
       resetForm();
       setOpenDialog(false);
@@ -199,7 +205,8 @@ const Journal = () => {
       if (error) throw new Error(error.message);
       
       if (data) {
-        setEntries(entries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
+        // Type cast and update the entry in our entries state
+        setEntries(entries.map((entry) => (entry.id === editingEntry.id ? data as JournalEntry : entry)));
       }
       
       resetForm();

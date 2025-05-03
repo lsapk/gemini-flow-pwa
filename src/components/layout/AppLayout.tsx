@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 
 const AppLayout = () => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth(); // Changed from isLoading to loading to match the context
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const location = useLocation();
@@ -21,7 +21,7 @@ const AppLayout = () => {
   }, [isMobile]);
 
   // Show loading state
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
