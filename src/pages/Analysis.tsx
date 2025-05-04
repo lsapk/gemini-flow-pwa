@@ -1,224 +1,224 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartLineIcon } from "@/components/icons/DeepFlowIcons";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AreaChart, BarChart } from "@/components/ui/chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { BarChart3, LineChart, Loader2, AlertCircle, PieChart, TrendingUp } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getAIAnalysis } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangleIcon } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
-
-type Stats = {
-  tasks: { total: number; completed: number; pending: number };
-  habits: { total: number };
-  goals: { total: number; completed: number; inProgress: number };
-  focus: { sessions: number; totalMinutes: number };
-};
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { checkAIRequestLimit, trackAIRequest, MAX_FREEMIUM_REQUESTS_PER_DAY } from "@/utils/aiLimits";
+import { getUserSettings } from "@/lib/api";
 
 const Analysis = () => {
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [limitExceeded, setLimitExceeded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [language, setLanguage] = useState<string>("fr");
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [requestsInfo, setRequestsInfo] = useState<{
+    hasReachedLimit: boolean;
+    requestsToday: number;
+    isPremium: boolean;
+  }>({ hasReachedLimit: false, requestsToday: 0, isPremium: false });
 
   useEffect(() => {
-    const fetchAnalysis = async () => {
+    const fetchData = async () => {
       if (!user) {
-        toast({
-          title: "Authentification requise",
-          description: "Veuillez vous connecter pour voir vos analyses.",
-          variant: "destructive",
-        });
-        navigate("/login");
+        setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
-        setError(null);
-        setLimitExceeded(false);
-        
-        const { data, error, status } = await getAIAnalysis(user.id);
+        // Get user's language preference
+        const { data: settings } = await getUserSettings();
+        if (settings && settings.language) {
+          setLanguage(settings.language);
+        }
 
-        if (status === 429) {
-          setLimitExceeded(true);
-          setAnalysis(data?.analysis || "Vous avez atteint votre limite quotidienne de requêtes gratuites. Passez à la version premium pour un accès illimité.");
+        // Check if user has reached the AI request limit
+        const limits = await checkAIRequestLimit("analysis");
+        setRequestsInfo(limits);
+
+        if (!limits.isPremium && limits.hasReachedLimit) {
+          setAnalysis(`⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} analyses quotidiennes avec le compte gratuit. Passez à un abonnement premium pour bénéficier d'analyses illimitées.`);
+          setLoading(false);
           return;
         }
 
-        if (error) {
-          throw new Error(error.message);
+        // Track this AI request before making the call
+        if (!limits.hasReachedLimit) {
+          await trackAIRequest("analysis");
         }
 
-        setAnalysis(data?.analysis || "Pas assez de données pour générer une analyse.");
-        setStats(data?.stats || null);
-      } catch (error: any) {
-        setError(error.message);
+        const { data, error } = await getAIAnalysis(user.id);
+
+        if (error) {
+          throw new Error(error as string);
+        }
+
+        if (data) {
+          setAnalysis(data.analysis);
+          setStats(data.stats);
+        }
+
+        // Update limits after successful request
+        const newLimits = await checkAIRequestLimit("analysis");
+        setRequestsInfo(newLimits);
+      } catch (error) {
+        console.error("Error fetching analysis:", error);
         toast({
           title: "Erreur",
-          description: "Impossible de charger votre analyse.",
+          description: "Impossible de charger l'analyse.",
           variant: "destructive",
         });
-        console.error("Error fetching analysis:", error);
+        setAnalysis("⚠️ **Une erreur est survenue**\n\nImpossible de générer l'analyse en ce moment. Veuillez réessayer plus tard.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAnalysis();
-  }, [user, toast, navigate]);
-
-  // Prepare chart data
-  const chartData = stats ? [
-    { name: 'Tâches', total: stats.tasks.total, complété: stats.tasks.completed, en_cours: stats.tasks.pending },
-    { name: 'Objectifs', total: stats.goals.total, complété: stats.goals.completed, en_cours: stats.goals.inProgress },
-  ] : [];
+    fetchData();
+  }, [user, toast]);
 
   return (
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <ChartLineIcon className="h-8 w-8" />
-          Analyse IA
+          <TrendingUp className="h-8 w-8" />
+          Analyse
         </h1>
         <p className="text-muted-foreground">
-          Des insights personnalisés basés sur vos données et votre activité.
+          Suivi et analyse de votre productivité avec insights personnalisés.
         </p>
       </div>
 
-      {limitExceeded && (
-        <Alert variant="warning" className="bg-amber-50 dark:bg-amber-900/30 border-amber-300">
-          <AlertTriangleIcon className="h-4 w-4" />
-          <AlertTitle>Limite atteinte</AlertTitle>
+      {!requestsInfo.isPremium && (
+        <Alert variant={requestsInfo.hasReachedLimit ? "destructive" : "default"}>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Compte Freemium</AlertTitle>
           <AlertDescription>
-            Vous avez atteint votre limite quotidienne de 5 requêtes gratuites. Passez à la version premium pour un accès illimité.
+            {requestsInfo.hasReachedLimit
+              ? `Vous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} analyses quotidiennes. Passez à un abonnement premium pour un accès illimité.`
+              : `Vous avez utilisé ${requestsInfo.requestsToday}/${MAX_FREEMIUM_REQUESTS_PER_DAY} analyses quotidiennes.`}
           </AlertDescription>
         </Alert>
       )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangleIcon className="h-4 w-4" />
-          <AlertTitle>Erreur</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="glass-card col-span-1 md:col-span-2">
-          <CardHeader>
-            <CardTitle>Analyse personnalisée</CardTitle>
-            <CardDescription>
-              Généré par DeepFlow AI en fonction de votre activité
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/6" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/6" />
+      <Tabs defaultValue="insights">
+        <TabsList>
+          <TabsTrigger value="insights">
+            <LineChart className="h-4 w-4 mr-2" />
+            Insights
+          </TabsTrigger>
+          <TabsTrigger value="charts">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Graphiques
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="insights" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle>Analyse IA</CardTitle>
+                {requestsInfo.isPremium ? (
+                  <Badge variant="outline">Premium</Badge>
+                ) : (
+                  <Badge variant="outline">{requestsInfo.requestsToday}/{MAX_FREEMIUM_REQUESTS_PER_DAY}</Badge>
+                )}
               </div>
-            ) : analysis ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <Markdown content={analysis} />
-              </div>
-            ) : (
-              <p>Utilisez davantage l'application pour générer des analyses personnalisées.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Statistiques</CardTitle>
-            <CardDescription>
-              Aperçu de votre activité
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/6" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ) : stats ? (
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Tâches</p>
-                  <p className="text-2xl font-bold">{stats.tasks.total}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.tasks.completed} complétées, {stats.tasks.pending} en cours
-                  </p>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="h-60 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">
+                      Génération de votre analyse personnalisée...
+                    </p>
+                  </div>
                 </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Objectifs</p>
-                  <p className="text-2xl font-bold">{stats.goals.total}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.goals.completed} complétés, {stats.goals.inProgress} en cours
-                  </p>
+              ) : !user ? (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p>Veuillez vous connecter pour voir votre analyse personnalisée.</p>
+                  <Button className="mt-4" variant="outline">
+                    Se connecter
+                  </Button>
                 </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Habitudes</p>
-                  <p className="text-2xl font-bold">{stats.habits.total}</p>
+              ) : analysis ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <Markdown content={analysis} />
                 </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Sessions Focus</p>
-                  <p className="text-2xl font-bold">{stats.focus.sessions}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.focus.totalMinutes} minutes au total
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Aucune donnée disponible</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {stats && chartData.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Visualisation des données</CardTitle>
-            <CardDescription>
-              Progression de vos tâches et objectifs
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              ) : (
+                <p>Aucune donnée d'analyse disponible.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="charts" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tâches complétées</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <BarChart
-                  data={chartData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="complété" stackId="a" fill="#4ADE80" />
-                  <Bar dataKey="en_cours" stackId="a" fill="#3B82F6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  data={stats?.tasksPerDay || [
+                    { name: "Lun", total: 2 },
+                    { name: "Mar", total: 5 },
+                    { name: "Mer", total: 3 },
+                    { name: "Jeu", total: 7 },
+                    { name: "Ven", total: 4 },
+                    { name: "Sam", total: 3 },
+                    { name: "Dim", total: 2 },
+                  ]}
+                  tooltipTitle="Tâches"
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Habitudes suivies</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AreaChart
+                  data={stats?.habitsPerWeek || [
+                    { name: "Semaine 1", total: 12 },
+                    { name: "Semaine 2", total: 18 },
+                    { name: "Semaine 3", total: 15 },
+                    { name: "Semaine 4", total: 20 },
+                  ]}
+                  tooltipTitle="Habitudes"
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Sessions Focus</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarChart
+                  data={stats?.focusPerDay || [
+                    { name: "Lun", total: 45 },
+                    { name: "Mar", total: 60 },
+                    { name: "Mer", total: 30 },
+                    { name: "Jeu", total: 75 },
+                    { name: "Ven", total: 45 },
+                    { name: "Sam", total: 15 },
+                    { name: "Dim", total: 30 },
+                  ]}
+                  tooltipTitle="Minutes"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -21,15 +21,21 @@ if ('serviceWorker' in navigator) {
         console.log('Service worker registered: ', registration);
         
         // Register for periodic sync if available
-        if ('periodicSync' in registration) {
+        if ('periodicSync' in registration && 'permissions' in navigator) {
           // Try to register periodic sync to sync data periodically
-          navigator.permissions.query({name: 'periodic-background-sync'})
+          navigator.permissions.query({name: 'periodic-background-sync' as PermissionName})
             .then((status) => {
-              if (status.state === 'granted') {
-                registration.periodicSync.register('sync-data', {
+              if (status.state === 'granted' && 'periodicSync' in registration) {
+                const periodicSync = registration.periodicSync as {
+                  register: (tag: string, options: { minInterval: number }) => Promise<void>;
+                };
+                periodicSync.register('sync-data', {
                   minInterval: 24 * 60 * 60 * 1000, // Once a day
                 });
               }
+            })
+            .catch(err => {
+              console.log('Periodic sync not supported:', err);
             });
         }
       })

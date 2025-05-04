@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Auth functions
@@ -515,6 +514,24 @@ export const updateFocusSession = async (id: string, updates: any) => {
     .single();
     
   return { data, error };
+};
+
+export const deleteFocusSession = async (id: string) => {
+  if (!isOnline()) {
+    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
+    if (offlineData.focus) {
+      offlineData.focus = offlineData.focus.filter((session: any) => session.id !== id);
+      localStorage.setItem('offlineData', JSON.stringify(offlineData));
+    }
+    return { error: null };
+  }
+  
+  const { error } = await supabase
+    .from('focus_sessions')
+    .delete()
+    .eq('id', id);
+    
+  return { error };
 };
 
 // AI functions

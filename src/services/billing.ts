@@ -1,4 +1,6 @@
 
+import { supabase } from "@/integrations/supabase/client";
+
 // This service handles billing operations for the app,
 // with support for Google Play Billing for native apps
 
@@ -83,19 +85,28 @@ export const makePurchase = async (productId: string): Promise<boolean> => {
 // Initiate Stripe checkout for web payments
 async function initiateStripeCheckout(productId: string): Promise<boolean> {
   try {
-    const response = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ productId }),
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("User not authenticated");
+      return false;
+    }
+    
+    const { data, error } = await supabase.functions.invoke('create-checkout', {
+      body: { productId }
     });
     
-    const session = await response.json();
+    if (error) {
+      throw new Error(error.message);
+    }
     
-    // Redirect to Stripe Checkout
-    window.location.href = session.url;
-    return true;
+    if (data && data.url) {
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     console.error('Error creating checkout session:', error);
     return false;
@@ -130,13 +141,16 @@ export const restorePurchases = async (): Promise<boolean> => {
 const validatePurchaseOnServer = async (purchaseInfo: any) => {
   try {
     // Call Supabase Edge Function to validate and record the purchase
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    await supabase.functions.invoke('validate-purchase', {
+    const { data, error } = await supabase.functions.invoke('validate-purchase', {
       body: { purchaseInfo }
     });
     
-    console.log("Purchase validated:", purchaseInfo);
+    if (error) {
+      console.error("Error validating purchase:", error);
+      return;
+    }
+    
+    console.log("Purchase validated:", data);
     
     // Update subscription status in local storage
     localStorage.setItem('subscriptionStatus', JSON.stringify({
@@ -197,30 +211,36 @@ export const getSubscriptionStatus = async (): Promise<{isActive: boolean, plan:
       return { isActive: false, plan: null };
     } else {
       // Web implementation - check with Supabase backend
-      const { supabase } = await import('@/integrations/supabase/client');
-      
-      // Check if logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return { isActive: false, plan: null };
       }
       
       // Get subscription from database
-      const { data } = await supabase
-        .from('subscribers')
-        .select('subscribed, subscription_tier, subscription_end')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (data && data.subscribed) {
-        // Update cached status
-        localStorage.setItem('subscriptionStatus', JSON.stringify({
-          subscribed: true,
-          plan: data.subscription_tier,
-          expirationDate: data.subscription_end
-        }));
+      try {
+        const { data, error } = await supabase
+          .from('subscribers')
+          .select('subscribed, subscription_tier, subscription_end')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching subscription:", error);
+          return { isActive: false, plan: null };
+        }
         
-        return { isActive: true, plan: data.subscription_tier };
+        if (data && data.subscribed) {
+          // Update cached status
+          localStorage.setItem('subscriptionStatus', JSON.stringify({
+            subscribed: true,
+            plan: data.subscription_tier,
+            expirationDate: data.subscription_end
+          }));
+          
+          return { isActive: true, plan: data.subscription_tier };
+        }
+      } catch (error) {
+        console.error("Error checking subscription status:", error);
       }
       
       // Clear cached status if no active subscription found
@@ -244,15 +264,15 @@ export const getSubscriptionStatus = async (): Promise<{isActive: boolean, plan:
 // Create Stripe customer portal session (for managing subscription on web)
 export const createCustomerPortalSession = async (): Promise<string | null> => {
   try {
-    const response = await fetch('/api/customer-portal', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      }
+    const { data, error } = await supabase.functions.invoke('customer-portal', {
+      body: {}
     });
     
-    const { url } = await response.json();
-    return url;
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    return data.url;
   } catch (error) {
     console.error('Error creating customer portal session:', error);
     return null;

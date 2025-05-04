@@ -1,100 +1,104 @@
 
-// Follow this setup guide to integrate the Deno runtime and Gemini into your Supabase project:
-// https://supabase.com/docs/guides/functions/ai/google-ai?utm_source=create-supabase-app
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
-import { GoogleGenerativeAI } from "npm:@google/generative-ai@^0.2.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
 
-// Initialize Google Generative AI with your API key
-const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
-
-// Set up the model configuration - Using gemini-1.5-flash for improved performance
-const modelName = "gemini-1.5-flash";
-const model = genAI.getGenerativeModel({ model: modelName });
-
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Define CORS headers for browser access
+// Define CORS headers for browser requests
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Track request counts for freemium limiting
-async function trackUserRequest(userId: string): Promise<boolean> {
-  try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    
-    // Get user's subscription status
-    const { data: subscriptionData } = await supabase
-      .from('subscribers')
-      .select('subscribed')
-      .eq('user_id', userId)
-      .single();
-      
-    const isPremium = subscriptionData?.subscribed || false;
-    
-    // Premium users have unlimited access
-    if (isPremium) {
-      return true;
-    }
-    
-    // For free users, count and limit requests
-    const { count, error } = await supabase
-      .from('ai_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', todayStart.toISOString())
-      .lte('created_at', todayEnd.toISOString());
-      
-    if (error) {
-      console.error("Error checking request count:", error);
-      return true; // Allow on error to prevent blocking users
-    }
-    
-    // Free users are limited to 5 requests per day
-    if ((count || 0) >= 5) {
-      return false; // Limit exceeded
-    }
-    
-    // Track this request
-    await supabase.from('ai_requests').insert({
-      user_id: userId,
-      service: 'analysis',
-      created_at: new Date().toISOString()
-    });
-    
-    return true;
-  } catch (error) {
-    console.error("Error tracking AI request:", error);
-    return true; // Allow on error to prevent blocking users
-  }
-}
+type LanguageCode = "fr" | "en" | "es" | "de";
 
-// Get user's preferred language
-async function getUserLanguage(userId: string): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('language')
-      .eq('id', userId)
-      .single();
-      
-    if (error || !data) {
-      return 'fr'; // Default to French
-    }
-    
-    return data.language || 'fr';
-  } catch (error) {
-    console.error("Error getting user language:", error);
-    return 'fr'; // Default to French
-  }
+// Helper function to get analysis prompt based on language
+function getAnalysisPrompt(userData: any, language: LanguageCode = "fr"): string {
+  const { tasks, habits, goals, focusSessions, journalEntries } = userData;
+  
+  // Format data for AI to analyze
+  const completedTasks = tasks.filter((t: any) => t.completed).length;
+  const pendingTasks = tasks.length - completedTasks;
+  const habitsCount = habits.length;
+  const goalsCount = goals.length;
+  const goalsCompleted = goals.filter((g: any) => g.completed).length;
+  const totalFocusTime = focusSessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
+  const journalCount = journalEntries.length;
+  
+  const prompts = {
+    fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse ces données de l'utilisateur et crée un rapport détaillé avec des recommandations constructives.
+
+Données utilisateur :
+- Tâches: ${tasks.length} au total (${completedTasks} terminées, ${pendingTasks} en attente)
+- Habitudes suivies: ${habitsCount}
+- Objectifs: ${goalsCount} au total (${goalsCompleted} atteints)
+- Temps total en sessions Focus: ${totalFocusTime} minutes
+- Entrées de journal: ${journalCount}
+
+Format souhaité :
+1. Utilise du markdown riche avec des emojis pertinents
+2. Commence par un résumé des tendances générales
+3. Analyse les points forts et axes d'amélioration
+4. Propose 3-5 conseils spécifiques basés sur les données
+5. Conclus avec une note encourageante
+
+Ton analyse doit être personnalisée, positive et orientée vers l'action.`,
+
+    en: `You are DeepFlow, an AI assistant specialized in productivity and wellbeing analysis. Analyze this user data and create a detailed report with constructive recommendations.
+
+User data:
+- Tasks: ${tasks.length} total (${completedTasks} completed, ${pendingTasks} pending)
+- Habits tracked: ${habitsCount}
+- Goals: ${goalsCount} total (${goalsCompleted} achieved)
+- Total Focus session time: ${totalFocusTime} minutes
+- Journal entries: ${journalCount}
+
+Desired format:
+1. Use rich markdown with relevant emojis
+2. Start with a summary of general trends
+3. Analyze strengths and areas for improvement
+4. Suggest 3-5 specific recommendations based on the data
+5. Conclude with an encouraging note
+
+Your analysis should be personalized, positive, and action-oriented.`,
+
+    es: `Eres DeepFlow, un asistente de IA especializado en análisis de productividad y bienestar. Analiza estos datos del usuario y crea un informe detallado con recomendaciones constructivas.
+
+Datos del usuario:
+- Tareas: ${tasks.length} en total (${completedTasks} completadas, ${pendingTasks} pendientes)
+- Hábitos seguidos: ${habitsCount}
+- Objetivos: ${goalsCount} en total (${goalsCompleted} alcanzados)
+- Tiempo total en sesiones de enfoque: ${totalFocusTime} minutos
+- Entradas de diario: ${journalCount}
+
+Formato deseado:
+1. Utiliza markdown enriquecido con emojis relevantes
+2. Comienza con un resumen de tendencias generales
+3. Analiza puntos fuertes y áreas de mejora
+4. Sugiere 3-5 recomendaciones específicas basadas en los datos
+5. Concluye con una nota alentadora
+
+Tu análisis debe ser personalizado, positivo y orientado a la acción.`,
+
+    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivitäts- und Wohlbefindensanalyse spezialisiert ist. Analysiere diese Benutzerdaten und erstelle einen detaillierten Bericht mit konstruktiven Empfehlungen.
+
+Benutzerdaten:
+- Aufgaben: ${tasks.length} insgesamt (${completedTasks} abgeschlossen, ${pendingTasks} ausstehend)
+- Verfolgte Gewohnheiten: ${habitsCount}
+- Ziele: ${goalsCount} insgesamt (${goalsCompleted} erreicht)
+- Gesamtzeit der Fokussitzungen: ${totalFocusTime} Minuten
+- Journaleinträge: ${journalCount}
+
+Gewünschtes Format:
+1. Verwende umfangreiches Markdown mit relevanten Emojis
+2. Beginne mit einer Zusammenfassung der allgemeinen Trends
+3. Analysiere Stärken und Verbesserungsbereiche
+4. Schlage 3-5 spezifische Empfehlungen basierend auf den Daten vor
+5. Schließe mit einer ermutigenden Notiz ab
+
+Deine Analyse sollte personalisiert, positiv und handlungsorientiert sein.`
+  };
+
+  return prompts[language] || prompts.fr;
 }
 
 serve(async (req) => {
@@ -104,190 +108,152 @@ serve(async (req) => {
   }
 
   try {
+    // Get API key from environment variable
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not set in environment variables");
+    }
+
+    // Get Supabase credentials from environment
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+    // Initialize the Google Generative AI
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    
+    // Parse request body
     const { userId } = await req.json();
     
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "User ID is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      throw new Error("User ID is required");
     }
-    
-    // Check if user has exceeded daily limit
-    const canProceed = await trackUserRequest(userId);
-    if (!canProceed) {
-      // Return a formatted message about limit exceeded
-      return new Response(
-        JSON.stringify({ 
-          error: "Daily limit exceeded",
-          analysis: "## ⚠️ Limite quotidienne atteinte\n\nVous avez atteint votre limite quotidienne de 5 requêtes gratuites. Passez à la version premium pour un accès illimité à l'analyse IA.",
-          stats: null
-        }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 429
-        }
-      );
-    }
-    
-    // Get user's preferred language
-    const preferredLanguage = await getUserLanguage(userId);
 
-    // Gather user data for analysis
-    const [tasksResult, habitsResult, journalResult, goalsResult, focusResult] = await Promise.all([
+    // Initialize Supabase client with service role for admin access
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get user's language preference
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('language')
+      .eq('id', userId)
+      .single();
+      
+    const userLanguage = userSettings?.language || "fr" as LanguageCode;
+
+    // Fetch user data
+    const [tasks, habits, goals, focusSessions, journalEntries] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId),
       supabase.from('habits').select('*').eq('user_id', userId),
-      supabase.from('journal_entries').select('*').eq('user_id', userId).limit(20).order('created_at', { ascending: false }),
       supabase.from('goals').select('*').eq('user_id', userId),
-      supabase.from('focus_sessions').select('*').eq('user_id', userId).limit(50).order('created_at', { ascending: false })
+      supabase.from('focus_sessions').select('*').eq('user_id', userId),
+      supabase.from('journal_entries').select('*').eq('user_id', userId)
     ]);
-    
-    const tasks = tasksResult.data || [];
-    const habits = habitsResult.data || [];
-    const journalEntries = journalResult.data || [];
-    const goals = goalsResult.data || [];
-    const focusSessions = focusResult.data || [];
 
-    console.log("Data fetched successfully:", {
-      tasksCount: tasks.length,
-      habitsCount: habits.length,
-      journalCount: journalEntries.length,
-      goalsCount: goals.length,
-      focusCount: focusSessions.length
+    const userData = {
+      tasks: tasks.data || [],
+      habits: habits.data || [],
+      goals: goals.data || [],
+      focusSessions: focusSessions.data || [],
+      journalEntries: journalEntries.data || []
+    };
+
+    // Prepare stats for the frontend
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+
+    // Task completion by day of week
+    const tasksPerDay = Array(7).fill(0).map((_, i) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      
+      const dayString = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][i];
+      
+      const completedToday = tasks.data ? tasks.data.filter((t: any) => {
+        if (!t.completed) return false;
+        const completedDate = new Date(t.updated_at);
+        return completedDate.getDate() === day.getDate() && 
+               completedDate.getMonth() === day.getMonth() &&
+               completedDate.getFullYear() === day.getFullYear();
+      }).length : 0;
+      
+      return { name: dayString, total: completedToday };
     });
-
-    // Prepare data summary for the AI
-    const completedTasks = tasks.filter(task => task.completed).length;
-    const pendingTasks = tasks.length - completedTasks;
     
-    const completedGoals = goals.filter(goal => goal.completed).length;
-    const inProgressGoals = goals.length - completedGoals;
+    // Habits tracking by week
+    const habitsPerWeek = [1, 2, 3, 4].map(weekNum => {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay() - (7 * (4 - weekNum)));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      const total = habits.data ? habits.data.filter((h: any) => {
+        if (!h.last_completed_at) return false;
+        const completedDate = new Date(h.last_completed_at);
+        return completedDate >= weekStart && completedDate <= weekEnd;
+      }).length : 0;
+      
+      return { name: `Semaine ${weekNum}`, total };
+    });
     
-    const totalFocusTime = focusSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    const averageFocusSessionLength = focusSessions.length > 0 ? totalFocusTime / focusSessions.length : 0;
+    // Focus time by day
+    const focusPerDay = Array(7).fill(0).map((_, i) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      
+      const dayString = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][i];
+      
+      const minutesToday = focusSessions.data ? focusSessions.data.filter((s: any) => {
+        if (!s.completed_at) return false;
+        const sessionDate = new Date(s.completed_at);
+        return sessionDate.getDate() === day.getDate() && 
+               sessionDate.getMonth() === day.getMonth() &&
+               sessionDate.getFullYear() === day.getFullYear();
+      }).reduce((sum: number, session: any) => sum + (session.duration || 0), 0) : 0;
+      
+      return { name: dayString, total: minutesToday };
+    });
     
-    // Format data for the AI prompt
-    const dataSummary = `
-    User Activity Summary:
-    - Tasks: ${tasks.length} total, ${completedTasks} completed, ${pendingTasks} pending
-    - Habits: ${habits.length} being tracked
-    - Goals: ${goals.length} total, ${completedGoals} completed, ${inProgressGoals} in progress
-    - Focus: ${focusSessions.length} sessions, ${Math.round(totalFocusTime / 60)} minutes total, ${Math.round(averageFocusSessionLength / 60)} minutes average
-    - Journal: ${journalEntries.length} entries
-    `;
+    const userStats = {
+      tasksPerDay,
+      habitsPerWeek,
+      focusPerDay
+    };
+    
+    // Generate analysis
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = getAnalysisPrompt(userData, userLanguage);
+    const result = await model.generateContent(prompt);
+    const analysis = result.response.text();
 
-    // Define the language-specific prompt for analysis
-    let promptTemplate;
-    if (preferredLanguage === 'fr') {
-      promptTemplate = `
-      En tant que DeepFlow AI, analysez les données de cet utilisateur et fournissez des insights personnalisés et des recommandations:
-      
-      ${dataSummary}
-      
-      Veuillez fournir:
-      1. 📊 Une brève analyse de productivité
-      2. 🚀 Trois recommandations spécifiques pour s'améliorer
-      3. 💪 Une perspective motivante basée sur leurs habitudes
-      
-      Formatez votre réponse en sections claires avec des émojis et des points pour une lisibilité optimale.
-      Utilisez le format Markdown pour structurer votre réponse.
-      `;
-    } else if (preferredLanguage === 'en') {
-      promptTemplate = `
-      As DeepFlow AI, analyze this user's data and provide personalized insights and recommendations:
-      
-      ${dataSummary}
-      
-      Please provide:
-      1. 📊 A brief productivity analysis
-      2. 🚀 Three specific recommendations for improvement
-      3. 💪 A motivational insight based on their patterns
-      
-      Format your response in clear sections with emojis and bullet points for easy readability.
-      Use Markdown format to structure your response.
-      `;
-    } else if (preferredLanguage === 'es') {
-      promptTemplate = `
-      Como DeepFlow AI, analice los datos de este usuario y proporcione información y recomendaciones personalizadas:
-      
-      ${dataSummary}
-      
-      Por favor proporcione:
-      1. 📊 Un breve análisis de productividad
-      2. 🚀 Tres recomendaciones específicas para mejorar
-      3. 💪 Una perspectiva motivadora basada en sus patrones
-      
-      Formatee su respuesta en secciones claras con emojis y viñetas para facilitar la lectura.
-      Use formato Markdown para estructurar su respuesta.
-      `;
-    } else if (preferredLanguage === 'de') {
-      promptTemplate = `
-      Als DeepFlow AI analysieren Sie die Daten dieses Benutzers und geben personalisierte Einblicke und Empfehlungen:
-      
-      ${dataSummary}
-      
-      Bitte geben Sie:
-      1. 📊 Eine kurze Produktivitätsanalyse
-      2. 🚀 Drei spezifische Verbesserungsempfehlungen
-      3. 💪 Eine motivierende Einsicht basierend auf ihren Mustern
-      
-      Formatieren Sie Ihre Antwort in übersichtliche Abschnitte mit Emojis und Aufzählungspunkten für eine einfache Lesbarkeit.
-      Verwenden Sie das Markdown-Format, um Ihre Antwort zu strukturieren.
-      `;
-    } else {
-      // Default to French
-      promptTemplate = `
-      En tant que DeepFlow AI, analysez les données de cet utilisateur et fournissez des insights personnalisés et des recommandations:
-      
-      ${dataSummary}
-      
-      Veuillez fournir:
-      1. 📊 Une brève analyse de productivité
-      2. 🚀 Trois recommandations spécifiques pour s'améliorer
-      3. 💪 Une perspective motivante basée sur leurs habitudes
-      
-      Formatez votre réponse en sections claires avec des émojis et des points pour une lisibilité optimale.
-      Utilisez le format Markdown pour structurer votre réponse.
-      `;
-    }
-
-    console.log("Sending request to Gemini API with model:", modelName);
-
-    // Generate analysis from Gemini
-    const result = await model.generateContent(promptTemplate);
-    const response = result.response.text();
-
-    console.log("Received response from Gemini API");
-
-    // Return the analysis
     return new Response(
       JSON.stringify({
-        analysis: response,
-        stats: {
-          tasks: { total: tasks.length, completed: completedTasks, pending: pendingTasks },
-          habits: { total: habits.length },
-          goals: { total: goals.length, completed: completedGoals, inProgress: inProgressGoals },
-          focus: { sessions: focusSessions.length, totalMinutes: Math.round(totalFocusTime / 60) }
-        }
+        analysis,
+        stats: userStats
       }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   } catch (error) {
-    console.error("Error in gemini-analysis function:", error);
+    console.error("Error generating analysis:", error);
+    
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message,
-        details: error.toString(),
-        modelAttempted: modelName 
+        analysis: "⚠️ **Une erreur est survenue**\n\nImpossible de générer l'analyse pour le moment. Veuillez réessayer plus tard.",
+        stats: null
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   }

@@ -15,9 +15,10 @@ export const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       className="prose prose-sm dark:prose-invert max-w-none break-words"
       remarkPlugins={[remarkGfm]}
       components={{
-        code({ node, inline, className, children, ...props }) {
+        code({ node, className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');
-          return !inline && match ? (
+          const isInline = !match && !className;
+          return !isInline && match ? (
             <SyntaxHighlighter
               style={oneDark}
               language={match[1]}

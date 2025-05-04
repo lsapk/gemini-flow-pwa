@@ -52,3 +52,22 @@ redirect_uri = "http://localhost:54321/auth/v1/callback"
 enabled = false
 port = 54327
 vector_port = 54328
+
+[functions]
+[functions.gemini-chat]
+verify_jwt = true
+
+[functions.gemini-analysis]
+verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
+
+[functions.validate-purchase]
+verify_jwt = true
+
+[functions.send-contact]
+verify_jwt = false

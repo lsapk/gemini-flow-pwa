@@ -1,124 +1,66 @@
 
-// Follow this setup guide to integrate the Deno runtime and Gemini into your Supabase project:
-// https://supabase.com/docs/guides/functions/ai/google-ai?utm_source=create-supabase-app
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
-import { GoogleGenerativeAI } from "npm:@google/generative-ai@^0.2.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
 
-// Initialize Google Generative AI with your API key
-const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
-
-// Set up the model configuration - Using gemini-1.5-flash for improved performance
-const modelName = "gemini-1.5-flash";
-const model = genAI.getGenerativeModel({ model: modelName });
-
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Define CORS headers for browser access
+// Define CORS headers for browser requests
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Track request counts for freemium limiting
-async function trackUserRequest(userId: string): Promise<boolean> {
-  try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    
-    // Get user's subscription status
-    const { data: subscriptionData } = await supabase
-      .from('subscribers')
-      .select('subscribed')
-      .eq('user_id', userId)
-      .single();
-      
-    const isPremium = subscriptionData?.subscribed || false;
-    
-    // Premium users have unlimited access
-    if (isPremium) {
-      return true;
-    }
-    
-    // For free users, count and limit requests
-    const { count, error } = await supabase
-      .from('ai_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', todayStart.toISOString())
-      .lte('created_at', todayEnd.toISOString());
-      
-    if (error) {
-      console.error("Error checking request count:", error);
-      return true; // Allow on error to prevent blocking users
-    }
-    
-    // Free users are limited to 5 requests per day
-    if ((count || 0) >= 5) {
-      return false; // Limit exceeded
-    }
-    
-    // Track this request
-    await supabase.from('ai_requests').insert({
-      user_id: userId,
-      service: 'chat',
-      created_at: new Date().toISOString()
-    });
-    
-    return true;
-  } catch (error) {
-    console.error("Error tracking AI request:", error);
-    return true; // Allow on error to prevent blocking users
-  }
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
-// Get user's preferred language
-async function getUserLanguage(userId: string): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('language')
-      .eq('id', userId)
-      .single();
-      
-    if (error || !data) {
-      return 'fr'; // Default to French
-    }
-    
-    return data.language || 'fr';
-  } catch (error) {
-    console.error("Error getting user language:", error);
-    return 'fr'; // Default to French
-  }
-}
+type LanguageCode = "fr" | "en" | "es" | "de";
 
-// Format responses based on language preferences
-function getSystemPromptForLanguage(language: string): string {
-  const basePrompt = `
-You are DeepFlow AI, a supportive and insightful personal assistant focused on productivity, 
-mindfulness, and personal development. Your goal is to help users enhance their daily routines, 
-develop better habits, achieve their goals, and maintain focus.
+// Helper function to get prompt based on language
+function getSystemPrompt(language: LanguageCode = "fr"): string {
+  const prompts = {
+    fr: `Tu es DeepFlow, un assistant IA spécialisé dans la productivité, le bien-être et le développement personnel. Voici comment tu dois répondre :
 
-Key aspects of your personality:
-- Supportive and encouraging, but not overly enthusiastic
-- Professional yet warm
-- Concise and practical in your advice
-- Data-driven when relevant
-- Respectful of the user's time and priorities
+1. Utilise du markdown riche avec des emojis pertinents pour structurer tes réponses.
+2. Sois concis mais complet, en utilisant des listes et des titres pour organiser l'information.
+3. Propose toujours des conseils pratiques et applicables immédiatement.
+4. Adapte ton ton pour être encourageant et positif.
+5. N'hésite pas à utiliser des métaphores ou des exemples concrets.
 
-Always format your responses using Markdown with clear headings, bullet points, and occasional emoji
-to improve readability and engagement. Organize information logically with short paragraphs.
+Si tu ne connais pas la réponse, admets-le simplement et suggère où l'utilisateur pourrait trouver l'information.`,
 
-Always respond in ${language === 'fr' ? 'French' : language === 'en' ? 'English' : language === 'es' ? 'Spanish' : language === 'de' ? 'German' : 'French'}.
-Provide concrete, actionable advice rather than vague motivational statements.
-`;
+    en: `You are DeepFlow, an AI assistant specialized in productivity, wellbeing, and personal development. Here's how you should respond:
 
-  return basePrompt;
+1. Use rich markdown with relevant emojis to structure your answers.
+2. Be concise but complete, using lists and headings to organize information.
+3. Always offer practical advice that can be applied immediately.
+4. Adapt your tone to be encouraging and positive.
+5. Don't hesitate to use metaphors or concrete examples.
+
+If you don't know the answer, simply admit it and suggest where the user might find the information.`,
+
+    es: `Eres DeepFlow, un asistente de IA especializado en productividad, bienestar y desarrollo personal. Así es como debes responder:
+
+1. Utiliza markdown enriquecido con emojis relevantes para estructurar tus respuestas.
+2. Sé conciso pero completo, utilizando listas y títulos para organizar la información.
+3. Ofrece siempre consejos prácticos que puedan aplicarse inmediatamente.
+4. Adapta tu tono para ser alentador y positivo.
+5. No dudes en utilizar metáforas o ejemplos concretos.
+
+Si no conoces la respuesta, simplemente admítelo y sugiere dónde podría encontrar la información el usuario.`,
+
+    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivität, Wohlbefinden und persönliche Entwicklung spezialisiert ist. So solltest du antworten:
+
+1. Verwende umfangreiches Markdown mit relevanten Emojis, um deine Antworten zu strukturieren.
+2. Sei präzise, aber umfassend und verwende Listen und Überschriften zur Organisation der Informationen.
+3. Biete immer praktische Ratschläge an, die sofort umgesetzt werden können.
+4. Passe deinen Ton an, um ermutigend und positiv zu sein.
+5. Zögere nicht, Metaphern oder konkrete Beispiele zu verwenden.
+
+Wenn du die Antwort nicht kennst, gib es einfach zu und schlage vor, wo der Benutzer die Information finden könnte.`
+  };
+
+  return prompts[language] || prompts.fr;
 }
 
 serve(async (req) => {
@@ -128,105 +70,95 @@ serve(async (req) => {
   }
 
   try {
-    const { message, chatHistory = [], userId } = await req.json();
+    // Get API key from environment variable
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not set in environment variables");
+    }
+
+    // Get Supabase credentials from environment
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+    // Initialize the Google Generative AI
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    
+    // Parse request body
+    const { message, chatHistory, userId } = await req.json();
+    
+    if (!message) {
+      throw new Error("Message is required");
+    }
     
     if (!userId) {
       throw new Error("User ID is required");
     }
-    
-    // Check if user has exceeded daily limit
-    const canProceed = await trackUserRequest(userId);
-    if (!canProceed) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Daily limit exceeded", 
-          response: "⚠️ **Limite quotidienne atteinte**\n\nVous avez atteint votre limite quotidienne de 5 requêtes gratuites. Passez à la version premium pour un accès illimité à l'assistant IA." 
-        }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 429
-        }
-      );
-    }
-    
-    // Get user's preferred language
-    const preferredLanguage = await getUserLanguage(userId);
-    
-    console.log("Processing chat request with model:", modelName);
-    console.log("Chat history length:", chatHistory.length);
-    console.log("User preferred language:", preferredLanguage);
 
-    // Prepare the chat history for Gemini
-    const formattedHistory = chatHistory.map((msg: any) => ({
-      role: msg.role,
-      parts: [{ text: msg.content }],
+    // Initialize Supabase client with service role for admin access
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get user's language preference
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('language')
+      .eq('id', userId)
+      .single();
+      
+    const userLanguage = userSettings?.language || "fr" as LanguageCode;
+
+    // Prepare history for the model
+    const history: ChatMessage[] = chatHistory || [];
+
+    // Create chat session with the Gemini model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      systemInstruction: getSystemPrompt(userLanguage)
+    });
+
+    // Convert history to Google's chat format
+    const googleChatHistory = history.map(msg => ({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content }]
     }));
-    
-    // System prompt based on language preference
-    const systemPrompt = getSystemPromptForLanguage(preferredLanguage);
 
-    // Start a chat session
+    // Start chat and send the user's message
     const chat = model.startChat({
-      history: formattedHistory,
+      history: googleChatHistory,
       generationConfig: {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2048,
       },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
-        },
-      ],
     });
 
-    // First send the system prompt to set the tone and formatting preferences
-    await chat.sendMessage(systemPrompt);
-    
-    // Then generate a response to the user message
     const result = await chat.sendMessage(message);
-    const response = result.response.text();
+    const response = result.response;
+    const responseText = response.text();
 
-    console.log("Received response from Gemini chat API");
-
-    // Return the AI response
     return new Response(
-      JSON.stringify({
-        response,
-      }),
+      JSON.stringify({ response: responseText }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   } catch (error) {
-    console.error("Error in gemini-chat function:", error);
-    
-    // Provide more detailed error information for debugging
-    const errorResponse = {
-      error: error.message,
-      details: error.toString(),
-      modelAttempted: modelName,
-    };
+    console.error("Error processing chat request:", error);
     
     return new Response(
-      JSON.stringify(errorResponse),
+      JSON.stringify({
+        error: error.message,
+      }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
