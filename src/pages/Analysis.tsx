@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangleIcon } from "lucide-react";
+import { Markdown } from "@/components/Markdown";
 
 type Stats = {
   tasks: { total: number; completed: number; pending: number };
@@ -20,6 +23,8 @@ const Analysis = () => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -38,7 +43,16 @@ const Analysis = () => {
 
       try {
         setLoading(true);
-        const { data, error } = await getAIAnalysis(user.id);
+        setError(null);
+        setLimitExceeded(false);
+        
+        const { data, error, status } = await getAIAnalysis(user.id);
+
+        if (status === 429) {
+          setLimitExceeded(true);
+          setAnalysis(data?.analysis || "Vous avez atteint votre limite quotidienne de requêtes gratuites. Passez à la version premium pour un accès illimité.");
+          return;
+        }
 
         if (error) {
           throw new Error(error.message);
@@ -46,7 +60,8 @@ const Analysis = () => {
 
         setAnalysis(data?.analysis || "Pas assez de données pour générer une analyse.");
         setStats(data?.stats || null);
-      } catch (error) {
+      } catch (error: any) {
+        setError(error.message);
         toast({
           title: "Erreur",
           description: "Impossible de charger votre analyse.",
@@ -79,6 +94,24 @@ const Analysis = () => {
         </p>
       </div>
 
+      {limitExceeded && (
+        <Alert variant="warning" className="bg-amber-50 dark:bg-amber-900/30 border-amber-300">
+          <AlertTriangleIcon className="h-4 w-4" />
+          <AlertTitle>Limite atteinte</AlertTitle>
+          <AlertDescription>
+            Vous avez atteint votre limite quotidienne de 5 requêtes gratuites. Passez à la version premium pour un accès illimité.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangleIcon className="h-4 w-4" />
+          <AlertTitle>Erreur</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="glass-card col-span-1 md:col-span-2">
           <CardHeader>
@@ -98,9 +131,7 @@ const Analysis = () => {
               </div>
             ) : analysis ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                {analysis.split('\n').map((line, i) => (
-                  line.trim() ? <p key={i}>{line}</p> : <br key={i} />
-                ))}
+                <Markdown content={analysis} />
               </div>
             ) : (
               <p>Utilisez davantage l'application pour générer des analyses personnalisées.</p>

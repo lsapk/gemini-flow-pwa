@@ -3,14 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BrainCircuitIcon, SendIcon } from "lucide-react";
+import { BrainCircuitIcon, SendIcon, AlertTriangleIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Markdown } from "@/components/Markdown";
 
 // Define message type
 type Message = {
@@ -24,6 +24,8 @@ const Assistant = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [limitExceeded, setLimitExceeded] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -36,7 +38,7 @@ const Assistant = () => {
         {
           id: "welcome",
           role: "assistant",
-          content: "Bonjour, je suis DeepFlow AI, votre assistant personnel. Comment puis-je vous aider aujourd'hui ?",
+          content: "## 👋 Bonjour!\n\nJe suis DeepFlow AI, votre assistant personnel. Comment puis-je vous aider aujourd'hui ?",
           timestamp: new Date(),
         },
       ]);
@@ -62,6 +64,8 @@ const Assistant = () => {
 
   const handleSendMessage = async () => {
     if (!input.trim() || isProcessing) return;
+    setError(null);
+    setLimitExceeded(false);
 
     // Add user message to chat
     const userMessage: Message = {
@@ -76,6 +80,10 @@ const Assistant = () => {
     setIsProcessing(true);
 
     try {
+      if (!user) {
+        throw new Error("Vous devez être connecté pour utiliser l'assistant");
+      }
+
       // Format chat history for the API
       const chatHistory = messages.map((msg) => ({
         role: msg.role,
@@ -83,7 +91,20 @@ const Assistant = () => {
       }));
 
       // Send message to API
-      const { data, error } = await sendChatMessage(input.trim(), chatHistory);
+      const { data, error, status } = await sendChatMessage(input.trim(), chatHistory, user.id);
+
+      if (status === 429) {
+        setLimitExceeded(true);
+        // Add the limit exceeded message from the API response
+        const limitMessage: Message = {
+          id: Date.now().toString() + "-limit",
+          role: "assistant",
+          content: data.response || "Vous avez atteint votre limite quotidienne de requêtes gratuites. Passez à la version premium pour un accès illimité.",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, limitMessage]);
+        return;
+      }
 
       if (error) {
         throw new Error(error.message);
@@ -98,10 +119,11 @@ const Assistant = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
+      setError(error.message);
       toast({
         title: "Erreur",
-        description: "Impossible d'obtenir une réponse. Veuillez réessayer.",
+        description: error.message || "Impossible d'obtenir une réponse. Veuillez réessayer.",
         variant: "destructive",
       });
       console.error("Error sending message:", error);
@@ -121,6 +143,16 @@ const Assistant = () => {
           Votre assistant intelligent personnel pour vous aider dans votre quotidien.
         </p>
       </div>
+
+      {limitExceeded && (
+        <Alert variant="warning" className="bg-amber-50 dark:bg-amber-900/30 border-amber-300">
+          <AlertTriangleIcon className="h-4 w-4" />
+          <AlertTitle>Limite atteinte</AlertTitle>
+          <AlertDescription>
+            Vous avez atteint votre limite quotidienne de 5 requêtes gratuites. Passez à la version premium pour un accès illimité.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="glass-card shadow-md">
         <CardHeader>
@@ -155,7 +187,11 @@ const Assistant = () => {
                         : "bg-secondary text-secondary-foreground"
                     }`}
                   >
-                    {message.content}
+                    {message.role === "assistant" ? (
+                      <Markdown content={message.content} />
+                    ) : (
+                      message.content
+                    )}
                   </div>
                 </div>
               </div>
@@ -190,12 +226,12 @@ const Assistant = () => {
                 }
               }}
               placeholder="Tapez votre message..."
-              disabled={isProcessing}
+              disabled={isProcessing || limitExceeded}
               className="flex-1"
             />
             <Button 
               onClick={handleSendMessage} 
-              disabled={!input.trim() || isProcessing}
+              disabled={!input.trim() || isProcessing || limitExceeded}
               size="icon"
             >
               <SendIcon className="h-4 w-4" />

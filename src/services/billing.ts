@@ -50,7 +50,8 @@ const registerProducts = async () => {
     // Define your product IDs here
     const productIds = [
       'com.deepflow.premium.monthly',
-      'com.deepflow.premium.yearly'
+      'com.deepflow.premium.yearly',
+      'com.deepflow.premium.lifetime'
     ];
     
     // Register products with the Play Store
@@ -63,8 +64,8 @@ const registerProducts = async () => {
 // Make a purchase
 export const makePurchase = async (productId: string): Promise<boolean> => {
   if (!isNativeApp()) {
-    console.warn("Purchase attempted in non-native environment");
-    return false;
+    // For web, use Stripe Checkout instead
+    return initiateStripeCheckout(productId);
   }
   
   try {
@@ -78,6 +79,28 @@ export const makePurchase = async (productId: string): Promise<boolean> => {
     return false;
   }
 };
+
+// Initiate Stripe checkout for web payments
+async function initiateStripeCheckout(productId: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productId }),
+    });
+    
+    const session = await response.json();
+    
+    // Redirect to Stripe Checkout
+    window.location.href = session.url;
+    return true;
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    return false;
+  }
+}
 
 // Restore purchases
 export const restorePurchases = async (): Promise<boolean> => {
@@ -106,13 +129,24 @@ export const restorePurchases = async (): Promise<boolean> => {
 // Validate purchase with your server
 const validatePurchaseOnServer = async (purchaseInfo: any) => {
   try {
-    // Here you would call your Supabase Edge Function to validate and record the purchase
-    // Example:
-    // await supabase.functions.invoke('validate-purchase', {
-    //   body: { purchaseInfo }
-    // });
+    // Call Supabase Edge Function to validate and record the purchase
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    await supabase.functions.invoke('validate-purchase', {
+      body: { purchaseInfo }
+    });
     
     console.log("Purchase validated:", purchaseInfo);
+    
+    // Update subscription status in local storage
+    localStorage.setItem('subscriptionStatus', JSON.stringify({
+      subscribed: true,
+      plan: purchaseInfo.productId,
+      expirationDate: null // Set to null for lifetime subscriptions or calculate for recurring
+    }));
+    
+    // Notify the app that subscription status has changed
+    window.dispatchEvent(new CustomEvent('subscription:updated'));
   } catch (error) {
     console.error("Purchase validation error:", error);
   }
@@ -121,6 +155,18 @@ const validatePurchaseOnServer = async (purchaseInfo: any) => {
 // Get subscription status
 export const getSubscriptionStatus = async (): Promise<{isActive: boolean, plan: string | null}> => {
   try {
+    // First check the cached status
+    const cachedStatus = localStorage.getItem('subscriptionStatus');
+    if (cachedStatus) {
+      const status = JSON.parse(cachedStatus);
+      // If expiration date exists and is in the future, return cached status
+      if (!status.expirationDate || new Date(status.expirationDate) > new Date()) {
+        return { isActive: status.subscribed, plan: status.plan };
+      }
+    }
+    
+    // If cached status doesn't exist or has expired, check actual status
+    
     if (isNativeApp()) {
       const { Plugins } = (window as any).Capacitor;
       if (!Plugins.InAppPurchase) {
@@ -135,17 +181,80 @@ export const getSubscriptionStatus = async (): Promise<{isActive: boolean, plan:
         );
         
         if (activeSub) {
+          // Update cached status
+          localStorage.setItem('subscriptionStatus', JSON.stringify({
+            subscribed: true,
+            plan: activeSub.productId,
+            expirationDate: activeSub.expiryDate
+          }));
+          
           return { isActive: true, plan: activeSub.productId };
         }
       }
       
+      // Clear cached status if no active subscription found
+      localStorage.removeItem('subscriptionStatus');
       return { isActive: false, plan: null };
     } else {
-      // Web implementation could check with your backend
+      // Web implementation - check with Supabase backend
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Check if logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { isActive: false, plan: null };
+      }
+      
+      // Get subscription from database
+      const { data } = await supabase
+        .from('subscribers')
+        .select('subscribed, subscription_tier, subscription_end')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data && data.subscribed) {
+        // Update cached status
+        localStorage.setItem('subscriptionStatus', JSON.stringify({
+          subscribed: true,
+          plan: data.subscription_tier,
+          expirationDate: data.subscription_end
+        }));
+        
+        return { isActive: true, plan: data.subscription_tier };
+      }
+      
+      // Clear cached status if no active subscription found
+      localStorage.removeItem('subscriptionStatus');
       return { isActive: false, plan: null };
     }
   } catch (error) {
     console.error("Error checking subscription:", error);
+    
+    // Fallback to cached status if available
+    const cachedStatus = localStorage.getItem('subscriptionStatus');
+    if (cachedStatus) {
+      const status = JSON.parse(cachedStatus);
+      return { isActive: status.subscribed, plan: status.plan };
+    }
+    
     return { isActive: false, plan: null };
+  }
+};
+
+// Create Stripe customer portal session (for managing subscription on web)
+export const createCustomerPortalSession = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/customer-portal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    const { url } = await response.json();
+    return url;
+  } catch (error) {
+    console.error('Error creating customer portal session:', error);
+    return null;
   }
 };
