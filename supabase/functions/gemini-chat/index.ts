@@ -81,9 +81,6 @@ serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-    // Initialize the Google Generative AI
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
     // Parse request body
     const { message, chatHistory, userId } = await req.json();
     
@@ -99,14 +96,82 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Get user's language preference
-    const { data: userSettings } = await supabase
+    const { data: userSettings, error: settingsError } = await supabase
       .from('user_settings')
       .select('language')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error("Error fetching user settings:", settingsError);
+    }
       
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
 
+    // Check if user is admin or premium
+    const { data: subscriptionData } = await supabase
+      .from('subscribers')
+      .select('subscribed')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+      
+    const isAdmin = roleData?.role === 'admin';
+    const isPremium = (subscriptionData?.subscribed === true) || isAdmin;
+
+    // If user is not premium, check request limits
+    if (!isPremium) {
+      // Get today's date (UTC midnight)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Count user's requests today
+      const { count, error } = await supabase
+        .from('ai_requests')
+        .select('*', { count: 'exact', head: false })
+        .eq('service', 'chat')
+        .eq('user_id', userId)
+        .gte('created_at', today.toISOString());
+        
+      if (error) {
+        throw new Error(`Error checking AI request limit: ${error.message}`);
+      }
+      
+      const requestsToday = count || 0;
+      
+      // If user has reached the limit, return an error
+      if (requestsToday >= 5) {
+        const limitMessage = {
+          fr: "⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de 5 requêtes quotidiennes avec le compte gratuit. Passez à un abonnement premium pour bénéficier d'un accès illimité.",
+          en: "⚠️ **Limit reached**\n\nYou have reached your limit of 5 daily requests with the free account. Upgrade to a premium subscription for unlimited access.",
+          es: "⚠️ **Límite alcanzado**\n\nHas alcanzado tu límite de 5 solicitudes diarias con la cuenta gratuita. Actualiza a una suscripción premium para obtener acceso ilimitado.",
+          de: "⚠️ **Limit erreicht**\n\nSie haben Ihr Limit von 5 täglichen Anfragen mit dem kostenlosen Konto erreicht. Upgrade auf ein Premium-Abonnement für unbegrenzten Zugriff."
+        };
+        
+        return new Response(
+          JSON.stringify({ response: limitMessage[userLanguage] || limitMessage.fr }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Track this request in the database
+    await supabase
+      .from('ai_requests')
+      .insert({ 
+        service: 'chat',
+        user_id: userId
+      });
+
+    // Initialize the Google Generative AI
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    
     // Prepare history for the model
     const history: ChatMessage[] = chatHistory || [];
 

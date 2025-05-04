@@ -7,9 +7,20 @@ export const MAX_FREEMIUM_REQUESTS_PER_DAY = 5;
 // Track a new AI request in the database
 export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<boolean> => {
   try {
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("No authenticated user found when tracking AI request");
+      return false;
+    }
+    
     const { data, error } = await supabase
       .from('ai_requests')
-      .insert({ service })
+      .insert({ 
+        service,
+        user_id: user.id 
+      })
       .select();
       
     if (error) {
@@ -31,14 +42,31 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
   isPremium: boolean;
 }> => {
   try {
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("No authenticated user found when checking AI request limit");
+      return { hasReachedLimit: true, requestsToday: 0, isPremium: false };
+    }
+
     // First check if user has premium subscription
-    const { data: subscriptionData } = await supabase
+    const { data: subscriptionData, error: subError } = await supabase
       .from('subscribers')
-      .select('subscribed')
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .select('subscribed, subscription_tier')
+      .eq('user_id', user.id)
       .single();
 
-    const isPremium = subscriptionData?.subscribed || false;
+    // Check if user is admin
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    const isAdmin = roleData?.role === 'admin';
+    const isPremium = (subscriptionData?.subscribed === true) || isAdmin;
     
     // Premium users have no limit
     if (isPremium) {
@@ -54,6 +82,7 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       .from('ai_requests')
       .select('*', { count: 'exact', head: false })
       .eq('service', service)
+      .eq('user_id', user.id)
       .gte('created_at', today.toISOString());
       
     if (error) {

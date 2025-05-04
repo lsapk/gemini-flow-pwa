@@ -9,7 +9,10 @@ import {
   Tooltip, 
   CartesianGrid, 
   AreaChart as RechartsAreaChart, 
-  Area 
+  Area,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -19,6 +22,15 @@ interface ChartProps {
     total: number;
   }>;
   tooltipTitle?: string;
+}
+
+interface PieChartProps {
+  data: Array<{
+    name: string;
+    value: number;
+  }>;
+  tooltipTitle?: string;
+  colors?: string[];
 }
 
 export const BarChart: React.FC<ChartProps> = ({ data, tooltipTitle = "Value" }) => {
@@ -121,6 +133,56 @@ export const AreaChart: React.FC<ChartProps> = ({ data, tooltipTitle = "Value" }
             fillOpacity={0.2}
           />
         </RechartsAreaChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+};
+
+export const PieChart: React.FC<PieChartProps> = ({ data, tooltipTitle = "Value", colors = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#6366f1'] }) => {
+  return (
+    <ChartContainer
+      config={{
+        value: {
+          label: tooltipTitle,
+          theme: {
+            light: "#0ea5e9",
+            dark: "#0ea5e9",
+          },
+        },
+      }}
+      className="h-[200px]"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsPieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            fill="var(--color-value)"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            labelLine={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                return (
+                  <ChartTooltipContent
+                    label={payload[0].name}
+                    payload={[{ ...payload[0], dataKey: 'value' }]}
+                  />
+                );
+              }
+              return null;
+            }}
+          />
+        </RechartsPieChart>
       </ResponsiveContainer>
     </ChartContainer>
   );

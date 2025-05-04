@@ -38,40 +38,72 @@ const Assistant = () => {
   }, [messages]);
 
   useEffect(() => {
-    // Add initial assistant message
-    setMessages([
-      {
-        role: "assistant",
-        content:
-          "👋 **Bonjour!** Je suis votre assistant IA personnel. Comment puis-je vous aider aujourd'hui?",
-      },
-    ]);
-
-    // Get user's language preference
-    const loadLanguagePreference = async () => {
+    // Add initial assistant message based on language preference
+    const loadInitialMessage = async () => {
       if (user) {
         try {
           const { data } = await getUserSettings();
-          if (data && data.language) {
-            setLanguage(data.language);
-          }
+          const userLanguage = data?.language || 'fr';
+          setLanguage(userLanguage);
+          setMessages([
+            {
+              role: "assistant",
+              content: getWelcomeMessage(userLanguage),
+            },
+          ]);
         } catch (error) {
           console.error("Error loading language preference:", error);
+          setMessages([
+            {
+              role: "assistant",
+              content: getWelcomeMessage('fr'),
+            },
+          ]);
         }
+      } else {
+        setMessages([
+          {
+            role: "assistant",
+            content: getWelcomeMessage('fr'),
+          },
+        ]);
       }
     };
 
     // Check AI request limits
     const checkLimits = async () => {
       if (user) {
-        const limits = await checkAIRequestLimit("chat");
-        setRequestsInfo(limits);
+        try {
+          const limits = await checkAIRequestLimit("chat");
+          setRequestsInfo(limits);
+        } catch (error) {
+          console.error("Error checking AI limits:", error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de vérifier les limites d'utilisation de l'IA.",
+            variant: "destructive",
+          });
+        }
       }
     };
 
-    loadLanguagePreference();
+    loadInitialMessage();
     checkLimits();
-  }, [user]);
+  }, [user, toast]);
+
+  // Function to get welcome message based on language
+  const getWelcomeMessage = (lang: string): string => {
+    switch (lang) {
+      case 'en':
+        return "👋 **Hello!** I'm your personal AI assistant. How may I help you today?";
+      case 'es':
+        return "👋 **¡Hola!** Soy tu asistente de IA personal. ¿Cómo puedo ayudarte hoy?";
+      case 'de':
+        return "👋 **Hallo!** Ich bin Ihr persönlicher KI-Assistent. Wie kann ich Ihnen heute helfen?";
+      default:
+        return "👋 **Bonjour!** Je suis votre assistant IA personnel. Comment puis-je vous aider aujourd'hui?";
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -85,13 +117,20 @@ const Assistant = () => {
     }
 
     // Check if user has reached the limit
-    if (!requestsInfo.isPremium && requestsInfo.hasReachedLimit) {
-      toast({
-        title: "Limite atteinte",
-        description: `Vous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} requêtes quotidiennes. Passez à un abonnement premium pour un accès illimité.`,
-        variant: "destructive",
-      });
-      return;
+    try {
+      const limits = await checkAIRequestLimit("chat");
+      setRequestsInfo(limits);
+
+      if (!limits.isPremium && limits.hasReachedLimit) {
+        toast({
+          title: "Limite atteinte",
+          description: `Vous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} requêtes quotidiennes. Passez à un abonnement premium pour un accès illimité.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking AI request limit:", error);
     }
 
     const userMessage = message;
@@ -106,15 +145,12 @@ const Assistant = () => {
     setLoading(true);
 
     try {
-      // Track this AI request
+      // Track this AI request before making the call
       await trackAIRequest("chat");
       
       const { data, error } = await sendChatMessage(
         userMessage,
-        updatedMessages.map(m => ({
-          role: m.role,
-          content: m.content
-        })),
+        updatedMessages,
         user.id
       );
 
@@ -148,20 +184,6 @@ const Assistant = () => {
       ]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Function to get welcome message based on language
-  const getWelcomeMessage = (): string => {
-    switch (language) {
-      case 'en':
-        return "Hello! I'm your personal AI assistant. How may I help you today?";
-      case 'es':
-        return "¡Hola! Soy tu asistente de IA personal. ¿Cómo puedo ayudarte hoy?";
-      case 'de':
-        return "Hallo! Ich bin Ihr persönlicher KI-Assistent. Wie kann ich Ihnen heute helfen?";
-      default:
-        return "Bonjour! Je suis votre assistant IA personnel. Comment puis-je vous aider aujourd'hui?";
     }
   };
 

@@ -545,11 +545,23 @@ export const sendChatMessage = async (message: string, chatHistory: any[] = [], 
     };
   }
   
-  const response = await supabase.functions.invoke('gemini-chat', {
-    body: { message, chatHistory, userId }
-  });
-  
-  return { data: response.data, error: response.error };
+  try {
+    const response = await supabase.functions.invoke('gemini-chat', {
+      body: { message, chatHistory, userId }
+    });
+    
+    if (response.error) {
+      throw new Error(response.error.message || "Error invoking gemini-chat function");
+    }
+    
+    return { data: response.data, error: null };
+  } catch (error) {
+    console.error("Error sending chat message:", error);
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 };
 
 export const getAIAnalysis = async (userId: string) => {
@@ -563,11 +575,23 @@ export const getAIAnalysis = async (userId: string) => {
     };
   }
   
-  const response = await supabase.functions.invoke('gemini-analysis', {
-    body: { userId }
-  });
-  
-  return { data: response.data, error: response.error };
+  try {
+    const response = await supabase.functions.invoke('gemini-analysis', {
+      body: { userId }
+    });
+    
+    if (response.error) {
+      throw new Error(response.error.message || "Error invoking gemini-analysis function");
+    }
+    
+    return { data: response.data, error: null };
+  } catch (error) {
+    console.error("Error getting AI analysis:", error);
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 };
 
 // User settings
