@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChart, BarChart } from "@/components/ui/chart";
+import { AreaChart, BarChart } from "@/components/ui/custom-charts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, LineChart, Loader2, AlertCircle, PieChart, TrendingUp } from "lucide-react";

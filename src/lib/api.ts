@@ -541,16 +541,15 @@ export const sendChatMessage = async (message: string, chatHistory: any[] = [], 
       data: { 
         response: "⚠️ **Mode hors connexion**\n\nL'assistant IA n'est pas disponible en mode hors connexion. Veuillez vous connecter à Internet pour utiliser cette fonctionnalité."
       }, 
-      error: null,
-      status: 200
+      error: null
     };
   }
   
-  const { data, error, status } = await supabase.functions.invoke('gemini-chat', {
+  const response = await supabase.functions.invoke('gemini-chat', {
     body: { message, chatHistory, userId }
   });
   
-  return { data, error, status };
+  return { data: response.data, error: response.error };
 };
 
 export const getAIAnalysis = async (userId: string) => {
@@ -560,16 +559,15 @@ export const getAIAnalysis = async (userId: string) => {
         analysis: "⚠️ **Mode hors connexion**\n\nL'analyse IA n'est pas disponible en mode hors connexion. Veuillez vous connecter à Internet pour utiliser cette fonctionnalité.",
         stats: null
       }, 
-      error: null,
-      status: 200
+      error: null
     };
   }
   
-  const { data, error, status } = await supabase.functions.invoke('gemini-analysis', {
+  const response = await supabase.functions.invoke('gemini-analysis', {
     body: { userId }
   });
   
-  return { data, error, status };
+  return { data: response.data, error: response.error };
 };
 
 // User settings

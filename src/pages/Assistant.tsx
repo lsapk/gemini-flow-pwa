@@ -100,7 +100,7 @@ const Assistant = () => {
     // Add user message to the chat
     const updatedMessages = [
       ...messages,
-      { role: "user", content: userMessage },
+      { role: "user" as const, content: userMessage },
     ];
     setMessages(updatedMessages);
     setLoading(true);
@@ -129,7 +129,7 @@ const Assistant = () => {
       // Add assistant response to the chat
       setMessages([
         ...updatedMessages,
-        { role: "assistant", content: data.response },
+        { role: "assistant" as const, content: data.response },
       ]);
     } catch (error) {
       console.error("Error sending message to assistant:", error);
@@ -142,7 +142,7 @@ const Assistant = () => {
       setMessages([
         ...updatedMessages,
         { 
-          role: "assistant", 
+          role: "assistant" as const, 
           content: "❌ **Désolé, une erreur s'est produite.**\n\nJe n'ai pas pu traiter votre demande. Veuillez réessayer plus tard." 
         },
       ]);
