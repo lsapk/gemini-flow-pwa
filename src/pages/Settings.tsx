@@ -27,7 +27,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -45,8 +45,8 @@ const Settings = () => {
         if (data) {
           setSettings(data as UserSettings);
           // Set theme in the theme provider based on user settings
-          if (data.theme) {
-            setTheme(data.theme);
+          if (data.theme && (data.theme === 'light' || data.theme === 'dark' || data.theme === 'system')) {
+            setTheme(data.theme as "light" | "dark" | "system");
           }
         }
       } catch (error) {
@@ -81,8 +81,8 @@ const Settings = () => {
       });
       
       // Update theme in the theme provider
-      if (settings.theme) {
-        setTheme(settings.theme);
+      if (settings.theme && (settings.theme === 'light' || settings.theme === 'dark' || settings.theme === 'system')) {
+        setTheme(settings.theme as "light" | "dark" | "system");
       }
       
     } catch (error) {
