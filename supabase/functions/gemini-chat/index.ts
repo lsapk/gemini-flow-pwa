@@ -7,8 +7,8 @@ import { GoogleGenerativeAI } from "npm:@google/generative-ai@^0.2.0";
 // Initialize Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
 
-// Set up the model configuration - Using gemini-pro instead of flash
-const modelName = "gemini-pro";
+// Set up the model configuration - Using gemini-1.5-flash for improved performance
+const modelName = "gemini-1.5-flash";
 const model = genAI.getGenerativeModel({ model: modelName });
 
 // Define CORS headers for browser access
@@ -44,6 +44,7 @@ serve(async (req) => {
     const { message, chatHistory = [] } = await req.json();
 
     console.log("Processing chat request with model:", modelName);
+    console.log("Chat history length:", chatHistory.length);
 
     // Prepare the chat history for Gemini
     const formattedHistory = chatHistory.map((msg: any) => ({
@@ -97,8 +98,16 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in gemini-chat function:", error);
+    
+    // Provide more detailed error information for debugging
+    const errorResponse = {
+      error: error.message,
+      details: error.toString(),
+      modelAttempted: modelName,
+    };
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify(errorResponse),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

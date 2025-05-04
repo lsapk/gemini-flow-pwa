@@ -1,163 +1,130 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SettingsIcon, BellIcon, MoonIcon, ComputerIcon, SunIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { SettingsIcon, UserCircle, BellIcon, Globe, CreditCard, MailIcon } from "lucide-react";
-import { getUserSettings, updateUserSettings, sendContactEmail } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { getUserSettings, updateUserSettings } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
+import { useTheme } from "@/components/theme-provider";
+
+type UserSettings = {
+  notifications_enabled: boolean;
+  sound_enabled: boolean;
+  focus_mode: boolean;
+  theme: string;
+  language: string;
+  clock_format: string;
+};
 
 const Settings = () => {
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [formState, setFormState] = useState({
-    theme: "system",
-    language: "fr",
-    notificationsEnabled: true,
-    soundEnabled: true,
-    clockFormat: "24h",
-    focusMode: false,
-  });
-  
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
-  
-  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { setTheme } = useTheme();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) {
-      toast({
-        title: "Authentification requise",
-        description: "Veuillez vous connecter pour accéder aux paramètres.",
-        variant: "destructive",
-      });
-      navigate("/login");
-      return;
-    }
-
-    const fetchUserSettings = async () => {
+    const loadSettings = async () => {
+      if (!user) return;
+      
       try {
         setLoading(true);
         const { data, error } = await getUserSettings();
-
+        
         if (error) {
           throw new Error(error.message);
         }
-
+        
         if (data) {
-          setFormState({
-            theme: data.theme || "system",
-            language: data.language || "fr",
-            notificationsEnabled: data.notifications_enabled !== false,
-            soundEnabled: data.sound_enabled !== false,
-            clockFormat: data.clock_format || "24h",
-            focusMode: data.focus_mode || false,
-          });
+          setSettings(data as UserSettings);
+          // Set theme in the theme provider based on user settings
+          if (data.theme) {
+            setTheme(data.theme);
+          }
         }
       } catch (error) {
+        console.error("Error loading settings:", error);
         toast({
           title: "Erreur",
           description: "Impossible de charger vos paramètres.",
           variant: "destructive",
         });
-        console.error("Error fetching user settings:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchUserSettings();
-  }, [user, toast, navigate]);
-
-  const handleSettingChange = async (key: string, value: any) => {
-    if (!user) return;
     
-    const newFormState = { ...formState, [key]: value };
-    setFormState(newFormState);
+    loadSettings();
+  }, [user, toast, setTheme]);
+
+  const handleSaveSettings = async () => {
+    if (!settings) return;
     
     try {
-      const updates = {
-        theme: newFormState.theme,
-        language: newFormState.language,
-        notifications_enabled: newFormState.notificationsEnabled,
-        sound_enabled: newFormState.soundEnabled,
-        clock_format: newFormState.clockFormat,
-        focus_mode: newFormState.focusMode,
-      };
+      setSaving(true);
+      const { error } = await updateUserSettings(settings);
       
-      const { error } = await updateUserSettings(updates);
-      
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new Error(error.message);
+      }
       
       toast({
-        title: "Paramètres mis à jour",
-        description: "Vos préférences ont été enregistrées.",
+        title: "Paramètres sauvegardés",
+        description: "Vos préférences ont été mises à jour.",
       });
+      
+      // Update theme in the theme provider
+      if (settings.theme) {
+        setTheme(settings.theme);
+      }
+      
     } catch (error) {
+      console.error("Error saving settings:", error);
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer vos paramètres.",
+        description: "Impossible de sauvegarder vos paramètres.",
         variant: "destructive",
       });
-      console.error("Error updating settings:", error);
-    }
-  };
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactForm.name || !contactForm.email || !contactForm.message) {
-      toast({
-        title: "Erreur",
-        description: "Tous les champs sont requis.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      setContactSubmitting(true);
-      const { data, error } = await sendContactEmail(
-        contactForm.name,
-        contactForm.email,
-        contactForm.message
-      );
-      
-      if (error) throw new Error(error.message);
-      
-      toast({
-        title: "Message envoyé",
-        description: "Votre message a été envoyé avec succès.",
-      });
-      
-      setContactForm({
-        name: "",
-        email: "",
-        message: "",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer votre message.",
-        variant: "destructive",
-      });
-      console.error("Error sending contact message:", error);
     } finally {
-      setContactSubmitting(false);
+      setSaving(false);
     }
   };
+
+  const handleSettingChange = (key: keyof UserSettings, value: any) => {
+    if (!settings) return;
+    
+    setSettings({
+      ...settings,
+      [key]: value,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <SettingsIcon className="h-8 w-8" />
+            Paramètres
+          </h1>
+          <p className="text-muted-foreground">
+            Personnalisez l'application selon vos préférences.
+          </p>
+        </div>
+        
+        <div className="flex items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -167,296 +134,183 @@ const Settings = () => {
           Paramètres
         </h1>
         <p className="text-muted-foreground">
-          Gérez vos préférences et votre compte.
+          Personnalisez l'application selon vos préférences.
         </p>
       </div>
-
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid grid-cols-4 md:grid-cols-4 lg:w-[400px]">
+      
+      <Tabs defaultValue="general">
+        <TabsList className="mb-6">
           <TabsTrigger value="general">Général</TabsTrigger>
-          <TabsTrigger value="account">Compte</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="appearance">Apparence</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="general">
-          <Card className="glass-card">
+        {/* General Settings */}
+        <TabsContent value="general" className="space-y-6">
+          <Card>
             <CardHeader>
               <CardTitle>Paramètres généraux</CardTitle>
               <CardDescription>
-                Personnalisez l'apparence et le comportement de DeepFlow.
+                Configurez les options principales de l'application.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="theme">Thème</Label>
-                  <Select 
-                    disabled={loading} 
-                    value={formState.theme} 
-                    onValueChange={(value) => handleSettingChange("theme", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un thème" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Clair</SelectItem>
-                      <SelectItem value="dark">Sombre</SelectItem>
-                      <SelectItem value="system">Système</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="language">Langue</Label>
-                  <Select 
-                    disabled={loading} 
-                    value={formState.language} 
-                    onValueChange={(value) => handleSettingChange("language", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez une langue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="clockFormat">Format d'horloge</Label>
-                  <Select 
-                    disabled={loading} 
-                    value={formState.clockFormat} 
-                    onValueChange={(value) => handleSettingChange("clockFormat", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Format d'horloge" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="12h">12 heures (AM/PM)</SelectItem>
-                      <SelectItem value="24h">24 heures</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="focusMode">Mode Focus</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Réduire les distractions et les notifications
-                    </p>
+              {/* Language selection */}
+              <div className="space-y-2">
+                <Label htmlFor="language">Langue</Label>
+                <Select 
+                  value={settings?.language || 'fr'} 
+                  onValueChange={(value) => handleSettingChange('language', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez une langue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="de">Deutsch</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Clock format */}
+              <div className="space-y-2">
+                <Label>Format de l'horloge</Label>
+                <RadioGroup 
+                  value={settings?.clock_format || '24h'} 
+                  onValueChange={(value) => handleSettingChange('clock_format', value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="12h" id="12h" />
+                    <Label htmlFor="12h">12 heures (AM/PM)</Label>
                   </div>
-                  <Switch
-                    id="focusMode"
-                    disabled={loading}
-                    checked={formState.focusMode}
-                    onCheckedChange={(checked) => handleSettingChange("focusMode", checked)}
-                  />
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="24h" id="24h" />
+                    <Label htmlFor="24h">24 heures</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              {/* Focus Mode */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Mode Focus</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Activez le mode Focus pour éliminer les distractions pendant vos sessions de concentration.
+                  </p>
                 </div>
+                <Switch 
+                  checked={settings?.focus_mode || false}
+                  onCheckedChange={(value) => handleSettingChange('focus_mode', value)}
+                />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="account">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Compte</CardTitle>
-              <CardDescription>
-                Gérez votre profil et vos informations personnelles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-                <UserCircle className="h-20 w-20 text-muted-foreground" />
-                <div className="space-y-1 text-center sm:text-left">
-                  <h3 className="text-lg font-medium">{user?.user_metadata?.display_name || user?.email}</h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Nom d'affichage</Label>
-                  <Input id="displayName" value={user?.user_metadata?.display_name || ""} disabled />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={user?.email || ""} disabled />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  signOut();
-                  navigate("/login");
-                }}
-              >
-                Se déconnecter
-              </Button>
-              <Button disabled>
-                Mettre à jour le profil
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Card className="glass-card mt-6">
-            <CardHeader>
-              <CardTitle>Plan d'abonnement</CardTitle>
-              <CardDescription>
-                Gérez votre abonnement et vos options de facturation.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="rounded-lg border p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium">Plan Gratuit</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Fonctionnalités de base avec des limitations.
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Actif
-                  </span>
-                </div>
-                <Separator className="my-4" />
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center">
-                    <span className="mr-2">✓</span> Suivi de tâches
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2">✓</span> Journal personnel
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2">✓</span> Mode Focus
-                  </li>
-                  <li className="flex items-center text-muted-foreground">
-                    <span className="mr-2">✗</span> Analyse IA avancée
-                  </li>
-                  <li className="flex items-center text-muted-foreground">
-                    <span className="mr-2">✗</span> Assistant IA illimité
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Passer à Premium
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications">
-          <Card className="glass-card">
+        {/* Notifications Settings */}
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
             <CardHeader>
               <CardTitle>Notifications</CardTitle>
               <CardDescription>
-                Configurez les notifications et les alertes.
+                Configurez vos préférences de notifications.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Notifications */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="notifications">Notifications</Label>
+                  <Label className="flex items-center gap-2">
+                    <BellIcon className="h-4 w-4" />
+                    Notifications
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    Activer les notifications dans l'application
+                    Activez ou désactivez toutes les notifications.
                   </p>
                 </div>
-                <Switch
-                  id="notifications"
-                  disabled={loading}
-                  checked={formState.notificationsEnabled}
-                  onCheckedChange={(checked) => handleSettingChange("notificationsEnabled", checked)}
+                <Switch 
+                  checked={settings?.notifications_enabled || false}
+                  onCheckedChange={(value) => handleSettingChange('notifications_enabled', value)}
                 />
               </div>
               
+              {/* Sounds */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="sound">Sons</Label>
+                  <Label>Sons</Label>
                   <p className="text-sm text-muted-foreground">
-                    Activer les sons pour les notifications
+                    Activez ou désactivez les sons de notification.
                   </p>
                 </div>
-                <Switch
-                  id="sound"
-                  disabled={loading || !formState.notificationsEnabled}
-                  checked={formState.soundEnabled && formState.notificationsEnabled}
-                  onCheckedChange={(checked) => handleSettingChange("soundEnabled", checked)}
+                <Switch 
+                  checked={settings?.sound_enabled || false}
+                  onCheckedChange={(value) => handleSettingChange('sound_enabled', value)}
+                  disabled={!settings?.notifications_enabled}
                 />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="contact">
-          <Card className="glass-card">
+        {/* Appearance Settings */}
+        <TabsContent value="appearance" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle>Contactez-nous</CardTitle>
+              <CardTitle>Apparence</CardTitle>
               <CardDescription>
-                Envoyez un message au créateur de DeepFlow.
+                Personnalisez l'apparence de l'application.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleContactSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nom</Label>
-                  <Input 
-                    id="name" 
-                    value={contactForm.name} 
-                    onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
-                    placeholder="Votre nom" 
-                    required 
-                  />
+            <CardContent className="space-y-6">
+              {/* Theme Selection */}
+              <div className="space-y-3">
+                <Label>Thème</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    variant={settings?.theme === 'light' ? 'default' : 'outline'}
+                    className="flex flex-col items-center justify-center gap-2 h-20"
+                    onClick={() => handleSettingChange('theme', 'light')}
+                  >
+                    <SunIcon className="h-5 w-5" />
+                    <span>Clair</span>
+                  </Button>
+                  
+                  <Button 
+                    variant={settings?.theme === 'dark' ? 'default' : 'outline'}
+                    className="flex flex-col items-center justify-center gap-2 h-20"
+                    onClick={() => handleSettingChange('theme', 'dark')}
+                  >
+                    <MoonIcon className="h-5 w-5" />
+                    <span>Sombre</span>
+                  </Button>
+                  
+                  <Button 
+                    variant={settings?.theme === 'system' ? 'default' : 'outline'}
+                    className="flex flex-col items-center justify-center gap-2 h-20"
+                    onClick={() => handleSettingChange('theme', 'system')}
+                  >
+                    <ComputerIcon className="h-5 w-5" />
+                    <span>Système</span>
+                  </Button>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={contactForm.email} 
-                    onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
-                    placeholder="votre@email.com" 
-                    required 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea 
-                    id="message" 
-                    value={contactForm.message} 
-                    onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
-                    placeholder="Écrivez votre message ici..." 
-                    required 
-                    rows={5} 
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={contactSubmitting}>
-                  <MailIcon className="mr-2 h-4 w-4" />
-                  {contactSubmitting ? "Envoi en cours..." : "Envoyer le message"}
-                </Button>
-              </form>
+              </div>
             </CardContent>
-            <CardFooter className="flex flex-col">
-              <p className="text-sm text-muted-foreground">
-                Votre message sera envoyé à : DeepFlow.ia@gmail.com
-              </p>
-            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSaveSettings}
+          disabled={saving || !settings}
+          className="min-w-[120px]"
+        >
+          {saving ? "Sauvegarde..." : "Sauvegarder"}
+        </Button>
+      </div>
     </div>
   );
 };

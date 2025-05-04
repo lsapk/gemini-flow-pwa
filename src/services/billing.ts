@@ -1,124 +1,151 @@
 
-// Service pour gérer l'intégration de Google Play Billing
+// This service handles billing operations for the app,
+// with support for Google Play Billing for native apps
 
-let isNativeApp = false;
-let billingAvailable = false;
+// Check if running in native environment
+const isNativeApp = (): boolean => {
+  return typeof (window as any).Capacitor !== 'undefined';
+};
 
-// Fonction pour détecter si nous sommes dans une application native
-export const detectNativeEnvironment = () => {
-  // Detect Capacitor environment
-  isNativeApp = 
-    typeof (window as any).Capacitor !== 'undefined' && 
-    (window as any).Capacitor.isNativePlatform();
+// Initialize native billing if available
+export const initBillingOnLoad = async () => {
+  try {
+    console.log("Running in native environment:", isNativeApp());
     
-  console.log('Running in native environment:', isNativeApp);
-  return isNativeApp;
-};
-
-// Initialiser l'API Google Play Billing
-export const initializeBilling = async () => {
-  if (!isNativeApp) {
-    console.log('Billing not initialized - not in native environment');
-    return false;
-  }
-  
-  try {
-    // Cette partie sera complétée après l'installation des plugins Capacitor
-    // Nécessite @capacitor-community/google-play-billing
-    console.log('Billing initialization would happen here in native app');
-    billingAvailable = true;
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize billing:', error);
-    return false;
-  }
-};
-
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  price: string;
-  priceAmountMicros: number;
-  priceCurrencyCode: string;
-  type: 'inapp' | 'subs';
-}
-
-// Récupérer les produits disponibles
-export const getProducts = async (): Promise<Product[]> => {
-  if (!isNativeApp || !billingAvailable) {
-    // Retour de produits fictifs pour le développement web
-    return [
-      {
-        id: 'premium_monthly',
-        title: 'Premium Mensuel',
-        description: 'Abonnement premium avec accès à toutes les fonctionnalités',
-        price: '9,99 €',
-        priceAmountMicros: 9990000,
-        priceCurrencyCode: 'EUR',
-        type: 'subs'
-      },
-      {
-        id: 'premium_yearly',
-        title: 'Premium Annuel',
-        description: 'Abonnement premium annuel avec économie de 20%',
-        price: '89,99 €',
-        priceAmountMicros: 89990000,
-        priceCurrencyCode: 'EUR',
-        type: 'subs'
-      }
-    ];
-  }
-  
-  try {
-    // Cette partie sera complétée après l'installation des plugins Capacitor
-    console.log('Would fetch products from Google Play Billing in native app');
-    return [];
-  } catch (error) {
-    console.error('Failed to get products:', error);
-    return [];
-  }
-};
-
-// Effectuer un achat
-export const purchaseProduct = async (productId: string): Promise<boolean> => {
-  if (!isNativeApp || !billingAvailable) {
-    console.log('Purchase not available in web environment');
-    return false;
-  }
-  
-  try {
-    // Cette partie sera complétée après l'installation des plugins Capacitor
-    console.log('Would initiate purchase for:', productId);
-    return true;
-  } catch (error) {
-    console.error('Purchase failed:', error);
-    return false;
-  }
-};
-
-// Vérifier les abonnements actifs
-export const checkSubscriptions = async (): Promise<string[]> => {
-  if (!isNativeApp || !billingAvailable) {
-    // Pour le développement web, on peut simuler un abonnement
-    return [];
-  }
-  
-  try {
-    // Cette partie sera complétée après l'installation des plugins Capacitor
-    console.log('Would check active subscriptions');
-    return [];
-  } catch (error) {
-    console.error('Failed to check subscriptions:', error);
-    return [];
-  }
-};
-
-// Initialiser le service de facturation au chargement
-export const initBillingOnLoad = () => {
-  if (detectNativeEnvironment()) {
-    initializeBilling().then(success => {
-      console.log('Billing initialization result:', success);
+    if (!isNativeApp()) {
+      return;
+    }
+    
+    // Check if the Google Play Billing API is available
+    const { Plugins } = (window as any).Capacitor;
+    if (!Plugins.InAppPurchase) {
+      console.warn("Google Play Billing plugin not available");
+      return;
+    }
+    
+    // Register Billing event listeners
+    Plugins.InAppPurchase.addListener('purchaseCompleted', (info: any) => {
+      console.log('Purchase completed:', info);
+      // Here you should validate the purchase with your backend
+      validatePurchaseOnServer(info);
     });
+
+    // Initialize products
+    await registerProducts();
+    
+    console.log("Native billing initialized successfully");
+  } catch (error) {
+    console.error("Error initializing billing:", error);
+  }
+};
+
+// Register available products (plans)
+const registerProducts = async () => {
+  if (!isNativeApp()) return;
+
+  try {
+    const { Plugins } = (window as any).Capacitor;
+    if (!Plugins.InAppPurchase) return;
+    
+    // Define your product IDs here
+    const productIds = [
+      'com.deepflow.premium.monthly',
+      'com.deepflow.premium.yearly'
+    ];
+    
+    // Register products with the Play Store
+    await Plugins.InAppPurchase.getProducts(productIds);
+  } catch (error) {
+    console.error("Error registering products:", error);
+  }
+};
+
+// Make a purchase
+export const makePurchase = async (productId: string): Promise<boolean> => {
+  if (!isNativeApp()) {
+    console.warn("Purchase attempted in non-native environment");
+    return false;
+  }
+  
+  try {
+    const { Plugins } = (window as any).Capacitor;
+    if (!Plugins.InAppPurchase) return false;
+    
+    await Plugins.InAppPurchase.purchase(productId);
+    return true;
+  } catch (error) {
+    console.error("Purchase error:", error);
+    return false;
+  }
+};
+
+// Restore purchases
+export const restorePurchases = async (): Promise<boolean> => {
+  if (!isNativeApp()) return false;
+  
+  try {
+    const { Plugins } = (window as any).Capacitor;
+    if (!Plugins.InAppPurchase) return false;
+    
+    const result = await Plugins.InAppPurchase.restorePurchases();
+    
+    // Handle restored purchases
+    if (result && result.purchases) {
+      for (const purchase of result.purchases) {
+        validatePurchaseOnServer(purchase);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Restore purchases error:", error);
+    return false;
+  }
+};
+
+// Validate purchase with your server
+const validatePurchaseOnServer = async (purchaseInfo: any) => {
+  try {
+    // Here you would call your Supabase Edge Function to validate and record the purchase
+    // Example:
+    // await supabase.functions.invoke('validate-purchase', {
+    //   body: { purchaseInfo }
+    // });
+    
+    console.log("Purchase validated:", purchaseInfo);
+  } catch (error) {
+    console.error("Purchase validation error:", error);
+  }
+};
+
+// Get subscription status
+export const getSubscriptionStatus = async (): Promise<{isActive: boolean, plan: string | null}> => {
+  try {
+    if (isNativeApp()) {
+      const { Plugins } = (window as any).Capacitor;
+      if (!Plugins.InAppPurchase) {
+        return { isActive: false, plan: null };
+      }
+      
+      // Get active subscriptions
+      const result = await Plugins.InAppPurchase.getPurchases();
+      if (result && result.purchases && result.purchases.length > 0) {
+        const activeSub = result.purchases.find((p: any) => 
+          p.productId.includes('premium') && p.state === 'ACTIVE'
+        );
+        
+        if (activeSub) {
+          return { isActive: true, plan: activeSub.productId };
+        }
+      }
+      
+      return { isActive: false, plan: null };
+    } else {
+      // Web implementation could check with your backend
+      return { isActive: false, plan: null };
+    }
+  } catch (error) {
+    console.error("Error checking subscription:", error);
+    return { isActive: false, plan: null };
   }
 };

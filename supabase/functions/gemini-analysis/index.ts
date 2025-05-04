@@ -8,8 +8,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Initialize Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
 
-// Set up the model configuration - Using gemini-pro instead of flash since it's more widely available
-const modelName = "gemini-pro";
+// Set up the model configuration - Using gemini-1.5-flash for improved performance
+const modelName = "gemini-1.5-flash";
 const model = genAI.getGenerativeModel({ model: modelName });
 
 // Initialize Supabase client
@@ -46,9 +46,9 @@ serve(async (req) => {
     const [tasksResult, habitsResult, journalResult, goalsResult, focusResult] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId),
       supabase.from('habits').select('*').eq('user_id', userId),
-      supabase.from('journal_entries').select('*').eq('user_id', userId).limit(20),
+      supabase.from('journal_entries').select('*').eq('user_id', userId).limit(20).order('created_at', { ascending: false }),
       supabase.from('goals').select('*').eq('user_id', userId),
-      supabase.from('focus_sessions').select('*').eq('user_id', userId).limit(50)
+      supabase.from('focus_sessions').select('*').eq('user_id', userId).limit(50).order('created_at', { ascending: false })
     ]);
     
     const tasks = tasksResult.data || [];
@@ -56,6 +56,14 @@ serve(async (req) => {
     const journalEntries = journalResult.data || [];
     const goals = goalsResult.data || [];
     const focusSessions = focusResult.data || [];
+
+    console.log("Data fetched successfully:", {
+      tasksCount: tasks.length,
+      habitsCount: habits.length,
+      journalCount: journalEntries.length,
+      goalsCount: goals.length,
+      focusCount: focusSessions.length
+    });
 
     // Prepare data summary for the AI
     const completedTasks = tasks.filter(task => task.completed).length;
@@ -117,7 +125,11 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in gemini-analysis function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString(),
+        modelAttempted: modelName 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

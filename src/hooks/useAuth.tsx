@@ -1,110 +1,137 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { createContext, useState, useContext, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
-interface AuthProviderProps {
-  children: ReactNode;
+interface UserProfile {
+  id: string;
+  display_name: string;
+  email: string;
+  photo_url?: string;
+  bio?: string;
 }
 
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: any | null;
-  loading: boolean;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+interface AuthState {
+  user: (User & { profile?: UserProfile }) | null;
+  session: Session | null;
+  loading: boolean; // Using loading instead of isLoading for consistency
+}
+
+interface AuthContextType extends AuthState {
+  signUp: (email: string, password: string, displayName: string) => Promise<{ data: any; error: any }>;
+  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
   user: null,
+  session: null,
   loading: true,
-  signUp: async () => {},
-  signIn: async () => {},
+  signUp: async () => ({ data: null, error: null }),
+  signIn: async () => ({ data: null, error: null }),
   signOut: async () => {},
 });
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    session: null,
+    loading: true,
+  });
 
-  // Check user on mount and set up persistent session
   useEffect(() => {
-    // First set up the auth state listener to avoid race conditions
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
-        if (session) {
-          setIsAuthenticated(true);
-          setUser(session.user);
-          
-          // Get user profile data after small delay to prevent deadlock
-          setTimeout(async () => {
-            try {
-              const { data: userProfile } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-                
-              if (userProfile) {
-                setUser(prev => ({ ...prev, profile: userProfile }));
-              }
-            } catch (error) {
-              console.error("Error fetching user profile:", error);
-            }
-          }, 0);
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    // Then check for existing session
-    const checkUser = async () => {
+    // Attempt to restore session from local storage
+    const initAuth = async () => {
       try {
+        // Check if there's a session
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (session) {
-          console.log("Existing session found");
-          setIsAuthenticated(true);
-          setUser(session.user);
+          // If there's a session, get the user
+          const { data: { user } } = await supabase.auth.getUser();
           
-          // Get additional user profile data if needed
-          const { data: userProfile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          if (user) {
+            // Fetch user profile if user exists
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
             
-          if (userProfile) {
-            setUser(prev => ({ ...prev, profile: userProfile }));
+            setAuthState({
+              user: { ...user, profile },
+              session,
+              loading: false,
+            });
+          } else {
+            setAuthState({
+              user: null,
+              session: null,
+              loading: false,
+            });
           }
         } else {
-          console.log("No session found");
+          setAuthState({
+            user: null,
+            session: null,
+            loading: false,
+          });
         }
       } catch (error) {
-        console.error('Error checking user:', error);
-      } finally {
-        setLoading(false);
+        console.error("Error initializing auth:", error);
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false,
+        });
       }
     };
 
-    checkUser();
+    // Initialize auth state
+    initAuth();
 
+    // Subscribe to auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
+
+      if (event === 'SIGNED_IN' && session) {
+        // If signed in, get the user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Fetch user profile if user exists
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          setAuthState({
+            user: { ...user, profile },
+            session,
+            loading: false,
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // If signed out, clear the user
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false,
+        });
+      }
+    });
+
+    // Cleanup subscription
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription?.unsubscribe();
     };
   }, []);
 
-  // Sign up
+  // Sign up function
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
-      const { error, data } = await supabase.auth.signUp({
+      const response = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -113,76 +140,62 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           },
         },
       });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Compte créé",
-        description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.",
-      });
+      
+      return { data: response.data, error: response.error };
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erreur d'inscription",
-        description: error.message || "Une erreur est survenue lors de l'inscription.",
-      });
-      throw error;
+      console.error("Sign up failed:", error);
+      return { data: null, error };
     }
   };
 
-  // Sign in with persistent session
+  // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({
+      const response = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      if (error) {
-        throw error;
+      
+      if (response.data?.user) {
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', response.data.user.id)
+          .single();
+        
+        // Update auth state
+        setAuthState({
+          user: { ...response.data.user, profile },
+          session: response.data.session,
+          loading: false,
+        });
       }
-
-      toast({
-        title: "Connecté",
-        description: "Vous êtes maintenant connecté à DeepFlow.",
-      });
+      
+      return { data: response.data, error: response.error };
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erreur de connexion",
-        description: error.message || "Identifiants invalides. Veuillez réessayer.",
-      });
-      throw error;
+      console.error("Login failed:", error);
+      return { data: null, error };
     }
   };
 
-  // Sign out
+  // Sign out function
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      toast({
-        title: "Déconnecté",
-        description: "Vous avez été déconnecté avec succès.",
+      await supabase.auth.signOut();
+      setAuthState({
+        user: null,
+        session: null,
+        loading: false,
       });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erreur de déconnexion",
-        description: error.message || "Une erreur est survenue lors de la déconnexion.",
-      });
-      throw error;
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 
+  // Create the auth context value
   const value = {
-    isAuthenticated,
-    user,
-    loading,
+    ...authState,
     signUp,
     signIn,
     signOut,

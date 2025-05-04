@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 
 const AppLayout = () => {
-  const { user, loading } = useAuth(); // Changed from isLoading to loading to match the context
+  const { user, loading } = useAuth(); // Using loading property correctly
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const location = useLocation();

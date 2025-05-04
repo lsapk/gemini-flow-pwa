@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './index.css'
 import { initBillingOnLoad } from './services/billing'
 
-// Initialiser la facturation native si disponible
+// Initialize native billing if available
 document.addEventListener('DOMContentLoaded', () => {
   initBillingOnLoad();
 });
