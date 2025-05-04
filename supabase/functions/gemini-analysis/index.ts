@@ -8,8 +8,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // Initialize Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
 
-// Set up the model configuration
-const modelName = "gemini-1.5-flash-latest"; // Using Flash 2.0 as specified
+// Set up the model configuration - Using gemini-pro instead of flash since it's more widely available
+const modelName = "gemini-pro";
 const model = genAI.getGenerativeModel({ model: modelName });
 
 // Initialize Supabase client
@@ -91,9 +91,13 @@ serve(async (req) => {
     Format your response in clear sections with bullet points for easy readability.
     `;
 
+    console.log("Sending request to Gemini API with model:", modelName);
+
     // Generate analysis from Gemini
     const result = await model.generateContent(prompt);
     const response = result.response.text();
+
+    console.log("Received response from Gemini API");
 
     // Return the analysis
     return new Response(

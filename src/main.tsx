@@ -22,4 +22,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Configuration de Gemini API pour débogage côté client
+console.log("Gemini API configuration initialized");
+
 createRoot(document.getElementById("root")!).render(<App />);

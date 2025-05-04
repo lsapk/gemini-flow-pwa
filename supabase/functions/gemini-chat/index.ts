@@ -7,8 +7,8 @@ import { GoogleGenerativeAI } from "npm:@google/generative-ai@^0.2.0";
 // Initialize Google Generative AI with your API key
 const genAI = new GoogleGenerativeAI(Deno.env.get("GEMINI_API_KEY") || "");
 
-// Set up the model configuration
-const modelName = "gemini-1.5-flash-latest"; // Using Flash 2.0 as specified
+// Set up the model configuration - Using gemini-pro instead of flash
+const modelName = "gemini-pro";
 const model = genAI.getGenerativeModel({ model: modelName });
 
 // Define CORS headers for browser access
@@ -42,6 +42,8 @@ serve(async (req) => {
 
   try {
     const { message, chatHistory = [] } = await req.json();
+
+    console.log("Processing chat request with model:", modelName);
 
     // Prepare the chat history for Gemini
     const formattedHistory = chatHistory.map((msg: any) => ({
@@ -81,6 +83,8 @@ serve(async (req) => {
     // Generate a response
     const result = await chat.sendMessage(message);
     const response = result.response.text();
+
+    console.log("Received response from Gemini chat API");
 
     // Return the AI response
     return new Response(
