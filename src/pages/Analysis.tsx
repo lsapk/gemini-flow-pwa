@@ -1,8 +1,17 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { SimpleAreaChart, SimpleBarChart, SimplePieChart, SimpleLineChart, AreaChart, BarChart, PieChart, LineChart } from "@/components/ui/custom-charts";
+import { 
+  SimpleAreaChart, 
+  SimpleBarChart, 
+  SimplePieChart, 
+  SimpleLineChart, 
+  AreaChart, 
+  BarChart, 
+  PieChart, 
+  LineChart,
+  ChartData
+} from "@/components/ui/custom-charts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -395,15 +404,15 @@ const Analysis = () => {
     ];
   };
 
-  const getProductivityData = () => {
+  const getProductivityData = (): ChartData[] => {
     return [
-      { name: "Lun", high: 85, low: 50 },
-      { name: "Mar", high: 75, low: 60 },
-      { name: "Mer", high: 90, low: 70 },
-      { name: "Jeu", high: 65, low: 40 },
-      { name: "Ven", high: 80, low: 55 },
-      { name: "Sam", high: 60, low: 35 },
-      { name: "Dim", high: 50, low: 30 }
+      { name: "Lun", high: 85, low: 50, value: 85 },
+      { name: "Mar", high: 75, low: 60, value: 75 },
+      { name: "Mer", high: 90, low: 70, value: 90 },
+      { name: "Jeu", high: 65, low: 40, value: 65 },
+      { name: "Ven", high: 80, low: 55, value: 80 },
+      { name: "Sam", high: 60, low: 35, value: 60 },
+      { name: "Dim", high: 50, low: 30, value: 50 }
     ];
   };
 
