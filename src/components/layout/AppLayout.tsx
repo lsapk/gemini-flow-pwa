@@ -5,9 +5,10 @@ import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
+import AssistantFloating from "../AssistantFloating";
 
 const AppLayout = () => {
-  const { user, loading } = useAuth(); // Using loading property correctly
+  const { user, loading } = useAuth();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const location = useLocation();
@@ -51,6 +52,9 @@ const AppLayout = () => {
           </div>
         </main>
       </div>
+      
+      {/* Add floating assistant */}
+      <AssistantFloating />
     </div>
   );
 };

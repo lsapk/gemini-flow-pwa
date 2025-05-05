@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   ChartLineIcon,
-  BrainCircuitIcon,
   CheckSquareIcon,
   ListTodoIcon,
   CalendarCheckIcon,
@@ -52,7 +51,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     { name: "Objectifs", to: "/goals", icon: <TargetIcon className="h-5 w-5" /> },
     { name: "Focus", to: "/focus", icon: <TimerIcon className="h-5 w-5" /> },
     { name: "Analyse IA", to: "/analysis", icon: <ChartLineIcon className="h-5 w-5" /> },
-    { name: "Assistant IA", to: "/assistant", icon: <BrainCircuitIcon className="h-5 w-5" /> },
+    // Removed Assistant IA from sidebar as requested
     { name: "Paramètres", to: "/settings", icon: <Settings className="h-5 w-5" /> },
   ];
 

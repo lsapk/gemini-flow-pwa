@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -12,7 +11,7 @@ const corsHeaders = {
 type LanguageCode = "fr" | "en" | "es" | "de";
 
 // Helper function to get analysis prompt based on language
-function getAnalysisPrompt(userData: any, language: LanguageCode = "fr"): string {
+function getAnalysisPrompt(userData: any, language: LanguageCode = "fr", customPrompt?: string): string {
   const { tasks, habits, goals, focusSessions, journalEntries } = userData;
   
   // Format data for AI to analyze
@@ -24,6 +23,23 @@ function getAnalysisPrompt(userData: any, language: LanguageCode = "fr"): string
   const totalFocusTime = focusSessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
   const journalCount = journalEntries.length;
   
+  // If a custom prompt is provided, use it with the user data
+  if (customPrompt) {
+    return `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Voici les données de l'utilisateur :
+
+Données utilisateur :
+- Tâches: ${tasks.length} au total (${completedTasks} terminées, ${pendingTasks} en attente)
+- Habitudes suivies: ${habitsCount}
+- Objectifs: ${goalsCount} au total (${goalsCompleted} atteints)
+- Temps total en sessions Focus: ${totalFocusTime} minutes
+- Entrées de journal: ${journalCount}
+
+Voici la demande spécifique de l'utilisateur : "${customPrompt}"
+
+Réponds de manière personnalisée à cette demande en utilisant les données fournies. Utilise du markdown riche avec des emojis pertinents et conclus avec une note encourageante.`;
+  }
+  
+  // Otherwise use the default prompts
   const prompts = {
     fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse ces données de l'utilisateur et crée un rapport détaillé avec des recommandations constructives.
 
@@ -123,7 +139,7 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
     // Parse request body
-    const { userId } = await req.json();
+    const { userId, customPrompt } = await req.json();
     
     if (!userId) {
       throw new Error("User ID is required");
@@ -221,9 +237,9 @@ serve(async (req) => {
       focusPerDay
     };
     
-    // Generate analysis
+    // Generate analysis with optional custom prompt
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = getAnalysisPrompt(userData, userLanguage);
+    const prompt = getAnalysisPrompt(userData, userLanguage, customPrompt);
     const result = await model.generateContent(prompt);
     const analysis = result.response.text();
 

@@ -82,7 +82,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     // Parse request body
-    const { message, chatHistory, userId } = await req.json();
+    const { message, chatHistory, userId, custom_prompt } = await req.json();
     
     if (!message) {
       throw new Error("Message is required");
@@ -172,17 +172,22 @@ serve(async (req) => {
     // Initialize the Google Generative AI
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Prepare history for the model
+    // Prepare history for the model with a maximum of 10 messages to prevent context overflow
+    const MAX_HISTORY_MESSAGES = 10;
     const history: ChatMessage[] = chatHistory || [];
+    const recentHistory = history.slice(-MAX_HISTORY_MESSAGES);
+
+    // Use custom prompt if provided (for analysis function), otherwise use default system prompt
+    const systemInstruction = custom_prompt || getSystemPrompt(userLanguage);
 
     // Create chat session with the Gemini model
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
-      systemInstruction: getSystemPrompt(userLanguage)
+      systemInstruction: systemInstruction
     });
 
     // Convert history to Google's chat format
-    const googleChatHistory = history.map(msg => ({
+    const googleChatHistory = recentHistory.map(msg => ({
       role: msg.role === "user" ? "user" : "model",
       parts: [{ text: msg.content }]
     }));

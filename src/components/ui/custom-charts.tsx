@@ -31,16 +31,20 @@ export const SimpleAreaChart = ({
   xAxisKey = "name",
   areaKey = "value", 
   color = "#3b82f6",
-  className
+  className,
+  tooltipTitle,
+  height = 200
 }: { 
   data: any[]; 
   xAxisKey?: string;
   areaKey?: string;
   color?: string;
   className?: string;
+  tooltipTitle?: string;
+  height?: number;
 }) => {
   return (
-    <div className={cn("h-[200px] w-full", className)}>
+    <div className={cn(`h-[${height}px] w-full`, className)}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsAreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <defs>
@@ -61,7 +65,8 @@ export const SimpleAreaChart = ({
               borderColor: 'var(--border)',
               borderRadius: '0.5rem',
               fontSize: '0.875rem'
-            }} 
+            }}
+            formatter={(value: any, name: any) => [value, tooltipTitle || name]}
           />
           <Area 
             type="monotone" 
@@ -81,16 +86,20 @@ export const SimpleBarChart = ({
   xAxisKey = "name",
   barKey = "value",
   color = "#3b82f6",
-  className
+  className,
+  tooltipTitle,
+  height = 200
 }: {
   data: any[];
   xAxisKey?: string;
   barKey?: string;
   color?: string;
   className?: string;
+  tooltipTitle?: string;
+  height?: number;
 }) => {
   return (
-    <div className={cn("h-[200px] w-full", className)}>
+    <div className={cn(`h-[${height}px] w-full`, className)}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -105,7 +114,8 @@ export const SimpleBarChart = ({
               borderColor: 'var(--border)',
               borderRadius: '0.5rem',
               fontSize: '0.875rem'
-            }} 
+            }}
+            formatter={(value: any, name: any) => [value, tooltipTitle || name]}
           />
           <Bar 
             dataKey={barKey} 
@@ -123,16 +133,18 @@ export const SimplePieChart = ({
   nameKey = "name",
   valueKey = "value",
   colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-  className
+  className,
+  height = 200
 }: {
   data: any[];
   nameKey?: string;
   valueKey?: string;
   colors?: string[];
   className?: string;
+  height?: number;
 }) => {
   return (
-    <div className={cn("h-[200px] w-full", className)}>
+    <div className={cn(`h-[${height}px] w-full`, className)}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsPieChart>
           <Pie
@@ -169,15 +181,17 @@ export const SimpleLineChart = ({
   data,
   xAxisKey = "name",
   lines = [{ dataKey: "value", name: "Value", color: "#3b82f6" }],
-  className
+  className,
+  height = 200
 }: {
   data: any[];
   xAxisKey?: string;
   lines?: { dataKey: string; name: string; color: string }[];
   className?: string;
+  height?: number;
 }) => {
   return (
-    <div className={cn("h-[200px] w-full", className)}>
+    <div className={cn(`h-[${height}px] w-full`, className)}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -210,8 +224,8 @@ export const SimpleLineChart = ({
   );
 };
 
-// Fallback chart components to ensure the original imports still work
-export const AreaChart = SimpleAreaChart;
-export const BarChart = SimpleBarChart;
-export const PieChart = SimplePieChart;
-export const LineChart = SimpleLineChart;
+// Explicitly export the components to fix TypeScript errors
+export { SimpleAreaChart as AreaChart };
+export { SimpleBarChart as BarChart };
+export { SimplePieChart as PieChart };
+export { SimpleLineChart as LineChart };

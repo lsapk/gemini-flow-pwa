@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { SimpleAreaChart, SimpleBarChart, SimplePieChart, SimpleLineChart, AreaChart, BarChart, PieChart, LineChart } from "@/components/ui/custom-charts";
@@ -22,7 +23,10 @@ import {
   Brain,
   Send,
   Sparkles,
-  WifiOff
+  WifiOff,
+  User,
+  Bot,
+  MessageSquare
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +36,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { checkAIRequestLimit, trackAIRequest, MAX_FREEMIUM_REQUESTS_PER_DAY } from "@/utils/aiLimits";
 import { getUserSettings } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 const Analysis = () => {
   const [analysis, setAnalysis] = useState<string | null>(null);
@@ -50,6 +59,8 @@ const Analysis = () => {
     requestsToday: number;
     isPremium: boolean;
   }>({ hasReachedLimit: false, requestsToday: 0, isPremium: false });
+  const [customAnalysisMessages, setCustomAnalysisMessages] = useState<Message[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Vérification périodique du statut réseau
   useEffect(() => {
@@ -69,6 +80,11 @@ const Analysis = () => {
       window.removeEventListener('offline', checkNetworkStatus);
     };
   }, []);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [customAnalysisMessages]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -208,6 +224,16 @@ const Analysis = () => {
     }
 
     setCustomAnalysisLoading(true);
+
+    // Add user message to chat
+    const userMessage = {
+      role: "user" as const,
+      content: customPrompt
+    };
+    
+    setCustomAnalysisMessages(prev => [...prev, userMessage]);
+    setCustomPrompt("");
+
     try {
       // Vérifier si l'utilisateur a atteint la limite de requêtes IA
       const limits = await checkAIRequestLimit("analysis");
@@ -218,6 +244,16 @@ const Analysis = () => {
           description: `Vous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} analyses quotidiennes. Passez à un abonnement premium pour un accès illimité.`,
           variant: "destructive",
         });
+        
+        // Add error message
+        setCustomAnalysisMessages(prev => [
+          ...prev, 
+          {
+            role: "assistant",
+            content: `⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de ${MAX_FREEMIUM_REQUESTS_PER_DAY} analyses quotidiennes. Passez à un abonnement premium pour bénéficier d'analyses illimitées.`
+          }
+        ]);
+        
         setCustomAnalysisLoading(false);
         return;
       }
@@ -225,18 +261,22 @@ const Analysis = () => {
       // Suivre cette requête IA avant d'effectuer l'appel
       await trackAIRequest("analysis");
 
-      // Ici vous appelleriez idéalement une fonction d'analyse personnalisée
-      // Pour l'instant, nous utilisons la même fonction mais vous pourriez ajouter le paramètre customPrompt
-      const { data, error } = await getAIAnalysis(user.id);
+      // Get analysis data as context for custom analysis
+      const { data, error } = await getAIAnalysis(user.id, customPrompt);
 
       if (error) {
         throw new Error(error as string);
       }
 
+      // Add assistant response
       if (data) {
-        // Simuler une analyse personnalisée en ajoutant un préfixe
-        setAnalysis(`💡 **Analyse personnalisée :** "${customPrompt}"\n\n${data.analysis}`);
-        setCustomPrompt("");
+        setCustomAnalysisMessages(prev => [
+          ...prev, 
+          {
+            role: "assistant",
+            content: data.analysis
+          }
+        ]);
       }
 
       // Mettre à jour les limites après une requête réussie
@@ -254,6 +294,15 @@ const Analysis = () => {
         description: "Impossible de générer l'analyse personnalisée.",
         variant: "destructive",
       });
+      
+      // Add error message
+      setCustomAnalysisMessages(prev => [
+        ...prev, 
+        {
+          role: "assistant",
+          content: "❌ **Désolé, une erreur s'est produite.**\n\nJe n'ai pas pu traiter votre demande. Veuillez réessayer plus tard."
+        }
+      ]);
     } finally {
       setCustomAnalysisLoading(false);
     }
@@ -530,7 +579,7 @@ const Analysis = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <BarChart
+                <SimpleBarChart
                   data={stats?.tasksPerDay || [
                     { name: "Lun", total: 2 },
                     { name: "Mar", total: 5 },
@@ -541,6 +590,7 @@ const Analysis = () => {
                     { name: "Dim", total: 2 },
                   ]}
                   barKey="total"
+                  tooltipTitle="Tâches"
                   className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
@@ -553,7 +603,7 @@ const Analysis = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <AreaChart
+                <SimpleAreaChart
                   data={stats?.habitsPerWeek || [
                     { name: "Semaine 1", total: 12 },
                     { name: "Semaine 2", total: 18 },
@@ -561,6 +611,7 @@ const Analysis = () => {
                     { name: "Semaine 4", total: 20 },
                   ]}
                   areaKey="total"
+                  tooltipTitle="Habitudes"
                   className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
@@ -573,7 +624,7 @@ const Analysis = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <BarChart
+                <SimpleBarChart
                   data={stats?.focusPerDay || [
                     { name: "Lun", total: 45 },
                     { name: "Mar", total: 60 },
@@ -584,6 +635,7 @@ const Analysis = () => {
                     { name: "Dim", total: 30 },
                   ]}
                   barKey="total"
+                  tooltipTitle="Minutes"
                   className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
@@ -596,7 +648,7 @@ const Analysis = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PieChart
+                <SimplePieChart
                   data={getCategoryData()}
                   className={loading ? "opacity-50" : ""}
                 />
@@ -612,7 +664,7 @@ const Analysis = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <LineChart 
+              <SimpleLineChart 
                 data={getProductivityData()}
                 lines={[
                   { dataKey: "high", name: "Énergie", color: "#10b981" },
@@ -638,13 +690,90 @@ const Analysis = () => {
                 </p>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="space-y-4">
+              {/* Chat container */}
+              <div className="h-[300px] overflow-y-auto p-4 bg-muted/30 rounded-lg space-y-4 mb-4">
+                {customAnalysisMessages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center p-6 text-muted-foreground">
+                    <div>
+                      <Brain className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                      <p>Posez une question pour commencer votre analyse personnalisée</p>
+                    </div>
+                  </div>
+                ) : (
+                  customAnalysisMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`flex items-start gap-3 max-w-[80%] ${
+                          msg.role === "user"
+                            ? "flex-row-reverse"
+                            : "flex-row"
+                        }`}
+                      >
+                        <div
+                          className={`rounded-full p-2 ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {msg.role === "user" ? (
+                            <User className="h-4 w-4" />
+                          ) : (
+                            <Bot className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div
+                          className={`rounded-lg p-3 ${
+                            msg.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {msg.role === "assistant" ? (
+                            <Markdown content={msg.content} />
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {customAnalysisLoading && (
+                  <div className="flex justify-start">
+                    <div className="flex items-start gap-3 max-w-[80%]">
+                      <div className="rounded-full p-2 bg-muted">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div className="rounded-lg p-3 bg-muted flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <p>Génération de l'analyse...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              
+              {/* Input area */}
+              <div className="flex gap-2">
                 <Textarea
                   placeholder="Ex: Quels sont mes moments de productivité idéaux dans la journée ? Quelles habitudes devrais-je renforcer ?"
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
-                  className="h-24"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCustomAnalysis();
+                    }
+                  }}
+                  className="min-h-[60px]"
                   disabled={
                     customAnalysisLoading || 
                     networkStatus === "offline" || 
@@ -659,20 +788,31 @@ const Analysis = () => {
                     networkStatus === "offline" || 
                     (requestsInfo.hasReachedLimit && !requestsInfo.isPremium)
                   }
-                  className="w-full"
+                  className="shrink-0"
                 >
                   {customAnalysisLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Génération de l'analyse...
+                      Analyse...
                     </>
                   ) : (
                     <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Générer l'analyse
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Envoyer
                     </>
                   )}
                 </Button>
+              </div>
+              
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                {requestsInfo.isPremium ? (
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    Premium
+                  </Badge>
+                ) : (
+                  <p>{requestsInfo.requestsToday}/{MAX_FREEMIUM_REQUESTS_PER_DAY} requêtes</p>
+                )}
+                <p>⌘+⏎ pour envoyer</p>
               </div>
             </CardContent>
             <CardFooter className="bg-muted/50 text-xs text-muted-foreground rounded-b-lg">
