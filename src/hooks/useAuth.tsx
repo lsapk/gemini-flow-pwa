@@ -14,7 +14,7 @@ interface UserProfile {
 interface AuthState {
   user: (User & { profile?: UserProfile }) | null;
   session: Session | null;
-  loading: boolean; // Using loading instead of isLoading for consistency
+  loading: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -40,36 +40,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    // Attempt to restore session from local storage
+    // First set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
+
+      if (session) {
+        // If there's a session, get the user
+        try {
+          // Fetch user profile if user exists
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          setAuthState({
+            user: { ...session.user, profile },
+            session,
+            loading: false,
+          });
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+          setAuthState({
+            user: session.user,
+            session,
+            loading: false,
+          });
+        }
+      } else {
+        // If signed out, clear the user
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false,
+        });
+      }
+    });
+    
+    // Then check if there's an existing session
     const initAuth = async () => {
       try {
         // Check if there's a session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          // If there's a session, get the user
-          const { data: { user } } = await supabase.auth.getUser();
+          // Fetch user profile if user exists
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
           
-          if (user) {
-            // Fetch user profile if user exists
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-            
-            setAuthState({
-              user: { ...user, profile },
-              session,
-              loading: false,
-            });
-          } else {
-            setAuthState({
-              user: null,
-              session: null,
-              loading: false,
-            });
-          }
+          setAuthState({
+            user: { ...session.user, profile },
+            session,
+            loading: false,
+          });
         } else {
           setAuthState({
             user: null,
@@ -87,44 +113,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Initialize auth state
     initAuth();
-
-    // Subscribe to auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event);
-
-      if (event === 'SIGNED_IN' && session) {
-        // If signed in, get the user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          // Fetch user profile if user exists
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          
-          setAuthState({
-            user: { ...user, profile },
-            session,
-            loading: false,
-          });
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // If signed out, clear the user
-        setAuthState({
-          user: null,
-          session: null,
-          loading: false,
-        });
-      }
-    });
 
     // Cleanup subscription
     return () => {
-      authListener.subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -155,22 +148,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
       });
-      
-      if (response.data?.user) {
-        // Fetch user profile
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', response.data.user.id)
-          .single();
-        
-        // Update auth state
-        setAuthState({
-          user: { ...response.data.user, profile },
-          session: response.data.session,
-          loading: false,
-        });
-      }
       
       return { data: response.data, error: response.error };
     } catch (error: any) {

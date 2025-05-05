@@ -22,10 +22,33 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate("/dashboard");
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        console.error("Erreur de connexion:", error);
+        toast({
+          title: "Échec de la connexion",
+          description: error.message || "Vérifiez vos identifiants et réessayez.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (data.session) {
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur DeepFlow!",
+        });
+        navigate("/dashboard");
+      }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Exception lors de la connexion:", error);
+      toast({
+        title: "Erreur inattendue",
+        description: "Une erreur s'est produite lors de la connexion.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -237,24 +238,49 @@ serve(async (req) => {
       focusPerDay
     };
     
-    // Generate analysis with optional custom prompt
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = getAnalysisPrompt(userData, userLanguage, customPrompt);
-    const result = await model.generateContent(prompt);
-    const analysis = result.response.text();
+    try {
+      // Generate analysis with optional custom prompt
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = getAnalysisPrompt(userData, userLanguage, customPrompt);
+      const result = await model.generateContent(prompt);
+      const analysis = result.response.text();
 
-    return new Response(
-      JSON.stringify({
-        analysis,
-        stats: userStats
-      }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      return new Response(
+        JSON.stringify({
+          analysis,
+          stats: userStats
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error with Gemini model:", error);
+      
+      // Fallback analysis in case of API failure
+      const fallbackAnalysis = {
+        fr: "🙁 **Désolé, je rencontre des difficultés techniques**\n\nLe service d'analyse Gemini AI est temporairement indisponible. Veuillez réessayer dans quelques instants.",
+        en: "🙁 **Sorry, I'm experiencing technical difficulties**\n\nThe Gemini AI analysis service is temporarily unavailable. Please try again in a few moments.",
+        es: "🙁 **Lo siento, estoy experimentando dificultades técnicas**\n\nEl servicio de análisis Gemini AI no está disponible temporalmente. Por favor, inténtalo de nuevo en unos instantes.",
+        de: "🙁 **Es tut mir leid, ich habe technische Schwierigkeiten**\n\nDer Gemini AI-Analysedienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in wenigen Augenblicken erneut."
+      };
+      
+      return new Response(
+        JSON.stringify({
+          analysis: fallbackAnalysis[userLanguage] || fallbackAnalysis.fr,
+          stats: userStats
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
   } catch (error) {
     console.error("Error generating analysis:", error);
     

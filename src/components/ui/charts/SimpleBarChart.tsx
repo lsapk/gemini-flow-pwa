@@ -1,51 +1,33 @@
 
-import React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartData } from "./types";
-import { cn } from "@/lib/utils";
-import { CustomTooltip } from "./CustomTooltip";
+import React from 'react';
+import { BarChart, BarChartProps } from './BarChart';
+import { ChartData } from './types';
 
 interface SimpleBarChartProps {
   data: ChartData[];
-  barKey: string;
-  tooltipTitle?: string;
+  dataKey?: string;
+  xAxisDataKey?: string;
+  width?: number;
+  height?: number;
   className?: string;
 }
 
 export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({ 
   data, 
-  barKey = "total", 
-  tooltipTitle = "Total", 
-  className 
+  dataKey = 'value', 
+  xAxisDataKey = 'name',
+  width = 600,
+  height = 300,
+  className
 }) => {
   return (
-    <div className={cn("w-full h-[200px]", className)}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{
-            top: 10,
-            right: 10,
-            left: 0,
-            bottom: 0,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-          <XAxis 
-            dataKey="name" 
-            tick={{ fontSize: 12 }} 
-            tickLine={false} 
-            axisLine={{ opacity: 0.1 }} 
-          />
-          <YAxis hide />
-          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
-          <Bar 
-            dataKey={barKey} 
-            fill="var(--primary)" 
-            radius={[4, 4, 0, 0]} 
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <BarChart
+      data={data}
+      dataKey={dataKey}
+      xAxisDataKey={xAxisDataKey}
+      width={width}
+      height={height}
+      className={className}
+    />
   );
 };
