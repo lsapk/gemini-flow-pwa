@@ -1,9 +1,18 @@
 
-// Re-export all chart components
+// Export all chart components
 export { AreaChart } from './AreaChart';
 export { BarChart } from './BarChart';
-export { LineChart } from './LineChart';
-export { MultiLineChart } from './MultiLineChart';
 export { PieChart } from './PieChart';
+export { LineChart } from './LineChart';
+export { ChartCards } from './ChartCards';
 export { ChartLoading } from './ChartLoading';
 export { CustomTooltip } from './CustomTooltip';
+
+// Export simplified chart components
+export { SimpleAreaChart } from './SimpleAreaChart';
+export { SimpleBarChart } from './SimpleBarChart';
+export { SimplePieChart } from './SimplePieChart';
+export { SimpleLineChart } from './SimpleLineChart';
+
+// Export types
+export type { ChartData, LineConfig } from './types';

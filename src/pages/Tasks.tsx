@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +63,7 @@ const Tasks = () => {
         return;
       }
       try {
-        const response = await getTasks(user.id) as ApiResponse<Task[]>;
+        const response = await getTasks() as ApiResponse<Task[]>;
         if (response.error) {
           throw new Error(response.error);
         }
@@ -88,7 +87,7 @@ const Tasks = () => {
     if (!newTask.trim() || !user) return;
 
     try {
-      const response = await createTask(user.id, {
+      const response = await createTask({
         title: newTask,
         completed: false,
         due_date: date ? format(date, "yyyy-MM-dd") : undefined,

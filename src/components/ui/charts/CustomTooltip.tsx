@@ -1,16 +1,26 @@
 
 import React from "react";
-import { CustomTooltipProps } from "./types";
+import { TooltipProps } from "recharts";
 
-// Custom tooltip component
-export const CustomTooltip = ({ active, payload, label, title }: CustomTooltipProps) => {
+export const CustomTooltip: React.FC<TooltipProps<any, any> & { title?: string }> = ({ 
+  active, 
+  payload, 
+  label,
+  title = "Value" 
+}) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-background border rounded p-2 shadow-md text-sm">
-        <p className="font-medium">{title || "Value"}: {payload[0].value}</p>
-        <p className="text-muted-foreground">{label}</p>
+      <div className="bg-background shadow border border-border p-2 rounded-lg text-xs">
+        <p className="text-foreground font-medium">{label}</p>
+        {payload.map((item, index) => (
+          <div key={index} className="flex items-center justify-between gap-4 mt-1">
+            <span className="text-muted-foreground">{item.name || title}:</span>
+            <span className="font-mono font-medium tabular-nums">{item.value}</span>
+          </div>
+        ))}
       </div>
     );
   }
+
   return null;
 };
