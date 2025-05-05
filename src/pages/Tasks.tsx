@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,14 @@ interface Task {
   priority?: string;
 }
 
+interface CreateTaskInput {
+  title: string;
+  description?: string;
+  completed?: boolean;
+  due_date?: string;
+  priority?: string;
+}
+
 const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
@@ -87,12 +96,14 @@ const Tasks = () => {
     if (!newTask.trim() || !user) return;
 
     try {
-      const response = await createTask({
+      const taskInput: CreateTaskInput = {
         title: newTask,
         completed: false,
         due_date: date ? format(date, "yyyy-MM-dd") : undefined,
         priority: selectedPriority,
-      }) as ApiResponse<Task>;
+      };
+
+      const response = await createTask(taskInput) as ApiResponse<Task>;
 
       if (response.error) {
         throw new Error(response.error);
