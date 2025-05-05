@@ -1,288 +1,169 @@
 
-import React from "react";
-import { 
-  ResponsiveContainer, 
-  BarChart as RechartsBarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  CartesianGrid, 
-  AreaChart as RechartsAreaChart, 
-  Area,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  LineChart as RechartsLineChart,
-  Line
-} from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import React, { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { Area, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart, Pie, Cell } from 'recharts';
+
+interface ChartConfig {
+  total?: {
+    label: string;
+    theme: {
+      light: string;
+      dark: string;
+    }
+  };
+  value?: {
+    label: string;
+    theme: {
+      light: string;
+      dark: string;
+    }
+  };
+}
 
 interface ChartProps {
-  data: Array<{
-    name: string;
-    total: number;
-  }>;
-  tooltipTitle?: string;
-  height?: string | number;
+  config: ChartConfig;
+  children: React.ReactNode;
   className?: string;
-  loading?: boolean;
 }
 
-interface PieChartProps {
-  data: Array<{
-    name: string;
-    value: number;
-  }>;
-  tooltipTitle?: string;
-  colors?: string[];
-  height?: string | number;
+export const SimpleAreaChart = ({ 
+  data,
+  xAxisKey = "name",
+  areaKey = "value", 
+  color = "#3b82f6",
+  className
+}: { 
+  data: any[]; 
+  xAxisKey?: string;
+  areaKey?: string;
+  color?: string;
   className?: string;
-  loading?: boolean;
-}
-
-interface MultiLineChartProps {
-  data: any[];
-  lines: Array<{
-    dataKey: string;
-    name: string;
-    color: string;
-  }>;
-  xAxisDataKey?: string;
-  height?: string | number;
-  className?: string;
-  loading?: boolean;
-}
-
-const LoadingOverlay = () => (
-  <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-    <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-  </div>
-);
-
-export const BarChart: React.FC<ChartProps> = ({ 
-  data, 
-  tooltipTitle = "Valeur", 
-  height = "200px",
-  className = "",
-  loading = false
 }) => {
   return (
-    <ChartContainer
-      config={{
-        total: {
-          label: tooltipTitle,
-          theme: {
-            light: "#0ea5e9",
-            dark: "#0ea5e9",
-          },
-        },
-      }}
-      className={`h-[${height}] ${className} relative`}
-    >
-      {loading && <LoadingOverlay />}
+    <div className={cn("h-[200px] w-full", className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsBarChart data={data}>
-          <XAxis
-            dataKey="name"
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
+        <RechartsAreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
+              <stop offset="95%" stopColor={color} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey={xAxisKey}
+            className="text-xs fill-muted-foreground" 
           />
-          <YAxis
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
+          <YAxis className="text-xs fill-muted-foreground" />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'var(--card)', 
+              borderColor: 'var(--border)',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem'
+            }} 
           />
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <ChartTooltipContent
-                    label={tooltipTitle}
-                    payload={payload}
-                  />
-                );
-              }
-              return null;
-            }}
-          />
-          <Bar 
-            dataKey="total" 
-            fill="var(--color-total)" 
-            radius={[4, 4, 0, 0]} 
-            animationDuration={500}
-          />
-        </RechartsBarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-};
-
-export const AreaChart: React.FC<ChartProps> = ({ 
-  data, 
-  tooltipTitle = "Valeur", 
-  height = "200px",
-  className = "",
-  loading = false
-}) => {
-  return (
-    <ChartContainer
-      config={{
-        total: {
-          label: tooltipTitle,
-          theme: {
-            light: "#0ea5e9",
-            dark: "#0ea5e9",
-          },
-        },
-      }}
-      className={`h-[${height}] ${className} relative`}
-    >
-      {loading && <LoadingOverlay />}
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsAreaChart data={data}>
-          <XAxis
-            dataKey="name"
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <ChartTooltipContent
-                    label={tooltipTitle}
-                    payload={payload}
-                  />
-                );
-              }
-              return null;
-            }}
-          />
-          <Area
-            dataKey="total"
-            stroke="var(--color-total)"
-            fill="var(--color-total)"
-            fillOpacity={0.2}
-            animationDuration={500}
+          <Area 
+            type="monotone" 
+            dataKey={areaKey} 
+            stroke={color} 
+            fillOpacity={1} 
+            fill="url(#colorValue)" 
           />
         </RechartsAreaChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-};
-
-export const LineChart: React.FC<MultiLineChartProps> = ({ 
-  data, 
-  lines,
-  xAxisDataKey = "name",
-  height = "200px",
-  className = "",
-  loading = false
-}) => {
-  return (
-    <div className={`h-[${height}] ${className} relative`}>
-      {loading && <LoadingOverlay />}
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsLineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey={xAxisDataKey} 
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-          />
-          <YAxis 
-            stroke="#888888"
-            fontSize={12}
-            tickLine={false}
-          />
-          <Tooltip />
-          {lines.map((line, index) => (
-            <Line
-              key={index}
-              type="monotone"
-              dataKey={line.dataKey}
-              name={line.name}
-              stroke={line.color}
-              activeDot={{ r: 8 }}
-              animationDuration={500}
-            />
-          ))}
-        </RechartsLineChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-export const PieChart: React.FC<PieChartProps> = ({ 
-  data, 
-  tooltipTitle = "Valeur", 
-  colors = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#6366f1'],
-  height = "200px",
-  className = "",
-  loading = false
+export const SimpleBarChart = ({
+  data,
+  xAxisKey = "name",
+  barKey = "value",
+  color = "#3b82f6",
+  className
+}: {
+  data: any[];
+  xAxisKey?: string;
+  barKey?: string;
+  color?: string;
+  className?: string;
 }) => {
   return (
-    <ChartContainer
-      config={{
-        value: {
-          label: tooltipTitle,
-          theme: {
-            light: "#0ea5e9",
-            dark: "#0ea5e9",
-          },
-        },
-      }}
-      className={`h-[${height}] ${className} relative`}
-    >
-      {loading && <LoadingOverlay />}
+    <div className={cn("h-[200px] w-full", className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsPieChart>
+        <RechartsBarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey={xAxisKey}
+            className="text-xs fill-muted-foreground" 
+          />
+          <YAxis className="text-xs fill-muted-foreground" />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'var(--card)', 
+              borderColor: 'var(--border)',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem'
+            }} 
+          />
+          <Bar 
+            dataKey={barKey} 
+            fill={color} 
+            radius={[4, 4, 0, 0]}
+          />
+        </RechartsBarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export const SimplePieChart = ({
+  data,
+  nameKey = "name",
+  valueKey = "value",
+  colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+  className
+}: {
+  data: any[];
+  nameKey?: string;
+  valueKey?: string;
+  colors?: string[];
+  className?: string;
+}) => {
+  return (
+    <div className={cn("h-[200px] w-full", className)}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
           <Pie
             data={data}
-            dataKey="value"
-            nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={80}
-            fill="var(--color-value)"
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
             labelLine={false}
-            animationDuration={500}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey={valueKey}
+            nameKey={nameKey}
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <ChartTooltipContent
-                    label={payload[0].name}
-                    payload={[{ ...payload[0], dataKey: 'value' }]}
-                  />
-                );
-              }
-              return null;
-            }}
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'var(--card)', 
+              borderColor: 'var(--border)',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem'
+            }} 
           />
-        </RechartsPieChart>
+        </PieChart>
       </ResponsiveContainer>
-    </ChartContainer>
+    </div>
   );
 };
+
+// Fallback chart components to ensure the original imports still work
+export const AreaChart = SimpleAreaChart;
+export const BarChart = SimpleBarChart;

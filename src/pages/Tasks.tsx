@@ -18,7 +18,7 @@ import { CalendarIcon, Clock, Flag, Pencil, PlusCircle, Trash2, Calendar as Cale
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTasks, addTask, updateTask, deleteTask } from "@/lib/api";
+import { getTasks, createTask, updateTask, deleteTask } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -149,7 +149,7 @@ const Tasks = () => {
         user_id: user.id,
       };
       
-      const { data, error } = await addTask(newTask);
+      const { data, error } = await createTask(newTask);
       
       if (error) throw new Error(error.message);
       

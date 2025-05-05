@@ -1,94 +1,72 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { PlusCircle, BookOpen, PenLine, Smile, Meh, Frown, Pencil, Trash2 } from "lucide-react";
-import { BookOpenTextIcon } from "@/components/icons/DeepFlowIcons";
+import { CalendarIcon, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getJournalEntries, addJournalEntry, getJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Json } from "@/integrations/supabase/types";
+import { parseISO } from 'date-fns';
 
-// Define mood options
-const moodOptions = [
-  { value: "great", label: "Excellent", icon: <Smile className="h-5 w-5 text-green-500" /> },
-  { value: "good", label: "Bon", icon: <Smile className="h-5 w-5 text-blue-500" /> },
-  { value: "neutral", label: "Neutre", icon: <Meh className="h-5 w-5 text-amber-500" /> },
-  { value: "bad", label: "Mauvais", icon: <Frown className="h-5 w-5 text-orange-500" /> },
-  { value: "terrible", label: "Terrible", icon: <Frown className="h-5 w-5 text-red-500" /> },
-];
-
-// Updated interface to match the database structure
 interface JournalEntry {
   id: string;
   title: string;
   content: string;
-  mood?: string;
-  tags?: Json | null; // Changed from string[] to Json | null to match Supabase's Json type
   created_at: string;
-  updated_at?: string;
   user_id: string;
 }
 
-interface JournalFormData {
+interface JournalEntryFormData {
   title: string;
   content: string;
-  mood: string;
+  created_at: Date | undefined;
 }
 
 const JournalEmptyState = ({ onCreate }: { onCreate: () => void }) => (
-  <Card className="flex flex-col items-center justify-center p-8 text-center">
-    <div className="mx-auto rounded-full bg-primary/10 p-4">
-      <BookOpen className="h-8 w-8 text-primary" />
+  <div className="text-center py-12">
+    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+      <BookOpenCheckIcon className="h-8 w-8 text-primary" />
     </div>
-    <h3 className="mt-4 text-lg font-medium">Journal vide</h3>
-    <p className="mb-4 mt-2 text-sm text-muted-foreground">
-      Commencez à écrire dans votre journal pour documenter vos pensées et réflexions.
+    <h3 className="text-lg font-medium mb-2">Aucune entrée de journal</h3>
+    <p className="text-muted-foreground mb-4">
+      Commencez à écrire votre première entrée de journal pour suivre vos pensées et vos expériences.
     </p>
     <Button onClick={onCreate}>
       <PlusCircle className="mr-2 h-4 w-4" />
       Nouvelle entrée
     </Button>
-  </Card>
+  </div>
 );
 
-const MoodIcon = ({ mood }: { mood: string | undefined }) => {
-  if (!mood) return null;
-  const moodOption = moodOptions.find((option) => option.value === mood);
-  return moodOption?.icon || null;
-};
-
 const Journal = () => {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewEntry, setViewEntry] = useState<JournalEntry | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const [openViewDialog, setOpenViewDialog] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-  const [formData, setFormData] = useState<JournalFormData>({
+  const [formData, setFormData] = useState<JournalEntryFormData>({
     title: "",
     content: "",
-    mood: "",
+    created_at: undefined,
   });
   
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchEntries();
+    fetchJournalEntries();
   }, [user]);
 
-  const fetchEntries = async () => {
+  const fetchJournalEntries = async () => {
     if (!user) return;
     
     try {
@@ -97,8 +75,7 @@ const Journal = () => {
       
       if (error) throw new Error(error.message);
       
-      // We need to type cast the data to match our JournalEntry interface
-      setEntries((data || []) as JournalEntry[]);
+      setJournalEntries(data || []);
     } catch (error) {
       toast({
         title: "Erreur",
@@ -106,30 +83,6 @@ const Journal = () => {
         variant: "destructive",
       });
       console.error("Error fetching journal entries:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleViewEntry = async (id: string) => {
-    try {
-      setLoading(true);
-      const { data, error } = await getJournalEntry(id);
-      
-      if (error) throw new Error(error.message);
-      
-      if (data) {
-        // Type cast the data to match our JournalEntry interface
-        setViewEntry(data as JournalEntry);
-        setOpenViewDialog(true);
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger cette entrée de journal.",
-        variant: "destructive",
-      });
-      console.error("Error fetching journal entry:", error);
     } finally {
       setLoading(false);
     }
@@ -151,18 +104,15 @@ const Journal = () => {
       const newEntry = {
         title: formData.title,
         content: formData.content,
-        mood: formData.mood || null,
-        user_id: user.id
+        user_id: user.id,
+        created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const { data, error } = await addJournalEntry(newEntry);
+      const { data, error } = await createJournalEntry(newEntry);
       
       if (error) throw new Error(error.message);
       
-      // Type cast and add the new entry to our entries state
-      if (data) {
-        setEntries([data as JournalEntry, ...entries]);
-      }
+      setJournalEntries([...(data ? [data] : []), ...journalEntries]);
       
       resetForm();
       setOpenDialog(false);
@@ -197,7 +147,7 @@ const Journal = () => {
       const updatedEntry = {
         title: formData.title,
         content: formData.content,
-        mood: formData.mood || null,
+        created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
       const { data, error } = await updateJournalEntry(editingEntry.id, updatedEntry);
@@ -205,8 +155,7 @@ const Journal = () => {
       if (error) throw new Error(error.message);
       
       if (data) {
-        // Type cast and update the entry in our entries state
-        setEntries(entries.map((entry) => (entry.id === editingEntry.id ? data as JournalEntry : entry)));
+        setJournalEntries(journalEntries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
       }
       
       resetForm();
@@ -232,7 +181,7 @@ const Journal = () => {
       
       if (error) throw new Error(error.message);
       
-      setEntries(entries.filter((entry) => entry.id !== id));
+      setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
       
       toast({
         title: "Entrée supprimée",
@@ -252,7 +201,7 @@ const Journal = () => {
     setFormData({
       title: "",
       content: "",
-      mood: "",
+      created_at: undefined,
     });
     setEditingEntry(null);
   };
@@ -262,32 +211,21 @@ const Journal = () => {
     setFormData({
       title: entry.title,
       content: entry.content,
-      mood: entry.mood || "",
+      created_at: entry.created_at ? parseISO(entry.created_at) : undefined,
     });
     setOpenDialog(true);
   };
-  
-  // Group entries by month
-  const groupedEntries = entries.reduce((acc, entry) => {
-    const date = parseISO(entry.created_at);
-    const month = format(date, 'MMMM yyyy', { locale: fr });
-    if (!acc[month]) {
-      acc[month] = [];
-    }
-    acc[month].push(entry);
-    return acc;
-  }, {} as Record<string, JournalEntry[]>);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <BookOpenTextIcon className="h-8 w-8" />
-            Journal personnel
+            <BookOpenCheckIcon className="h-8 w-8" />
+            Journal
           </h1>
           <p className="text-muted-foreground">
-            Notez vos pensées, réflexions et accomplissements quotidiens.
+            Écrivez vos pensées et vos expériences.
           </p>
         </div>
         
@@ -301,46 +239,25 @@ const Journal = () => {
               Nouvelle entrée
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingEntry ? "Modifier l'entrée" : "Nouvelle entrée"}</DialogTitle>
               <DialogDescription>
                 {editingEntry
-                  ? "Modifiez votre entrée de journal."
-                  : "Écrivez vos pensées et réflexions."}
+                  ? "Modifiez les détails de votre entrée de journal."
+                  : "Créez une nouvelle entrée de journal pour suivre vos pensées et vos expériences."}
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Titre</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Titre de votre entrée..."
+                  placeholder="Titre de l'entrée..."
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="mood">Humeur</Label>
-                <Select
-                  value={formData.mood}
-                  onValueChange={(value) => setFormData({ ...formData, mood: value })}
-                >
-                  <SelectTrigger id="mood" className="w-full">
-                    <SelectValue placeholder="Comment vous sentez-vous?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {moodOptions.map((mood) => (
-                      <SelectItem key={mood.value} value={mood.value}>
-                        <span className="flex items-center gap-2">
-                          {mood.icon} {mood.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               
               <div className="space-y-2">
@@ -349,9 +266,36 @@ const Journal = () => {
                   id="content"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Écrivez vos pensées ici..."
-                  rows={10}
+                  placeholder="Écrivez votre entrée de journal ici..."
+                  rows={5}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Date de création</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.created_at ? (
+                        format(formData.created_at, "P", { locale: fr })
+                      ) : (
+                        <span>Choisir une date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.created_at}
+                      onSelect={(date) => setFormData({ ...formData, created_at: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             
@@ -363,24 +307,53 @@ const Journal = () => {
                 Annuler
               </Button>
               <Button onClick={editingEntry ? handleUpdateEntry : handleCreateEntry}>
-                {editingEntry ? "Mettre à jour" : "Enregistrer"}
+                {editingEntry ? "Mettre à jour" : "Créer"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
 
-        <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
-          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-            {viewEntry && (
-              <>
-                <DialogHeader className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <DialogTitle className="text-2xl">{viewEntry.title}</DialogTitle>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => {
-                        setOpenViewDialog(false);
-                        openEditDialog(viewEntry);
-                      }}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Vos entrées de journal</CardTitle>
+          <CardDescription>
+            Suivez vos pensées et vos expériences au fil du temps.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : journalEntries.length > 0 ? (
+            <div className="space-y-4">
+              {journalEntries.map((entry) => (
+                <Card key={entry.id} className="glass-card">
+                  <CardHeader>
+                    <CardTitle>{entry.title}</CardTitle>
+                    <CardDescription>
+                      {format(parseISO(entry.created_at), "dd/MM/yyyy", { locale: fr })}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {entry.content.length > 200 ? entry.content.substring(0, 200) + "..." : entry.content}
+                    </p>
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(entry)}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       
@@ -400,10 +373,7 @@ const Journal = () => {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => {
-                                handleDeleteEntry(viewEntry.id);
-                                setOpenViewDialog(false);
-                              }}
+                              onClick={() => handleDeleteEntry(entry.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               Supprimer
@@ -412,102 +382,15 @@ const Journal = () => {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <time dateTime={viewEntry.created_at}>
-                        {format(parseISO(viewEntry.created_at), "PPPp", { locale: fr })}
-                      </time>
-                      {viewEntry.mood && (
-                        <span className="flex items-center gap-1">
-                          • <MoodIcon mood={viewEntry.mood} />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </DialogHeader>
-                
-                <div className="mt-6 space-y-4 prose prose-sm dark:prose-invert max-w-none">
-                  {viewEntry.content.split("\n").map((paragraph, i) => (
-                    paragraph.trim() ? <p key={i}>{paragraph}</p> : <br key={i} />
-                  ))}
-                </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardHeader>
-                <Skeleton className="h-6 w-2/3" />
-                <Skeleton className="h-4 w-1/3" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-5/6 mb-2" />
-                <Skeleton className="h-4 w-4/6" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : entries.length === 0 ? (
-        <JournalEmptyState onCreate={() => setOpenDialog(true)} />
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(groupedEntries).map(([month, monthEntries]) => (
-            <div key={month} className="space-y-4">
-              <h2 className="text-xl font-semibold first-letter:uppercase">{month}</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {monthEntries.map((entry) => (
-                  <Card 
-                    key={entry.id} 
-                    className="glass-card hover:shadow-md cursor-pointer transition-all"
-                    onClick={() => handleViewEntry(entry.id)}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between">
-                        <CardTitle className="line-clamp-1">{entry.title}</CardTitle>
-                        {entry.mood && <MoodIcon mood={entry.mood} />}
-                      </div>
-                      <CardDescription>
-                        {format(parseISO(entry.created_at), "PP", { locale: fr })}
-                      </CardDescription>
-                    </CardHeader>
-                    
-                    <CardContent>
-                      <p className="text-sm line-clamp-3">
-                        {entry.content}
-                      </p>
-                    </CardContent>
-                    
-                    <CardFooter className="pt-0 flex justify-between">
-                      <Button variant="ghost" size="sm">
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        Lire
-                      </Button>
-                      
-                      <Button variant="ghost" size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(entry);
-                        }}
-                      >
-                        <PenLine className="mr-2 h-4 w-4" />
-                        Modifier
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          ) : (
+            <JournalEmptyState onCreate={() => setOpenDialog(true)} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
