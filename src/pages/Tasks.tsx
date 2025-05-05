@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ApiResponse, ApiSuccessResponse } from "@/types/models";
 
 interface Task {
   id: string;
@@ -62,11 +64,11 @@ const Tasks = () => {
         return;
       }
       try {
-        const { data, error } = await getTasks(user.id);
-        if (error) {
-          throw new Error(error as string);
+        const response = await getTasks(user.id) as ApiResponse<Task[]>;
+        if (response.error) {
+          throw new Error(response.error);
         }
-        setTasks(data || []);
+        setTasks(response.data || []);
       } catch (error) {
         console.error("Error fetching tasks:", error);
         toast({
@@ -86,18 +88,18 @@ const Tasks = () => {
     if (!newTask.trim() || !user) return;
 
     try {
-      const { data, error } = await createTask(user.id, {
+      const response = await createTask(user.id, {
         title: newTask,
         completed: false,
         due_date: date ? format(date, "yyyy-MM-dd") : undefined,
         priority: selectedPriority,
-      });
+      }) as ApiResponse<Task>;
 
-      if (error) {
-        throw new Error(error as string);
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      setTasks([...tasks, data]);
+      setTasks([...tasks, response.data]);
       setNewTask("");
       setDate(undefined);
       setSelectedPriority("");
@@ -118,9 +120,9 @@ const Tasks = () => {
   const handleUpdateTask = async (task: Task, completed: boolean) => {
     if (!user) return;
     try {
-      const { error } = await updateTask(task.id, { completed });
-      if (error) {
-        throw new Error(error as string);
+      const response = await updateTask(task.id, { completed }) as ApiResponse<Task>;
+      if (response.error) {
+        throw new Error(response.error);
       }
 
       setTasks(
@@ -145,9 +147,9 @@ const Tasks = () => {
   const handleDeleteTask = async (task: Task) => {
     if (!user) return;
     try {
-      const { error } = await deleteTask(task.id);
-      if (error) {
-        throw new Error(error as string);
+      const response = await deleteTask(task.id) as ApiSuccessResponse;
+      if (response.error) {
+        throw new Error(response.error);
       }
 
       setTasks(tasks.filter((t) => t.id !== task.id));

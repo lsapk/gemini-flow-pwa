@@ -1,59 +1,79 @@
 
 import React from "react";
 import {
-  AreaChart as RechartsAreaChart,
   Area,
+  AreaChart as RechartsAreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
 } from "recharts";
-import { AreaChartProps } from "./types";
-import { CustomTooltip } from "./CustomTooltip";
+import { cn } from "@/lib/utils";
 import { ChartLoading } from "./ChartLoading";
+import { CustomTooltip } from "./CustomTooltip";
+import { AreaChartProps } from "./types";
 
-// Area Chart Component
 export const AreaChart: React.FC<AreaChartProps> = ({
   data,
-  xAxisKey = "name",
-  areaKey = "value",
-  color = "#3b82f6",
+  width = 500,
   height = 300,
-  className = "",
+  dataKey = "value",
+  xAxisDataKey = "name",
+  areaOpacity = 0.3,
   loading = false,
-  tooltipTitle
+  className,
+  noDataMessage = "No data available",
+  colors = ["var(--chart-primary, #3498db)"],
 }) => {
-  if (loading || !data || data.length === 0) {
+  // Handle empty data or loading state
+  if (loading) {
     return <ChartLoading height={height} />;
   }
 
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height }}
+      >
+        {noDataMessage}
+      </div>
+    );
+  }
+
   return (
-    <div className={className} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className={cn("w-full", className)}>
+      <ResponsiveContainer width="100%" height={height}>
         <RechartsAreaChart
           data={data}
-          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
+          <defs>
+            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={colors[0]} stopOpacity={0.8} />
+              <stop offset="95%" stopColor={colors[0]} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey={xAxisKey} 
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <XAxis
+            dataKey={xAxisDataKey}
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <YAxis 
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <YAxis
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
-          <Area 
-            type="monotone" 
-            dataKey={areaKey} 
-            stroke={color} 
-            fill={color} 
-            fillOpacity={0.2} 
+          <Tooltip content={<CustomTooltip title={dataKey} />} />
+          <Area
+            type="monotone"
+            dataKey={dataKey}
+            stroke={colors[0]}
+            fillOpacity={areaOpacity}
+            fill="url(#colorValue)"
           />
         </RechartsAreaChart>
       </ResponsiveContainer>

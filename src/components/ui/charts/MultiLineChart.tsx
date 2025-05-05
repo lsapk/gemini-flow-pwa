@@ -1,64 +1,79 @@
 
 import React from "react";
 import {
-  LineChart as RechartsLineChart,
   Line,
+  LineChart as RechartsLineChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
   Legend,
-  ResponsiveContainer
 } from "recharts";
-import { MultiLineChartProps } from "./types";
-import { CustomTooltip } from "./CustomTooltip";
+import { cn } from "@/lib/utils";
 import { ChartLoading } from "./ChartLoading";
+import { CustomTooltip } from "./CustomTooltip";
+import { MultiLineChartProps } from "./types";
 
-// Multi-Line Chart Component
 export const MultiLineChart: React.FC<MultiLineChartProps> = ({
   data,
-  xAxisKey = "name",
-  lines = [],
+  lines,
+  width = 500,
   height = 300,
-  className = "",
+  xAxisDataKey = "name",
+  strokeWidth = 2,
   loading = false,
-  tooltipTitle
+  className,
+  noDataMessage = "No data available",
+  colors = ["#3498db", "#e74c3c", "#2ecc71", "#f39c12", "#9b59b6"],
 }) => {
-  if (loading || !data || data.length === 0) {
+  // Handle empty data or loading state
+  if (loading) {
     return <ChartLoading height={height} />;
   }
 
+  if (!data || data.length === 0 || !lines || lines.length === 0) {
+    return (
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height }}
+      >
+        {noDataMessage}
+      </div>
+    );
+  }
+
   return (
-    <div className={className} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className={cn("w-full", className)}>
+      <ResponsiveContainer width="100%" height={height}>
         <RechartsLineChart
           data={data}
-          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey={xAxisKey} 
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <XAxis
+            dataKey={xAxisDataKey}
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <YAxis 
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <YAxis
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
+          <Tooltip content={<CustomTooltip />} />
           <Legend />
           {lines.map((line, index) => (
             <Line
-              key={index}
+              key={line.key}
               type="monotone"
-              dataKey={line.dataKey}
+              dataKey={line.key}
               name={line.name}
-              stroke={line.color}
-              strokeWidth={2}
-              dot={{ r: 4, fill: line.color, stroke: line.color }}
-              activeDot={{ r: 6, fill: line.color, stroke: 'white', strokeWidth: 2 }}
+              stroke={line.color || colors[index % colors.length]}
+              strokeWidth={strokeWidth}
+              dot={{ fill: line.color || colors[index % colors.length] }}
+              activeDot={{ r: 6, fill: line.color || colors[index % colors.length] }}
             />
           ))}
         </RechartsLineChart>

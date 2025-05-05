@@ -1,54 +1,68 @@
 
 import React from "react";
 import {
-  BarChart as RechartsBarChart,
   Bar,
+  BarChart as RechartsBarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
 } from "recharts";
-import { BarChartProps } from "./types";
-import { CustomTooltip } from "./CustomTooltip";
+import { cn } from "@/lib/utils";
 import { ChartLoading } from "./ChartLoading";
+import { CustomTooltip } from "./CustomTooltip";
+import { BarChartProps } from "./types";
 
-// Bar Chart Component
 export const BarChart: React.FC<BarChartProps> = ({
   data,
-  xAxisKey = "name",
-  barKey = "value",
-  color = "#3b82f6",
+  width = 500,
   height = 300,
-  className = "",
+  dataKey = "value",
+  xAxisDataKey = "name",
+  barSize = 30,
   loading = false,
-  tooltipTitle
+  className,
+  noDataMessage = "No data available",
+  colors = ["var(--chart-primary, #3498db)"],
 }) => {
-  if (loading || !data || data.length === 0) {
+  // Handle empty data or loading state
+  if (loading) {
     return <ChartLoading height={height} />;
   }
 
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height }}
+      >
+        {noDataMessage}
+      </div>
+    );
+  }
+
   return (
-    <div className={className} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className={cn("w-full", className)}>
+      <ResponsiveContainer width="100%" height={height}>
         <RechartsBarChart
           data={data}
-          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey={xAxisKey}
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <XAxis
+            dataKey={xAxisDataKey}
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <YAxis 
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          <YAxis
+            tick={{ fill: "var(--chart-text, currentColor)" }}
+            stroke="var(--chart-text, currentColor)"
+            opacity={0.6}
           />
-          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
-          <Bar dataKey={barKey} fill={color} radius={[4, 4, 0, 0]} />
+          <Tooltip content={<CustomTooltip title={dataKey} />} />
+          <Bar dataKey={dataKey} fill={colors[0]} barSize={barSize} />
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>

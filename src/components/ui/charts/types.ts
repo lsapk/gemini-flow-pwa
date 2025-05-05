@@ -1,66 +1,66 @@
 
-import { CSSProperties } from "react";
-import { Formatter, TooltipProps } from "recharts";
+import React, { CSSProperties } from "react";
+import { TooltipProps as RechartsTooltipProps } from "recharts";
 
-// Shared interface for chart data
-export interface ChartData {
+// Define CustomTooltipProps
+export interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  title?: string;
+}
+
+// Define chart data types
+export interface ChartDataPoint {
   name: string;
   value: number;
   [key: string]: any;
 }
 
-// Base chart props
-export interface BaseChartProps {
-  data: ChartData[];
+export interface MultiLineChartDataPoint {
+  name: string;
+  [key: string]: any;
+}
+
+// Define common chart props
+export interface CommonChartProps {
+  data: ChartDataPoint[] | MultiLineChartDataPoint[];
+  width?: number;
   height?: number;
-  className?: string;
   loading?: boolean;
-}
-
-// Bar chart specific props
-export interface BarChartProps extends BaseChartProps {
-  xAxisKey?: string;
-  barKey?: string;
-  color?: string;
-  tooltipTitle?: string;
-}
-
-// Area chart specific props
-export interface AreaChartProps extends BaseChartProps {
-  xAxisKey?: string;
-  areaKey?: string;
-  color?: string;
-  tooltipTitle?: string;
-}
-
-// Line chart specific props
-export interface LineChartProps extends BaseChartProps {
-  xAxisKey?: string;
-  lineKey?: string;
-  color?: string;
-  tooltipTitle?: string;
-}
-
-// Line chart with multiple lines props
-export interface MultiLineChartProps extends BaseChartProps {
-  xAxisKey?: string;
-  lines?: Array<{
-    dataKey: string;
-    name: string;
-    color: string;
-  }>;
-  tooltipTitle?: string;
-}
-
-// Pie chart specific props
-export interface PieChartProps extends BaseChartProps {
-  nameKey?: string;
-  dataKey?: string;
+  className?: string;
+  noDataMessage?: string;
   colors?: string[];
-  tooltipTitle?: string;
 }
 
-// Custom tooltip props
-export type CustomTooltipProps = TooltipProps<number, string> & { 
-  title?: string 
-};
+// Define specific chart props
+export interface AreaChartProps extends CommonChartProps {
+  dataKey?: string;
+  xAxisDataKey?: string;
+  areaOpacity?: number;
+}
+
+export interface BarChartProps extends CommonChartProps {
+  dataKey?: string;
+  xAxisDataKey?: string;
+  barSize?: number;
+}
+
+export interface LineChartProps extends CommonChartProps {
+  dataKey?: string;
+  xAxisDataKey?: string;
+  strokeWidth?: number;
+}
+
+export interface MultiLineChartProps extends CommonChartProps {
+  lines: { key: string; name: string; color?: string }[];
+  xAxisDataKey?: string;
+  strokeWidth?: number;
+}
+
+export interface PieChartProps extends CommonChartProps {
+  dataKey?: string;
+  nameKey?: string;
+  innerRadius?: number;
+  outerRadius?: number;
+}

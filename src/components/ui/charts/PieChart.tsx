@@ -1,57 +1,68 @@
 
 import React from "react";
 import {
-  PieChart as RechartsPieChart,
   Pie,
-  Cell,
+  PieChart as RechartsPieChart,
+  ResponsiveContainer,
   Tooltip,
+  Cell,
   Legend,
-  ResponsiveContainer
 } from "recharts";
-import { PieChartProps } from "./types";
-import { CustomTooltip } from "./CustomTooltip";
+import { cn } from "@/lib/utils";
 import { ChartLoading } from "./ChartLoading";
+import { CustomTooltip } from "./CustomTooltip";
+import { PieChartProps } from "./types";
 
-// Pie Chart Component
 export const PieChart: React.FC<PieChartProps> = ({
   data,
-  nameKey = "name",
-  dataKey = "value",
-  colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+  width = 500,
   height = 300,
-  className = "",
+  dataKey = "value",
+  nameKey = "name",
+  innerRadius = 0,
+  outerRadius = 80,
   loading = false,
-  tooltipTitle
+  className,
+  noDataMessage = "No data available",
+  colors = ["#3498db", "#e74c3c", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c", "#d35400", "#7f8c8d"],
 }) => {
-  if (loading || !data || data.length === 0) {
+  // Handle empty data or loading state
+  if (loading) {
     return <ChartLoading height={height} />;
   }
 
-  // Generate colors for each segment
-  const pieColors = data.map((_, index) => colors[index % colors.length]);
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height }}
+      >
+        {noDataMessage}
+      </div>
+    );
+  }
 
   return (
-    <div className={className} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsPieChart>
+    <div className={cn("w-full", className)}>
+      <ResponsiveContainer width="100%" height={height}>
+        <RechartsPieChart margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <Tooltip content={<CustomTooltip title={dataKey} />} />
+          <Legend />
           <Pie
             data={data}
             cx="50%"
             cy="50%"
             labelLine={false}
-            outerRadius={80}
-            innerRadius={40}
+            outerRadius={outerRadius}
+            innerRadius={innerRadius}
             fill="#8884d8"
             dataKey={dataKey}
             nameKey={nameKey}
-            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
           >
-            {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={pieColors[index]} />
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
-          <Legend />
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>
