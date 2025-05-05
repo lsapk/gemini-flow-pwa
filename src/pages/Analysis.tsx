@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { AreaChart, BarChart, PieChart, LineChart } from "@/components/ui/custom-charts";
+import { SimpleAreaChart, SimpleBarChart, SimplePieChart, SimpleLineChart, AreaChart, BarChart, PieChart, LineChart } from "@/components/ui/custom-charts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -541,9 +540,8 @@ const Analysis = () => {
                     { name: "Sam", total: 3 },
                     { name: "Dim", total: 2 },
                   ]}
-                  tooltipTitle="Tâches"
-                  height={200}
-                  loading={loading}
+                  barKey="total"
+                  className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
             </Card>
@@ -562,9 +560,8 @@ const Analysis = () => {
                     { name: "Semaine 3", total: 15 },
                     { name: "Semaine 4", total: 20 },
                   ]}
-                  tooltipTitle="Habitudes"
-                  height={200}
-                  loading={loading}
+                  areaKey="total"
+                  className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
             </Card>
@@ -586,9 +583,8 @@ const Analysis = () => {
                     { name: "Sam", total: 15 },
                     { name: "Dim", total: 30 },
                   ]}
-                  tooltipTitle="Minutes"
-                  height={200}
-                  loading={loading}
+                  barKey="total"
+                  className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
             </Card>
@@ -602,9 +598,7 @@ const Analysis = () => {
               <CardContent>
                 <PieChart
                   data={getCategoryData()}
-                  tooltipTitle="Pourcentage"
-                  height={200}
-                  loading={loading}
+                  className={loading ? "opacity-50" : ""}
                 />
               </CardContent>
             </Card>
@@ -624,8 +618,7 @@ const Analysis = () => {
                   { dataKey: "high", name: "Énergie", color: "#10b981" },
                   { dataKey: "low", name: "Focus", color: "#0ea5e9" }
                 ]}
-                height={250}
-                loading={loading}
+                className={loading ? "opacity-50" : ""}
               />
             </CardContent>
           </Card>

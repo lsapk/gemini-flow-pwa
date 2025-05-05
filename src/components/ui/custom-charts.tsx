@@ -1,7 +1,7 @@
 
 import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { Area, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart, Pie, Cell } from 'recharts';
+import { Area, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 interface ChartConfig {
   total?: {
@@ -134,7 +134,7 @@ export const SimplePieChart = ({
   return (
     <div className={cn("h-[200px] w-full", className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <RechartsPieChart>
           <Pie
             data={data}
             cx="50%"
@@ -158,7 +158,53 @@ export const SimplePieChart = ({
               fontSize: '0.875rem'
             }} 
           />
-        </PieChart>
+        </RechartsPieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// Added the SimpleLineChart component
+export const SimpleLineChart = ({
+  data,
+  xAxisKey = "name",
+  lines = [{ dataKey: "value", name: "Value", color: "#3b82f6" }],
+  className
+}: {
+  data: any[];
+  xAxisKey?: string;
+  lines?: { dataKey: string; name: string; color: string }[];
+  className?: string;
+}) => {
+  return (
+    <div className={cn("h-[200px] w-full", className)}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey={xAxisKey}
+            className="text-xs fill-muted-foreground" 
+          />
+          <YAxis className="text-xs fill-muted-foreground" />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'var(--card)', 
+              borderColor: 'var(--border)',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem'
+            }} 
+          />
+          {lines.map((line, index) => (
+            <Line 
+              key={index}
+              type="monotone" 
+              dataKey={line.dataKey} 
+              stroke={line.color}
+              name={line.name} 
+              activeDot={{ r: 8 }} 
+            />
+          ))}
+        </RechartsLineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -167,3 +213,5 @@ export const SimplePieChart = ({
 // Fallback chart components to ensure the original imports still work
 export const AreaChart = SimpleAreaChart;
 export const BarChart = SimpleBarChart;
+export const PieChart = SimplePieChart;
+export const LineChart = SimpleLineChart;
