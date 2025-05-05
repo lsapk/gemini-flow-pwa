@@ -1,753 +1,864 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { generateUniqueId } from "@/lib/utils";
 
-// Auth functions
-export const signUp = async (email: string, password: string, displayName: string) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        display_name: displayName,
-      }
-    }
+// Contrôle de connexion et mise en cache
+let isOnline = true;
+const checkNetwork = () => {
+  isOnline = navigator.onLine;
+  return isOnline;
+};
+
+// Écoute des changements de statut réseau
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => { 
+    isOnline = true;
+    syncOfflineData().catch(console.error);
   });
-  
-  return { data, error };
+  window.addEventListener('offline', () => { isOnline = false; });
+}
+
+// Tables pour mise en cache hors ligne
+const OFFLINE_TABLES = ['tasks', 'habits', 'goals', 'journal_entries', 'focus_sessions'];
+
+// Fonctions de stockage hors ligne
+const getOfflineStore = (storeName: string) => {
+  const store = localStorage.getItem(`offline_${storeName}`);
+  return store ? JSON.parse(store) : [];
 };
 
-export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  
-  return { data, error };
+const saveOfflineStore = (storeName: string, data: any[]) => {
+  localStorage.setItem(`offline_${storeName}`, JSON.stringify(data));
 };
 
-export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  return { error };
-};
-
-export const getCurrentUser = async () => {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (user) {
-    // Fetch user profile data if needed
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select()
-      .eq('id', user.id)
-      .single();
-      
-    return { user: { ...user, profile }, error };
+const addToOfflineStore = (storeName: string, item: any) => {
+  const store = getOfflineStore(storeName);
+  // S'assurer que l'élément a un offline_id pour le suivi
+  if (!item.offline_id) {
+    item.offline_id = generateUniqueId();
   }
   
-  return { user, error };
+  // Ajouter un timestamp pour le suivi des modifications
+  item.updated_at = new Date().toISOString();
+  
+  // Rechercher et mettre à jour si existe, sinon ajouter
+  const existingIndex = store.findIndex((i: any) => 
+    (i.id && i.id === item.id) || (i.offline_id && i.offline_id === item.offline_id)
+  );
+  
+  if (existingIndex >= 0) {
+    store[existingIndex] = { ...store[existingIndex], ...item };
+  } else {
+    store.push(item);
+  }
+  
+  saveOfflineStore(storeName, store);
+  return item;
 };
 
-// Data synchronization function for offline mode
+// Synchronisation des données hors ligne
 export const syncOfflineData = async () => {
-  const offlineData = localStorage.getItem('offlineData');
-  
-  if (!offlineData) {
-    return { success: true };
-  }
+  if (!checkNetwork()) return { success: false, error: "Hors ligne" };
   
   try {
-    const parsedData = JSON.parse(offlineData);
-    const { tasks = [], habits = [], goals = [], journal = [] } = parsedData;
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) return { success: false, error: "Non authentifié" };
     
-    // Process tasks
-    for (const task of tasks) {
-      if (task.id.startsWith('offline_')) {
-        // This is a new task created offline
-        const newTask = { ...task };
-        delete newTask.id;
-        await addTask(newTask);
-      } else {
-        // This is an existing task updated offline
-        await updateTask(task.id, task);
+    const dataToSync: Record<string, any[]> = {};
+    
+    // Collecter toutes les données hors ligne
+    OFFLINE_TABLES.forEach(table => {
+      const offlineData = getOfflineStore(table);
+      if (offlineData && offlineData.length > 0) {
+        dataToSync[table] = offlineData;
       }
+    });
+    
+    // S'il n'y a pas de données à synchroniser, terminer
+    if (Object.keys(dataToSync).length === 0) {
+      return { success: true, message: "Pas de données à synchroniser" };
     }
     
-    // Process habits
-    for (const habit of habits) {
-      if (habit.id.startsWith('offline_')) {
-        const newHabit = { ...habit };
-        delete newHabit.id;
-        await addHabit(newHabit);
-      } else {
-        await updateHabit(habit.id, habit);
-      }
+    // Appeler l'edge function pour synchroniser les données
+    const { data, error } = await supabase.functions.invoke('sync-offline-data', {
+      body: dataToSync
+    });
+    
+    if (error) {
+      console.error("Erreur synchronisation:", error);
+      return { success: false, error: error.message };
     }
     
-    // Process goals
-    for (const goal of goals) {
-      if (goal.id.startsWith('offline_')) {
-        const newGoal = { ...goal };
-        delete newGoal.id;
-        await addGoal(newGoal);
-      } else {
-        await updateGoal(goal.id, goal);
-      }
+    // Vider les magasins locaux après synchronisation réussie
+    if (data && data.success) {
+      OFFLINE_TABLES.forEach(table => {
+        saveOfflineStore(table, []);
+      });
+      return { success: true, message: "Synchronisation réussie" };
     }
     
-    // Process journal entries
-    for (const entry of journal) {
-      if (entry.id.startsWith('offline_')) {
-        const newEntry = { ...entry };
-        delete newEntry.id;
-        await addJournalEntry(newEntry);
-      } else {
-        await updateJournalEntry(entry.id, entry);
-      }
-    }
-    
-    // Clear offline data after successful sync
-    localStorage.removeItem('offlineData');
-    
-    return { success: true };
+    return { success: false, error: "Échec de synchronisation" };
   } catch (error) {
-    console.error("Error syncing offline data:", error);
-    return { success: false, error };
+    console.error("Erreur dans syncOfflineData:", error);
+    return { success: false, error: String(error) };
   }
 };
 
-// Helper function to store data offline
-const storeOfflineData = (type: string, data: any) => {
-  try {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    
-    if (!offlineData[type]) {
-      offlineData[type] = [];
-    }
-    
-    // Add or update the item in offline storage
-    const index = offlineData[type].findIndex((item: any) => item.id === data.id);
-    
-    if (index >= 0) {
-      offlineData[type][index] = data;
-    } else {
-      offlineData[type].push(data);
-    }
-    
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    return true;
-  } catch (error) {
-    console.error(`Error storing offline ${type}:`, error);
-    return false;
-  }
-};
-
-// Function to check if we're online
-export const isOnline = () => {
-  return navigator.onLine;
-};
-
-// Tasks functions
+// === TÂCHES ===
 export const getTasks = async () => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    return { data: offlineData.tasks || [], error: null };
+  try {
+    // Essayer de récupérer depuis Supabase si en ligne
+    if (checkNetwork()) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Mettre en cache pour utilisation hors ligne
+      saveOfflineStore('tasks', data || []);
+      return { data, error: null };
+    } else {
+      // Utiliser les données hors ligne
+      const offlineTasks = getOfflineStore('tasks');
+      return { data: offlineTasks, error: null, offline: true };
+    }
+  } catch (error) {
+    console.error("Erreur getTasks:", error);
+    // Si erreur, essayer les données hors ligne
+    const offlineTasks = getOfflineStore('tasks');
+    return { data: offlineTasks, error: String(error), offline: true };
   }
-  
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('due_date', { ascending: true });
-    
-  if (!error && data) {
-    // Cache the data for offline use
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    offlineData.tasks = data;
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-  }
-    
-  return { data, error };
 };
 
-export const addTask = async (taskData: any) => {
-  if (!isOnline()) {
-    const offlineId = `offline_${Date.now()}`;
-    const newTask = { ...taskData, id: offlineId };
-    storeOfflineData('tasks', newTask);
-    return { data: newTask, error: null };
+export const createTask = async (task: any) => {
+  // Ajouter un ID temporaire pour le suivi
+  const taskWithOfflineId = { ...task, offline_id: generateUniqueId() };
+  
+  // Toujours stocker en local d'abord pour une expérience réactive
+  const offlineTask = addToOfflineStore('tasks', taskWithOfflineId);
+  
+  // Si hors ligne, retourner immédiatement
+  if (!checkNetwork()) {
+    return { data: offlineTask, error: null, offline: true };
   }
   
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert(taskData)
-    .select()
-    .single();
+  try {
+    // Tenter d'enregistrer dans Supabase
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([task])
+      .select();
     
-  return { data, error };
+    if (error) throw error;
+    
+    // Mettre à jour le stockage local avec l'ID réel
+    if (data && data.length > 0) {
+      const updatedTasks = getOfflineStore('tasks').map((t: any) => 
+        t.offline_id === offlineTask.offline_id ? { ...t, id: data[0].id } : t
+      );
+      saveOfflineStore('tasks', updatedTasks);
+    }
+    
+    return { data: data && data.length > 0 ? data[0] : offlineTask, error: null };
+  } catch (error) {
+    console.error("Erreur createTask:", error);
+    // Garder le local en cas d'échec
+    return { data: offlineTask, error: String(error), offline: true };
+  }
 };
 
 export const updateTask = async (id: string, updates: any) => {
-  if (!isOnline()) {
-    const updatedTask = { ...updates, id };
-    storeOfflineData('tasks', updatedTask);
-    return { data: updatedTask, error: null };
-  }
+  // Mettre à jour en local d'abord
+  const offlineTasks = getOfflineStore('tasks');
+  const taskIndex = offlineTasks.findIndex((t: any) => t.id === id || t.offline_id === id);
   
-  const { data, error } = await supabase
-    .from('tasks')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  if (taskIndex >= 0) {
+    const updatedTask = { ...offlineTasks[taskIndex], ...updates, updated_at: new Date().toISOString() };
+    offlineTasks[taskIndex] = updatedTask;
+    saveOfflineStore('tasks', offlineTasks);
     
-  return { data, error };
+    // Si hors ligne, retourner immédiatement
+    if (!checkNetwork()) {
+      return { data: updatedTask, error: null, offline: true };
+    }
+    
+    // Si la tâche n'a pas d'ID réel, elle n'existe pas encore dans la base de données
+    if (!updatedTask.id || updatedTask.id.startsWith('offline_')) {
+      return { data: updatedTask, error: null, offline: true };
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: data && data.length > 0 ? data[0] : updatedTask, error: null };
+    } catch (error) {
+      console.error("Erreur updateTask:", error);
+      return { data: updatedTask, error: String(error), offline: true };
+    }
+  } else {
+    return { data: null, error: "Tâche non trouvée", offline: true };
+  }
 };
 
 export const deleteTask = async (id: string) => {
-  if (!isOnline()) {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.tasks) {
-      offlineData.tasks = offlineData.tasks.filter((task: any) => task.id !== id);
-      localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    }
+  // Supprimer en local d'abord
+  const offlineTasks = getOfflineStore('tasks');
+  const updatedTasks = offlineTasks.filter((t: any) => t.id !== id && t.offline_id !== id);
+  saveOfflineStore('tasks', updatedTasks);
+  
+  // Si hors ligne, retourner immédiatement
+  if (!checkNetwork()) {
+    return { error: null, offline: true };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
     return { error: null };
+  } catch (error) {
+    console.error("Erreur deleteTask:", error);
+    return { error: String(error), offline: true };
   }
-  
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', id);
-    
-  return { error };
 };
 
-// Habits functions
+// === HABITUDES ===
+// ...Même logique que pour les tâches avec des adaptations appropriées
 export const getHabits = async () => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    return { data: offlineData.habits || [], error: null };
+  try {
+    if (checkNetwork()) {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      saveOfflineStore('habits', data || []);
+      return { data, error: null };
+    } else {
+      const offlineHabits = getOfflineStore('habits');
+      return { data: offlineHabits, error: null, offline: true };
+    }
+  } catch (error) {
+    console.error("Erreur getHabits:", error);
+    const offlineHabits = getOfflineStore('habits');
+    return { data: offlineHabits, error: String(error), offline: true };
   }
-  
-  const { data, error } = await supabase
-    .from('habits')
-    .select('*')
-    .order('created_at', { ascending: false });
-    
-  if (!error && data) {
-    // Cache the data for offline use
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    offlineData.habits = data;
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-  }
-    
-  return { data, error };
 };
 
-export const addHabit = async (habitData: any) => {
-  if (!isOnline()) {
-    const offlineId = `offline_${Date.now()}`;
-    const newHabit = { ...habitData, id: offlineId };
-    storeOfflineData('habits', newHabit);
-    return { data: newHabit, error: null };
+export const createHabit = async (habit: any) => {
+  const habitWithOfflineId = { ...habit, offline_id: generateUniqueId() };
+  const offlineHabit = addToOfflineStore('habits', habitWithOfflineId);
+  
+  if (!checkNetwork()) {
+    return { data: offlineHabit, error: null, offline: true };
   }
   
-  const { data, error } = await supabase
-    .from('habits')
-    .insert(habitData)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('habits')
+      .insert([habit])
+      .select();
     
-  return { data, error };
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      const updatedHabits = getOfflineStore('habits').map((h: any) => 
+        h.offline_id === offlineHabit.offline_id ? { ...h, id: data[0].id } : h
+      );
+      saveOfflineStore('habits', updatedHabits);
+    }
+    
+    return { data: data && data.length > 0 ? data[0] : offlineHabit, error: null };
+  } catch (error) {
+    console.error("Erreur createHabit:", error);
+    return { data: offlineHabit, error: String(error), offline: true };
+  }
 };
 
 export const updateHabit = async (id: string, updates: any) => {
-  if (!isOnline()) {
-    const updatedHabit = { ...updates, id };
-    storeOfflineData('habits', updatedHabit);
-    return { data: updatedHabit, error: null };
-  }
+  const offlineHabits = getOfflineStore('habits');
+  const habitIndex = offlineHabits.findIndex((h: any) => h.id === id || h.offline_id === id);
   
-  const { data, error } = await supabase
-    .from('habits')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  if (habitIndex >= 0) {
+    const updatedHabit = { ...offlineHabits[habitIndex], ...updates, updated_at: new Date().toISOString() };
+    offlineHabits[habitIndex] = updatedHabit;
+    saveOfflineStore('habits', offlineHabits);
     
-  return { data, error };
+    if (!checkNetwork()) {
+      return { data: updatedHabit, error: null, offline: true };
+    }
+    
+    if (!updatedHabit.id || updatedHabit.id.startsWith('offline_')) {
+      return { data: updatedHabit, error: null, offline: true };
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: data && data.length > 0 ? data[0] : updatedHabit, error: null };
+    } catch (error) {
+      console.error("Erreur updateHabit:", error);
+      return { data: updatedHabit, error: String(error), offline: true };
+    }
+  } else {
+    return { data: null, error: "Habitude non trouvée", offline: true };
+  }
 };
 
 export const deleteHabit = async (id: string) => {
-  if (!isOnline()) {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.habits) {
-      offlineData.habits = offlineData.habits.filter((habit: any) => habit.id !== id);
-      localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    }
+  const offlineHabits = getOfflineStore('habits');
+  const updatedHabits = offlineHabits.filter((h: any) => h.id !== id && h.offline_id !== id);
+  saveOfflineStore('habits', updatedHabits);
+  
+  if (!checkNetwork()) {
+    return { error: null, offline: true };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('habits')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
     return { error: null };
+  } catch (error) {
+    console.error("Erreur deleteHabit:", error);
+    return { error: String(error), offline: true };
   }
-  
-  const { error } = await supabase
-    .from('habits')
-    .delete()
-    .eq('id', id);
-    
-  return { error };
 };
 
-// Journal functions
-export const getJournalEntries = async () => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    return { data: offlineData.journal || [], error: null };
-  }
-  
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .order('created_at', { ascending: false });
-    
-  if (!error && data) {
-    // Cache the data for offline use
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    offlineData.journal = data;
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-  }
-    
-  return { data, error };
-};
-
-export const addJournalEntry = async (entryData: any) => {
-  if (!isOnline()) {
-    const offlineId = `offline_${Date.now()}`;
-    const newEntry = { ...entryData, id: offlineId };
-    storeOfflineData('journal', newEntry);
-    return { data: newEntry, error: null };
-  }
-  
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .insert(entryData)
-    .select()
-    .single();
-    
-  return { data, error };
-};
-
-export const getJournalEntry = async (id: string) => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.journal) {
-      const entry = offlineData.journal.find((entry: any) => entry.id === id);
-      return { data: entry || null, error: null };
-    }
-    return { data: null, error: null };
-  }
-  
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .eq('id', id)
-    .single();
-    
-  return { data, error };
-};
-
-export const updateJournalEntry = async (id: string, updates: any) => {
-  if (!isOnline()) {
-    const updatedEntry = { ...updates, id };
-    storeOfflineData('journal', updatedEntry);
-    return { data: updatedEntry, error: null };
-  }
-  
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-    
-  return { data, error };
-};
-
-export const deleteJournalEntry = async (id: string) => {
-  if (!isOnline()) {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.journal) {
-      offlineData.journal = offlineData.journal.filter((entry: any) => entry.id !== id);
-      localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    }
-    return { error: null };
-  }
-  
-  const { error } = await supabase
-    .from('journal_entries')
-    .delete()
-    .eq('id', id);
-    
-  return { error };
-};
-
-// Goals functions
+// === OBJECTIFS ===
+// ... Logique similaire aux tâches et habitudes
 export const getGoals = async () => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    return { data: offlineData.goals || [], error: null };
+  try {
+    if (checkNetwork()) {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      saveOfflineStore('goals', data || []);
+      return { data, error: null };
+    } else {
+      const offlineGoals = getOfflineStore('goals');
+      return { data: offlineGoals, error: null, offline: true };
+    }
+  } catch (error) {
+    console.error("Erreur getGoals:", error);
+    const offlineGoals = getOfflineStore('goals');
+    return { data: offlineGoals, error: String(error), offline: true };
   }
-  
-  const { data, error } = await supabase
-    .from('goals')
-    .select('*')
-    .order('created_at', { ascending: false });
-    
-  if (!error && data) {
-    // Cache the data for offline use
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    offlineData.goals = data;
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-  }
-    
-  return { data, error };
 };
 
-export const addGoal = async (goalData: any) => {
-  if (!isOnline()) {
-    const offlineId = `offline_${Date.now()}`;
-    const newGoal = { ...goalData, id: offlineId };
-    storeOfflineData('goals', newGoal);
-    return { data: newGoal, error: null };
+export const createGoal = async (goal: any) => {
+  const goalWithOfflineId = { ...goal, offline_id: generateUniqueId() };
+  const offlineGoal = addToOfflineStore('goals', goalWithOfflineId);
+  
+  if (!checkNetwork()) {
+    return { data: offlineGoal, error: null, offline: true };
   }
   
-  const { data, error } = await supabase
-    .from('goals')
-    .insert(goalData)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('goals')
+      .insert([goal])
+      .select();
     
-  return { data, error };
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      const updatedGoals = getOfflineStore('goals').map((g: any) => 
+        g.offline_id === offlineGoal.offline_id ? { ...g, id: data[0].id } : g
+      );
+      saveOfflineStore('goals', updatedGoals);
+    }
+    
+    return { data: data && data.length > 0 ? data[0] : offlineGoal, error: null };
+  } catch (error) {
+    console.error("Erreur createGoal:", error);
+    return { data: offlineGoal, error: String(error), offline: true };
+  }
 };
 
 export const updateGoal = async (id: string, updates: any) => {
-  if (!isOnline()) {
-    const updatedGoal = { ...updates, id };
-    storeOfflineData('goals', updatedGoal);
-    return { data: updatedGoal, error: null };
-  }
+  const offlineGoals = getOfflineStore('goals');
+  const goalIndex = offlineGoals.findIndex((g: any) => g.id === id || g.offline_id === id);
   
-  const { data, error } = await supabase
-    .from('goals')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  if (goalIndex >= 0) {
+    const updatedGoal = { ...offlineGoals[goalIndex], ...updates, updated_at: new Date().toISOString() };
+    offlineGoals[goalIndex] = updatedGoal;
+    saveOfflineStore('goals', offlineGoals);
     
-  return { data, error };
+    if (!checkNetwork()) {
+      return { data: updatedGoal, error: null, offline: true };
+    }
+    
+    if (!updatedGoal.id || updatedGoal.id.startsWith('offline_')) {
+      return { data: updatedGoal, error: null, offline: true };
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: data && data.length > 0 ? data[0] : updatedGoal, error: null };
+    } catch (error) {
+      console.error("Erreur updateGoal:", error);
+      return { data: updatedGoal, error: String(error), offline: true };
+    }
+  } else {
+    return { data: null, error: "Objectif non trouvé", offline: true };
+  }
 };
 
 export const deleteGoal = async (id: string) => {
-  if (!isOnline()) {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.goals) {
-      offlineData.goals = offlineData.goals.filter((goal: any) => goal.id !== id);
-      localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    }
+  const offlineGoals = getOfflineStore('goals');
+  const updatedGoals = offlineGoals.filter((g: any) => g.id !== id && g.offline_id !== id);
+  saveOfflineStore('goals', updatedGoals);
+  
+  if (!checkNetwork()) {
+    return { error: null, offline: true };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
     return { error: null };
+  } catch (error) {
+    console.error("Erreur deleteGoal:", error);
+    return { error: String(error), offline: true };
   }
-  
-  const { error } = await supabase
-    .from('goals')
-    .delete()
-    .eq('id', id);
-    
-  return { error };
 };
 
-// Focus sessions
+// === JOURNAL ===
+// ... Logique similaire aux autres fonctionnalités
+export const getJournalEntries = async () => {
+  try {
+    if (checkNetwork()) {
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      saveOfflineStore('journal_entries', data || []);
+      return { data, error: null };
+    } else {
+      const offlineEntries = getOfflineStore('journal_entries');
+      return { data: offlineEntries, error: null, offline: true };
+    }
+  } catch (error) {
+    console.error("Erreur getJournalEntries:", error);
+    const offlineEntries = getOfflineStore('journal_entries');
+    return { data: offlineEntries, error: String(error), offline: true };
+  }
+};
+
+export const createJournalEntry = async (entry: any) => {
+  const entryWithOfflineId = { ...entry, offline_id: generateUniqueId() };
+  const offlineEntry = addToOfflineStore('journal_entries', entryWithOfflineId);
+  
+  if (!checkNetwork()) {
+    return { data: offlineEntry, error: null, offline: true };
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .insert([entry])
+      .select();
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      const updatedEntries = getOfflineStore('journal_entries').map((e: any) => 
+        e.offline_id === offlineEntry.offline_id ? { ...e, id: data[0].id } : e
+      );
+      saveOfflineStore('journal_entries', updatedEntries);
+    }
+    
+    return { data: data && data.length > 0 ? data[0] : offlineEntry, error: null };
+  } catch (error) {
+    console.error("Erreur createJournalEntry:", error);
+    return { data: offlineEntry, error: String(error), offline: true };
+  }
+};
+
+export const updateJournalEntry = async (id: string, updates: any) => {
+  const offlineEntries = getOfflineStore('journal_entries');
+  const entryIndex = offlineEntries.findIndex((e: any) => e.id === id || e.offline_id === id);
+  
+  if (entryIndex >= 0) {
+    const updatedEntry = { ...offlineEntries[entryIndex], ...updates, updated_at: new Date().toISOString() };
+    offlineEntries[entryIndex] = updatedEntry;
+    saveOfflineStore('journal_entries', offlineEntries);
+    
+    if (!checkNetwork()) {
+      return { data: updatedEntry, error: null, offline: true };
+    }
+    
+    if (!updatedEntry.id || updatedEntry.id.startsWith('offline_')) {
+      return { data: updatedEntry, error: null, offline: true };
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: data && data.length > 0 ? data[0] : updatedEntry, error: null };
+    } catch (error) {
+      console.error("Erreur updateJournalEntry:", error);
+      return { data: updatedEntry, error: String(error), offline: true };
+    }
+  } else {
+    return { data: null, error: "Entrée de journal non trouvée", offline: true };
+  }
+};
+
+export const deleteJournalEntry = async (id: string) => {
+  const offlineEntries = getOfflineStore('journal_entries');
+  const updatedEntries = offlineEntries.filter((e: any) => e.id !== id && e.offline_id !== id);
+  saveOfflineStore('journal_entries', updatedEntries);
+  
+  if (!checkNetwork()) {
+    return { error: null, offline: true };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('journal_entries')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    return { error: null };
+  } catch (error) {
+    console.error("Erreur deleteJournalEntry:", error);
+    return { error: String(error), offline: true };
+  }
+};
+
+// === SESSIONS FOCUS ===
+// ... Logique similaire aux autres fonctionnalités
 export const getFocusSessions = async () => {
-  if (!isOnline()) {
-    const offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    return { data: offlineData.focus || [], error: null };
+  try {
+    if (checkNetwork()) {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      saveOfflineStore('focus_sessions', data || []);
+      return { data, error: null };
+    } else {
+      const offlineSessions = getOfflineStore('focus_sessions');
+      return { data: offlineSessions, error: null, offline: true };
+    }
+  } catch (error) {
+    console.error("Erreur getFocusSessions:", error);
+    const offlineSessions = getOfflineStore('focus_sessions');
+    return { data: offlineSessions, error: String(error), offline: true };
   }
-  
-  const { data, error } = await supabase
-    .from('focus_sessions')
-    .select('*')
-    .order('created_at', { ascending: false });
-    
-  if (!error && data) {
-    // Cache the data for offline use
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    offlineData.focus = data;
-    localStorage.setItem('offlineData', JSON.stringify(offlineData));
-  }
-    
-  return { data, error };
 };
 
-export const addFocusSession = async (sessionData: any) => {
-  if (!isOnline()) {
-    const offlineId = `offline_${Date.now()}`;
-    const newSession = { ...sessionData, id: offlineId };
-    storeOfflineData('focus', newSession);
-    return { data: newSession, error: null };
+export const createFocusSession = async (session: any) => {
+  const sessionWithOfflineId = { ...session, offline_id: generateUniqueId() };
+  const offlineSession = addToOfflineStore('focus_sessions', sessionWithOfflineId);
+  
+  if (!checkNetwork()) {
+    return { data: offlineSession, error: null, offline: true };
   }
   
-  const { data, error } = await supabase
-    .from('focus_sessions')
-    .insert(sessionData)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('focus_sessions')
+      .insert([session])
+      .select();
     
-  return { data, error };
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      const updatedSessions = getOfflineStore('focus_sessions').map((s: any) => 
+        s.offline_id === offlineSession.offline_id ? { ...s, id: data[0].id } : s
+      );
+      saveOfflineStore('focus_sessions', updatedSessions);
+    }
+    
+    return { data: data && data.length > 0 ? data[0] : offlineSession, error: null };
+  } catch (error) {
+    console.error("Erreur createFocusSession:", error);
+    return { data: offlineSession, error: String(error), offline: true };
+  }
 };
 
 export const updateFocusSession = async (id: string, updates: any) => {
-  if (!isOnline()) {
-    const updatedSession = { ...updates, id };
-    storeOfflineData('focus', updatedSession);
-    return { data: updatedSession, error: null };
-  }
+  const offlineSessions = getOfflineStore('focus_sessions');
+  const sessionIndex = offlineSessions.findIndex((s: any) => s.id === id || s.offline_id === id);
   
-  const { data, error } = await supabase
-    .from('focus_sessions')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  if (sessionIndex >= 0) {
+    const updatedSession = { ...offlineSessions[sessionIndex], ...updates, updated_at: new Date().toISOString() };
+    offlineSessions[sessionIndex] = updatedSession;
+    saveOfflineStore('focus_sessions', offlineSessions);
     
-  return { data, error };
+    if (!checkNetwork()) {
+      return { data: updatedSession, error: null, offline: true };
+    }
+    
+    if (!updatedSession.id || updatedSession.id.startsWith('offline_')) {
+      return { data: updatedSession, error: null, offline: true };
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: data && data.length > 0 ? data[0] : updatedSession, error: null };
+    } catch (error) {
+      console.error("Erreur updateFocusSession:", error);
+      return { data: updatedSession, error: String(error), offline: true };
+    }
+  } else {
+    return { data: null, error: "Session focus non trouvée", offline: true };
+  }
 };
 
 export const deleteFocusSession = async (id: string) => {
-  if (!isOnline()) {
-    let offlineData = JSON.parse(localStorage.getItem('offlineData') || '{}');
-    if (offlineData.focus) {
-      offlineData.focus = offlineData.focus.filter((session: any) => session.id !== id);
-      localStorage.setItem('offlineData', JSON.stringify(offlineData));
-    }
+  const offlineSessions = getOfflineStore('focus_sessions');
+  const updatedSessions = offlineSessions.filter((s: any) => s.id !== id && s.offline_id !== id);
+  saveOfflineStore('focus_sessions', updatedSessions);
+  
+  if (!checkNetwork()) {
+    return { error: null, offline: true };
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('focus_sessions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
     return { error: null };
-  }
-  
-  const { error } = await supabase
-    .from('focus_sessions')
-    .delete()
-    .eq('id', id);
-    
-  return { error };
-};
-
-// AI functions
-export const sendChatMessage = async (message: string, chatHistory: any[] = [], userId: string) => {
-  if (!isOnline()) {
-    return { 
-      data: { 
-        response: "⚠️ **Mode hors connexion**\n\nL'assistant IA n'est pas disponible en mode hors connexion. Veuillez vous connecter à Internet pour utiliser cette fonctionnalité."
-      }, 
-      error: null
-    };
-  }
-  
-  try {
-    const response = await supabase.functions.invoke('gemini-chat', {
-      body: { message, chatHistory, userId }
-    });
-    
-    if (response.error) {
-      throw new Error(response.error.message || "Error invoking gemini-chat function");
-    }
-    
-    return { data: response.data, error: null };
   } catch (error) {
-    console.error("Error sending chat message:", error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : String(error)
-    };
+    console.error("Erreur deleteFocusSession:", error);
+    return { error: String(error), offline: true };
   }
 };
 
-export const getAIAnalysis = async (userId: string) => {
-  if (!isOnline()) {
-    return { 
-      data: { 
-        analysis: "⚠️ **Mode hors connexion**\n\nL'analyse IA n'est pas disponible en mode hors connexion. Veuillez vous connecter à Internet pour utiliser cette fonctionnalité.",
-        stats: null
-      }, 
-      error: null
-    };
-  }
-  
-  try {
-    const response = await supabase.functions.invoke('gemini-analysis', {
-      body: { userId }
-    });
-    
-    if (response.error) {
-      throw new Error(response.error.message || "Error invoking gemini-analysis function");
-    }
-    
-    return { data: response.data, error: null };
-  } catch (error) {
-    console.error("Error getting AI analysis:", error);
-    return { 
-      data: null, 
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-};
-
-// User settings
+// === PARAMÈTRES UTILISATEUR ===
 export const getUserSettings = async () => {
-  if (!isOnline()) {
-    const settings = localStorage.getItem('userSettings');
-    return { data: settings ? JSON.parse(settings) : null, error: null };
-  }
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return { data: null, error: new Error('User not authenticated') };
-  
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-    
-  if (!error && data) {
-    // Cache settings for offline use
-    localStorage.setItem('userSettings', JSON.stringify(data));
-  }
-    
-  return { data, error };
-};
-
-export const updateUserSettings = async (updates: any) => {
-  if (!isOnline()) {
-    const currentSettings = JSON.parse(localStorage.getItem('userSettings') || '{}');
-    const newSettings = { ...currentSettings, ...updates };
-    localStorage.setItem('userSettings', JSON.stringify(newSettings));
-    return { data: newSettings, error: null };
-  }
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return { data: null, error: new Error('User not authenticated') };
-  
-  const { data, error } = await supabase
-    .from('user_settings')
-    .update(updates)
-    .eq('id', user.id)
-    .select()
-    .single();
-    
-  if (!error && data) {
-    // Update cached settings
-    localStorage.setItem('userSettings', JSON.stringify(data));
-  }
-    
-  return { data, error };
-};
-
-// Contact form
-export const sendContactEmail = async (name: string, email: string, message: string) => {
-  if (!isOnline()) {
-    // Store contact form data for later sending
-    const contactRequests = JSON.parse(localStorage.getItem('contactRequests') || '[]');
-    contactRequests.push({ name, email, message, timestamp: new Date().toISOString() });
-    localStorage.setItem('contactRequests', JSON.stringify(contactRequests));
-    
-    return { 
-      data: { success: true, message: "Votre message sera envoyé quand la connexion sera rétablie." }, 
-      error: null 
-    };
-  }
-  
-  const { data, error } = await supabase.functions.invoke('send-contact', {
-    body: { name, email, message }
-  });
-  
-  return { data, error };
-};
-
-// Subscription & Billing functions
-export const getSubscriptionStatus = async () => {
-  if (!isOnline()) {
-    const subscriptionData = localStorage.getItem('subscriptionStatus');
-    return { data: subscriptionData ? JSON.parse(subscriptionData) : { subscribed: false }, error: null };
-  }
-  
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      return { data: { subscribed: false }, error: null };
+      return { data: null, error: "Utilisateur non authentifié" };
+    }
+    
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error("Erreur getUserSettings:", error);
+    return { data: null, error: String(error) };
+  }
+};
+
+export const updateUserSettings = async (settings: any) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { data: null, error: "Utilisateur non authentifié" };
+    }
+    
+    const { data, error } = await supabase
+      .from('user_settings')
+      .update(settings)
+      .eq('id', user.id)
+      .select();
+    
+    if (error) throw error;
+    
+    return { data: data && data.length > 0 ? data[0] : null, error: null };
+  } catch (error) {
+    console.error("Erreur updateUserSettings:", error);
+    return { data: null, error: String(error) };
+  }
+};
+
+// === ABONNEMENTS ===
+export const getUserSubscription = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { data: null, error: "Utilisateur non authentifié" };
     }
     
     const { data, error } = await supabase
       .from('subscribers')
       .select('*')
       .eq('user_id', user.id)
-      .single();
-      
-    if (error) {
-      return { data: { subscribed: false }, error };
-    }
+      .maybeSingle();
     
-    // Cache subscription status for offline use
-    localStorage.setItem('subscriptionStatus', JSON.stringify(data));
+    if (error) throw error;
     
     return { data, error: null };
   } catch (error) {
-    console.error("Error checking subscription:", error);
-    return { data: { subscribed: false }, error };
+    console.error("Erreur getUserSubscription:", error);
+    return { data: null, error: String(error) };
   }
 };
 
-// Admin functions
-export const isUserAdmin = async () => {
+// === RÔLES UTILISATEUR ===
+export const getUserRoles = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      return false;
+      return { data: [], error: "Utilisateur non authentifié" };
     }
     
-    // Check if user has admin role
     const { data, error } = await supabase
       .from('user_roles')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-      
-    return !!data && !error;
+      .select('role')
+      .eq('user_id', user.id);
+    
+    if (error) throw error;
+    
+    return { data: data || [], error: null };
   } catch (error) {
-    console.error("Error checking admin status:", error);
+    console.error("Erreur getUserRoles:", error);
+    return { data: [], error: String(error) };
+  }
+};
+
+export const isUserAdmin = async () => {
+  try {
+    const { data, error } = await getUserRoles();
+    
+    if (error) throw error;
+    
+    return data.some(role => role.role === 'admin');
+  } catch (error) {
+    console.error("Erreur isUserAdmin:", error);
     return false;
   }
 };
 
-// Network status handler
-export const setupNetworkListeners = () => {
-  window.addEventListener('online', async () => {
-    console.log('Application is online. Syncing data...');
-    await syncOfflineData();
-    
-    // Also try to send any cached contact form submissions
-    const contactRequests = JSON.parse(localStorage.getItem('contactRequests') || '[]');
-    if (contactRequests.length > 0) {
-      for (const request of contactRequests) {
-        await sendContactEmail(request.name, request.email, request.message);
-      }
-      localStorage.removeItem('contactRequests');
+// === IA ASSISTANT ===
+export const sendChatMessage = async (message: string, chatHistory: any[] = [], userId?: string) => {
+  try {
+    if (!checkNetwork()) {
+      return { 
+        data: { 
+          response: "⚠️ **Mode hors ligne**\n\nL'assistant IA n'est pas disponible en mode hors ligne. Veuillez vous reconnecter à Internet pour utiliser cette fonctionnalité." 
+        }, 
+        error: null, 
+        offline: true 
+      };
     }
     
-    // Publish an event that the app is back online
-    window.dispatchEvent(new CustomEvent('app:online'));
-  });
-  
-  window.addEventListener('offline', () => {
-    console.log('Application is offline. Changes will be saved locally.');
+    const { data, error } = await supabase.functions.invoke('gemini-chat', {
+      body: { message, chatHistory, userId }
+    });
     
-    // Publish an event that the app is offline
-    window.dispatchEvent(new CustomEvent('app:offline'));
-  });
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error("Erreur sendChatMessage:", error);
+    return { 
+      data: { 
+        response: "❌ **Désolé, une erreur s'est produite.**\n\nJe n'ai pas pu traiter votre demande. Veuillez réessayer plus tard." 
+      }, 
+      error: String(error) 
+    };
+  }
+};
+
+// === IA ANALYSE ===
+export const getAIAnalysis = async (userId?: string) => {
+  try {
+    if (!checkNetwork()) {
+      return { 
+        data: { 
+          analysis: "⚠️ **Mode hors ligne**\n\nL'analyse IA n'est pas disponible en mode hors ligne. Veuillez vous reconnecter à Internet pour utiliser cette fonctionnalité." 
+        }, 
+        error: null, 
+        offline: true 
+      };
+    }
+    
+    const { data, error } = await supabase.functions.invoke('gemini-analysis', {
+      body: { userId }
+    });
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error("Erreur getAIAnalysis:", error);
+    return { 
+      data: { 
+        analysis: "❌ **Une erreur est survenue**\n\nImpossible de générer l'analyse pour le moment. Veuillez réessayer plus tard." 
+      }, 
+      error: String(error) 
+    };
+  }
 };

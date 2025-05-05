@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SendHorizonal, Bot, User, Loader2, AlertCircle } from "lucide-react";
+import { SendHorizonal, Bot, User, Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { sendChatMessage } from "@/lib/api";
@@ -22,6 +22,7 @@ const Assistant = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [networkStatus, setNetworkStatus] = useState<"online" | "offline">("online");
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,13 +33,32 @@ const Assistant = () => {
     isPremium: boolean;
   }>({ hasReachedLimit: false, requestsToday: 0, isPremium: false });
 
+  // Vérification périodique du statut réseau
   useEffect(() => {
-    // Scroll to bottom when messages change
+    const checkNetworkStatus = () => {
+      setNetworkStatus(navigator.onLine ? "online" : "offline");
+    };
+
+    // Vérifier immédiatement
+    checkNetworkStatus();
+
+    // Écouter les changements de statut réseau
+    window.addEventListener('online', checkNetworkStatus);
+    window.addEventListener('offline', checkNetworkStatus);
+
+    return () => {
+      window.removeEventListener('online', checkNetworkStatus);
+      window.removeEventListener('offline', checkNetworkStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Scroll vers le bas quand les messages changent
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    // Add initial assistant message based on language preference
+    // Ajouter un message initial de l'assistant basé sur la préférence de langue
     const loadInitialMessage = async () => {
       if (user) {
         try {
@@ -52,7 +72,7 @@ const Assistant = () => {
             },
           ]);
         } catch (error) {
-          console.error("Error loading language preference:", error);
+          console.error("Erreur lors du chargement de la préférence de langue:", error);
           setMessages([
             {
               role: "assistant",
@@ -70,14 +90,14 @@ const Assistant = () => {
       }
     };
 
-    // Check AI request limits
+    // Vérifier les limites d'utilisation de l'IA
     const checkLimits = async () => {
       if (user) {
         try {
           const limits = await checkAIRequestLimit("chat");
           setRequestsInfo(limits);
         } catch (error) {
-          console.error("Error checking AI limits:", error);
+          console.error("Erreur lors de la vérification des limites d'utilisation de l'IA:", error);
           toast({
             title: "Erreur",
             description: "Impossible de vérifier les limites d'utilisation de l'IA.",
@@ -91,7 +111,7 @@ const Assistant = () => {
     checkLimits();
   }, [user, toast]);
 
-  // Function to get welcome message based on language
+  // Fonction pour obtenir le message de bienvenue en fonction de la langue
   const getWelcomeMessage = (lang: string): string => {
     switch (lang) {
       case 'en':
@@ -116,7 +136,7 @@ const Assistant = () => {
       return;
     }
 
-    // Check if user has reached the limit
+    // Vérifier si l'utilisateur a atteint sa limite
     try {
       const limits = await checkAIRequestLimit("chat");
       setRequestsInfo(limits);
@@ -130,22 +150,43 @@ const Assistant = () => {
         return;
       }
     } catch (error) {
-      console.error("Error checking AI request limit:", error);
+      console.error("Erreur lors de la vérification de la limite de requêtes IA:", error);
+    }
+
+    // Vérifier l'état du réseau
+    if (networkStatus === "offline") {
+      toast({
+        title: "Mode Hors Ligne",
+        description: "L'assistant IA n'est pas disponible en mode hors ligne. Veuillez vous reconnecter à Internet pour utiliser cette fonctionnalité.",
+        variant: "destructive",
+      });
+      
+      setMessages(prev => [
+        ...prev,
+        { role: "user", content: message },
+        { 
+          role: "assistant", 
+          content: "⚠️ **Mode hors ligne**\n\nL'assistant IA n'est pas disponible en mode hors ligne. Veuillez vous reconnecter à Internet pour utiliser cette fonctionnalité." 
+        }
+      ]);
+      
+      setMessage("");
+      return;
     }
 
     const userMessage = message;
     setMessage("");
 
-    // Add user message to the chat
-    const updatedMessages = [
+    // Ajouter le message de l'utilisateur au chat
+    const updatedMessages: Message[] = [
       ...messages,
-      { role: "user" as const, content: userMessage },
+      { role: "user", content: userMessage },
     ];
     setMessages(updatedMessages);
     setLoading(true);
 
     try {
-      // Track this AI request before making the call
+      // Suivre cette requête IA avant d'effectuer l'appel
       await trackAIRequest("chat");
       
       const { data, error } = await sendChatMessage(
@@ -158,27 +199,27 @@ const Assistant = () => {
         throw new Error(error);
       }
 
-      // Update limits after successful request
+      // Mettre à jour les limites après une requête réussie
       const newLimits = await checkAIRequestLimit("chat");
       setRequestsInfo(newLimits);
 
-      // Add assistant response to the chat
+      // Ajouter la réponse de l'assistant au chat
       setMessages([
         ...updatedMessages,
-        { role: "assistant" as const, content: data.response },
+        { role: "assistant", content: data.response },
       ]);
     } catch (error) {
-      console.error("Error sending message to assistant:", error);
+      console.error("Erreur lors de l'envoi du message à l'assistant:", error);
       toast({
         title: "Erreur",
         description: "Une erreur s'est produite lors de la communication avec l'assistant.",
         variant: "destructive",
       });
-      // Add error message directly to the chat
+      // Ajouter un message d'erreur directement dans le chat
       setMessages([
         ...updatedMessages,
         { 
-          role: "assistant" as const, 
+          role: "assistant", 
           content: "❌ **Désolé, une erreur s'est produite.**\n\nJe n'ai pas pu traiter votre demande. Veuillez réessayer plus tard." 
         },
       ]);
@@ -199,7 +240,17 @@ const Assistant = () => {
         </p>
       </div>
 
-      {!requestsInfo.isPremium && (
+      {networkStatus === "offline" && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle>Mode hors ligne</AlertTitle>
+          <AlertDescription>
+            L'assistant IA n'est pas disponible en mode hors ligne. Certaines fonctionnalités sont limitées.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {networkStatus === "online" && !requestsInfo.isPremium && (
         <Alert variant={requestsInfo.hasReachedLimit ? "destructive" : "default"}>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Compte Freemium</AlertTitle>
@@ -212,8 +263,17 @@ const Assistant = () => {
       )}
 
       <Card>
-        <CardHeader className="border-b p-4">
+        <CardHeader className="border-b p-4 flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-medium">Discussion</CardTitle>
+          {networkStatus === "online" ? (
+            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+              <Wifi className="mr-1 h-3 w-3"/> En ligne
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+              <WifiOff className="mr-1 h-3 w-3"/> Hors ligne
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="h-[400px] overflow-y-auto p-4 space-y-4">
@@ -288,11 +348,11 @@ const Assistant = () => {
                   }
                 }}
                 className="min-h-[60px]"
-                disabled={loading || (requestsInfo.hasReachedLimit && !requestsInfo.isPremium)}
+                disabled={loading || networkStatus === "offline" || (requestsInfo.hasReachedLimit && !requestsInfo.isPremium)}
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!message.trim() || loading || (requestsInfo.hasReachedLimit && !requestsInfo.isPremium)}
+                disabled={!message.trim() || loading || networkStatus === "offline" || (requestsInfo.hasReachedLimit && !requestsInfo.isPremium)}
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

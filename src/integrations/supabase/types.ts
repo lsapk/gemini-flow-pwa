@@ -1533,6 +1533,57 @@ export type Database = {
         }
         Relationships: []
       }
+      video_analyses: {
+        Row: {
+          annotated_video_url: string | null
+          created_at: string | null
+          distance_covered: number | null
+          error: string | null
+          heatmap_url: string | null
+          id: string
+          max_speed: number | null
+          raw_data: Json | null
+          sprints: number | null
+          status: string
+          updated_at: string | null
+          user_id: string | null
+          veo_url: string
+          video_url: string | null
+        }
+        Insert: {
+          annotated_video_url?: string | null
+          created_at?: string | null
+          distance_covered?: number | null
+          error?: string | null
+          heatmap_url?: string | null
+          id?: string
+          max_speed?: number | null
+          raw_data?: Json | null
+          sprints?: number | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+          veo_url: string
+          video_url?: string | null
+        }
+        Update: {
+          annotated_video_url?: string | null
+          created_at?: string | null
+          distance_covered?: number | null
+          error?: string | null
+          heatmap_url?: string | null
+          id?: string
+          max_speed?: number | null
+          raw_data?: Json | null
+          sprints?: number | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string | null
+          veo_url?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       webhook_entity: {
         Row: {
           method: string

@@ -1,17 +1,32 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { SettingsIcon, BellIcon, MoonIcon, ComputerIcon, SunIcon } from "lucide-react";
+import { 
+  SettingsIcon, 
+  BellIcon, 
+  MoonIcon, 
+  ComputerIcon, 
+  SunIcon, 
+  CreditCard, 
+  CheckCircle, 
+  CrownIcon, 
+  ShieldCheck, 
+  AlertCircle,
+  Loader2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getUserSettings, updateUserSettings } from "@/lib/api";
+import { getUserSettings, updateUserSettings, getUserSubscription, getUserRoles, isUserAdmin } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
+import { Badge } from "@/components/ui/badge";
 
 type UserSettings = {
   notifications_enabled: boolean;
@@ -24,33 +39,49 @@ type UserSettings = {
 
 const Settings = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
   const { user } = useAuth();
 
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadData = async () => {
       if (!user) return;
       
       try {
         setLoading(true);
-        const { data, error } = await getUserSettings();
         
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        if (data) {
-          setSettings(data as UserSettings);
-          // Set theme in the theme provider based on user settings
-          if (data.theme && (data.theme === 'light' || data.theme === 'dark' || data.theme === 'system')) {
-            setTheme(data.theme as "light" | "dark" | "system");
+        // Charger les paramètres utilisateur
+        const { data: settingsData, error: settingsError } = await getUserSettings();
+        if (settingsError) throw new Error(settingsError);
+        if (settingsData) {
+          setSettings(settingsData as UserSettings);
+          // Définir le thème dans le provider de thème en fonction des paramètres utilisateur
+          if (settingsData.theme && (settingsData.theme === 'light' || settingsData.theme === 'dark' || settingsData.theme === 'system')) {
+            setTheme(settingsData.theme as "light" | "dark" | "system");
           }
         }
+        
+        // Charger les informations d'abonnement
+        const { data: subscriptionData } = await getUserSubscription();
+        setSubscription(subscriptionData);
+        
+        // Vérifier si l'utilisateur est administrateur
+        const adminStatus = await isUserAdmin();
+        setIsAdmin(adminStatus);
+        
+        // Charger les rôles de l'utilisateur
+        const { data: rolesData } = await getUserRoles();
+        setRoles(rolesData || []);
+        
       } catch (error) {
-        console.error("Error loading settings:", error);
+        console.error("Erreur lors du chargement des données:", error);
         toast({
           title: "Erreur",
           description: "Impossible de charger vos paramètres.",
@@ -61,7 +92,7 @@ const Settings = () => {
       }
     };
     
-    loadSettings();
+    loadData();
   }, [user, toast, setTheme]);
 
   const handleSaveSettings = async () => {
@@ -72,7 +103,7 @@ const Settings = () => {
       const { error } = await updateUserSettings(settings);
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error);
       }
       
       toast({
@@ -80,13 +111,13 @@ const Settings = () => {
         description: "Vos préférences ont été mises à jour.",
       });
       
-      // Update theme in the theme provider
+      // Mettre à jour le thème dans le provider de thème
       if (settings.theme && (settings.theme === 'light' || settings.theme === 'dark' || settings.theme === 'system')) {
         setTheme(settings.theme as "light" | "dark" | "system");
       }
       
     } catch (error) {
-      console.error("Error saving settings:", error);
+      console.error("Erreur lors de la sauvegarde des paramètres:", error);
       toast({
         title: "Erreur",
         description: "Impossible de sauvegarder vos paramètres.",
@@ -105,6 +136,61 @@ const Settings = () => {
       [key]: value,
     });
   };
+
+  const handleCheckout = async (planType: 'basic' | 'premium' | 'ultimate') => {
+    try {
+      setCheckoutLoading(true);
+      
+      const { url, error } = await createCheckoutSession(planType);
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la session de paiement:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la session de paiement.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handlePortal = async () => {
+    try {
+      setPortalLoading(true);
+      
+      const { url, error } = await createCustomerPortal();
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création du portail client:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accéder au portail client.",
+        variant: "destructive",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const hasCreatorPlan = roles.some(role => role.role === 'creator');
+  const hasActiveSubscription = subscription?.subscribed || false;
+  const subscriptionTier = subscription?.subscription_tier || null;
+  const isSubscriber = hasActiveSubscription || isAdmin || hasCreatorPlan;
 
   if (loading) {
     return (
@@ -138,14 +224,35 @@ const Settings = () => {
         </p>
       </div>
       
+      {isAdmin && (
+        <Alert>
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>Compte Administrateur</AlertTitle>
+          <AlertDescription>
+            Vous êtes connecté en tant qu'administrateur. Vous avez accès à toutes les fonctionnalités premium.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {hasCreatorPlan && !isAdmin && (
+        <Alert>
+          <CrownIcon className="h-4 w-4" />
+          <AlertTitle>Plan Créateur</AlertTitle>
+          <AlertDescription>
+            Vous bénéficiez du plan Créateur qui vous donne accès à toutes les fonctionnalités premium gratuitement.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Tabs defaultValue="general">
         <TabsList className="mb-6">
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Apparence</TabsTrigger>
+          <TabsTrigger value="subscription">Abonnement</TabsTrigger>
         </TabsList>
         
-        {/* General Settings */}
+        {/* Paramètres généraux */}
         <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
@@ -155,7 +262,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Language selection */}
+              {/* Sélection de la langue */}
               <div className="space-y-2">
                 <Label htmlFor="language">Langue</Label>
                 <Select 
@@ -174,7 +281,7 @@ const Settings = () => {
                 </Select>
               </div>
               
-              {/* Clock format */}
+              {/* Format de l'horloge */}
               <div className="space-y-2">
                 <Label>Format de l'horloge</Label>
                 <RadioGroup 
@@ -193,7 +300,7 @@ const Settings = () => {
                 </RadioGroup>
               </div>
               
-              {/* Focus Mode */}
+              {/* Mode Focus */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Mode Focus</Label>
@@ -210,7 +317,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* Notifications Settings */}
+        {/* Paramètres de notifications */}
         <TabsContent value="notifications" className="space-y-6">
           <Card>
             <CardHeader>
@@ -237,7 +344,7 @@ const Settings = () => {
                 />
               </div>
               
-              {/* Sounds */}
+              {/* Sons */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Sons</Label>
@@ -255,7 +362,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* Appearance Settings */}
+        {/* Paramètres d'apparence */}
         <TabsContent value="appearance" className="space-y-6">
           <Card>
             <CardHeader>
@@ -265,7 +372,7 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Theme Selection */}
+              {/* Sélection du thème */}
               <div className="space-y-3">
                 <Label>Thème</Label>
                 <div className="grid grid-cols-3 gap-2">
@@ -300,6 +407,213 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {/* Abonnement */}
+        <TabsContent value="subscription" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gérer votre abonnement</CardTitle>
+              <CardDescription>
+                Consultez et gérez votre abonnement DeepFlow
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isSubscriber ? (
+                <div className="space-y-4">
+                  <Alert className="bg-primary/10 border-primary/20">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <AlertTitle>
+                      {isAdmin 
+                        ? "Compte Administrateur" 
+                        : hasCreatorPlan 
+                          ? "Plan Créateur" 
+                          : `Plan ${subscriptionTier || "Premium"} actif`}
+                    </AlertTitle>
+                    <AlertDescription>
+                      {isAdmin 
+                        ? "Vous avez accès à toutes les fonctionnalités premium en tant qu'administrateur."
+                        : hasCreatorPlan
+                          ? "Vous bénéficiez de l'accès à toutes les fonctionnalités premium gratuitement."
+                          : "Vous bénéficiez de toutes les fonctionnalités premium sans limitation."}
+                    </AlertDescription>
+                  </Alert>
+                  
+                  {hasActiveSubscription && !isAdmin && !hasCreatorPlan && (
+                    <Button 
+                      onClick={handlePortal} 
+                      className="w-full"
+                      disabled={portalLoading}
+                    >
+                      {portalLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Chargement...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Gérer mon abonnement
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Compte gratuit limité</AlertTitle>
+                    <AlertDescription>
+                      Vous utilisez actuellement la version gratuite avec des limitations. Passez à un abonnement premium pour débloquer toutes les fonctionnalités.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {/* Plan Basique */}
+                    <Card className="flex flex-col">
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          Basique
+                          <Badge variant="outline">4,99€/mois</Badge>
+                        </CardTitle>
+                        <CardDescription>Pour les débutants</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            10 requêtes IA/jour
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Synchronisation hors-ligne
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Rapports de productivité
+                          </li>
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          onClick={() => handleCheckout('basic')} 
+                          className="w-full"
+                          disabled={checkoutLoading}
+                        >
+                          {checkoutLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Chargement...
+                            </>
+                          ) : (
+                            "Choisir ce plan"
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                    
+                    {/* Plan Premium */}
+                    <Card className="flex flex-col border-primary relative">
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold">
+                        Populaire
+                      </div>
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          Premium
+                          <Badge variant="outline">9,99€/mois</Badge>
+                        </CardTitle>
+                        <CardDescription>Pour les utilisateurs réguliers</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Requêtes IA illimitées
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Fonctionnalités avancées d'analyse
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Rapports personnalisés
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Synchronisation multi-appareils
+                          </li>
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          onClick={() => handleCheckout('premium')} 
+                          className="w-full"
+                          disabled={checkoutLoading}
+                        >
+                          {checkoutLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Chargement...
+                            </>
+                          ) : (
+                            "Choisir ce plan"
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                    
+                    {/* Plan Ultimate */}
+                    <Card className="flex flex-col">
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          Ultimate
+                          <Badge variant="outline">19,99€/mois</Badge>
+                        </CardTitle>
+                        <CardDescription>Pour les professionnels</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Tout du plan Premium
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Modèles IA avancés
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Support prioritaire
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
+                            Fonctionnalités en avant-première
+                          </li>
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        <Button 
+                          onClick={() => handleCheckout('ultimate')} 
+                          className="w-full"
+                          disabled={checkoutLoading}
+                        >
+                          {checkoutLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Chargement...
+                            </>
+                          ) : (
+                            "Choisir ce plan"
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
       
       <div className="flex justify-end">
@@ -308,7 +622,14 @@ const Settings = () => {
           disabled={saving || !settings}
           className="min-w-[120px]"
         >
-          {saving ? "Sauvegarde..." : "Sauvegarder"}
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sauvegarde...
+            </>
+          ) : (
+            "Sauvegarder"
+          )}
         </Button>
       </div>
     </div>
