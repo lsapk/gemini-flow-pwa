@@ -67,7 +67,7 @@ const AssistantFloating = () => {
           if (storedMessages) {
             const parsedMessages = JSON.parse(storedMessages);
             if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
-              setMessages(parsedMessages);
+              setMessages(parsedMessages as Message[]);
               return;
             }
           }
@@ -77,8 +77,8 @@ const AssistantFloating = () => {
           const userLanguage = data?.language || 'fr';
           setLanguage(userLanguage);
           
-          const welcomeMessage = {
-            role: "assistant" as const,
+          const welcomeMessage: Message = {
+            role: "assistant",
             content: getWelcomeMessage(userLanguage),
           };
           
@@ -86,8 +86,8 @@ const AssistantFloating = () => {
           localStorage.setItem('assistant_messages', JSON.stringify([welcomeMessage]));
         } catch (error) {
           console.error("Error loading language preference:", error);
-          const defaultMessage = {
-            role: "assistant" as const,
+          const defaultMessage: Message = {
+            role: "assistant",
             content: getWelcomeMessage('fr'),
           };
           setMessages([defaultMessage]);
@@ -217,7 +217,7 @@ const AssistantFloating = () => {
       setRequestsInfo(newLimits);
 
       // Add assistant response to chat
-      const newMessages = [
+      const newMessages: Message[] = [
         ...updatedMessages,
         { role: "assistant", content: data.response },
       ];
@@ -255,8 +255,8 @@ const AssistantFloating = () => {
   };
 
   const clearConversation = () => {
-    const welcomeMessage = {
-      role: "assistant" as const,
+    const welcomeMessage: Message = {
+      role: "assistant",
       content: getWelcomeMessage(language),
     };
     setMessages([welcomeMessage]);

@@ -114,6 +114,112 @@ export async function getAIAnalysis(userId: string, customPrompt?: string) {
   }
 }
 
+// Added missing functions for Settings.tsx
+export async function getUserSubscription() {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+  
+  const { data, error } = await supabase
+    .from("subscribers")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+    
+  if (error && error.code !== 'PGRST116') { // PGRST116 is the "no rows returned" error
+    console.error("Error fetching subscription:", error);
+    throw error;
+  }
+  
+  return { data: data || { subscribed: false } };
+}
+
+export async function getUserRoles() {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+  
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("*")
+    .eq("user_id", user.id);
+    
+  if (error) {
+    console.error("Error fetching user roles:", error);
+    throw error;
+  }
+  
+  return { data: data || [] };
+}
+
+export async function isUserAdmin() {
+  try {
+    const { data } = await getUserRoles();
+    return Array.isArray(data) && data.some(role => role.role === 'admin');
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false;
+  }
+}
+
+// Add syncOfflineData function for main.tsx
+export async function syncOfflineData() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.log("User not authenticated, skipping sync");
+      return { success: false, message: "User not authenticated" };
+    }
+    
+    // Get offline data from local storage
+    const offlineData = {
+      tasks: JSON.parse(localStorage.getItem('offline_tasks') || '[]'),
+      habits: JSON.parse(localStorage.getItem('offline_habits') || '[]'),
+      goals: JSON.parse(localStorage.getItem('offline_goals') || '[]'),
+      journal: JSON.parse(localStorage.getItem('offline_journal') || '[]'),
+      focus: JSON.parse(localStorage.getItem('offline_focus') || '[]')
+    };
+    
+    // Skip if no offline data
+    if (!Object.values(offlineData).some(items => items.length > 0)) {
+      return { success: true, message: "No offline data to sync" };
+    }
+    
+    // Call the sync function
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-offline-data`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+      },
+      body: JSON.stringify(offlineData)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Sync failed with status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // Clear synced offline data
+    localStorage.removeItem('offline_tasks');
+    localStorage.removeItem('offline_habits');
+    localStorage.removeItem('offline_goals');
+    localStorage.removeItem('offline_journal');
+    localStorage.removeItem('offline_focus');
+    
+    return { success: true, result };
+  } catch (error) {
+    console.error("Error syncing offline data:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Tasks
 export async function getTasks() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -576,4 +682,73 @@ export async function deleteFocusSession(sessionId: string) {
   }
   
   return { success: true };
+}
+
+// Add missing exports for Stripe integration
+export async function createCheckoutSession(planType: 'basic' | 'premium' | 'ultimate') {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+      },
+      body: JSON.stringify({ 
+        planType,
+        userId: user.id,
+        email: user.email,
+        returnUrl: window.location.origin + "/settings"
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create checkout session");
+    }
+    
+    const { url } = await response.json();
+    return { url };
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return { error: error.message };
+  }
+}
+
+export async function createCustomerPortal() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-customer-portal`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+      },
+      body: JSON.stringify({ 
+        userId: user.id,
+        returnUrl: window.location.origin + "/settings"
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create customer portal");
+    }
+    
+    const { url } = await response.json();
+    return { url };
+  } catch (error) {
+    console.error("Error creating customer portal:", error);
+    return { error: error.message };
+  }
 }

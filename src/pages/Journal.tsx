@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,14 +18,7 @@ import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO } from 'date-fns';
-
-interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-}
+import { JournalEntry } from "@/types/models";
 
 interface JournalEntryFormData {
   title: string;
@@ -71,9 +65,7 @@ const Journal = () => {
     
     try {
       setLoading(true);
-      const { data, error } = await getJournalEntries();
-      
-      if (error) throw new Error(error.message);
+      const { data } = await getJournalEntries();
       
       setJournalEntries(data || []);
     } catch (error) {
@@ -108,9 +100,7 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const { data, error } = await createJournalEntry(newEntry);
-      
-      if (error) throw new Error(error.message);
+      const { data } = await createJournalEntry(newEntry);
       
       setJournalEntries([...(data ? [data] : []), ...journalEntries]);
       
@@ -150,9 +140,7 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const { data, error } = await updateJournalEntry(editingEntry.id, updatedEntry);
-      
-      if (error) throw new Error(error.message);
+      const { data } = await updateJournalEntry(editingEntry.id, updatedEntry);
       
       if (data) {
         setJournalEntries(journalEntries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
@@ -177,16 +165,16 @@ const Journal = () => {
 
   const handleDeleteEntry = async (id: string) => {
     try {
-      const { error } = await deleteJournalEntry(id);
+      const { success } = await deleteJournalEntry(id);
       
-      if (error) throw new Error(error.message);
-      
-      setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
-      
-      toast({
-        title: "Entrée supprimée",
-        description: "Votre entrée de journal a été supprimée avec succès.",
-      });
+      if (success) {
+        setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
+        
+        toast({
+          title: "Entrée supprimée",
+          description: "Votre entrée de journal a été supprimée avec succès.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erreur",

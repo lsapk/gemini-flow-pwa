@@ -1,79 +1,176 @@
 
-import React, { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
-import { Area, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import React from "react";
+import {
+  AreaChart as RechartsAreaChart,
+  Area,
+  BarChart as RechartsBarChart,
+  Bar,
+  LineChart as RechartsLineChart,
+  Line,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  TooltipProps
+} from "recharts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface ChartConfig {
-  total?: {
-    label: string;
-    theme: {
-      light: string;
-      dark: string;
-    }
-  };
-  value?: {
-    label: string;
-    theme: {
-      light: string;
-      dark: string;
-    }
-  };
+// Shared interface for chart data
+interface ChartData {
+  name: string;
+  value: number;
+  [key: string]: any;
 }
 
-interface ChartProps {
-  config: ChartConfig;
-  children: React.ReactNode;
+// Base chart props
+interface BaseChartProps {
+  data: ChartData[];
+  height?: number;
   className?: string;
+  loading?: boolean;
 }
 
-export const SimpleAreaChart = ({ 
-  data,
-  xAxisKey = "name",
-  areaKey = "value", 
-  color = "#3b82f6",
-  className,
-  tooltipTitle,
-  height = 200
-}: { 
-  data: any[]; 
+// Bar chart specific props
+interface BarChartProps extends BaseChartProps {
+  xAxisKey?: string;
+  barKey?: string;
+  color?: string;
+  tooltipTitle?: string;
+}
+
+// Area chart specific props
+interface AreaChartProps extends BaseChartProps {
   xAxisKey?: string;
   areaKey?: string;
   color?: string;
-  className?: string;
   tooltipTitle?: string;
-  height?: number;
+}
+
+// Line chart specific props
+interface LineChartProps extends BaseChartProps {
+  xAxisKey?: string;
+  lineKey?: string;
+  color?: string;
+  tooltipTitle?: string;
+}
+
+// Pie chart specific props
+interface PieChartProps extends BaseChartProps {
+  nameKey?: string;
+  dataKey?: string;
+  colors?: string[];
+  tooltipTitle?: string;
+}
+
+// Custom tooltip component
+const CustomTooltip = ({ active, payload, label, title }: TooltipProps & { title?: string }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background border rounded p-2 shadow-md text-sm">
+        <p className="font-medium">{title || "Value"}: {payload[0].value}</p>
+        <p className="text-muted-foreground">{label}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// Loading state component
+const ChartLoading = ({ height = 300 }: { height?: number }) => (
+  <div className="flex items-center justify-center" style={{ height }}>
+    <Skeleton className="h-[80%] w-[90%]" />
+  </div>
+);
+
+// Bar Chart Component
+export const BarChart: React.FC<BarChartProps> = ({
+  data,
+  xAxisKey = "name",
+  barKey = "value",
+  color = "#3b82f6",
+  height = 300,
+  className = "",
+  loading = false,
+  tooltipTitle
 }) => {
+  if (loading || !data || data.length === 0) {
+    return <ChartLoading height={height} />;
+  }
+
   return (
-    <div className={cn(`h-[${height}px] w-full`, className)}>
+    <div className={className} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsAreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={color} stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+        <RechartsBarChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis 
             dataKey={xAxisKey}
-            className="text-xs fill-muted-foreground" 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <YAxis className="text-xs fill-muted-foreground" />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'var(--card)', 
-              borderColor: 'var(--border)',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem'
-            }}
-            formatter={(value: any, name: any) => [value, tooltipTitle || name]}
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
+          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Bar dataKey={barKey} fill={color} radius={[4, 4, 0, 0]} />
+        </RechartsBarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// Area Chart Component
+export const AreaChart: React.FC<AreaChartProps> = ({
+  data,
+  xAxisKey = "name",
+  areaKey = "value",
+  color = "#3b82f6",
+  height = 300,
+  className = "",
+  loading = false,
+  tooltipTitle
+}) => {
+  if (loading || !data || data.length === 0) {
+    return <ChartLoading height={height} />;
+  }
+
+  return (
+    <div className={className} style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsAreaChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis 
+            dataKey={xAxisKey} 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          />
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          />
+          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
           <Area 
             type="monotone" 
             dataKey={areaKey} 
             stroke={color} 
-            fillOpacity={1} 
-            fill="url(#colorValue)" 
+            fill={color} 
+            fillOpacity={0.2} 
           />
         </RechartsAreaChart>
       </ResponsiveContainer>
@@ -81,70 +178,75 @@ export const SimpleAreaChart = ({
   );
 };
 
-export const SimpleBarChart = ({
+// Line Chart Component
+export const LineChart: React.FC<LineChartProps> = ({
   data,
   xAxisKey = "name",
-  barKey = "value",
+  lineKey = "value",
   color = "#3b82f6",
-  className,
-  tooltipTitle,
-  height = 200
-}: {
-  data: any[];
-  xAxisKey?: string;
-  barKey?: string;
-  color?: string;
-  className?: string;
-  tooltipTitle?: string;
-  height?: number;
+  height = 300,
+  className = "",
+  loading = false,
+  tooltipTitle
 }) => {
+  if (loading || !data || data.length === 0) {
+    return <ChartLoading height={height} />;
+  }
+
   return (
-    <div className={cn(`h-[${height}px] w-full`, className)}>
+    <div className={className} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsBarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis 
-            dataKey={xAxisKey}
-            className="text-xs fill-muted-foreground" 
+            dataKey={xAxisKey} 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <YAxis className="text-xs fill-muted-foreground" />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'var(--card)', 
-              borderColor: 'var(--border)',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem'
-            }}
-            formatter={(value: any, name: any) => [value, tooltipTitle || name]}
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <Bar 
-            dataKey={barKey} 
-            fill={color} 
-            radius={[4, 4, 0, 0]}
+          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Line 
+            type="monotone" 
+            dataKey={lineKey} 
+            stroke={color} 
+            strokeWidth={2}
+            dot={{ r: 4, fill: color, stroke: color }}
+            activeDot={{ r: 6, fill: color, stroke: 'white', strokeWidth: 2 }}
           />
-        </RechartsBarChart>
+        </RechartsLineChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-export const SimplePieChart = ({
+// Pie Chart Component
+export const PieChart: React.FC<PieChartProps> = ({
   data,
   nameKey = "name",
-  valueKey = "value",
+  dataKey = "value",
   colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-  className,
-  height = 200
-}: {
-  data: any[];
-  nameKey?: string;
-  valueKey?: string;
-  colors?: string[];
-  className?: string;
-  height?: number;
+  height = 300,
+  className = "",
+  loading = false,
+  tooltipTitle
 }) => {
+  if (loading || !data || data.length === 0) {
+    return <ChartLoading height={height} />;
+  }
+
+  // Generate colors for each segment
+  const pieColors = data.map((_, index) => colors[index % colors.length]);
+
   return (
-    <div className={cn(`h-[${height}px] w-full`, className)}>
+    <div className={className} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsPieChart>
           <Pie
@@ -153,79 +255,57 @@ export const SimplePieChart = ({
             cy="50%"
             labelLine={false}
             outerRadius={80}
+            innerRadius={40}
             fill="#8884d8"
-            dataKey={valueKey}
+            dataKey={dataKey}
             nameKey={nameKey}
             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            {data.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={pieColors[index]} />
             ))}
           </Pie>
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'var(--card)', 
-              borderColor: 'var(--border)',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem'
-            }} 
-          />
+          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Legend />
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-// Added the SimpleLineChart component
-export const SimpleLineChart = ({
-  data,
-  xAxisKey = "name",
-  lines = [{ dataKey: "value", name: "Value", color: "#3b82f6" }],
-  className,
-  height = 200
-}: {
-  data: any[];
-  xAxisKey?: string;
-  lines?: { dataKey: string; name: string; color: string }[];
-  className?: string;
-  height?: number;
-}) => {
-  return (
-    <div className={cn(`h-[${height}px] w-full`, className)}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis 
-            dataKey={xAxisKey}
-            className="text-xs fill-muted-foreground" 
-          />
-          <YAxis className="text-xs fill-muted-foreground" />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'var(--card)', 
-              borderColor: 'var(--border)',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem'
-            }} 
-          />
-          {lines.map((line, index) => (
-            <Line 
-              key={index}
-              type="monotone" 
-              dataKey={line.dataKey} 
-              stroke={line.color}
-              name={line.name} 
-              activeDot={{ r: 8 }} 
-            />
-          ))}
-        </RechartsLineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
+// Card wrappers for the charts
+export const BarChartCard = ({ title, ...props }: BarChartProps & { title: string }) => (
+  <Card>
+    <CardContent className="pt-6">
+      <h3 className="font-medium mb-3">{title}</h3>
+      <BarChart {...props} />
+    </CardContent>
+  </Card>
+);
 
-// Explicitly export the components to fix TypeScript errors
-export { SimpleAreaChart as AreaChart };
-export { SimpleBarChart as BarChart };
-export { SimplePieChart as PieChart };
-export { SimpleLineChart as LineChart };
+export const AreaChartCard = ({ title, ...props }: AreaChartProps & { title: string }) => (
+  <Card>
+    <CardContent className="pt-6">
+      <h3 className="font-medium mb-3">{title}</h3>
+      <AreaChart {...props} />
+    </CardContent>
+  </Card>
+);
+
+export const LineChartCard = ({ title, ...props }: LineChartProps & { title: string }) => (
+  <Card>
+    <CardContent className="pt-6">
+      <h3 className="font-medium mb-3">{title}</h3>
+      <LineChart {...props} />
+    </CardContent>
+  </Card>
+);
+
+export const PieChartCard = ({ title, ...props }: PieChartProps & { title: string }) => (
+  <Card>
+    <CardContent className="pt-6">
+      <h3 className="font-medium mb-3">{title}</h3>
+      <PieChart {...props} />
+    </CardContent>
+  </Card>
+);

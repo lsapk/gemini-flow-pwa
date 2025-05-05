@@ -25,23 +25,15 @@ import { getUserSettings, updateUserSettings, getUserSubscription, getUserRoles,
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
+import { createCheckoutSession, createCustomerPortal } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-
-type UserSettings = {
-  notifications_enabled: boolean;
-  sound_enabled: boolean;
-  focus_mode: boolean;
-  theme: string;
-  language: string;
-  clock_format: string;
-};
+import { UserSettings, SubscriptionInfo, UserRole } from "@/types/models";
 
 const Settings = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [roles, setRoles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -58,8 +50,7 @@ const Settings = () => {
         setLoading(true);
         
         // Charger les paramètres utilisateur
-        const { data: settingsData, error: settingsError } = await getUserSettings();
-        if (settingsError) throw new Error(settingsError);
+        const { data: settingsData } = await getUserSettings();
         if (settingsData) {
           setSettings(settingsData as UserSettings);
           // Définir le thème dans le provider de thème en fonction des paramètres utilisateur
@@ -70,7 +61,7 @@ const Settings = () => {
         
         // Charger les informations d'abonnement
         const { data: subscriptionData } = await getUserSubscription();
-        setSubscription(subscriptionData);
+        setSubscription(subscriptionData as SubscriptionInfo);
         
         // Vérifier si l'utilisateur est administrateur
         const adminStatus = await isUserAdmin();
@@ -100,11 +91,7 @@ const Settings = () => {
     
     try {
       setSaving(true);
-      const { error } = await updateUserSettings(settings);
-      
-      if (error) {
-        throw new Error(error);
-      }
+      const { data } = await updateUserSettings(settings);
       
       toast({
         title: "Paramètres sauvegardés",
