@@ -18,7 +18,7 @@ import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO } from 'date-fns';
-import { JournalEntry } from "@/types/models";
+import { JournalEntry, ApiResponse, ApiSuccessResponse } from "@/types/models";
 
 interface JournalEntryFormData {
   title: string;
@@ -65,9 +65,16 @@ const Journal = () => {
     
     try {
       setLoading(true);
-      const { data } = await getJournalEntries();
+      const response = await getJournalEntries() as ApiResponse<JournalEntry[]>;
       
-      setJournalEntries(data || []);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setJournalEntries(response.data.map(entry => ({
+        ...entry,
+        tags: Array.isArray(entry.tags) ? entry.tags : []
+      })));
     } catch (error) {
       toast({
         title: "Erreur",
@@ -100,9 +107,19 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const { data } = await createJournalEntry(newEntry);
+      const response = await createJournalEntry(newEntry) as ApiResponse<JournalEntry>;
       
-      setJournalEntries([...(data ? [data] : []), ...journalEntries]);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      // Ensure tags is an array
+      const entryWithTags = {
+        ...response.data,
+        tags: Array.isArray(response.data.tags) ? response.data.tags : []
+      };
+      
+      setJournalEntries([entryWithTags, ...journalEntries]);
       
       resetForm();
       setOpenDialog(false);
@@ -140,11 +157,21 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const { data } = await updateJournalEntry(editingEntry.id, updatedEntry);
+      const response = await updateJournalEntry(editingEntry.id, updatedEntry) as ApiResponse<JournalEntry>;
       
-      if (data) {
-        setJournalEntries(journalEntries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
+      if (response.error) {
+        throw new Error(response.error);
       }
+      
+      // Ensure tags is an array
+      const entryWithTags = {
+        ...response.data,
+        tags: Array.isArray(response.data.tags) ? response.data.tags : []
+      };
+      
+      setJournalEntries(journalEntries.map((entry) => 
+        entry.id === editingEntry.id ? entryWithTags : entry
+      ));
       
       resetForm();
       setOpenDialog(false);
@@ -165,9 +192,13 @@ const Journal = () => {
 
   const handleDeleteEntry = async (id: string) => {
     try {
-      const { success } = await deleteJournalEntry(id);
+      const response = await deleteJournalEntry(id) as ApiSuccessResponse;
       
-      if (success) {
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      if (response.success) {
         setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
         
         toast({

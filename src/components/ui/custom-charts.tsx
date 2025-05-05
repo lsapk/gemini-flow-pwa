@@ -16,7 +16,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps
+  TooltipProps as RechartsTooltipProps
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +60,17 @@ interface LineChartProps extends BaseChartProps {
   tooltipTitle?: string;
 }
 
+// Line chart with multiple lines props
+interface MultiLineChartProps extends BaseChartProps {
+  xAxisKey?: string;
+  lines?: Array<{
+    dataKey: string;
+    name: string;
+    color: string;
+  }>;
+  tooltipTitle?: string;
+}
+
 // Pie chart specific props
 interface PieChartProps extends BaseChartProps {
   nameKey?: string;
@@ -69,7 +80,7 @@ interface PieChartProps extends BaseChartProps {
 }
 
 // Custom tooltip component
-const CustomTooltip = ({ active, payload, label, title }: TooltipProps & { title?: string }) => {
+const CustomTooltip = ({ active, payload, label, title }: RechartsTooltipProps<number, string> & { title?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-background border rounded p-2 shadow-md text-sm">
@@ -122,7 +133,7 @@ export const BarChart: React.FC<BarChartProps> = ({
             tickLine={false}
             axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
           <Bar dataKey={barKey} fill={color} radius={[4, 4, 0, 0]} />
         </RechartsBarChart>
       </ResponsiveContainer>
@@ -164,7 +175,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
             tickLine={false}
             axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
           <Area 
             type="monotone" 
             dataKey={areaKey} 
@@ -212,7 +223,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             tickLine={false}
             axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
           />
-          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
           <Line 
             type="monotone" 
             dataKey={lineKey} 
@@ -221,6 +232,59 @@ export const LineChart: React.FC<LineChartProps> = ({
             dot={{ r: 4, fill: color, stroke: color }}
             activeDot={{ r: 6, fill: color, stroke: 'white', strokeWidth: 2 }}
           />
+        </RechartsLineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// Multi-Line Chart Component
+export const MultiLineChart: React.FC<MultiLineChartProps> = ({
+  data,
+  xAxisKey = "name",
+  lines = [],
+  height = 300,
+  className = "",
+  loading = false,
+  tooltipTitle
+}) => {
+  if (loading || !data || data.length === 0) {
+    return <ChartLoading height={height} />;
+  }
+
+  return (
+    <div className={className} style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis 
+            dataKey={xAxisKey} 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          />
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={{ stroke: '#d1d5db', strokeWidth: 1 }}
+          />
+          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
+          <Legend />
+          {lines.map((line, index) => (
+            <Line
+              key={index}
+              type="monotone"
+              dataKey={line.dataKey}
+              name={line.name}
+              stroke={line.color}
+              strokeWidth={2}
+              dot={{ r: 4, fill: line.color, stroke: line.color }}
+              activeDot={{ r: 6, fill: line.color, stroke: 'white', strokeWidth: 2 }}
+            />
+          ))}
         </RechartsLineChart>
       </ResponsiveContainer>
     </div>
@@ -265,13 +329,30 @@ export const PieChart: React.FC<PieChartProps> = ({
               <Cell key={`cell-${index}`} fill={pieColors[index]} />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip title={tooltipTitle} />} />
+          <Tooltip content={(props) => <CustomTooltip {...props} title={tooltipTitle} />} />
           <Legend />
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>
   );
 };
+
+// Simplified chart components with default settings
+export const SimpleBarChart: React.FC<BarChartProps> = (props) => (
+  <BarChart {...props} />
+);
+
+export const SimpleAreaChart: React.FC<AreaChartProps> = (props) => (
+  <AreaChart {...props} />
+);
+
+export const SimpleLineChart: React.FC<MultiLineChartProps> = (props) => (
+  <MultiLineChart {...props} />
+);
+
+export const SimplePieChart: React.FC<PieChartProps> = (props) => (
+  <PieChart {...props} />
+);
 
 // Card wrappers for the charts
 export const BarChartCard = ({ title, ...props }: BarChartProps & { title: string }) => (

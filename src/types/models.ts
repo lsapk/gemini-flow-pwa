@@ -39,7 +39,7 @@ export interface JournalEntry extends BaseModel {
   title: string;
   content: string;
   mood?: string;
-  tags?: string[];
+  tags?: string[] | null;
 }
 
 export interface FocusSession extends BaseModel {
@@ -89,4 +89,16 @@ export interface UserRole {
   user_id: string;
   role: string;
   created_at?: string;
+}
+
+// Type for API responses with data
+export interface ApiResponse<T> {
+  data: T;
+  error?: string;
+}
+
+// Type for API responses with success flag
+export interface ApiSuccessResponse {
+  success: boolean;
+  error?: string;
 }

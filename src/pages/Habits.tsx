@@ -1,55 +1,39 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { CalendarCheckIcon } from "@/components/icons/DeepFlowIcons";
-import { Badge } from "@/components/ui/badge";
-import { Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { CalendarIcon, CheckCircle2, Edit, PlusCircle, Repeat, Target, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getHabits, createHabit, updateHabit, deleteHabit } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Habit, ApiResponse, ApiSuccessResponse } from "@/types/models";
+import { getHabits, createHabit, updateHabit, deleteHabit } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Habit } from "@/types/models";
-
-// Frequency options
-const frequencyOptions = [
-  { value: "daily", label: "Quotidien" },
-  { value: "weekly", label: "Hebdomadaire" },
-  { value: "monthly", label: "Mensuel" }
-];
-
-// Category options
-const categoryOptions = [
-  { value: "health", label: "Santé" },
-  { value: "productivity", label: "Productivité" },
-  { value: "learning", label: "Apprentissage" },
-  { value: "finance", label: "Finance" },
-  { value: "social", label: "Social" },
-  { value: "other", label: "Autre" }
-];
 
 interface HabitFormData {
   title: string;
-  description: string;
+  description?: string;
   frequency: string;
   target: number;
-  category: string;
+  category?: string;
 }
 
-const HabitsEmptyState = ({ onCreate }: { onCreate: () => void }) => (
+const HabitEmptyState = ({ onCreate }: { onCreate: () => void }) => (
   <div className="text-center py-12">
     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-      <CalendarCheckIcon className="h-8 w-8 text-primary" />
+      <Repeat className="h-8 w-8 text-primary" />
     </div>
     <h3 className="text-lg font-medium mb-2">Aucune habitude</h3>
     <p className="text-muted-foreground mb-4">
-      Commencez par créer votre première habitude pour améliorer votre quotidien.
+      Commencez à suivre vos habitudes pour améliorer votre quotidien.
     </p>
     <Button onClick={onCreate}>
       <PlusCircle className="mr-2 h-4 w-4" />
@@ -83,9 +67,13 @@ const Habits = () => {
     
     try {
       setLoading(true);
-      const { data } = await getHabits();
+      const response = await getHabits() as ApiResponse<Habit[]>;
       
-      setHabits(data || []);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setHabits(response.data || []);
     } catch (error) {
       toast({
         title: "Erreur",
@@ -104,7 +92,7 @@ const Habits = () => {
     if (!formData.title || !formData.frequency) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre et une fréquence pour votre habitude.",
+        description: "Veuillez remplir tous les champs obligatoires.",
         variant: "destructive",
       });
       return;
@@ -116,12 +104,17 @@ const Habits = () => {
         description: formData.description,
         frequency: formData.frequency,
         target: formData.target,
-        category: formData.category || undefined,
+        category: formData.category,
+        user_id: user.id,
       };
       
-      const { data } = await createHabit(newHabit);
+      const response = await createHabit(newHabit) as ApiResponse<Habit>;
       
-      setHabits([data, ...habits]);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setHabits([response.data, ...habits]);
       
       resetForm();
       setOpenDialog(false);
@@ -146,7 +139,7 @@ const Habits = () => {
     if (!formData.title || !formData.frequency) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre et une fréquence pour votre habitude.",
+        description: "Veuillez remplir tous les champs obligatoires.",
         variant: "destructive",
       });
       return;
@@ -158,14 +151,16 @@ const Habits = () => {
         description: formData.description,
         frequency: formData.frequency,
         target: formData.target,
-        category: formData.category || undefined,
+        category: formData.category,
       };
       
-      const { data } = await updateHabit(editingHabit.id, updatedHabit);
+      const response = await updateHabit(editingHabit.id, updatedHabit) as ApiResponse<Habit>;
       
-      setHabits(habits.map((habit) => 
-        habit.id === editingHabit.id ? data : habit
-      ));
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setHabits(habits.map((habit) => (habit.id === editingHabit.id ? response.data : habit)));
       
       resetForm();
       setOpenDialog(false);
@@ -186,9 +181,13 @@ const Habits = () => {
 
   const handleDeleteHabit = async (id: string) => {
     try {
-      const { success } = await deleteHabit(id);
+      const response = await deleteHabit(id) as ApiSuccessResponse;
       
-      if (success) {
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      if (response.success) {
         setHabits(habits.filter((habit) => habit.id !== id));
         
         toast({
@@ -208,18 +207,22 @@ const Habits = () => {
 
   const handleCompleteHabit = async (habit: Habit) => {
     try {
-      const updates = {
-        streak: habit.streak + 1,
+      const updateData = {
         last_completed_at: new Date().toISOString(),
+        streak: habit.streak + 1,
       };
       
-      const { data } = await updateHabit(habit.id, updates);
+      const response = await updateHabit(habit.id, updateData) as ApiResponse<Habit>;
       
-      setHabits(habits.map((h) => (h.id === habit.id ? data : h)));
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      setHabits(habits.map((h) => (h.id === habit.id ? response.data : h)));
       
       toast({
         title: "Habitude complétée",
-        description: `Votre habitude a été complétée. Série actuelle: ${data.streak}!`,
+        description: `Vous avez maintenant une série de ${response.data.streak} pour cette habitude.`,
       });
     } catch (error) {
       toast({
@@ -246,23 +249,12 @@ const Habits = () => {
     setEditingHabit(habit);
     setFormData({
       title: habit.title,
-      description: habit.description || "",
+      description: habit.description,
       frequency: habit.frequency,
       target: habit.target,
-      category: habit.category || "",
+      category: habit.category,
     });
     setOpenDialog(true);
-  };
-
-  const getCategoryLabel = (value: string | undefined) => {
-    if (!value) return "";
-    const category = categoryOptions.find((cat) => cat.value === value);
-    return category ? category.label : value;
-  };
-
-  const getFrequencyLabel = (value: string) => {
-    const frequency = frequencyOptions.find((freq) => freq.value === value);
-    return frequency ? frequency.label : value;
   };
 
   return (
@@ -270,11 +262,11 @@ const Habits = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <CalendarCheckIcon className="h-8 w-8" />
+            <Repeat className="h-8 w-8" />
             Habitudes
           </h1>
           <p className="text-muted-foreground">
-            Suivez vos habitudes quotidiennes, hebdomadaires et mensuelles.
+            Suivez vos habitudes pour améliorer votre quotidien.
           </p>
         </div>
         
@@ -294,7 +286,7 @@ const Habits = () => {
               <DialogDescription>
                 {editingHabit
                   ? "Modifiez les détails de votre habitude."
-                  : "Créez une nouvelle habitude que vous souhaitez suivre régulièrement."}
+                  : "Créez une nouvelle habitude pour suivre votre progression."}
               </DialogDescription>
             </DialogHeader>
             
@@ -313,28 +305,26 @@ const Habits = () => {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  value={formData.description}
+                  value={formData.description || ""}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Description (optionnel)..."
+                  placeholder="Description de l'habitude..."
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="frequency">Fréquence</Label>
                 <Select
                   value={formData.frequency}
                   onValueChange={(value) => setFormData({ ...formData, frequency: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une fréquence" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisir une fréquence" />
                   </SelectTrigger>
                   <SelectContent>
-                    {frequencyOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="daily">Quotidienne</SelectItem>
+                    <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                    <SelectItem value="monthly">Mensuelle</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -344,32 +334,21 @@ const Habits = () => {
                 <Input
                   id="target"
                   type="number"
-                  min="1"
-                  value={formData.target}
-                  onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) || 1 })}
+                  value={formData.target.toString()}
+                  onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) })}
+                  placeholder="Nombre de fois par jour/semaine/mois..."
                 />
-                <p className="text-xs text-muted-foreground">
-                  Nombre de fois que vous souhaitez accomplir cette habitude.
-                </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category">Catégorie</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une catégorie (optionnel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="category"
+                  type="text"
+                  value={formData.category || ""}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="Catégorie (facultatif)..."
+                />
               </div>
             </div>
             
@@ -392,7 +371,7 @@ const Habits = () => {
         <CardHeader>
           <CardTitle>Vos habitudes</CardTitle>
           <CardDescription>
-            Suivez et complétez vos habitudes régulièrement pour améliorer votre quotidien.
+            Suivez vos habitudes pour améliorer votre quotidien.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -411,36 +390,37 @@ const Habits = () => {
           ) : habits.length > 0 ? (
             <div className="space-y-4">
               {habits.map((habit) => (
-                <Card key={habit.id} className="bg-card/50">
-                  <CardContent className="p-4">
+                <Card key={habit.id} className="glass-card">
+                  <CardHeader>
+                    <CardTitle>{habit.title}</CardTitle>
+                    <CardDescription>
+                      {habit.description || "Aucune description"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-medium">{habit.title}</h3>
-                        {habit.description && (
-                          <p className="text-sm text-muted-foreground">{habit.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline">{getFrequencyLabel(habit.frequency)}</Badge>
-                          {habit.category && (
-                            <Badge variant="outline">{getCategoryLabel(habit.category)}</Badge>
-                          )}
-                          <Badge variant="secondary">Série: {habit.streak}</Badge>
-                        </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Fréquence: {habit.frequency}, Objectif: {habit.target}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Série actuelle: {habit.streak}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center space-x-2">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleCompleteHabit(habit)}
                         >
-                          Compléter
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => openEditDialog(habit)}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                         
                         <AlertDialog>
@@ -453,7 +433,7 @@ const Habits = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Cette action ne peut pas être annulée. Cela supprimera définitivement cette habitude et son historique.
+                                Cette action ne peut pas être annulée. Cela supprimera définitivement cette habitude.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -474,7 +454,7 @@ const Habits = () => {
               ))}
             </div>
           ) : (
-            <HabitsEmptyState onCreate={() => setOpenDialog(true)} />
+            <HabitEmptyState onCreate={() => setOpenDialog(true)} />
           )}
         </CardContent>
       </Card>
