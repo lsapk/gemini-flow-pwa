@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleLineChart } from "@/components/ui/charts/SimpleLineChart";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
@@ -62,6 +61,7 @@ const generateChartData = (focusSessions: any[], tasks: any[]) => {
   ];
   
   // Préparer les données pour le graphique de temps de concentration quotidien
+  // Fixed: Changed the property name from 'hours' to 'value' to match ChartData interface
   const focusHoursData = Array.from({ length: 7 }, (_, i) => {
     const day = addDays(startOfWeekDate, i);
     const sessionsForDay = focusSessions.filter(session => {
@@ -81,7 +81,7 @@ const generateChartData = (focusSessions: any[], tasks: any[]) => {
     
     return {
       name: format(day, 'EEE', { locale: fr }),
-      hours: focusHours
+      value: focusHours // Changed from 'hours' to 'value' to match ChartData interface
     };
   });
   
@@ -323,7 +323,7 @@ export default function Dashboard() {
                 <SimpleBarChart
                   data={chartData.focusHoursData}
                   xAxisKey="name"
-                  barKey="hours"
+                  barKey="value" {/* Updated from "hours" to "value" to match our data structure */}
                   className="h-80"
                   color="#7C3AED"
                 />
