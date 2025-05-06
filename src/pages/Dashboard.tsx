@@ -4,7 +4,6 @@ import { SimpleLineChart } from "@/components/ui/charts/SimpleLineChart";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
 import { SimpleAreaChart } from "@/components/ui/charts/SimpleAreaChart";
 import { SimplePieChart } from "@/components/ui/charts/SimplePieChart";
-import { ChartContainer, ChartData } from "@/components/ui/custom-charts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +12,7 @@ import { useState, useEffect } from "react";
 import { format, startOfWeek, addDays, parseISO, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { ChartData } from "@/components/ui/charts/types";
 
 // Fonction pour générer un nombre aléatoire entre min et max
 function getRandomNumber(min: number, max: number): number {
@@ -319,7 +319,7 @@ export default function Dashboard() {
                 Chargement...
               </div>
             ) : chartData.focusHoursData.length > 0 ? (
-              <ChartContainer className="h-80">
+              <div className="h-80">
                 <SimpleBarChart
                   data={chartData.focusHoursData}
                   xAxisKey="name"
@@ -327,7 +327,7 @@ export default function Dashboard() {
                   className="h-80"
                   color="#7C3AED"
                 />
-              </ChartContainer>
+              </div>
             ) : (
               <div className="h-80 flex items-center justify-center text-muted-foreground">
                 Aucune donnée disponible
@@ -349,14 +349,14 @@ export default function Dashboard() {
                 Chargement...
               </div>
             ) : chartData.taskCompletionData.length > 0 ? (
-              <ChartContainer className="h-80">
+              <div className="h-80">
                 <SimplePieChart
                   data={chartData.taskCompletionData}
                   nameKey="name"
                   valueKey="value"
                   className="h-80"
                 />
-              </ChartContainer>
+              </div>
             ) : (
               <div className="h-80 flex items-center justify-center text-muted-foreground">
                 Aucune donnée disponible

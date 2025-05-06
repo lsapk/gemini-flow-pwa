@@ -19,7 +19,6 @@ import Journal from "./pages/Journal";
 import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Analysis from "./pages/Analysis";
-import Assistant from "./pages/Assistant";
 import Settings from "./pages/Settings";
 
 // Layout
@@ -48,7 +47,6 @@ const App = () => (
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/focus" element={<Focus />} />
                 <Route path="/analysis" element={<Analysis />} />
-                <Route path="/assistant" element={<Assistant />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               

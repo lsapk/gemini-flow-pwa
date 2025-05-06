@@ -5,7 +5,6 @@ import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
-import AssistantButton from "../AssistantButton";
 
 const AppLayout = () => {
   const { user, loading } = useAuth(); // Using loading property correctly
@@ -35,8 +34,6 @@ const AppLayout = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isAssistantPage = location.pathname === "/assistant";
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -54,9 +51,6 @@ const AppLayout = () => {
           </div>
         </main>
       </div>
-
-      {/* Le bouton d'assistant IA n'est pas affiché sur la page Assistant */}
-      {!isAssistantPage && <AssistantButton />}
     </div>
   );
 };
