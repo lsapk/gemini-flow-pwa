@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { LineChart, LineChartProps } from './LineChart';
-import { ChartData } from './types';
+import { LineChart } from './LineChart';
+import { ChartData, LineChartProps } from './types';
 
 interface SimpleLineChartProps {
   data: ChartData[];

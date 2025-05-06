@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { BarChart, BarChartProps } from './BarChart';
-import { ChartData } from './types';
+import { BarChart } from './BarChart';
+import { ChartData, BarChartProps } from './types';
 
 interface SimpleBarChartProps {
   data: ChartData[];

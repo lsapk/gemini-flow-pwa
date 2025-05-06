@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { PieChart, PieChartProps } from './PieChart';
-import { ChartData } from './types';
+import { PieChart } from './PieChart';
+import { ChartData, PieChartProps } from './types';
 
 interface SimplePieChartProps {
   data: ChartData[];

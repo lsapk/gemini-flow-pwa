@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { AreaChart, AreaChartProps } from './AreaChart';
-import { ChartData } from './types';
+import { AreaChart } from './AreaChart';
+import { ChartData, AreaChartProps } from './types';
 
 interface SimpleAreaChartProps {
   data: ChartData[];
