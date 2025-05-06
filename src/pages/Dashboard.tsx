@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarCheckIcon, ChartLineIcon, ListTodoIcon, TargetIcon, TimerIcon, BrainCircuitIcon } from "@/components/icons/DeepFlowIcons";
@@ -66,7 +65,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
-          {getGreeting()}, <span className="text-primary">{user?.user_metadata?.display_name || user?.profile?.display_name || "utilisateur"}</span> !
+          {getGreeting()}, <span className="text-primary">{user?.user_metadata?.display_name || "utilisateur"}</span> !
         </h1>
         <p className="text-muted-foreground">
           Voici un aperçu de votre journée et de vos activités.

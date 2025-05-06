@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{
+  signUp: (email: string, password: string, name?: string) => Promise<{
     user: User | null;
     error: Error | null;
   }>;
@@ -36,14 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setLoading(false);
-        
-        // On utilise setTimeout pour les opérations qui pourraient appeler d'autres méthodes Supabase
-        if (newSession?.user) {
-          setTimeout(() => {
-            // Des opérations supplémentaires peuvent être faites ici
-            // comme récupérer des données de profil, etc.
-          }, 0);
-        }
       }
     );
 
@@ -60,11 +51,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            display_name: name || '',
+          },
+        },
       });
       
       if (error) {

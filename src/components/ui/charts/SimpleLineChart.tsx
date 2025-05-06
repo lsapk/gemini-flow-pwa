@@ -1,6 +1,6 @@
 
 import React from "react";
-import { LineChart } from "./LineChart";
+import { LineChart } from "@/components/ui/custom-charts";
 import { ChartData } from "./types";
 
 interface SimpleLineChartProps {
@@ -12,10 +12,9 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ data, height =
   return (
     <LineChart
       data={data}
-      xAxisDataKey="name"
-      lineDataKey="value"
+      xAxisKey="name"
+      lines={[{ dataKey: "value", name: "Value", color: "var(--line-chart)" }]}
       height={height}
-      color="var(--line-chart)"
     />
   );
 };

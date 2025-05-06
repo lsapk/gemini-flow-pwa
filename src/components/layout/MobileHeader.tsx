@@ -16,7 +16,7 @@ const MobileHeader = ({ sidebarOpen, setSidebarOpen }: MobileHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const displayName = user?.user_metadata?.display_name || user?.profile?.display_name || '';
+  const displayName = user?.user_metadata?.display_name || '';
   const initials = displayName ? displayName.charAt(0).toUpperCase() : 'U';
   
   return (

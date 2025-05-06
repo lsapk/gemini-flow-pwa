@@ -1,6 +1,6 @@
 
 import React from "react";
-import { BarChart } from "./BarChart";
+import { BarChart } from "@/components/ui/custom-charts";
 import { ChartData } from "./types";
 
 interface SimpleBarChartProps {
@@ -12,8 +12,8 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({ data, height = 3
   return (
     <BarChart
       data={data}
-      xAxisDataKey="name"
-      barDataKey="value"
+      xAxisKey="name"
+      barKey="value"
       height={height}
       color="var(--bar-chart)"
     />

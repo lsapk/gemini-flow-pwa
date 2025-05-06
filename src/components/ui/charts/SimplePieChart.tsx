@@ -1,6 +1,6 @@
 
 import React from "react";
-import { PieChart } from "./PieChart";
+import { PieChart } from "@/components/ui/custom-charts";
 import { ChartData } from "./types";
 
 interface SimplePieChartProps {
@@ -12,8 +12,8 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, height = 3
   return (
     <PieChart
       data={data}
-      dataKey="value"
       nameKey="name"
+      valueKey="value"
       height={height}
     />
   );

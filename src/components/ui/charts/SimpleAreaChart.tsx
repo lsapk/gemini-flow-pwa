@@ -1,7 +1,7 @@
 
 import React from "react";
-import { AreaChart } from "./AreaChart";
-import { ChartData, AreaChartProps } from "./types";
+import { AreaChart } from "@/components/ui/custom-charts";
+import { ChartData } from "./types";
 
 interface SimpleAreaChartProps {
   data: ChartData[];
@@ -12,8 +12,8 @@ export const SimpleAreaChart: React.FC<SimpleAreaChartProps> = ({ data, height =
   return (
     <AreaChart
       data={data}
-      xAxisDataKey="name"
-      areaDataKey="value"
+      xAxisKey="name"
+      areaKey="value"
       height={height}
       color="var(--area-chart)"
     />

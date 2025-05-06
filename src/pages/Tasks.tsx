@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,11 +43,11 @@ type TaskInput = {
   due_date?: string;
 };
 
-const priorityColors = {
+const priorityColors: Record<string, "destructive" | "default" | "secondary" | "outline"> = {
   high: "destructive",
-  medium: "warning",
+  medium: "secondary",
   low: "default",
-} as const;
+};
 
 const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -115,7 +114,7 @@ const Tasks = () => {
         .from("tasks")
         .select("*")
         .eq("user_id", user?.id)
-        .order("due_date", { ascending: true, nullsLast: true });
+        .order("due_date", { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       if (data) setTasks(data);
