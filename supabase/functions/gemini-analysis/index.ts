@@ -12,7 +12,7 @@ const corsHeaders = {
 type LanguageCode = "fr" | "en" | "es" | "de";
 
 // Helper function to get analysis prompt based on language
-function getAnalysisPrompt(userData: any, language: LanguageCode = "fr", customPrompt?: string): string {
+function getAnalysisPrompt(userData: any, language: LanguageCode = "fr"): string {
   const { tasks, habits, goals, focusSessions, journalEntries } = userData;
   
   // Format data for AI to analyze
@@ -24,23 +24,6 @@ function getAnalysisPrompt(userData: any, language: LanguageCode = "fr", customP
   const totalFocusTime = focusSessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
   const journalCount = journalEntries.length;
   
-  // If a custom prompt is provided, use it with the user data
-  if (customPrompt) {
-    return `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Voici les données de l'utilisateur :
-
-Données utilisateur :
-- Tâches: ${tasks.length} au total (${completedTasks} terminées, ${pendingTasks} en attente)
-- Habitudes suivies: ${habitsCount}
-- Objectifs: ${goalsCount} au total (${goalsCompleted} atteints)
-- Temps total en sessions Focus: ${totalFocusTime} minutes
-- Entrées de journal: ${journalCount}
-
-Voici la demande spécifique de l'utilisateur : "${customPrompt}"
-
-Réponds de manière personnalisée à cette demande en utilisant les données fournies. Utilise du markdown riche avec des emojis pertinents et conclus avec une note encourageante.`;
-  }
-  
-  // Otherwise use the default prompts
   const prompts = {
     fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse ces données de l'utilisateur et crée un rapport détaillé avec des recommandations constructives.
 
@@ -140,7 +123,7 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
     // Parse request body
-    const { userId, customPrompt } = await req.json();
+    const { userId } = await req.json();
     
     if (!userId) {
       throw new Error("User ID is required");
@@ -238,49 +221,24 @@ serve(async (req) => {
       focusPerDay
     };
     
-    try {
-      // Generate analysis with optional custom prompt
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = getAnalysisPrompt(userData, userLanguage, customPrompt);
-      const result = await model.generateContent(prompt);
-      const analysis = result.response.text();
+    // Generate analysis
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = getAnalysisPrompt(userData, userLanguage);
+    const result = await model.generateContent(prompt);
+    const analysis = result.response.text();
 
-      return new Response(
-        JSON.stringify({
-          analysis,
-          stats: userStats
-        }),
-        {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Error with Gemini model:", error);
-      
-      // Fallback analysis in case of API failure
-      const fallbackAnalysis = {
-        fr: "🙁 **Désolé, je rencontre des difficultés techniques**\n\nLe service d'analyse Gemini AI est temporairement indisponible. Veuillez réessayer dans quelques instants.",
-        en: "🙁 **Sorry, I'm experiencing technical difficulties**\n\nThe Gemini AI analysis service is temporarily unavailable. Please try again in a few moments.",
-        es: "🙁 **Lo siento, estoy experimentando dificultades técnicas**\n\nEl servicio de análisis Gemini AI no está disponible temporalmente. Por favor, inténtalo de nuevo en unos instantes.",
-        de: "🙁 **Es tut mir leid, ich habe technische Schwierigkeiten**\n\nDer Gemini AI-Analysedienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in wenigen Augenblicken erneut."
-      };
-      
-      return new Response(
-        JSON.stringify({
-          analysis: fallbackAnalysis[userLanguage] || fallbackAnalysis.fr,
-          stats: userStats
-        }),
-        {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
+    return new Response(
+      JSON.stringify({
+        analysis,
+        stats: userStats
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error generating analysis:", error);
     

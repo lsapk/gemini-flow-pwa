@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/useAuth";
 
@@ -19,21 +19,13 @@ import Journal from "./pages/Journal";
 import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Analysis from "./pages/Analysis";
+import Assistant from "./pages/Assistant";
 import Settings from "./pages/Settings";
 
 // Layout
 import AppLayout from "./components/layout/AppLayout";
 
-// Create a fresh query client with optimized config
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000, // 1 minute
-      retry: 1, // Only retry once on failure
-      refetchOnWindowFocus: false // Don't refetch when window gets focus
-    }
-  }
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -56,8 +48,7 @@ const App = () => (
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/focus" element={<Focus />} />
                 <Route path="/analysis" element={<Analysis />} />
-                {/* Redirect /assistant route to /analysis to avoid broken links */}
-                <Route path="/assistant" element={<Navigate to="/analysis" replace />} />
+                <Route path="/assistant" element={<Assistant />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               

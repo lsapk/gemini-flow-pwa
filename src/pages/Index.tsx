@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -5,7 +6,7 @@ import {
   CalendarCheckIcon, 
   TimerIcon, 
   BrainCircuitIcon 
-} from "@/components/icons";
+} from "@/components/icons/DeepFlowIcons";
 
 const Index = () => {
   return (

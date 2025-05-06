@@ -82,7 +82,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     // Parse request body
-    const { message, chatHistory, userId, custom_prompt } = await req.json();
+    const { message, chatHistory, userId } = await req.json();
     
     if (!message) {
       throw new Error("Message is required");
@@ -172,79 +172,51 @@ serve(async (req) => {
     // Initialize the Google Generative AI
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Prepare history for the model with a maximum of 10 messages to prevent context overflow
-    const MAX_HISTORY_MESSAGES = 10;
+    // Prepare history for the model
     const history: ChatMessage[] = chatHistory || [];
-    const recentHistory = history.slice(-MAX_HISTORY_MESSAGES);
 
-    // Use custom prompt if provided (for analysis function), otherwise use default system prompt
-    const systemInstruction = custom_prompt || getSystemPrompt(userLanguage);
+    // Create chat session with the Gemini model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      systemInstruction: getSystemPrompt(userLanguage)
+    });
 
-    try {
-      // Create chat session with the Gemini model
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: systemInstruction
-      });
+    // Convert history to Google's chat format
+    const googleChatHistory = history.map(msg => ({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content }]
+    }));
 
-      // Convert history to Google's chat format
-      const googleChatHistory = recentHistory.map(msg => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }]
-      }));
+    // Start chat and send the user's message
+    const chat = model.startChat({
+      history: googleChatHistory,
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+    });
 
-      // Start chat and send the user's message
-      const chat = model.startChat({
-        history: googleChatHistory,
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
+    const result = await chat.sendMessage(message);
+    const response = result.response;
+    const responseText = response.text();
+
+    return new Response(
+      JSON.stringify({ response: responseText }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
         },
-      });
-
-      const result = await chat.sendMessage(message);
-      const response = result.response;
-      const responseText = response.text();
-
-      return new Response(
-        JSON.stringify({ response: responseText }),
-        {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Error with Gemini model:", error);
-      
-      // Fallback response in case of API failure
-      const fallbackResponse = {
-        fr: "🙁 **Désolé, je rencontre des difficultés techniques**\n\nLe service Gemini AI est temporairement indisponible. Veuillez réessayer dans quelques instants.",
-        en: "🙁 **Sorry, I'm experiencing technical difficulties**\n\nThe Gemini AI service is temporarily unavailable. Please try again in a few moments.",
-        es: "🙁 **Lo siento, estoy experimentando dificultades técnicas**\n\nEl servicio Gemini AI no está disponible temporalmente. Por favor, inténtalo de nuevo en unos instantes.",
-        de: "🙁 **Es tut mir leid, ich habe technische Schwierigkeiten**\n\nDer Gemini AI-Dienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in wenigen Augenblicken erneut."
-      };
-      
-      return new Response(
-        JSON.stringify({ response: fallbackResponse[userLanguage] || fallbackResponse.fr }),
-        {
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
+      }
+    );
   } catch (error) {
     console.error("Error processing chat request:", error);
     
     return new Response(
       JSON.stringify({
         error: error.message,
-        response: "⚠️ **Une erreur est survenue**\n\nImpossible de traiter votre demande pour le moment. Veuillez réessayer plus tard."
       }),
       {
         status: 500,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,245 +11,251 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { TargetIcon } from "@/components/icons/DeepFlowIcons";
+import { ListTodoIcon } from "@/components/icons/DeepFlowIcons";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Clock, Flag, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, Flag, Pencil, PlusCircle, Trash2, Calendar as CalendarIcon2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getGoals, createGoal, updateGoal, deleteGoal } from "@/lib/api";
+import { getTasks, createTask, updateTask, deleteTask } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Goal } from "@/types/models";
 
-// Category options
-const categoryOptions = [
-  { value: "personal", label: "Personnel" },
-  { value: "career", label: "Carrière" },
-  { value: "health", label: "Santé" },
-  { value: "finance", label: "Finance" },
-  { value: "education", label: "Éducation" },
-  { value: "other", label: "Autre" }
+// Task priorities
+const priorityOptions = [
+  { value: "high", label: "Haute", badge: "bg-red-500" },
+  { value: "medium", label: "Moyenne", badge: "bg-amber-500" },
+  { value: "low", label: "Basse", badge: "bg-green-500" }
 ];
 
-interface GoalFormData {
+interface Task {
+  id: string;
   title: string;
-  description: string;
-  target_date: Date | undefined;
-  category: string;
+  description?: string;
+  completed: boolean;
+  due_date?: string;
+  priority?: string;
+  user_id: string;
+  created_at: string;
 }
 
-const GoalsEmptyState = ({ onCreate }: { onCreate: () => void }) => (
+interface TaskFormData {
+  title: string;
+  description: string;
+  due_date: Date | undefined;
+  priority: string;
+}
+
+const TasksEmptyState = ({ onCreate }: { onCreate: () => void }) => (
   <div className="text-center py-12">
     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-      <TargetIcon className="h-8 w-8 text-primary" />
+      <ListTodoIcon className="h-8 w-8 text-primary" />
     </div>
-    <h3 className="text-lg font-medium mb-2">Aucun objectif</h3>
+    <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
     <p className="text-muted-foreground mb-4">
-      Commencez par définir votre premier objectif pour avancer vers vos ambitions.
+      Commencez par créer votre première tâche pour suivre votre productivité.
     </p>
     <Button onClick={onCreate}>
       <PlusCircle className="mr-2 h-4 w-4" />
-      Nouvel objectif
+      Nouvelle tâche
     </Button>
   </div>
 );
 
-const Goals = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "completed">("all");
+const PriorityBadge = ({ priority }: { priority?: string }) => {
+  if (!priority) return null;
+  
+  const priorityOption = priorityOptions.find((option) => option.value === priority);
+  
+  return (
+    <Badge 
+      variant="outline" 
+      className={`border-none ${priority === "high" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : 
+        priority === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}
+    >
+      <div className={`w-2 h-2 rounded-full mr-1.5 ${
+        priority === "high" ? "bg-red-500" :
+        priority === "medium" ? "bg-amber-500" :
+        "bg-green-500"
+      }`}></div>
+      {priorityOption?.label || ""}
+    </Badge>
+  );
+};
+
+const Tasks = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [formData, setFormData] = useState<GoalFormData>({
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [formData, setFormData] = useState<TaskFormData>({
     title: "",
     description: "",
-    target_date: undefined,
-    category: "",
+    due_date: undefined,
+    priority: "",
   });
   
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchGoals();
+    fetchTasks();
   }, [user]);
 
-  const fetchGoals = async () => {
+  const fetchTasks = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      const { data } = await getGoals();
+      const { data, error } = await getTasks();
       
-      setGoals(data || []);
+      if (error) throw new Error(error.message);
+      
+      setTasks(data || []);
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de charger vos objectifs.",
+        description: "Impossible de charger vos tâches.",
         variant: "destructive",
       });
-      console.error("Error fetching goals:", error);
+      console.error("Error fetching tasks:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateGoal = async () => {
+  const handleCreateTask = async () => {
     if (!user) return;
     
     if (!formData.title) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre pour votre objectif.",
+        description: "Veuillez saisir un titre pour votre tâche.",
         variant: "destructive",
       });
       return;
     }
     
     try {
-      const newGoal = {
+      const newTask = {
         title: formData.title,
         description: formData.description,
-        target_date: formData.target_date ? formData.target_date.toISOString() : undefined,
-        category: formData.category || undefined,
+        completed: false,
+        due_date: formData.due_date ? formData.due_date.toISOString() : null,
+        priority: formData.priority || null,
+        user_id: user.id,
       };
       
-      const { data } = await createGoal(newGoal);
+      const { data, error } = await createTask(newTask);
       
-      setGoals([data, ...goals]);
+      if (error) throw new Error(error.message);
+      
+      setTasks([...(data ? [data] : []), ...tasks]);
       
       resetForm();
       setOpenDialog(false);
       
       toast({
-        title: "Objectif créé",
-        description: "Votre nouvel objectif a été créé avec succès.",
+        title: "Tâche créée",
+        description: "Votre nouvelle tâche a été créée avec succès.",
       });
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de créer l'objectif.",
+        description: "Impossible de créer la tâche.",
         variant: "destructive",
       });
-      console.error("Error creating goal:", error);
+      console.error("Error creating task:", error);
     }
   };
 
-  const handleUpdateGoal = async () => {
-    if (!user || !editingGoal) return;
+  const handleUpdateTask = async () => {
+    if (!user || !editingTask) return;
     
     if (!formData.title) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre pour votre objectif.",
+        description: "Veuillez saisir un titre pour votre tâche.",
         variant: "destructive",
       });
       return;
     }
     
     try {
-      const updatedGoal = {
+      const updatedTask = {
         title: formData.title,
         description: formData.description,
-        target_date: formData.target_date ? formData.target_date.toISOString() : null,
-        category: formData.category || null,
+        due_date: formData.due_date ? formData.due_date.toISOString() : null,
+        priority: formData.priority || null,
       };
       
-      const { data } = await updateGoal(editingGoal.id, updatedGoal);
+      const { data, error } = await updateTask(editingTask.id, updatedTask);
       
-      setGoals(goals.map((goal) => (goal.id === editingGoal.id ? data : goal)));
+      if (error) throw new Error(error.message);
+      
+      if (data) {
+        setTasks(tasks.map((task) => (task.id === editingTask.id ? data : task)));
+      }
       
       resetForm();
       setOpenDialog(false);
       
       toast({
-        title: "Objectif mis à jour",
-        description: "Votre objectif a été mis à jour avec succès.",
+        title: "Tâche mise à jour",
+        description: "Votre tâche a été mise à jour avec succès.",
       });
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour l'objectif.",
+        description: "Impossible de mettre à jour la tâche.",
         variant: "destructive",
       });
-      console.error("Error updating goal:", error);
+      console.error("Error updating task:", error);
     }
   };
 
-  const handleDeleteGoal = async (id: string) => {
+  const handleDeleteTask = async (id: string) => {
     try {
-      const { success } = await deleteGoal(id);
+      const { error } = await deleteTask(id);
       
-      if (success) {
-        setGoals(goals.filter((goal) => goal.id !== id));
-        
-        toast({
-          title: "Objectif supprimé",
-          description: "Votre objectif a été supprimé avec succès.",
-        });
+      if (error) throw new Error(error.message);
+      
+      setTasks(tasks.filter((task) => task.id !== id));
+      
+      toast({
+        title: "Tâche supprimée",
+        description: "Votre tâche a été supprimée avec succès.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la tâche.",
+        variant: "destructive",
+      });
+      console.error("Error deleting task:", error);
+    }
+  };
+
+  const toggleTaskCompletion = async (task: Task) => {
+    try {
+      const { data, error } = await updateTask(task.id, {
+        completed: !task.completed
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      if (data) {
+        setTasks(tasks.map((t) => (t.id === task.id ? data : t)));
       }
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer l'objectif.",
+        description: "Impossible de mettre à jour l'état de la tâche.",
         variant: "destructive",
       });
-      console.error("Error deleting goal:", error);
-    }
-  };
-
-  const handleToggleComplete = async (goal: Goal) => {
-    try {
-      const updates = {
-        completed: !goal.completed,
-        progress: !goal.completed ? 100 : 0,
-      };
-      
-      const { data } = await updateGoal(goal.id, updates);
-      
-      setGoals(goals.map((g) => (g.id === goal.id ? data : g)));
-      
-      toast({
-        title: goal.completed ? "Objectif réactivé" : "Objectif complété",
-        description: goal.completed
-          ? "Votre objectif a été marqué comme en cours."
-          : "Félicitations ! Votre objectif a été marqué comme complété.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour l'objectif.",
-        variant: "destructive",
-      });
-      console.error("Error updating goal completion:", error);
-    }
-  };
-
-  const handleUpdateProgress = async (goal: Goal, progress: number) => {
-    try {
-      const updates = {
-        progress: progress,
-        completed: progress === 100,
-      };
-      
-      const { data } = await updateGoal(goal.id, updates);
-      
-      setGoals(goals.map((g) => (g.id === goal.id ? data : g)));
-      
-      if (progress === 100) {
-        toast({
-          title: "Objectif complété",
-          description: "Félicitations ! Votre objectif a été complété à 100%.",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour la progression.",
-        variant: "destructive",
-      });
-      console.error("Error updating goal progress:", error);
+      console.error("Error toggling task completion:", error);
     }
   };
 
@@ -258,51 +263,55 @@ const Goals = () => {
     setFormData({
       title: "",
       description: "",
-      target_date: undefined,
-      category: "",
+      due_date: undefined,
+      priority: "",
     });
-    setEditingGoal(null);
+    setEditingTask(null);
   };
 
-  const openEditDialog = (goal: Goal) => {
-    setEditingGoal(goal);
+  const openEditDialog = (task: Task) => {
+    setEditingTask(task);
     setFormData({
-      title: goal.title,
-      description: goal.description || "",
-      target_date: goal.target_date ? parseISO(goal.target_date) : undefined,
-      category: goal.category || "",
+      title: task.title,
+      description: task.description || "",
+      due_date: task.due_date ? parseISO(task.due_date) : undefined,
+      priority: task.priority || "",
     });
     setOpenDialog(true);
   };
 
-  const getCategoryLabel = (value: string | undefined) => {
-    if (!value) return "";
-    const category = categoryOptions.find((cat) => cat.value === value);
-    return category ? category.label : value;
-  };
-
-  const filteredGoals = goals.filter((goal) => {
-    if (activeTab === "active") return !goal.completed;
-    if (activeTab === "completed") return goal.completed;
+  // Filter tasks based on active tab
+  const filteredTasks = tasks.filter((task) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "today") {
+      return task.due_date && isToday(parseISO(task.due_date));
+    }
+    if (activeTab === "completed") return task.completed;
+    if (activeTab === "pending") return !task.completed;
+    if (activeTab === "overdue") {
+      return task.due_date && !task.completed && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
+    }
     return true;
   });
-
-  const getProgressBackgroundColor = (progress: number) => {
-    if (progress < 30) return "bg-red-500";
-    if (progress < 70) return "bg-amber-500";
-    return "bg-green-500";
-  };
+  
+  // Task counts
+  const completedCount = tasks.filter((task) => task.completed).length;
+  const pendingCount = tasks.filter((task) => !task.completed).length;
+  const todayCount = tasks.filter((task) => task.due_date && isToday(parseISO(task.due_date))).length;
+  const overdueCount = tasks.filter((task) => 
+    task.due_date && !task.completed && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))
+  ).length;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <TargetIcon className="h-8 w-8" />
-            Objectifs
+            <ListTodoIcon className="h-8 w-8" />
+            Gestion de tâches
           </h1>
           <p className="text-muted-foreground">
-            Définissez et suivez vos objectifs personnels et professionnels.
+            Organisez vos tâches et suivez votre progression.
           </p>
         </div>
         
@@ -313,16 +322,16 @@ const Goals = () => {
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Nouvel objectif
+              Nouvelle tâche
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingGoal ? "Modifier l'objectif" : "Nouvel objectif"}</DialogTitle>
+              <DialogTitle>{editingTask ? "Modifier la tâche" : "Nouvelle tâche"}</DialogTitle>
               <DialogDescription>
-                {editingGoal
-                  ? "Modifiez les détails de votre objectif."
-                  : "Créez un nouvel objectif que vous souhaitez atteindre."}
+                {editingTask
+                  ? "Modifiez les détails de votre tâche."
+                  : "Créez une nouvelle tâche pour suivre votre progression."}
               </DialogDescription>
             </DialogHeader>
             
@@ -333,7 +342,7 @@ const Goals = () => {
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Titre de l'objectif..."
+                  placeholder="Qu'est-ce qui doit être fait ?"
                 />
               </div>
               
@@ -343,55 +352,64 @@ const Goals = () => {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Description (optionnel)..."
+                  placeholder="Ajoutez des détails supplémentaires..."
                   rows={3}
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label>Date cible</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.target_date ? (
-                        format(formData.target_date, "P", { locale: fr })
-                      ) : (
-                        <span>Choisir une date (optionnel)</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.target_date}
-                      onSelect={(date) => setFormData({ ...formData, target_date: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une catégorie (optionnel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Priorité</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                  >
+                    <SelectTrigger id="priority">
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorityOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center">
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              option.value === "high" ? "bg-red-500" :
+                              option.value === "medium" ? "bg-amber-500" :
+                              "bg-green-500"
+                            }`}></div>
+                            {option.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Échéance</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.due_date ? (
+                          format(formData.due_date, "P", { locale: fr })
+                        ) : (
+                          <span>Choisir une date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.due_date}
+                        onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
             
@@ -402,158 +420,186 @@ const Goals = () => {
               }}>
                 Annuler
               </Button>
-              <Button onClick={editingGoal ? handleUpdateGoal : handleCreateGoal}>
-                {editingGoal ? "Mettre à jour" : "Créer"}
+              <Button onClick={editingTask ? handleUpdateTask : handleCreateTask}>
+                {editingTask ? "Mettre à jour" : "Créer"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="glass-card">
         <CardHeader>
-          <CardTitle>Vos objectifs</CardTitle>
-          <CardDescription>
-            Suivez votre progression et atteignez vos ambitions.
-          </CardDescription>
-          <Tabs 
-            defaultValue="all" 
-            className="mt-4"
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as "all" | "active" | "completed")}
-          >
-            <TabsList>
-              <TabsTrigger value="all">Tous</TabsTrigger>
-              <TabsTrigger value="active">En cours</TabsTrigger>
-              <TabsTrigger value="completed">Complétés</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <CardTitle>Ajouter une tâche rapide</CardTitle>
+          <CardDescription>Ajoutez rapidement une nouvelle tâche à votre liste.</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
-                  <Skeleton className="h-5 w-5 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredGoals.length > 0 ? (
-            <div className="space-y-4">
-              {filteredGoals.map((goal) => (
-                <Card key={goal.id} className={`bg-card/50 ${goal.completed ? 'border-green-500/50' : ''}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={goal.completed}
-                          onCheckedChange={() => handleToggleComplete(goal)}
-                          className="h-5 w-5"
-                        />
-                        <h3 className={`text-lg font-medium ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
-                          {goal.title}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(goal)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Cette action ne peut pas être annulée. Cela supprimera définitivement cet objectif.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteGoal(goal.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Supprimer
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                    
-                    {goal.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{goal.description}</p>
-                    )}
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Progression: {goal.progress}%</span>
-                        <div className="flex items-center gap-2">
-                          {[0, 25, 50, 75, 100].map((progressValue) => (
-                            <Button
-                              key={progressValue}
-                              variant="outline"
-                              size="sm"
-                              className={`h-7 w-7 p-0 ${goal.progress === progressValue ? 'bg-primary text-primary-foreground' : ''}`}
-                              onClick={() => handleUpdateProgress(goal, progressValue)}
-                            >
-                              {progressValue}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="w-full bg-muted rounded-full h-2.5">
-                        <div 
-                          className={`h-2.5 rounded-full ${getProgressBackgroundColor(goal.progress)}`} 
-                          style={{ width: `${goal.progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-3">
-                      {goal.category && (
-                        <Badge variant="outline">{getCategoryLabel(goal.category)}</Badge>
-                      )}
-                      
-                      {goal.target_date && (
-                        <Badge 
-                          variant="outline"
-                          className={`flex items-center gap-1 ${
-                            isPast(parseISO(goal.target_date)) && !isToday(parseISO(goal.target_date)) && !goal.completed 
-                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' 
-                              : ''
-                          }`}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {format(parseISO(goal.target_date), "dd/MM/yyyy", { locale: fr })}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <GoalsEmptyState onCreate={() => setOpenDialog(true)} />
-          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (formData.title) {
+                handleCreateTask();
+              }
+            }}
+            className="flex space-x-2"
+          >
+            <Input
+              placeholder="Nouvelle tâche..."
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="flex-grow"
+            />
+            <Button type="submit" disabled={!formData.title}>Ajouter</Button>
+          </form>
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4 grid grid-cols-5 max-w-lg mx-auto">
+          <TabsTrigger value="all">
+            Toutes ({tasks.length})
+          </TabsTrigger>
+          <TabsTrigger value="today">
+            Aujourd'hui ({todayCount})
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            À faire ({pendingCount})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Complétées ({completedCount})
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className={overdueCount > 0 ? "text-red-500" : ""}>
+            En retard ({overdueCount})
+          </TabsTrigger>
+        </TabsList>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {activeTab === "all" ? "Toutes les tâches" :
+               activeTab === "today" ? "Tâches d'aujourd'hui" :
+               activeTab === "pending" ? "Tâches à faire" :
+               activeTab === "completed" ? "Tâches complétées" :
+               "Tâches en retard"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredTasks.length > 0 ? (
+              <div className="space-y-1">
+                {filteredTasks.map((task) => (
+                  <div 
+                    key={task.id} 
+                    className={`flex items-center justify-between p-3 rounded-md ${
+                      task.completed 
+                        ? "bg-muted/40" 
+                        : task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))
+                        ? "bg-red-50 dark:bg-red-950/20" 
+                        : "hover:bg-accent"
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3 flex-1">
+                      <Checkbox 
+                        id={`task-${task.id}`}
+                        checked={task.completed}
+                        onCheckedChange={() => toggleTaskCompletion(task)}
+                      />
+                      <div className="flex flex-col">
+                        <Label
+                          htmlFor={`task-${task.id}`}
+                          className={`font-medium ${
+                            task.completed ? "line-through text-muted-foreground" : ""
+                          }`}
+                        >
+                          {task.title}
+                        </Label>
+                        
+                        {task.description && (
+                          <p className={`text-sm text-muted-foreground ${
+                            task.completed ? "line-through" : ""
+                          }`}>
+                            {task.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center space-x-2 mt-1">
+                          {task.due_date && (
+                            <Badge 
+                              variant="outline" 
+                              className={`flex items-center space-x-1 text-xs ${
+                                isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date)) && !task.completed
+                                  ? "border-red-300 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400"
+                                  : "border-muted bg-muted/50"
+                              }`}
+                            >
+                              <CalendarIcon2 className="h-3 w-3" />
+                              <span>{format(parseISO(task.due_date), "dd/MM/yyyy", { locale: fr })}</span>
+                            </Badge>
+                          )}
+                          
+                          {task.priority && (
+                            <PriorityBadge priority={task.priority} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(task)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action ne peut pas être annulée. Cela supprimera définitivement cette tâche.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <TasksEmptyState onCreate={() => setOpenDialog(true)} />
+            )}
+          </CardContent>
+        </Card>
+      </Tabs>
     </div>
   );
 };
 
-export default Goals;
+export default Tasks;

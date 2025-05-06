@@ -1,18 +1,16 @@
 
 import { useState, useEffect } from "react";
-import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
-import AssistantFloating from "../AssistantFloating";
 
 const AppLayout = () => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuth(); // Using loading property correctly
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (isMobile) {
@@ -21,13 +19,6 @@ const AppLayout = () => {
       setSidebarOpen(true);
     }
   }, [isMobile]);
-
-  // Rediriger vers la page de connexion si l'utilisateur n'est pas connecté après le chargement
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login", { replace: true });
-    }
-  }, [loading, user, navigate]);
 
   // Show loading state
   if (loading) {
@@ -60,9 +51,6 @@ const AppLayout = () => {
           </div>
         </main>
       </div>
-      
-      {/* Ajout de l'assistant flottant */}
-      <AssistantFloating />
     </div>
   );
 };

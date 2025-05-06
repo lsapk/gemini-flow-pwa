@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +17,14 @@ import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO } from 'date-fns';
-import { JournalEntry, ApiResponse, ApiSuccessResponse } from "@/types/models";
+
+interface JournalEntry {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+}
 
 interface JournalEntryFormData {
   title: string;
@@ -65,16 +71,11 @@ const Journal = () => {
     
     try {
       setLoading(true);
-      const response = await getJournalEntries() as ApiResponse<JournalEntry[]>;
+      const { data, error } = await getJournalEntries();
       
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      if (error) throw new Error(error.message);
       
-      setJournalEntries(response.data.map(entry => ({
-        ...entry,
-        tags: Array.isArray(entry.tags) ? entry.tags : []
-      })));
+      setJournalEntries(data || []);
     } catch (error) {
       toast({
         title: "Erreur",
@@ -107,19 +108,11 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const response = await createJournalEntry(newEntry) as ApiResponse<JournalEntry>;
+      const { data, error } = await createJournalEntry(newEntry);
       
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      if (error) throw new Error(error.message);
       
-      // Ensure tags is an array
-      const entryWithTags = {
-        ...response.data,
-        tags: Array.isArray(response.data.tags) ? response.data.tags : []
-      };
-      
-      setJournalEntries([entryWithTags, ...journalEntries]);
+      setJournalEntries([...(data ? [data] : []), ...journalEntries]);
       
       resetForm();
       setOpenDialog(false);
@@ -157,21 +150,13 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
-      const response = await updateJournalEntry(editingEntry.id, updatedEntry) as ApiResponse<JournalEntry>;
+      const { data, error } = await updateJournalEntry(editingEntry.id, updatedEntry);
       
-      if (response.error) {
-        throw new Error(response.error);
+      if (error) throw new Error(error.message);
+      
+      if (data) {
+        setJournalEntries(journalEntries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
       }
-      
-      // Ensure tags is an array
-      const entryWithTags = {
-        ...response.data,
-        tags: Array.isArray(response.data.tags) ? response.data.tags : []
-      };
-      
-      setJournalEntries(journalEntries.map((entry) => 
-        entry.id === editingEntry.id ? entryWithTags : entry
-      ));
       
       resetForm();
       setOpenDialog(false);
@@ -192,20 +177,16 @@ const Journal = () => {
 
   const handleDeleteEntry = async (id: string) => {
     try {
-      const response = await deleteJournalEntry(id) as ApiSuccessResponse;
+      const { error } = await deleteJournalEntry(id);
       
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      if (error) throw new Error(error.message);
       
-      if (response.success) {
-        setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
-        
-        toast({
-          title: "Entrée supprimée",
-          description: "Votre entrée de journal a été supprimée avec succès.",
-        });
-      }
+      setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
+      
+      toast({
+        title: "Entrée supprimée",
+        description: "Votre entrée de journal a été supprimée avec succès.",
+      });
     } catch (error) {
       toast({
         title: "Erreur",
