@@ -172,20 +172,19 @@ serve(async (req) => {
     // Initialize the Google Generative AI
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Prepare history for the model
-    const history: ChatMessage[] = chatHistory || [];
-
     // Create chat session with the Gemini model
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       systemInstruction: getSystemPrompt(userLanguage)
     });
 
-    // Convert history to Google's chat format
-    const googleChatHistory = history.map(msg => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }]
-    }));
+    // Convert history from our format to Google's format
+    const googleChatHistory = Array.isArray(chatHistory) ? chatHistory
+      .filter(msg => msg.role === "user" || msg.role === "assistant")
+      .map(msg => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.content }]
+      })) : [];
 
     // Start chat and send the user's message
     const chat = model.startChat({

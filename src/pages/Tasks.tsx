@@ -1,603 +1,468 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format, isPast, isToday, parseISO } from "date-fns";
+import { Label } from "@/components/ui/label";
+import { format, isBefore, parseISO, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ListTodoIcon } from "@/components/icons/DeepFlowIcons";
-import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Clock, Flag, Pencil, PlusCircle, Trash2, Calendar as CalendarIcon2 } from "lucide-react";
+import { CalendarIcon, ListTodo, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTasks, createTask, updateTask, deleteTask } from "@/lib/api";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-// Task priorities
-const priorityOptions = [
-  { value: "high", label: "Haute", badge: "bg-red-500" },
-  { value: "medium", label: "Moyenne", badge: "bg-amber-500" },
-  { value: "low", label: "Basse", badge: "bg-green-500" }
-];
-
-interface Task {
+type Task = {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
+  priority: string | null;
+  due_date: string | null;
   completed: boolean;
-  due_date?: string;
-  priority?: string;
-  user_id: string;
   created_at: string;
-}
-
-interface TaskFormData {
-  title: string;
-  description: string;
-  due_date: Date | undefined;
-  priority: string;
-}
-
-const TasksEmptyState = ({ onCreate }: { onCreate: () => void }) => (
-  <div className="text-center py-12">
-    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-      <ListTodoIcon className="h-8 w-8 text-primary" />
-    </div>
-    <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
-    <p className="text-muted-foreground mb-4">
-      Commencez par créer votre première tâche pour suivre votre productivité.
-    </p>
-    <Button onClick={onCreate}>
-      <PlusCircle className="mr-2 h-4 w-4" />
-      Nouvelle tâche
-    </Button>
-  </div>
-);
-
-const PriorityBadge = ({ priority }: { priority?: string }) => {
-  if (!priority) return null;
-  
-  const priorityOption = priorityOptions.find((option) => option.value === priority);
-  
-  return (
-    <Badge 
-      variant="outline" 
-      className={`border-none ${priority === "high" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : 
-        priority === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}
-    >
-      <div className={`w-2 h-2 rounded-full mr-1.5 ${
-        priority === "high" ? "bg-red-500" :
-        priority === "medium" ? "bg-amber-500" :
-        "bg-green-500"
-      }`}></div>
-      {priorityOption?.label || ""}
-    </Badge>
-  );
+  updated_at: string;
 };
+
+type TaskInput = {
+  title: string;
+  description?: string;
+  priority?: string;
+  due_date?: string;
+};
+
+const priorityColors = {
+  high: "destructive",
+  medium: "warning",
+  low: "default",
+} as const;
 
 const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [formData, setFormData] = useState<TaskFormData>({
+  const [newTask, setNewTask] = useState<TaskInput>({
     title: "",
     description: "",
-    due_date: undefined,
-    priority: "",
+    priority: "medium",
   });
-  
-  const { toast } = useToast();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { user } = useAuth();
+  const { toast } = useToast();
 
+  const todayStart = startOfToday();
+
+  // Filtrer les tâches
+  const overdueTasks = useMemo(() => {
+    return tasks.filter(
+      (task) =>
+        !task.completed &&
+        task.due_date &&
+        isBefore(parseISO(task.due_date), todayStart)
+    );
+  }, [tasks, todayStart]);
+
+  const todayTasks = useMemo(() => {
+    return tasks.filter(
+      (task) =>
+        !task.completed &&
+        task.due_date &&
+        format(parseISO(task.due_date), "yyyy-MM-dd") ===
+          format(todayStart, "yyyy-MM-dd")
+    );
+  }, [tasks, todayStart]);
+
+  const upcomingTasks = useMemo(() => {
+    return tasks.filter(
+      (task) =>
+        !task.completed &&
+        (!task.due_date ||
+          (task.due_date &&
+            !isBefore(parseISO(task.due_date), todayStart) &&
+            format(parseISO(task.due_date), "yyyy-MM-dd") !==
+              format(todayStart, "yyyy-MM-dd")))
+    );
+  }, [tasks, todayStart]);
+
+  const completedTasks = useMemo(() => {
+    return tasks.filter((task) => task.completed);
+  }, [tasks]);
+
+  // Charger les tâches au chargement du composant
   useEffect(() => {
-    fetchTasks();
+    if (user) {
+      fetchTasks();
+    }
   }, [user]);
 
+  // Récupérer les tâches depuis Supabase
   const fetchTasks = async () => {
-    if (!user) return;
-    
     try {
       setLoading(true);
-      const { data, error } = await getTasks();
-      
-      if (error) throw new Error(error.message);
-      
-      setTasks(data || []);
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("due_date", { ascending: true, nullsLast: true });
+
+      if (error) throw error;
+      if (data) setTasks(data);
     } catch (error) {
+      console.error("Erreur lors de la récupération des tâches:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger vos tâches.",
+        description: "Impossible de charger les tâches.",
         variant: "destructive",
       });
-      console.error("Error fetching tasks:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateTask = async () => {
-    if (!user) return;
-    
-    if (!formData.title) {
+  // Ajouter une nouvelle tâche
+  const handleAddTask = async () => {
+    if (!newTask.title.trim()) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre pour votre tâche.",
+        description: "Le titre de la tâche est requis.",
         variant: "destructive",
       });
       return;
     }
-    
+
     try {
-      const newTask = {
-        title: formData.title,
-        description: formData.description,
-        completed: false,
-        due_date: formData.due_date ? formData.due_date.toISOString() : null,
-        priority: formData.priority || null,
-        user_id: user.id,
+      // Préparer l'objet à insérer avec la date d'échéance formatée
+      const taskToInsert = {
+        ...newTask,
+        user_id: user?.id,
+        due_date: selectedDate ? format(selectedDate, "yyyy-MM-dd'T'HH:mm:ss'Z'") : null,
+        completed: false
       };
-      
-      const { data, error } = await createTask(newTask);
-      
-      if (error) throw new Error(error.message);
-      
-      setTasks([...(data ? [data] : []), ...tasks]);
-      
-      resetForm();
-      setOpenDialog(false);
-      
-      toast({
-        title: "Tâche créée",
-        description: "Votre nouvelle tâche a été créée avec succès.",
-      });
+
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert([taskToInsert])
+        .select();
+
+      if (error) throw error;
+
+      if (data) {
+        setTasks((prev) => [...prev, data[0]]);
+        setNewTask({ title: "", description: "", priority: "medium" });
+        setSelectedDate(undefined);
+        toast({
+          title: "Succès",
+          description: "Tâche ajoutée avec succès.",
+        });
+      }
     } catch (error) {
+      console.error("Erreur lors de l'ajout de la tâche:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de créer la tâche.",
+        description: "Impossible d'ajouter la tâche.",
         variant: "destructive",
       });
-      console.error("Error creating task:", error);
     }
   };
 
-  const handleUpdateTask = async () => {
-    if (!user || !editingTask) return;
-    
-    if (!formData.title) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez saisir un titre pour votre tâche.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  // Marquer une tâche comme terminée ou non terminée
+  const toggleTaskCompletion = async (taskId: string, completed: boolean) => {
     try {
-      const updatedTask = {
-        title: formData.title,
-        description: formData.description,
-        due_date: formData.due_date ? formData.due_date.toISOString() : null,
-        priority: formData.priority || null,
-      };
-      
-      const { data, error } = await updateTask(editingTask.id, updatedTask);
-      
-      if (error) throw new Error(error.message);
-      
-      if (data) {
-        setTasks(tasks.map((task) => (task.id === editingTask.id ? data : task)));
-      }
-      
-      resetForm();
-      setOpenDialog(false);
-      
-      toast({
-        title: "Tâche mise à jour",
-        description: "Votre tâche a été mise à jour avec succès.",
-      });
+      const { error } = await supabase
+        .from("tasks")
+        .update({ completed, updated_at: new Date().toISOString() })
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, completed } : task
+        )
+      );
     } catch (error) {
+      console.error("Erreur lors de la mise à jour de la tâche:", error);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour la tâche.",
         variant: "destructive",
       });
-      console.error("Error updating task:", error);
     }
   };
 
-  const handleDeleteTask = async (id: string) => {
+  // Supprimer une tâche
+  const handleDeleteTask = async (taskId: string) => {
     try {
-      const { error } = await deleteTask(id);
-      
-      if (error) throw new Error(error.message);
-      
-      setTasks(tasks.filter((task) => task.id !== id));
-      
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
       toast({
-        title: "Tâche supprimée",
-        description: "Votre tâche a été supprimée avec succès.",
+        title: "Succès",
+        description: "Tâche supprimée avec succès.",
       });
     } catch (error) {
+      console.error("Erreur lors de la suppression de la tâche:", error);
       toast({
         title: "Erreur",
         description: "Impossible de supprimer la tâche.",
         variant: "destructive",
       });
-      console.error("Error deleting task:", error);
     }
   };
 
-  const toggleTaskCompletion = async (task: Task) => {
-    try {
-      const { data, error } = await updateTask(task.id, {
-        completed: !task.completed
-      });
-      
-      if (error) throw new Error(error.message);
-      
-      if (data) {
-        setTasks(tasks.map((t) => (t.id === task.id ? data : t)));
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour l'état de la tâche.",
-        variant: "destructive",
-      });
-      console.error("Error toggling task completion:", error);
+  // Rendu d'une liste de tâches
+  const renderTaskList = (taskList: Task[], emptyMessage: string) => {
+    if (loading) {
+      return (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-6 flex-1" />
+            </div>
+          ))}
+        </div>
+      );
     }
-  };
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      due_date: undefined,
-      priority: "",
-    });
-    setEditingTask(null);
-  };
-
-  const openEditDialog = (task: Task) => {
-    setEditingTask(task);
-    setFormData({
-      title: task.title,
-      description: task.description || "",
-      due_date: task.due_date ? parseISO(task.due_date) : undefined,
-      priority: task.priority || "",
-    });
-    setOpenDialog(true);
-  };
-
-  // Filter tasks based on active tab
-  const filteredTasks = tasks.filter((task) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "today") {
-      return task.due_date && isToday(parseISO(task.due_date));
+    if (taskList.length === 0) {
+      return (
+        <div className="flex justify-center py-4 text-muted-foreground">
+          {emptyMessage}
+        </div>
+      );
     }
-    if (activeTab === "completed") return task.completed;
-    if (activeTab === "pending") return !task.completed;
-    if (activeTab === "overdue") {
-      return task.due_date && !task.completed && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date));
-    }
-    return true;
-  });
-  
-  // Task counts
-  const completedCount = tasks.filter((task) => task.completed).length;
-  const pendingCount = tasks.filter((task) => !task.completed).length;
-  const todayCount = tasks.filter((task) => task.due_date && isToday(parseISO(task.due_date))).length;
-  const overdueCount = tasks.filter((task) => 
-    task.due_date && !task.completed && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))
-  ).length;
+
+    return (
+      <div className="space-y-3">
+        {taskList.map((task) => (
+          <div key={task.id} className="flex items-start space-x-3">
+            <Checkbox
+              checked={task.completed}
+              onCheckedChange={(value) =>
+                toggleTaskCompletion(task.id, value === true)
+              }
+              className="mt-1"
+            />
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <h3
+                  className={cn(
+                    "font-medium",
+                    task.completed && "line-through text-muted-foreground"
+                  )}
+                >
+                  {task.title}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => handleDeleteTask(task.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+              {task.description && (
+                <p className="text-sm text-muted-foreground">
+                  {task.description}
+                </p>
+              )}
+              <div className="flex items-center gap-2 text-xs">
+                {task.priority && (
+                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] || "default"}>
+                    {task.priority === "high"
+                      ? "Élevée"
+                      : task.priority === "medium"
+                      ? "Moyenne"
+                      : "Faible"}
+                  </Badge>
+                )}
+                {task.due_date && (
+                  <span className="text-muted-foreground">
+                    Échéance: {format(parseISO(task.due_date), "dd MMMM yyyy", { locale: fr })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <ListTodoIcon className="h-8 w-8" />
-            Gestion de tâches
-          </h1>
-          <p className="text-muted-foreground">
-            Organisez vos tâches et suivez votre progression.
-          </p>
-        </div>
-        
-        <Dialog open={openDialog} onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nouvelle tâche
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingTask ? "Modifier la tâche" : "Nouvelle tâche"}</DialogTitle>
-              <DialogDescription>
-                {editingTask
-                  ? "Modifiez les détails de votre tâche."
-                  : "Créez une nouvelle tâche pour suivre votre progression."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
+    <div className="space-y-8 pb-16">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <ListTodo className="h-8 w-8" />
+          Tâches
+        </h1>
+        <p className="text-muted-foreground">
+          Gérez vos tâches quotidiennes et suivez votre progression.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Nouvelle Tâche</CardTitle>
+          <CardDescription>
+            Ajoutez une nouvelle tâche à votre liste.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-3">
+              <div className="grid gap-1.5">
                 <Label htmlFor="title">Titre</Label>
                 <Input
                   id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Qu'est-ce qui doit être fait ?"
+                  placeholder="Entrez le titre de la tâche..."
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="description">Description (optionnelle)</Label>
                 <Textarea
                   id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Ajoutez des détails supplémentaires..."
-                  rows={3}
+                  placeholder="Entrez une description..."
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
                   <Label htmlFor="priority">Priorité</Label>
                   <Select
-                    value={formData.priority}
-                    onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                    value={newTask.priority}
+                    onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
                   >
                     <SelectTrigger id="priority">
-                      <SelectValue placeholder="Sélectionner..." />
+                      <SelectValue placeholder="Sélectionnez la priorité" />
                     </SelectTrigger>
                     <SelectContent>
-                      {priorityOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${
-                              option.value === "high" ? "bg-red-500" :
-                              option.value === "medium" ? "bg-amber-500" :
-                              "bg-green-500"
-                            }`}></div>
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="high">Élevée</SelectItem>
+                      <SelectItem value="medium">Moyenne</SelectItem>
+                      <SelectItem value="low">Faible</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Échéance</Label>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="due-date">Date d'échéance (optionnelle)</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        id="due-date"
                         variant="outline"
-                        className="w-full justify-start text-left font-normal"
+                        className="w-full justify-start text-left"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.due_date ? (
-                          format(formData.due_date, "P", { locale: fr })
+                        {selectedDate ? (
+                          format(selectedDate, "dd MMMM yyyy", { locale: fr })
                         ) : (
-                          <span>Choisir une date</span>
+                          <span>Sélectionnez une date</span>
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={formData.due_date}
-                        onSelect={(date) => setFormData({ ...formData, due_date: date })}
-                        initialFocus
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                resetForm();
-                setOpenDialog(false);
-              }}>
-                Annuler
-              </Button>
-              <Button onClick={editingTask ? handleUpdateTask : handleCreateTask}>
-                {editingTask ? "Mettre à jour" : "Créer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Ajouter une tâche rapide</CardTitle>
-          <CardDescription>Ajoutez rapidement une nouvelle tâche à votre liste.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (formData.title) {
-                handleCreateTask();
-              }
-            }}
-            className="flex space-x-2"
-          >
-            <Input
-              placeholder="Nouvelle tâche..."
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="flex-grow"
-            />
-            <Button type="submit" disabled={!formData.title}>Ajouter</Button>
-          </form>
+            <Button onClick={handleAddTask} className="w-full">
+              <Plus className="mr-2 h-4 w-4" /> Ajouter la tâche
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4 grid grid-cols-5 max-w-lg mx-auto">
-          <TabsTrigger value="all">
-            Toutes ({tasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="today">
-            Aujourd'hui ({todayCount})
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            À faire ({pendingCount})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Complétées ({completedCount})
-          </TabsTrigger>
-          <TabsTrigger value="overdue" className={overdueCount > 0 ? "text-red-500" : ""}>
-            En retard ({overdueCount})
-          </TabsTrigger>
+      <Tabs defaultValue="today" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
+          <TabsTrigger value="overdue">En retard {overdueTasks.length > 0 && `(${overdueTasks.length})`}</TabsTrigger>
+          <TabsTrigger value="upcoming">À venir</TabsTrigger>
+          <TabsTrigger value="completed">Terminées</TabsTrigger>
         </TabsList>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {activeTab === "all" ? "Toutes les tâches" :
-               activeTab === "today" ? "Tâches d'aujourd'hui" :
-               activeTab === "pending" ? "Tâches à faire" :
-               activeTab === "completed" ? "Tâches complétées" :
-               "Tâches en retard"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
-                    <Skeleton className="h-5 w-5 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredTasks.length > 0 ? (
-              <div className="space-y-1">
-                {filteredTasks.map((task) => (
-                  <div 
-                    key={task.id} 
-                    className={`flex items-center justify-between p-3 rounded-md ${
-                      task.completed 
-                        ? "bg-muted/40" 
-                        : task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))
-                        ? "bg-red-50 dark:bg-red-950/20" 
-                        : "hover:bg-accent"
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3 flex-1">
-                      <Checkbox 
-                        id={`task-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={() => toggleTaskCompletion(task)}
-                      />
-                      <div className="flex flex-col">
-                        <Label
-                          htmlFor={`task-${task.id}`}
-                          className={`font-medium ${
-                            task.completed ? "line-through text-muted-foreground" : ""
-                          }`}
-                        >
-                          {task.title}
-                        </Label>
-                        
-                        {task.description && (
-                          <p className={`text-sm text-muted-foreground ${
-                            task.completed ? "line-through" : ""
-                          }`}>
-                            {task.description}
-                          </p>
-                        )}
-                        
-                        <div className="flex items-center space-x-2 mt-1">
-                          {task.due_date && (
-                            <Badge 
-                              variant="outline" 
-                              className={`flex items-center space-x-1 text-xs ${
-                                isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date)) && !task.completed
-                                  ? "border-red-300 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400"
-                                  : "border-muted bg-muted/50"
-                              }`}
-                            >
-                              <CalendarIcon2 className="h-3 w-3" />
-                              <span>{format(parseISO(task.due_date), "dd/MM/yyyy", { locale: fr })}</span>
-                            </Badge>
-                          )}
-                          
-                          {task.priority && (
-                            <PriorityBadge priority={task.priority} />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(task)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action ne peut pas être annulée. Cela supprimera définitivement cette tâche.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <TasksEmptyState onCreate={() => setOpenDialog(true)} />
-            )}
-          </CardContent>
-        </Card>
+        <TabsContent value="today">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tâches d'aujourd'hui</CardTitle>
+              <CardDescription>
+                Les tâches prévues pour aujourd'hui.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderTaskList(todayTasks, "Aucune tâche pour aujourd'hui.")}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="overdue">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tâches en retard</CardTitle>
+              <CardDescription>
+                Les tâches dont l'échéance est dépassée.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderTaskList(overdueTasks, "Aucune tâche en retard.")}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="upcoming">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tâches à venir</CardTitle>
+              <CardDescription>
+                Les tâches à venir dans les prochains jours.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderTaskList(upcomingTasks, "Aucune tâche à venir.")}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="completed">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tâches terminées</CardTitle>
+              <CardDescription>
+                Les tâches que vous avez déjà accomplies.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderTaskList(completedTasks, "Aucune tâche terminée.")}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
