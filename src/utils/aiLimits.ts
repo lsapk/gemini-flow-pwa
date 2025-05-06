@@ -2,7 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Maximum de requêtes IA quotidiennes pour les utilisateurs freemium
-export const MAX_FREEMIUM_REQUESTS_PER_DAY = 5;
+// Retiré la limite de 5 requêtes
+export const MAX_FREEMIUM_REQUESTS_PER_DAY = Infinity; // Pas de limite
 
 // Suivre une nouvelle requête IA dans la base de données
 export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<boolean> => {
@@ -35,6 +36,7 @@ export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<bool
 };
 
 // Vérifier si l'utilisateur a atteint la limite quotidienne pour le niveau gratuit
+// Modifié pour toujours retourner qu'il n'a pas atteint la limite
 export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise<{
   hasReachedLimit: boolean;
   requestsToday: number;
@@ -46,7 +48,7 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
     
     if (!user) {
       console.error("Aucun utilisateur authentifié trouvé lors de la vérification de la limite de requêtes IA");
-      return { hasReachedLimit: true, requestsToday: 0, isPremium: false };
+      return { hasReachedLimit: false, requestsToday: 0, isPremium: true };
     }
 
     // Vérifier directement si l'utilisateur a un abonnement premium
@@ -60,13 +62,8 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       console.error("Error checking subscription:", subError);
     }
 
-    // Si l'utilisateur est abonné, il est premium
-    const isPremium = subscriptionData?.subscribed === true;
-    
-    // Les utilisateurs premium n'ont pas de limite
-    if (isPremium) {
-      return { hasReachedLimit: false, requestsToday: 0, isPremium };
-    }
+    // On considère tous les utilisateurs comme premium
+    const isPremium = true;
     
     // Obtenir la date du jour dans le fuseau horaire de l'utilisateur (par simplicité, utilisant UTC)
     const today = new Date();
@@ -86,11 +83,10 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
     }
     
     const requestsToday = count || 0;
-    const hasReachedLimit = requestsToday >= MAX_FREEMIUM_REQUESTS_PER_DAY;
-    
-    return { hasReachedLimit, requestsToday, isPremium };
+    // Toujours retourner hasReachedLimit à false
+    return { hasReachedLimit: false, requestsToday, isPremium };
   } catch (err) {
     console.error("Exception lors de la vérification de la limite de requêtes IA:", err);
-    return { hasReachedLimit: false, requestsToday: 0, isPremium: false };
+    return { hasReachedLimit: false, requestsToday: 0, isPremium: true };
   }
 };

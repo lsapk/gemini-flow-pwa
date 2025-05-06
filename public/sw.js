@@ -1,7 +1,7 @@
 
-const CACHE_NAME = 'deepflow-v2';
-const STATIC_CACHE_NAME = 'deepflow-static-v2';
-const DATA_CACHE_NAME = 'deepflow-data-v2';
+const CACHE_NAME = 'deepflow-v3';
+const STATIC_CACHE_NAME = 'deepflow-static-v3';
+const DATA_CACHE_NAME = 'deepflow-data-v3';
 
 const urlsToCache = [
   '/',
@@ -9,17 +9,47 @@ const urlsToCache = [
   '/manifest.json',
   '/assets/index.css',
   '/assets/index.js',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 // Installation du service worker avec mise en cache des ressources importantes
 self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
-        console.log('Cache opened');
+        console.log('Service Worker: Caching app shell...');
         return cache.addAll(urlsToCache);
       })
+      .then(() => {
+        console.log('Service Worker: Installation completed');
+        return self.skipWaiting();
+      })
+  );
+});
+
+// Activation et nettoyage des anciens caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating...');
+  const cacheWhitelist = [STATIC_CACHE_NAME, DATA_CACHE_NAME];
+  
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Service Worker: Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+    .then(() => {
+      console.log('Service Worker: Claiming clients...');
+      return self.clients.claim();
+    })
   );
 });
 
@@ -104,25 +134,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Nettoyage des anciens caches lors de l'activation
-self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [STATIC_CACHE_NAME, DATA_CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-  
-  // Claim clients so the service worker is in control immediately
-  return self.clients.claim();
-});
-
 // Synchronisation en arrière-plan pour les opérations en attente
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-data') {
@@ -162,7 +173,7 @@ self.addEventListener('push', (event) => {
     
     const options = {
       body: data.body || 'Nouvelle notification',
-      icon: '/favicon.ico',
+      icon: '/icons/icon-192x192.png',
       badge: '/favicon.ico',
       data: {
         url: data.url || '/'

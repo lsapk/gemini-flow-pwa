@@ -3,14 +3,16 @@ import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useOrientation } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
+import { AnimatePresence, motion } from "framer-motion";
 
 const AppLayout = () => {
-  const { user } = useAuth(); // Removed reference to loading property
+  const { user } = useAuth();
   const isMobile = useIsMobile();
+  const orientation = useOrientation();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
-  const [isLoading, setIsLoading] = useState(true); // Create our own loading state
+  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
   // Check if user data is loaded
@@ -20,6 +22,7 @@ const AppLayout = () => {
     }
   }, [user]);
 
+  // Adjust sidebar visibility based on screen size
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -31,8 +34,11 @@ const AppLayout = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground animate-pulse">Chargement...</p>
+        </div>
       </div>
     );
   }
@@ -44,20 +50,56 @@ const AppLayout = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <AnimatePresence mode="wait">
+        {sidebarOpen && (
+          <motion.div
+            key="sidebar"
+            initial={{ x: isMobile ? -240 : 0, opacity: isMobile ? 0 : 1 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -240, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={isMobile ? "fixed z-30 h-full" : "relative"}
+          >
+            <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Overlay for mobile sidebar */}
+      {isMobile && sidebarOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 bg-black/50 z-20"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       
       <div className="flex flex-col flex-1 w-0 overflow-hidden">
         {isMobile && (
           <MobileHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         )}
         
-        <main className="relative flex-1 overflow-y-auto focus:outline-none">
-          <div className="py-6 px-4 sm:px-6 md:px-8">
-            <div className="animate-fade-in">
+        <motion.main 
+          className="relative flex-1 overflow-y-auto focus:outline-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className={`py-4 px-3 sm:px-6 md:px-8 ${isMobile && orientation === 'portrait' ? 'pb-20' : ''}`}>
+            <motion.div 
+              key={location.pathname}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="animate-fade-in"
+            >
               <Outlet />
-            </div>
+            </motion.div>
           </div>
-        </main>
+        </motion.main>
       </div>
     </div>
   );

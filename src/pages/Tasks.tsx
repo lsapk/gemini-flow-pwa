@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Task = {
   id: string;
@@ -61,6 +62,7 @@ const Tasks = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const todayStart = startOfToday();
 
@@ -239,9 +241,9 @@ const Tasks = () => {
         </p>
       </div>
 
-      <Card className="border-primary/10">
+      <Card className="border-primary/10 bg-card shadow-md">
         <CardHeader className="pb-3">
-          <CardTitle>Nouvelle tâche</CardTitle>
+          <CardTitle className="text-xl font-semibold text-primary">Nouvelle tâche</CardTitle>
           <CardDescription>
             Ajoutez une nouvelle tâche à votre liste.
           </CardDescription>
@@ -256,6 +258,7 @@ const Tasks = () => {
                   placeholder="Entrez le titre de la tâche..."
                   value={newTask.title}
                   onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  className="bg-background"
                 />
               </div>
               <div className="grid gap-1.5">
@@ -265,7 +268,7 @@ const Tasks = () => {
                   placeholder="Entrez une description..."
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="resize-none"
+                  className="resize-none bg-background"
                   rows={3}
                 />
               </div>
@@ -276,7 +279,7 @@ const Tasks = () => {
                     value={newTask.priority}
                     onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
                   >
-                    <SelectTrigger id="priority">
+                    <SelectTrigger id="priority" className="bg-background">
                       <SelectValue placeholder="Sélectionnez la priorité" />
                     </SelectTrigger>
                     <SelectContent>
@@ -293,7 +296,7 @@ const Tasks = () => {
                       <Button
                         id="due-date"
                         variant="outline"
-                        className="w-full justify-start text-left"
+                        className="w-full justify-start text-left bg-background"
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {selectedDate ? (
@@ -315,7 +318,7 @@ const Tasks = () => {
                 </div>
               </div>
             </div>
-            <Button onClick={handleAddTask} className="w-full">
+            <Button onClick={handleAddTask} className="w-full bg-primary hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" /> Ajouter la tâche
             </Button>
           </div>
@@ -323,70 +326,70 @@ const Tasks = () => {
       </Card>
 
       <Tabs defaultValue="today" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
-          <TabsTrigger value="overdue">
+        <TabsList className="mb-4 bg-muted w-full justify-start overflow-auto">
+          <TabsTrigger value="today" className="px-4 py-2">Aujourd'hui</TabsTrigger>
+          <TabsTrigger value="overdue" className="px-4 py-2 flex items-center">
             En retard {overdueTasks.length > 0 && (
               <Badge variant="destructive" className="ml-1">
                 {overdueTasks.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="upcoming">À venir</TabsTrigger>
-          <TabsTrigger value="completed">Terminées</TabsTrigger>
+          <TabsTrigger value="upcoming" className="px-4 py-2">À venir</TabsTrigger>
+          <TabsTrigger value="completed" className="px-4 py-2">Terminées</TabsTrigger>
         </TabsList>
         
         <TabsContent value="today">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tâches d'aujourd'hui</CardTitle>
+          <Card className="shadow-md bg-card">
+            <CardHeader className="bg-primary/5 pb-2">
+              <CardTitle className="text-xl font-semibold text-primary">Tâches d'aujourd'hui</CardTitle>
               <CardDescription>
                 Les tâches prévues pour aujourd'hui.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {renderTaskList(todayTasks, "Aucune tâche pour aujourd'hui.")}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="overdue">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tâches en retard</CardTitle>
+          <Card className="shadow-md bg-card">
+            <CardHeader className="bg-destructive/5 pb-2">
+              <CardTitle className="text-xl font-semibold text-destructive">Tâches en retard</CardTitle>
               <CardDescription>
                 Les tâches dont l'échéance est dépassée.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {renderTaskList(overdueTasks, "Aucune tâche en retard.")}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="upcoming">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tâches à venir</CardTitle>
+          <Card className="shadow-md bg-card">
+            <CardHeader className="bg-secondary/5 pb-2">
+              <CardTitle className="text-xl font-semibold text-secondary">Tâches à venir</CardTitle>
               <CardDescription>
                 Les tâches à venir dans les prochains jours.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {renderTaskList(upcomingTasks, "Aucune tâche à venir.")}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="completed">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tâches terminées</CardTitle>
+          <Card className="shadow-md bg-card">
+            <CardHeader className="bg-success/5 pb-2">
+              <CardTitle className="text-xl font-semibold text-green-600">Tâches terminées</CardTitle>
               <CardDescription>
                 Les tâches que vous avez déjà accomplies.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               {renderTaskList(completedTasks, "Aucune tâche terminée.")}
             </CardContent>
           </Card>
@@ -423,8 +426,8 @@ const Tasks = () => {
       <div className="space-y-3">
         {taskList.map((task) => (
           <div key={task.id} 
-            className={cn("flex items-start space-x-3 p-3 rounded-lg transition-colors", 
-              !task.completed && "hover:bg-muted/50")}>
+            className={cn("flex items-start space-x-3 p-3 rounded-lg transition-colors border",
+              task.completed ? "border-muted bg-muted/20" : "border-primary/10 bg-card hover:bg-muted/30")}>
             <Checkbox
               checked={task.completed}
               onCheckedChange={(value) =>
@@ -445,7 +448,7 @@ const Tasks = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleDeleteTask(task.id)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -459,7 +462,8 @@ const Tasks = () => {
               )}
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {task.priority && (
-                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] || "default"}>
+                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] || "default"}
+                        className="font-normal">
                     {task.priority === "high"
                       ? "Élevée"
                       : task.priority === "medium"
@@ -468,7 +472,7 @@ const Tasks = () => {
                   </Badge>
                 )}
                 {task.due_date && (
-                  <span className={cn("text-muted-foreground flex items-center gap-1",
+                  <span className={cn("text-muted-foreground flex items-center gap-1 bg-background/80 px-2 py-1 rounded-full",
                     task.completed && "line-through")}>
                     <CalendarIcon className="h-3 w-3" />
                     {format(parseISO(task.due_date), "dd MMMM yyyy", { locale: fr })}
