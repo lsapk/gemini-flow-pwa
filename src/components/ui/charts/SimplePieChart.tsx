@@ -9,12 +9,15 @@ interface SimplePieChartProps {
 }
 
 export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, height = 300 }) => {
+  // Apply the height as a style using className instead of trying to pass it as a prop
+  const className = `h-[${height}px]`;
+  
   return (
     <PieChart
       data={data}
       nameKey="name"
       valueKey="value"
-      height={height}
+      className={className}
     />
   );
 };

@@ -9,13 +9,16 @@ interface SimpleBarChartProps {
 }
 
 export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({ data, height = 300 }) => {
+  // Apply the height as a style using className instead of trying to pass it as a prop
+  const className = `h-[${height}px]`;
+  
   return (
     <BarChart
       data={data}
       xAxisKey="name"
       barKey="value"
-      height={height}
       color="var(--bar-chart)"
+      className={className}
     />
   );
 };

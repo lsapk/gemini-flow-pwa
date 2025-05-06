@@ -9,13 +9,16 @@ interface SimpleAreaChartProps {
 }
 
 export const SimpleAreaChart: React.FC<SimpleAreaChartProps> = ({ data, height = 300 }) => {
+  // Apply the height as a style using className instead of trying to pass it as a prop
+  const className = `h-[${height}px]`;
+  
   return (
     <AreaChart
       data={data}
       xAxisKey="name"
       areaKey="value"
-      height={height}
       color="var(--area-chart)"
+      className={className}
     />
   );
 };
