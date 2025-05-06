@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -226,92 +227,11 @@ const Tasks = () => {
     }
   };
 
-  // Rendu d'une liste de tâches
-  const renderTaskList = (taskList: Task[], emptyMessage: string) => {
-    if (loading) {
-      return (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center space-x-2">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-6 flex-1" />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (taskList.length === 0) {
-      return (
-        <div className="flex justify-center py-4 text-muted-foreground">
-          {emptyMessage}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        {taskList.map((task) => (
-          <div key={task.id} className="flex items-start space-x-3">
-            <Checkbox
-              checked={task.completed}
-              onCheckedChange={(value) =>
-                toggleTaskCompletion(task.id, value === true)
-              }
-              className="mt-1"
-            />
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h3
-                  className={cn(
-                    "font-medium",
-                    task.completed && "line-through text-muted-foreground"
-                  )}
-                >
-                  {task.title}
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleDeleteTask(task.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </div>
-              {task.description && (
-                <p className="text-sm text-muted-foreground">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center gap-2 text-xs">
-                {task.priority && (
-                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] || "default"}>
-                    {task.priority === "high"
-                      ? "Élevée"
-                      : task.priority === "medium"
-                      ? "Moyenne"
-                      : "Faible"}
-                  </Badge>
-                )}
-                {task.due_date && (
-                  <span className="text-muted-foreground">
-                    Échéance: {format(parseISO(task.due_date), "dd MMMM yyyy", { locale: fr })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-2">
+    <div className="space-y-6">
+      <div className="flex flex-col space-y-2">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <ListTodo className="h-8 w-8" />
+          <ListTodo className="h-8 w-8 text-primary" />
           Tâches
         </h1>
         <p className="text-muted-foreground">
@@ -319,9 +239,9 @@ const Tasks = () => {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Nouvelle Tâche</CardTitle>
+      <Card className="border-primary/10">
+        <CardHeader className="pb-3">
+          <CardTitle>Nouvelle tâche</CardTitle>
           <CardDescription>
             Ajoutez une nouvelle tâche à votre liste.
           </CardDescription>
@@ -345,6 +265,8 @@ const Tasks = () => {
                   placeholder="Entrez une description..."
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  className="resize-none"
+                  rows={3}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -365,7 +287,7 @@ const Tasks = () => {
                   </Select>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label htmlFor="due-date">Date d'échéance (optionnelle)</Label>
+                  <Label htmlFor="due-date">Date d'échéance</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -377,7 +299,7 @@ const Tasks = () => {
                         {selectedDate ? (
                           format(selectedDate, "dd MMMM yyyy", { locale: fr })
                         ) : (
-                          <span>Sélectionnez une date</span>
+                          <span className="text-muted-foreground">Sélectionnez une date</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -386,6 +308,7 @@ const Tasks = () => {
                         mode="single"
                         selected={selectedDate}
                         onSelect={setSelectedDate}
+                        initialFocus
                       />
                     </PopoverContent>
                   </Popover>
@@ -402,7 +325,13 @@ const Tasks = () => {
       <Tabs defaultValue="today" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
-          <TabsTrigger value="overdue">En retard {overdueTasks.length > 0 && `(${overdueTasks.length})`}</TabsTrigger>
+          <TabsTrigger value="overdue">
+            En retard {overdueTasks.length > 0 && (
+              <Badge variant="destructive" className="ml-1">
+                {overdueTasks.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="upcoming">À venir</TabsTrigger>
           <TabsTrigger value="completed">Terminées</TabsTrigger>
         </TabsList>
@@ -465,6 +394,93 @@ const Tasks = () => {
       </Tabs>
     </div>
   );
+  
+  // Rendu d'une liste de tâches
+  function renderTaskList(taskList: Task[], emptyMessage: string) {
+    if (loading) {
+      return (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="h-16 flex-1" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (taskList.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
+          <ListTodo className="h-12 w-12 mb-3 text-muted" />
+          {emptyMessage}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {taskList.map((task) => (
+          <div key={task.id} 
+            className={cn("flex items-start space-x-3 p-3 rounded-lg transition-colors", 
+              !task.completed && "hover:bg-muted/50")}>
+            <Checkbox
+              checked={task.completed}
+              onCheckedChange={(value) =>
+                toggleTaskCompletion(task.id, value === true)
+              }
+              className="mt-1"
+            />
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <h3
+                  className={cn(
+                    "font-medium",
+                    task.completed && "line-through text-muted-foreground"
+                  )}
+                >
+                  {task.title}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleDeleteTask(task.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              {task.description && (
+                <p className={cn("text-sm text-muted-foreground", 
+                  task.completed && "line-through text-muted-foreground/70")}>
+                  {task.description}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {task.priority && (
+                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] || "default"}>
+                    {task.priority === "high"
+                      ? "Élevée"
+                      : task.priority === "medium"
+                      ? "Moyenne"
+                      : "Faible"}
+                  </Badge>
+                )}
+                {task.due_date && (
+                  <span className={cn("text-muted-foreground flex items-center gap-1",
+                    task.completed && "line-through")}>
+                    <CalendarIcon className="h-3 w-3" />
+                    {format(parseISO(task.due_date), "dd MMMM yyyy", { locale: fr })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 };
 
 export default Tasks;
