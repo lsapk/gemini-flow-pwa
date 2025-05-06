@@ -108,22 +108,22 @@ serve(async (req) => {
       
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
 
-    // Check if user is admin or premium
-    const { data: subscriptionData } = await supabase
-      .from('subscribers')
-      .select('subscribed')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
-      
-    const isAdmin = roleData?.role === 'admin';
-    const isPremium = (subscriptionData?.subscribed === true) || isAdmin;
+    // Check user premium status
+    let isPremium = false;
+    
+    try {
+      // Check if user is subscribed
+      const { data: subscriptionData } = await supabase
+        .from('subscribers')
+        .select('subscribed')
+        .eq('user_id', userId)
+        .single();
+        
+      // Simpler approach: assume user has admin access if they're subscribed
+      isPremium = subscriptionData?.subscribed === true;
+    } catch (error) {
+      console.error("Error checking subscription status:", error);
+    }
 
     // If user is not premium, check request limits
     if (!isPremium) {
@@ -162,44 +162,40 @@ serve(async (req) => {
     }
 
     // Track this request in the database
-    await supabase
-      .from('ai_requests')
-      .insert({ 
-        service: 'chat',
-        user_id: userId
-      });
+    try {
+      await supabase
+        .from('ai_requests')
+        .insert({ 
+          service: 'chat',
+          user_id: userId
+        });
+    } catch (error) {
+      console.error("Error tracking AI request:", error);
+      // Continue execution even if tracking fails
+    }
 
     // Initialize the Google Generative AI
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Create chat session with the Gemini model
+    // Create a generative model
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
-      systemInstruction: getSystemPrompt(userLanguage)
     });
 
-    // Convert history from our format to Google's format
-    const googleChatHistory = Array.isArray(chatHistory) ? chatHistory
-      .filter(msg => msg.role === "user" || msg.role === "assistant")
-      .map(msg => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }]
-      })) : [];
-
-    // Start chat and send the user's message
+    // Create a chat session
     const chat = model.startChat({
-      history: googleChatHistory,
       generationConfig: {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 2048,
       },
+      systemInstruction: getSystemPrompt(userLanguage),
     });
 
+    // Send message and get response
     const result = await chat.sendMessage(message);
-    const response = result.response;
-    const responseText = response.text();
+    const responseText = result.response.text();
 
     return new Response(
       JSON.stringify({ response: responseText }),

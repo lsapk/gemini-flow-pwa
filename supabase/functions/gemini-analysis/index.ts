@@ -11,94 +11,115 @@ const corsHeaders = {
 
 type LanguageCode = "fr" | "en" | "es" | "de";
 
-// Helper function to get analysis prompt based on language
-function getAnalysisPrompt(userData: any, language: LanguageCode = "fr"): string {
-  const { tasks, habits, goals, focusSessions, journalEntries } = userData;
-  
-  // Format data for AI to analyze
-  const completedTasks = tasks.filter((t: any) => t.completed).length;
-  const pendingTasks = tasks.length - completedTasks;
-  const habitsCount = habits.length;
-  const goalsCount = goals.length;
-  const goalsCompleted = goals.filter((g: any) => g.completed).length;
-  const totalFocusTime = focusSessions.reduce((acc: number, s: any) => acc + (s.duration || 0), 0);
-  const journalCount = journalEntries.length;
-  
-  const prompts = {
-    fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse ces données de l'utilisateur et crée un rapport détaillé avec des recommandations constructives.
+// Helper function to create a custom prompt based on the user's request
+function createCustomPrompt(prompt: string, language: LanguageCode = "fr"): string {
+  const basePrompts = {
+    fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse la demande de l'utilisateur et fournis une réponse détaillée et constructive.
 
-Données utilisateur :
-- Tâches: ${tasks.length} au total (${completedTasks} terminées, ${pendingTasks} en attente)
-- Habitudes suivies: ${habitsCount}
-- Objectifs: ${goalsCount} au total (${goalsCompleted} atteints)
-- Temps total en sessions Focus: ${totalFocusTime} minutes
-- Entrées de journal: ${journalCount}
-
-Format souhaité :
+Format de réponse souhaité :
 1. Utilise du markdown riche avec des emojis pertinents
-2. Commence par un résumé des tendances générales
-3. Analyse les points forts et axes d'amélioration
-4. Propose 3-5 conseils spécifiques basés sur les données
-5. Conclus avec une note encourageante
+2. Structure ta réponse avec des titres et sous-titres
+3. Sois précis et concis, en utilisant des listes à puces lorsque c'est approprié
+4. Propose des recommandations concrètes et actionnables
+5. Conclus de façon encourageante et positive
 
-Ton analyse doit être personnalisée, positive et orientée vers l'action.`,
+Si la demande de l'utilisateur implique des données qui pourraient être représentées visuellement, génère également des données simulées pour un ou plusieurs graphiques sous forme de JSON. Par exemple :
 
-    en: `You are DeepFlow, an AI assistant specialized in productivity and wellbeing analysis. Analyze this user data and create a detailed report with constructive recommendations.
+{
+  "charts": {
+    "pie": [
+      {"name": "Catégorie A", "value": 40},
+      {"name": "Catégorie B", "value": 30},
+      {"name": "Catégorie C", "value": 20},
+      {"name": "Catégorie D", "value": 10}
+    ]
+  }
+}
 
-User data:
-- Tasks: ${tasks.length} total (${completedTasks} completed, ${pendingTasks} pending)
-- Habits tracked: ${habitsCount}
-- Goals: ${goalsCount} total (${goalsCompleted} achieved)
-- Total Focus session time: ${totalFocusTime} minutes
-- Journal entries: ${journalCount}
+Types de graphiques possibles : "bar", "line", "pie", "area"
 
-Desired format:
+Demande de l'utilisateur : "${prompt}"`,
+
+    en: `You are DeepFlow, an AI assistant specialized in productivity and wellbeing analysis. Analyze the user's request and provide a detailed and constructive response.
+
+Desired response format:
 1. Use rich markdown with relevant emojis
-2. Start with a summary of general trends
-3. Analyze strengths and areas for improvement
-4. Suggest 3-5 specific recommendations based on the data
-5. Conclude with an encouraging note
+2. Structure your response with headings and subheadings
+3. Be precise and concise, using bullet points when appropriate
+4. Offer concrete and actionable recommendations
+5. Conclude in an encouraging and positive way
 
-Your analysis should be personalized, positive, and action-oriented.`,
+If the user's request involves data that could be visually represented, also generate simulated data for one or more charts in JSON format. For example:
 
-    es: `Eres DeepFlow, un asistente de IA especializado en análisis de productividad y bienestar. Analiza estos datos del usuario y crea un informe detallado con recomendaciones constructivas.
+{
+  "charts": {
+    "pie": [
+      {"name": "Category A", "value": 40},
+      {"name": "Category B", "value": 30},
+      {"name": "Category C", "value": 20},
+      {"name": "Category D", "value": 10}
+    ]
+  }
+}
 
-Datos del usuario:
-- Tareas: ${tasks.length} en total (${completedTasks} completadas, ${pendingTasks} pendientes)
-- Hábitos seguidos: ${habitsCount}
-- Objetivos: ${goalsCount} en total (${goalsCompleted} alcanzados)
-- Tiempo total en sesiones de enfoque: ${totalFocusTime} minutos
-- Entradas de diario: ${journalCount}
+Possible chart types: "bar", "line", "pie", "area"
 
-Formato deseado:
+User request: "${prompt}"`,
+
+    es: `Eres DeepFlow, un asistente de IA especializado en análisis de productividad y bienestar. Analiza la solicitud del usuario y proporciona una respuesta detallada y constructiva.
+
+Formato de respuesta deseado:
 1. Utiliza markdown enriquecido con emojis relevantes
-2. Comienza con un resumen de tendencias generales
-3. Analiza puntos fuertes y áreas de mejora
-4. Sugiere 3-5 recomendaciones específicas basadas en los datos
-5. Concluye con una nota alentadora
+2. Estructura tu respuesta con títulos y subtítulos
+3. Sé preciso y conciso, utilizando viñetas cuando sea apropiado
+4. Ofrece recomendaciones concretas y procesables
+5. Concluye de manera alentadora y positiva
 
-Tu análisis debe ser personalizado, positivo y orientado a la acción.`,
+Si la solicitud del usuario involucra datos que podrían representarse visualmente, genera también datos simulados para uno o más gráficos en formato JSON. Por ejemplo:
 
-    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivitäts- und Wohlbefindensanalyse spezialisiert ist. Analysiere diese Benutzerdaten und erstelle einen detaillierten Bericht mit konstruktiven Empfehlungen.
+{
+  "charts": {
+    "pie": [
+      {"name": "Categoría A", "value": 40},
+      {"name": "Categoría B", "value": 30},
+      {"name": "Categoría C", "value": 20},
+      {"name": "Categoría D", "value": 10}
+    ]
+  }
+}
 
-Benutzerdaten:
-- Aufgaben: ${tasks.length} insgesamt (${completedTasks} abgeschlossen, ${pendingTasks} ausstehend)
-- Verfolgte Gewohnheiten: ${habitsCount}
-- Ziele: ${goalsCount} insgesamt (${goalsCompleted} erreicht)
-- Gesamtzeit der Fokussitzungen: ${totalFocusTime} Minuten
-- Journaleinträge: ${journalCount}
+Tipos de gráficos posibles: "bar", "line", "pie", "area"
 
-Gewünschtes Format:
+Solicitud del usuario: "${prompt}"`,
+
+    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivitäts- und Wohlbefindensanalyse spezialisiert ist. Analysiere die Anfrage des Benutzers und gib eine detaillierte und konstruktive Antwort.
+
+Gewünschtes Antwortformat:
 1. Verwende umfangreiches Markdown mit relevanten Emojis
-2. Beginne mit einer Zusammenfassung der allgemeinen Trends
-3. Analysiere Stärken und Verbesserungsbereiche
-4. Schlage 3-5 spezifische Empfehlungen basierend auf den Daten vor
-5. Schließe mit einer ermutigenden Notiz ab
+2. Strukturiere deine Antwort mit Überschriften und Unterüberschriften
+3. Sei präzise und prägnant, verwende Aufzählungspunkte, wenn es angebracht ist
+4. Biete konkrete und umsetzbare Empfehlungen an
+5. Schließe auf eine ermutigende und positive Weise ab
 
-Deine Analyse sollte personalisiert, positiv und handlungsorientiert sein.`
+Wenn die Anfrage des Benutzers Daten enthält, die visuell dargestellt werden könnten, generiere auch simulierte Daten für eine oder mehrere Diagramme im JSON-Format. Zum Beispiel:
+
+{
+  "charts": {
+    "pie": [
+      {"name": "Kategorie A", "value": 40},
+      {"name": "Kategorie B", "value": 30},
+      {"name": "Kategorie C", "value": 20},
+      {"name": "Kategorie D", "value": 10}
+    ]
+  }
+}
+
+Mögliche Diagrammtypen: "bar", "line", "pie", "area"
+
+Benutzeranfrage: "${prompt}"`
   };
 
-  return prompts[language] || prompts.fr;
+  return basePrompts[language] || basePrompts.fr;
 }
 
 serve(async (req) => {
@@ -119,11 +140,12 @@ serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-    // Initialize the Google Generative AI
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
     // Parse request body
-    const { userId } = await req.json();
+    const { prompt, userId } = await req.json();
+    
+    if (!prompt) {
+      throw new Error("Prompt is required");
+    }
     
     if (!userId) {
       throw new Error("User ID is required");
@@ -133,104 +155,121 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Get user's language preference
-    const { data: userSettings } = await supabase
+    const { data: userSettings, error: settingsError } = await supabase
       .from('user_settings')
       .select('language')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error("Error fetching user settings:", settingsError);
+    }
       
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
 
-    // Fetch user data
-    const [tasks, habits, goals, focusSessions, journalEntries] = await Promise.all([
-      supabase.from('tasks').select('*').eq('user_id', userId),
-      supabase.from('habits').select('*').eq('user_id', userId),
-      supabase.from('goals').select('*').eq('user_id', userId),
-      supabase.from('focus_sessions').select('*').eq('user_id', userId),
-      supabase.from('journal_entries').select('*').eq('user_id', userId)
-    ]);
+    // Check user premium status
+    let isPremium = false;
+    
+    try {
+      // Check if user is subscribed
+      const { data: subscriptionData } = await supabase
+        .from('subscribers')
+        .select('subscribed')
+        .eq('user_id', userId)
+        .single();
+      
+      // Simpler approach: assume user has premium access if they're subscribed
+      isPremium = subscriptionData?.subscribed === true;
+    } catch (error) {
+      console.error("Error checking subscription status:", error);
+    }
 
-    const userData = {
-      tasks: tasks.data || [],
-      habits: habits.data || [],
-      goals: goals.data || [],
-      focusSessions: focusSessions.data || [],
-      journalEntries: journalEntries.data || []
-    };
+    // If user is not premium, check request limits
+    if (!isPremium) {
+      // Get today's date (UTC midnight)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Count user's requests today
+      const { count, error } = await supabase
+        .from('ai_requests')
+        .select('*', { count: 'exact', head: false })
+        .eq('service', 'analysis')
+        .eq('user_id', userId)
+        .gte('created_at', today.toISOString());
+        
+      if (error) {
+        throw new Error(`Error checking AI request limit: ${error.message}`);
+      }
+      
+      const requestsToday = count || 0;
+      
+      // If user has reached the limit, return an error
+      if (requestsToday >= 5) {
+        const limitMessage = {
+          fr: "⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de 5 requêtes quotidiennes avec le compte gratuit. Passez à un abonnement premium pour bénéficier d'un accès illimité.",
+          en: "⚠️ **Limit reached**\n\nYou have reached your limit of 5 daily requests with the free account. Upgrade to a premium subscription for unlimited access.",
+          es: "⚠️ **Límite alcanzado**\n\nHas alcanzado tu límite de 5 solicitudes diarias con la cuenta gratuita. Actualiza a una suscripción premium para obtener acceso ilimitado.",
+          de: "⚠️ **Limit erreicht**\n\nSie haben Ihr Limit von 5 täglichen Anfragen mit dem kostenlosen Konto erreicht. Upgrade auf ein Premium-Abonnement für unbegrenzten Zugriff."
+        };
+        
+        return new Response(
+          JSON.stringify({ content: limitMessage[userLanguage] || limitMessage.fr }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
-    // Prepare stats for the frontend
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    // Track this request in the database
+    try {
+      await supabase
+        .from('ai_requests')
+        .insert({ 
+          service: 'analysis',
+          user_id: userId
+        });
+    } catch (error) {
+      console.error("Error tracking AI request:", error);
+      // Continue execution even if tracking fails
+    }
 
-    // Task completion by day of week
-    const tasksPerDay = Array(7).fill(0).map((_, i) => {
-      const day = new Date(weekStart);
-      day.setDate(weekStart.getDate() + i);
-      
-      const dayString = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][i];
-      
-      const completedToday = tasks.data ? tasks.data.filter((t: any) => {
-        if (!t.completed) return false;
-        const completedDate = new Date(t.updated_at);
-        return completedDate.getDate() === day.getDate() && 
-               completedDate.getMonth() === day.getMonth() &&
-               completedDate.getFullYear() === day.getFullYear();
-      }).length : 0;
-      
-      return { name: dayString, total: completedToday };
-    });
+    // Initialize the Google Generative AI
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // Habits tracking by week
-    const habitsPerWeek = [1, 2, 3, 4].map(weekNum => {
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() - (7 * (4 - weekNum)));
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      const total = habits.data ? habits.data.filter((h: any) => {
-        if (!h.last_completed_at) return false;
-        const completedDate = new Date(h.last_completed_at);
-        return completedDate >= weekStart && completedDate <= weekEnd;
-      }).length : 0;
-      
-      return { name: `Semaine ${weekNum}`, total };
-    });
-    
-    // Focus time by day
-    const focusPerDay = Array(7).fill(0).map((_, i) => {
-      const day = new Date(weekStart);
-      day.setDate(weekStart.getDate() + i);
-      
-      const dayString = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][i];
-      
-      const minutesToday = focusSessions.data ? focusSessions.data.filter((s: any) => {
-        if (!s.completed_at) return false;
-        const sessionDate = new Date(s.completed_at);
-        return sessionDate.getDate() === day.getDate() && 
-               sessionDate.getMonth() === day.getMonth() &&
-               sessionDate.getFullYear() === day.getFullYear();
-      }).reduce((sum: number, session: any) => sum + (session.duration || 0), 0) : 0;
-      
-      return { name: dayString, total: minutesToday };
-    });
-    
-    const userStats = {
-      tasksPerDay,
-      habitsPerWeek,
-      focusPerDay
-    };
-    
-    // Generate analysis
+    // Create a generative model
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = getAnalysisPrompt(userData, userLanguage);
-    const result = await model.generateContent(prompt);
-    const analysis = result.response.text();
+    
+    // Create the custom prompt based on user's language
+    const customPrompt = createCustomPrompt(prompt, userLanguage);
+    
+    // Generate content
+    const result = await model.generateContent(customPrompt);
+    const responseText = result.response.text();
+    
+    // Process the response to extract chart data if present
+    let content = responseText;
+    let charts = {};
+    
+    // Look for JSON chart data in the response
+    const jsonMatch = responseText.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        const jsonData = JSON.parse(jsonMatch[1]);
+        if (jsonData.charts) {
+          charts = jsonData.charts;
+          
+          // Remove the JSON block from the content
+          content = responseText.replace(/```json\s*(\{[\s\S]*?\})\s*```/, '');
+        }
+      } catch (e) {
+        console.error("Error parsing JSON chart data:", e);
+      }
+    }
 
     return new Response(
-      JSON.stringify({
-        analysis,
-        stats: userStats
+      JSON.stringify({ 
+        content,
+        charts
       }),
       {
         headers: {
@@ -245,8 +284,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message,
-        analysis: "⚠️ **Une erreur est survenue**\n\nImpossible de générer l'analyse pour le moment. Veuillez réessayer plus tard.",
-        stats: null
+        content: "⚠️ **Une erreur est survenue**\n\nImpossible de générer l'analyse pour le moment. Veuillez réessayer plus tard."
       }),
       {
         status: 500,

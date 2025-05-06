@@ -20,8 +20,7 @@ export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<bool
       .insert({ 
         service,
         user_id: user.id 
-      })
-      .select();
+      });
       
     if (error) {
       console.error("Erreur lors du suivi de la requête IA:", error);
@@ -50,32 +49,19 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       return { hasReachedLimit: true, requestsToday: 0, isPremium: false };
     }
 
-    // Vérifier d'abord si l'utilisateur a un abonnement premium
+    // Vérifier directement si l'utilisateur a un abonnement premium
     const { data: subscriptionData, error: subError } = await supabase
       .from('subscribers')
-      .select('subscribed, subscription_tier')
+      .select('subscribed')
       .eq('user_id', user.id)
-      .single();
-
-    // Vérifier si l'utilisateur est administrateur
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
       .maybeSingle();
 
-    // Vérifier si l'utilisateur a un rôle créateur
-    const { data: creatorData, error: creatorError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'creator')
-      .maybeSingle();
+    if (subError) {
+      console.error("Error checking subscription:", subError);
+    }
 
-    const isAdmin = roleData?.role === 'admin';
-    const isCreator = creatorData?.role === 'creator';
-    const isPremium = (subscriptionData?.subscribed === true) || isAdmin || isCreator;
+    // Si l'utilisateur est abonné, il est premium
+    const isPremium = subscriptionData?.subscribed === true;
     
     // Les utilisateurs premium n'ont pas de limite
     if (isPremium) {
