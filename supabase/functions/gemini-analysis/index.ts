@@ -12,19 +12,61 @@ const corsHeaders = {
 type LanguageCode = "fr" | "en" | "es" | "de";
 
 // Helper function to create a custom prompt based on the user's request
-function createCustomPrompt(prompt: string, language: LanguageCode = "fr"): string {
+function createCustomPrompt(prompt: string, userData: any, language: LanguageCode = "fr"): string {
+  const tasksData = userData.tasks || [];
+  const habitsData = userData.habits || [];
+  const journalData = userData.journal || [];
+  const goalsData = userData.goals || [];
+  const focusData = userData.focus || [];
+  
+  // Simplify data to make it more digestible for the AI
+  const simplifiedData = {
+    tasks: tasksData.map((t: any) => ({
+      title: t.title,
+      completed: t.completed,
+      dueDate: t.due_date,
+      priority: t.priority
+    })).slice(0, 20),
+    habits: habitsData.map((h: any) => ({
+      title: h.title,
+      streak: h.streak,
+      frequency: h.frequency
+    })).slice(0, 20),
+    journal: journalData.map((j: any) => ({
+      title: j.title,
+      mood: j.mood,
+      date: j.created_at
+    })).slice(0, 10),
+    goals: goalsData.map((g: any) => ({
+      title: g.title,
+      progress: g.progress,
+      targetDate: g.target_date
+    })).slice(0, 10),
+    focus: focusData.map((f: any) => ({
+      title: f.title,
+      duration: f.duration,
+      date: f.created_at
+    })).slice(0, 15)
+  };
+  
+  const dataContext = JSON.stringify(simplifiedData, null, 2);
+
   const basePrompts = {
-    fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse la demande de l'utilisateur et fournis une réponse détaillée et constructive.
+    fr: `Tu es DeepFlow, un assistant IA spécialisé en analyse de productivité et bien-être. Analyse la demande de l'utilisateur en tenant compte de ses données personnelles.
+
+Voici les données réelles de l'utilisateur :
+${dataContext}
 
 Format de réponse souhaité :
 1. Utilise du markdown riche avec des emojis pertinents
 2. Structure ta réponse avec des titres et sous-titres
 3. Sois précis et concis, en utilisant des listes à puces lorsque c'est approprié
-4. Propose des recommandations concrètes et actionnables
+4. Propose des recommandations concrètes et actionnables basées spécifiquement sur les données de l'utilisateur
 5. Conclus de façon encourageante et positive
 
-Si la demande de l'utilisateur implique des données qui pourraient être représentées visuellement, génère également des données simulées pour un ou plusieurs graphiques sous forme de JSON. Par exemple :
+Si la demande de l'utilisateur implique des données qui pourraient être représentées visuellement, génère également des données pour un ou plusieurs graphiques sous forme de JSON. Par exemple :
 
+\`\`\`json
 {
   "charts": {
     "pie": [
@@ -35,22 +77,27 @@ Si la demande de l'utilisateur implique des données qui pourraient être repré
     ]
   }
 }
+\`\`\`
 
 Types de graphiques possibles : "bar", "line", "pie", "area"
 
 Demande de l'utilisateur : "${prompt}"`,
 
-    en: `You are DeepFlow, an AI assistant specialized in productivity and wellbeing analysis. Analyze the user's request and provide a detailed and constructive response.
+    en: `You are DeepFlow, an AI assistant specialized in productivity and wellbeing analysis. Analyze the user's request taking into account their personal data.
+
+Here is the user's actual data:
+${dataContext}
 
 Desired response format:
 1. Use rich markdown with relevant emojis
 2. Structure your response with headings and subheadings
 3. Be precise and concise, using bullet points when appropriate
-4. Offer concrete and actionable recommendations
+4. Offer concrete and actionable recommendations specifically based on the user's data
 5. Conclude in an encouraging and positive way
 
-If the user's request involves data that could be visually represented, also generate simulated data for one or more charts in JSON format. For example:
+If the user's request involves data that could be visually represented, also generate data for one or more charts in JSON format. For example:
 
+\`\`\`json
 {
   "charts": {
     "pie": [
@@ -61,22 +108,27 @@ If the user's request involves data that could be visually represented, also gen
     ]
   }
 }
+\`\`\`
 
 Possible chart types: "bar", "line", "pie", "area"
 
 User request: "${prompt}"`,
 
-    es: `Eres DeepFlow, un asistente de IA especializado en análisis de productividad y bienestar. Analiza la solicitud del usuario y proporciona una respuesta detallada y constructiva.
+    es: `Eres DeepFlow, un asistente de IA especializado en análisis de productividad y bienestar. Analiza la solicitud del usuario teniendo en cuenta sus datos personales.
+
+Aquí están los datos reales del usuario:
+${dataContext}
 
 Formato de respuesta deseado:
 1. Utiliza markdown enriquecido con emojis relevantes
 2. Estructura tu respuesta con títulos y subtítulos
 3. Sé preciso y conciso, utilizando viñetas cuando sea apropiado
-4. Ofrece recomendaciones concretas y procesables
+4. Ofrece recomendaciones concretas y procesables basadas específicamente en los datos del usuario
 5. Concluye de manera alentadora y positiva
 
-Si la solicitud del usuario involucra datos que podrían representarse visualmente, genera también datos simulados para uno o más gráficos en formato JSON. Por ejemplo:
+Si la solicitud del usuario involucra datos que podrían representarse visualmente, genera también datos para uno o más gráficos en formato JSON. Por ejemplo:
 
+\`\`\`json
 {
   "charts": {
     "pie": [
@@ -87,22 +139,27 @@ Si la solicitud del usuario involucra datos que podrían representarse visualmen
     ]
   }
 }
+\`\`\`
 
 Tipos de gráficos posibles: "bar", "line", "pie", "area"
 
 Solicitud del usuario: "${prompt}"`,
 
-    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivitäts- und Wohlbefindensanalyse spezialisiert ist. Analysiere die Anfrage des Benutzers und gib eine detaillierte und konstruktive Antwort.
+    de: `Du bist DeepFlow, ein KI-Assistent, der auf Produktivitäts- und Wohlbefindensanalyse spezialisiert ist. Analysiere die Anfrage des Benutzers unter Berücksichtigung seiner persönlichen Daten.
+
+Hier sind die tatsächlichen Daten des Benutzers:
+${dataContext}
 
 Gewünschtes Antwortformat:
 1. Verwende umfangreiches Markdown mit relevanten Emojis
 2. Strukturiere deine Antwort mit Überschriften und Unterüberschriften
 3. Sei präzise und prägnant, verwende Aufzählungspunkte, wenn es angebracht ist
-4. Biete konkrete und umsetzbare Empfehlungen an
+4. Biete konkrete und umsetzbare Empfehlungen an, die speziell auf den Daten des Benutzers basieren
 5. Schließe auf eine ermutigende und positive Weise ab
 
-Wenn die Anfrage des Benutzers Daten enthält, die visuell dargestellt werden könnten, generiere auch simulierte Daten für eine oder mehrere Diagramme im JSON-Format. Zum Beispiel:
+Wenn die Anfrage des Benutzers Daten enthält, die visuell dargestellt werden könnten, generiere auch Daten für eine oder mehrere Diagramme im JSON-Format. Zum Beispiel:
 
+\`\`\`json
 {
   "charts": {
     "pie": [
@@ -113,6 +170,7 @@ Wenn die Anfrage des Benutzers Daten enthält, die visuell dargestellt werden k�
     ]
   }
 }
+\`\`\`
 
 Mögliche Diagrammtypen: "bar", "line", "pie", "area"
 
@@ -166,6 +224,70 @@ serve(async (req) => {
     }
       
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
+
+    // Fetch user data to provide context
+    const userData = {
+      tasks: [],
+      habits: [],
+      journal: [],
+      goals: [],
+      focus: []
+    };
+
+    // Fetch tasks data
+    const { data: tasksData, error: tasksError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (!tasksError) {
+      userData.tasks = tasksData || [];
+    }
+    
+    // Fetch habits data
+    const { data: habitsData, error: habitsError } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (!habitsError) {
+      userData.habits = habitsData || [];
+    }
+    
+    // Fetch journal entries
+    const { data: journalData, error: journalError } = await supabase
+      .from('journal_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (!journalError) {
+      userData.journal = journalData || [];
+    }
+    
+    // Fetch goals
+    const { data: goalsData, error: goalsError } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (!goalsError) {
+      userData.goals = goalsData || [];
+    }
+    
+    // Fetch focus sessions
+    const { data: focusData, error: focusError } = await supabase
+      .from('focus_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (!focusError) {
+      userData.focus = focusData || [];
+    }
 
     // Check user premium status
     let isPremium = false;
@@ -239,8 +361,8 @@ serve(async (req) => {
     // Create a generative model
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    // Create the custom prompt based on user's language
-    const customPrompt = createCustomPrompt(prompt, userLanguage);
+    // Create the custom prompt based on user's language and data
+    const customPrompt = createCustomPrompt(prompt, userData, userLanguage);
     
     // Generate content
     const result = await model.generateContent(customPrompt);

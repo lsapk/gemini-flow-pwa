@@ -1,24 +1,53 @@
 
 import React from "react";
-import { BarChart } from "@/components/ui/custom-charts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartData } from "./types";
 
 interface SimpleBarChartProps {
   data: ChartData[];
-  height?: number;
+  xAxisKey?: string;
+  barKey?: string;
+  color?: string;
+  className?: string;
 }
 
-export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({ data, height = 300 }) => {
-  // Apply the height as a style using className instead of trying to pass it as a prop
-  const className = `h-[${height}px]`;
-  
+export const SimpleBarChart = ({
+  data,
+  xAxisKey = "name",
+  barKey = "value",
+  color = "#7C3AED",
+  className = "h-72"
+}: SimpleBarChartProps) => {
   return (
-    <BarChart
-      data={data}
-      xAxisKey="name"
-      barKey="value"
-      color="var(--bar-chart)"
-      className={className}
-    />
+    <div className={className}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          margin={{
+            top: 10,
+            right: 10,
+            left: 0,
+            bottom: 0,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+          <XAxis
+            dataKey={xAxisKey}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tick={{ fontSize: 12 }}
+            dx={-10}
+          />
+          <Tooltip />
+          <Bar dataKey={barKey} fill={color} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
