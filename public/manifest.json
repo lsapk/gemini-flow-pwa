@@ -49,19 +49,19 @@
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [
@@ -143,5 +143,25 @@
   },
   "edge_side_panel": {
     "preferred_width": 400
-  }
+  },
+  "handle_links": "preferred",
+  "dir": "auto",
+  "lang": "fr",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "file_handlers": [
+    {
+      "action": "/open-task",
+      "accept": {
+        "text/plain": [".txt"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+deepflow",
+      "url": "/protocol?url=%s"
+    }
+  ],
+  "capture_links": "new-client"
 }

@@ -11,12 +11,14 @@ import { SimpleAreaChart } from '@/components/ui/charts/SimpleAreaChart';
 import { SimpleBarChart } from '@/components/ui/charts/SimpleBarChart';
 import { SimpleLineChart } from '@/components/ui/charts/SimpleLineChart';
 import { SimplePieChart } from '@/components/ui/charts/SimplePieChart';
-import { Bot, User, LineChart, BarChart3, PieChart, TrendingUp, AlertCircle, Loader2, WifiOff, Wifi, SendHorizonal } from 'lucide-react';
+import { Bot, User, LineChart, BarChart3, PieChart, TrendingUp, AlertCircle, Loader2, WifiOff, Wifi, SendHorizonal, Maximize2, Minimize2 } from 'lucide-react';
 import { ChartData } from '@/components/ui/charts/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Markdown } from '@/components/Markdown';
 import { supabase } from '@/integrations/supabase/client';
 import { checkAIRequestLimit, MAX_FREEMIUM_REQUESTS_PER_DAY, trackAIRequest } from '@/utils/aiLimits';
+import { useAnalyticsData } from '@/hooks/useAnalyticsData';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface AnalysisResult {
   content: string;
@@ -50,8 +52,10 @@ const Analysis = () => {
   const [networkStatus, setNetworkStatus] = useState<"online" | "offline">("online");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [selectedTab, setSelectedTab] = useState("insights");
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useMobile();
   const [requestsInfo, setRequestsInfo] = useState<{
     hasReachedLimit: boolean;
     requestsToday: number;
@@ -59,6 +63,20 @@ const Analysis = () => {
   }>({ hasReachedLimit: false, requestsToday: 0, isPremium: false });
   const [customMessages, setCustomMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Get real analytics data
+  const { 
+    habitsData, 
+    tasksData, 
+    focusData, 
+    activityData, 
+    taskCompletionRate, 
+    totalFocusTime,
+    streakCount,
+    isLoading: isDataLoading, 
+    error: dataError,
+    refetch
+  } = useAnalyticsData();
 
   // Vérification périodique du statut réseau
   useEffect(() => {
@@ -93,6 +111,13 @@ const Analysis = () => {
     };
   }, [user]);
 
+  // Auto fullscreen on mobile
+  useEffect(() => {
+    if (isMobile && selectedTab === "custom") {
+      setIsFullscreen(true);
+    }
+  }, [isMobile, selectedTab]);
+
   // Scroll vers le bas quand les messages changent
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,6 +132,43 @@ const Analysis = () => {
       }
     ]);
   }, []);
+
+  // Convert task data for pie chart
+  const taskCompletionData = React.useMemo(() => {
+    if (!tasksData || tasksData.length === 0 || tasksData[0].name === "Pas de données") {
+      return [
+        { name: 'Complétées', value: 0 },
+        { name: 'En cours', value: 0 },
+        { name: 'En retard', value: 0 },
+      ];
+    }
+    
+    let completed = 0;
+    let pending = 0;
+    let late = 0;
+    
+    tasksData.forEach((item) => {
+      completed += item.completed || 0;
+      pending += item.pending || 0;
+    });
+    
+    // Simple estimation for late tasks (10% of pending)
+    if (pending > 0) {
+      late = Math.round(pending * 0.1);
+      pending -= late;
+    }
+    
+    return [
+      { name: 'Complétées', value: completed },
+      { name: 'En cours', value: pending },
+      { name: 'En retard', value: late }
+    ];
+  }, [tasksData]);
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
 
   // Fonction pour générer l'analyse IA personnalisée
   const handleCustomAnalysis = async () => {
@@ -209,47 +271,29 @@ const Analysis = () => {
     }
   };
 
-  // Données pour les graphiques préconfigurés
-  const productivityData: ChartData[] = [
-    { name: 'Lundi', value: 65 },
-    { name: 'Mardi', value: 78 },
-    { name: 'Mercredi', value: 52 },
-    { name: 'Jeudi', value: 84 },
-    { name: 'Vendredi', value: 90 },
-    { name: 'Samedi', value: 45 },
-    { name: 'Dimanche', value: 32 },
-  ];
-
-  const taskCompletionData: ChartData[] = [
-    { name: 'Complétées', value: 72 },
-    { name: 'En cours', value: 18 },
-    { name: 'En retard', value: 10 },
-  ];
-
-  const habitsData: ChartData[] = [
-    { name: 'Méditation', value: 85 },
-    { name: 'Exercice', value: 65 },
-    { name: 'Lecture', value: 72 },
-    { name: 'Journaling', value: 92 },
-  ];
-
-  const progressData: ChartData[] = [
-    { name: 'Semaine 1', value: 25 },
-    { name: 'Semaine 2', value: 40 },
-    { name: 'Semaine 3', value: 55 },
-    { name: 'Semaine 4', value: 75 },
-  ];
-
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <LineChart className="h-8 w-8" />
-          Analyse IA
-        </h1>
-        <p className="text-muted-foreground">
-          Obtenez des insights sur vos habitudes, tâches et objectifs grâce à l'intelligence artificielle.
-        </p>
+    <div className={`space-y-8 pb-16 ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-4 overflow-y-auto' : ''}`}>
+      <div className="space-y-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <LineChart className="h-8 w-8" />
+            Analyse IA
+          </h1>
+          <p className="text-muted-foreground">
+            Obtenez des insights sur vos habitudes, tâches et objectifs grâce à l'intelligence artificielle.
+          </p>
+        </div>
+        
+        {selectedTab === "custom" && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="flex-shrink-0"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {networkStatus === "offline" && (
@@ -287,62 +331,107 @@ const Analysis = () => {
         </TabsList>
 
         <TabsContent value="insights">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-medium">Productivité</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <SimpleAreaChart data={productivityData} />
-                </div>
-              </CardContent>
-            </Card>
+          {isDataLoading ? (
+            <div className="flex justify-center items-center min-h-[300px]">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : dataError ? (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erreur de chargement</AlertTitle>
+              <AlertDescription>
+                {dataError}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="ml-2"
+                  onClick={() => refetch()}
+                >
+                  Réessayer
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">Productivité</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <SimpleAreaChart data={activityData} xAxisKey="date" areaKey="count" />
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-medium">Complétion des tâches</CardTitle>
-                <PieChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <SimplePieChart data={taskCompletionData} />
-                </div>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">Complétion des tâches</CardTitle>
+                  <PieChart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <SimplePieChart 
+                      data={taskCompletionData} 
+                      colors={["#9b87f5", "#f5a787", "#87f5a7"]} 
+                    />
+                  </div>
+                  <div className="text-center text-sm mt-4 text-muted-foreground">
+                    Taux de complétion: {taskCompletionRate.toFixed(0)}%
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-medium">Habitudes</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <SimpleBarChart data={habitsData} />
-                </div>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">Habitudes</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <SimpleBarChart data={habitsData} />
+                  </div>
+                  <div className="text-center text-sm mt-4 text-muted-foreground">
+                    Meilleure série: {streakCount} jours
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-medium">Progrès</CardTitle>
-                <LineChart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <SimpleLineChart data={progressData} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">Sessions Focus</CardTitle>
+                  <LineChart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px]">
+                    <SimpleLineChart data={focusData} xAxisKey="date" lines={[{ dataKey: "minutes", name: "Minutes", color: "#9b87f5" }]} />
+                  </div>
+                  <div className="text-center text-sm mt-4 text-muted-foreground">
+                    Total: {(totalFocusTime / 60).toFixed(1)} heures de concentration
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="custom">
           <div className="grid gap-6 md:grid-cols-1">
-            <Card>
+            <Card className={isFullscreen ? "h-full" : ""}>
               <CardHeader>
-                <CardTitle>Analyse IA Personnalisée</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Analyse IA Personnalisée</CardTitle>
+                  {!isMobile && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={toggleFullscreen}
+                    >
+                      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
                 <CardDescription>
                   Posez n'importe quelle question sur vos habitudes, tâches et objectifs.
                 </CardDescription>
@@ -350,7 +439,7 @@ const Analysis = () => {
               <CardContent>
                 <div className="space-y-4">
                   {/* Conversation avec l'assistant d'analyse personnalisée */}
-                  <div className="h-[400px] overflow-y-auto p-2 space-y-4 border rounded-md">
+                  <div className={`${isFullscreen ? 'h-[calc(100vh-320px)]' : 'h-[400px]'} overflow-y-auto p-2 space-y-4 border rounded-md`}>
                     {customMessages.map((msg, idx) => (
                       <div
                         key={idx}
@@ -434,40 +523,65 @@ const Analysis = () => {
                   </div>
                   
                   {/* Affichage des graphiques si présents */}
-                  {analysisResult?.charts && (
+                  {analysisResult?.charts && Object.keys(analysisResult.charts).length > 0 && (
                     <div className="mt-6 space-y-6">
-                      {analysisResult.charts.bar && (
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Graphique à barres</h3>
-                          <div className="h-[250px]">
-                            <SimpleBarChart data={analysisResult.charts.bar} />
-                          </div>
-                        </div>
-                      )}
-                      {analysisResult.charts.line && (
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Graphique linéaire</h3>
-                          <div className="h-[250px]">
-                            <SimpleLineChart data={analysisResult.charts.line} />
-                          </div>
-                        </div>
-                      )}
-                      {analysisResult.charts.pie && (
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Graphique circulaire</h3>
-                          <div className="h-[250px]">
-                            <SimplePieChart data={analysisResult.charts.pie} />
-                          </div>
-                        </div>
-                      )}
-                      {analysisResult.charts.area && (
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-medium">Graphique de zone</h3>
-                          <div className="h-[250px]">
-                            <SimpleAreaChart data={analysisResult.charts.area} />
-                          </div>
-                        </div>
-                      )}
+                      <h3 className="text-lg font-medium">Visualisations des données</h3>
+                      <div className="grid gap-6 md:grid-cols-2">
+                        {analysisResult.charts.bar && (
+                          <Card>
+                            <CardHeader className="py-2">
+                              <CardTitle className="text-base">Graphique à barres</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-[200px]">
+                                <SimpleBarChart data={analysisResult.charts.bar} color="#9b87f5" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {analysisResult.charts.line && (
+                          <Card>
+                            <CardHeader className="py-2">
+                              <CardTitle className="text-base">Graphique linéaire</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-[200px]">
+                                <SimpleLineChart 
+                                  data={analysisResult.charts.line}
+                                  lines={[{ dataKey: "value", name: "Valeur", color: "#9b87f5" }]}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {analysisResult.charts.pie && (
+                          <Card>
+                            <CardHeader className="py-2">
+                              <CardTitle className="text-base">Graphique circulaire</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-[200px]">
+                                <SimplePieChart 
+                                  data={analysisResult.charts.pie} 
+                                  colors={["#9b87f5", "#1EAEDB", "#f59e0b", "#ef4444", "#8b5cf6"]}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {analysisResult.charts.area && (
+                          <Card>
+                            <CardHeader className="py-2">
+                              <CardTitle className="text-base">Graphique de zone</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-[200px]">
+                                <SimpleAreaChart data={analysisResult.charts.area} color="#9b87f5" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
                     </div>
                   )}
                   
@@ -484,6 +598,16 @@ const Analysis = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {isFullscreen && (
+        <Button 
+          onClick={toggleFullscreen} 
+          className="fixed bottom-4 right-4 z-50"
+          variant="secondary"
+        >
+          <Minimize2 className="h-4 w-4 mr-2" /> Quitter le mode plein écran
+        </Button>
+      )}
     </div>
   );
 };

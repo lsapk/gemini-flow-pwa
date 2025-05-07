@@ -21,7 +21,23 @@ services:
     headers:
       - path: /*
         name: Cache-Control
-        value: max-age=3600
+        value: public, max-age=3600
       - path: /assets/*
         name: Cache-Control
-        value: max-age=31536000
+        value: public, max-age=31536000
+      - path: /manifest.json
+        name: Cache-Control
+        value: public, max-age=3600
+      - path: /sw.js
+        name: Cache-Control
+        value: public, no-cache
+    pullRequestPreviewsEnabled: true
+    buildFilter:
+      paths:
+        - src/**/*.ts
+        - src/**/*.tsx
+        - src/**/*.js
+        - src/**/*.jsx
+        - src/**/*.css
+        - src/**/*.scss
+        - public/**/*

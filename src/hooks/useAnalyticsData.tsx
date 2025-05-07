@@ -155,9 +155,9 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         return date.toISOString().split('T')[0];
       }).reverse();
       
-      // Compter toutes les activités par jour - using a direct query instead of RPC
+      // Compter toutes les activités par jour en utilisant des requêtes directes
       const startDate = last7DaysDates[0];
-      const endDate = last7DaysDates[last7DaysDates.length - 1];
+      const endDate = last7DaysDates[last7DaysDates.length - 1] + 'T23:59:59';
       
       // Get habits activity
       const { data: habitsActivityData, error: habitsActivityError } = await supabase
@@ -165,7 +165,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('updated_at')
         .eq('user_id', user.id)
         .gte('updated_at', startDate)
-        .lte('updated_at', endDate + 'T23:59:59');
+        .lte('updated_at', endDate);
         
       // Get tasks activity
       const { data: tasksActivityData, error: tasksActivityError } = await supabase
@@ -173,7 +173,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('updated_at')
         .eq('user_id', user.id)
         .gte('updated_at', startDate)
-        .lte('updated_at', endDate + 'T23:59:59');
+        .lte('updated_at', endDate);
         
       // Get focus sessions activity
       const { data: focusActivityData, error: focusActivityError } = await supabase
@@ -181,7 +181,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('created_at')
         .eq('user_id', user.id)
         .gte('created_at', startDate)
-        .lte('created_at', endDate + 'T23:59:59');
+        .lte('created_at', endDate);
         
       // Get journal entries activity
       const { data: journalActivityData, error: journalActivityError } = await supabase
@@ -189,7 +189,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('created_at')
         .eq('user_id', user.id)
         .gte('created_at', startDate)
-        .lte('created_at', endDate + 'T23:59:59');
+        .lte('created_at', endDate);
         
       if (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError) {
         throw new Error("Erreur lors de la récupération des données d'activité: " 

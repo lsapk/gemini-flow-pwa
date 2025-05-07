@@ -1,7 +1,7 @@
 
 import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { Area, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { Area, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 
 interface ChartConfig {
   total?: {
@@ -30,7 +30,7 @@ export const SimpleAreaChart = ({
   data,
   xAxisKey = "name",
   areaKey = "value", 
-  color = "#3b82f6",
+  color = "#9b87f5",
   className
 }: { 
   data: any[]; 
@@ -80,7 +80,7 @@ export const SimpleBarChart = ({
   data,
   xAxisKey = "name",
   barKey = "value",
-  color = "#3b82f6",
+  color = "#9b87f5",
   className
 }: {
   data: any[];
@@ -122,13 +122,15 @@ export const SimplePieChart = ({
   data,
   nameKey = "name",
   valueKey = "value",
-  colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+  colors = ["#9b87f5", "#1EAEDB", "#f59e0b", "#ef4444", "#8b5cf6"],
+  showLegend = false,
   className
 }: {
   data: any[];
   nameKey?: string;
   valueKey?: string;
   colors?: string[];
+  showLegend?: boolean;
   className?: string;
 }) => {
   return (
@@ -158,17 +160,17 @@ export const SimplePieChart = ({
               fontSize: '0.875rem'
             }} 
           />
+          {showLegend && <Legend />}
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-// Added the SimpleLineChart component
 export const SimpleLineChart = ({
   data,
   xAxisKey = "name",
-  lines = [{ dataKey: "value", name: "Value", color: "#3b82f6" }],
+  lines = [{ dataKey: "value", name: "Value", color: "#9b87f5" }],
   className
 }: {
   data: any[];

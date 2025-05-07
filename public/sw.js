@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'deepflow-v4';
 const STATIC_CACHE_NAME = 'deepflow-static-v4';
 const DATA_CACHE_NAME = 'deepflow-data-v4';
@@ -11,7 +12,8 @@ const urlsToCache = [
   '/favicon.ico',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  '/offline.html'
+  '/offline.html',
+  '/lovable-uploads/9aada0a3-c387-47a3-b70c-00e80e8f2a42.png' // Logo DeepFlow
 ];
 
 // Installation du service worker avec mise en cache des ressources importantes
@@ -150,6 +152,11 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Handle PWA installation event
+self.addEventListener('appinstalled', (event) => {
+  console.log('PWA was installed');
+});
+
 // Synchronisation en arrière-plan pour les opérations en attente
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-data') {
@@ -193,7 +200,7 @@ self.addEventListener('push', (event) => {
     const options = {
       body: sanitizedBody,
       icon: '/icons/icon-192x192.png',
-      badge: '/favicon.ico',
+      badge: '/lovable-uploads/9aada0a3-c387-47a3-b70c-00e80e8f2a42.png',
       data: {
         url: data.url || '/'
       },
