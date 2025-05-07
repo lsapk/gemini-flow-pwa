@@ -33,14 +33,15 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       // Récupérer les données des habitudes
       const { data: habitsRawData, error: habitsError } = await supabase
         .from('habits')
-        .select('name, completions:habit_completions(id)')
+        .select('title, id, streak')
         .eq('user_id', user.id);
         
       if (habitsError) throw habitsError;
       
+      // Format the habit data using the correct column name (title instead of name)
       const formattedHabitsData = (habitsRawData || []).map(habit => ({
-        name: habit.name,
-        value: Array.isArray(habit.completions) ? habit.completions.length : 0
+        name: habit.title, // Using 'title' instead of 'name'
+        value: habit.streak || 0
       }));
       
       setHabitsData(formattedHabitsData.length > 0 ? formattedHabitsData : [
@@ -109,11 +110,44 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         return date.toISOString().split('T')[0];
       }).reverse();
       
-      // Compter toutes les activités par jour
-      const { data: activityRawData, error: activityError } = await supabase
-        .rpc('get_user_activity_count', { user_id_param: user.id });
+      // Compter toutes les activités par jour - using a direct query instead of RPC
+      const startDate = last7Days[0];
+      const endDate = last7Days[last7Days.length - 1];
+      
+      // Get habits completions
+      const { data: habitsActivityData, error: habitsActivityError } = await supabase
+        .from('habits')
+        .select('updated_at')
+        .eq('user_id', user.id)
+        .gte('updated_at', startDate)
+        .lte('updated_at', endDate + 'T23:59:59');
         
-      if (activityError) throw activityError;
+      // Get tasks activity
+      const { data: tasksActivityData, error: tasksActivityError } = await supabase
+        .from('tasks')
+        .select('updated_at')
+        .eq('user_id', user.id)
+        .gte('updated_at', startDate)
+        .lte('updated_at', endDate + 'T23:59:59');
+        
+      // Get focus sessions activity
+      const { data: focusActivityData, error: focusActivityError } = await supabase
+        .from('focus_sessions')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate + 'T23:59:59');
+        
+      if (habitsActivityError || tasksActivityError || focusActivityError) {
+        throw habitsActivityError || tasksActivityError || focusActivityError;
+      }
+      
+      // Combine all activity data
+      const allActivityData = [
+        ...(habitsActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
+        ...(tasksActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
+        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
+      ];
       
       // Mapper les activités par jour
       const activityByDay: Record<string, number> = {};
@@ -121,14 +155,11 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         activityByDay[day] = 0;
       });
       
-      if (Array.isArray(activityRawData)) {
-        activityRawData.forEach(item => {
-          const day = new Date(item.date).toISOString().split('T')[0];
-          if (activityByDay[day] !== undefined) {
-            activityByDay[day] = item.count;
-          }
-        });
-      }
+      allActivityData.forEach(item => {
+        if (activityByDay[item.date] !== undefined) {
+          activityByDay[item.date] += 1;
+        }
+      });
       
       const formattedActivityData = Object.entries(activityByDay).map(([date, count]) => ({
         date: new Date(date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
