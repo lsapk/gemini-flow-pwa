@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { format, subDays, startOfToday, parseISO } from "date-fns";
 
 type AnalyticsDataType = {
   // Types de données pour les graphiques
@@ -9,9 +10,12 @@ type AnalyticsDataType = {
   tasksData: { name: string; completed: number; pending: number }[];
   focusData: { date: string; minutes: number }[];
   activityData: { date: string; count: number }[];
+  taskCompletionRate: number;
+  totalFocusTime: number;
+  streakCount: number;
   isLoading: boolean;
   error: string | null;
-  refetch: () => void;
+  refetch: () => Promise<void>;
 };
 
 export const useAnalyticsData = (): AnalyticsDataType => {
@@ -19,11 +23,14 @@ export const useAnalyticsData = (): AnalyticsDataType => {
   const [tasksData, setTasksData] = useState<{ name: string; completed: number; pending: number }[]>([]);
   const [focusData, setFocusData] = useState<{ date: string; minutes: number }[]>([]);
   const [activityData, setActivityData] = useState<{ date: string; count: number }[]>([]);
+  const [taskCompletionRate, setTaskCompletionRate] = useState<number>(0);
+  const [totalFocusTime, setTotalFocusTime] = useState<number>(0);
+  const [streakCount, setStreakCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     
     setIsLoading(true);
@@ -36,14 +43,23 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('title, id, streak')
         .eq('user_id', user.id);
         
-      if (habitsError) throw habitsError;
+      if (habitsError) throw new Error("Erreur lors de la récupération des habitudes: " + habitsError.message);
       
       // Format the habit data using the correct column name (title instead of name)
-      const formattedHabitsData = (habitsRawData || []).map(habit => ({
-        name: habit.title, // Using 'title' instead of 'name'
-        value: habit.streak || 0
-      }));
+      let maxStreak = 0;
+      const formattedHabitsData = (habitsRawData || []).map(habit => {
+        const streak = habit.streak || 0;
+        if (streak > maxStreak) maxStreak = streak;
+        return {
+          name: habit.title, // Using 'title' instead of 'name'
+          value: streak
+        };
+      });
       
+      // Update global streak count
+      setStreakCount(maxStreak);
+      
+      // Set habits data
       setHabitsData(formattedHabitsData.length > 0 ? formattedHabitsData : [
         { name: "Pas d'habitudes", value: 0 }
       ]);
@@ -54,7 +70,12 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .select('priority, completed')
         .eq('user_id', user.id);
         
-      if (tasksError) throw tasksError;
+      if (tasksError) throw new Error("Erreur lors de la récupération des tâches: " + tasksError.message);
+      
+      // Calculate task completion rate
+      const totalTasks = (tasksRawData || []).length;
+      const completedTasks = (tasksRawData || []).filter(task => task.completed).length;
+      setTaskCompletionRate(totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0);
       
       // Regrouper par priorité
       const tasksByPriority = (tasksRawData || []).reduce((acc: Record<string, {completed: number, pending: number}>, task) => {
@@ -87,34 +108,58 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .from('focus_sessions')
         .select('duration, created_at')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(7);
+        .gt('created_at', subDays(new Date(), 14).toISOString())
+        .order('created_at', { ascending: false });
         
-      if (focusError) throw focusError;
+      if (focusError) throw new Error("Erreur lors de la récupération des sessions focus: " + focusError.message);
+      
+      // Calculer le temps total de focus en minutes
+      let totalMinutes = 0;
       
       // Formater les données de focus
-      const formattedFocusData = (focusRawData || []).map(session => ({
-        date: new Date(session.created_at).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-        minutes: Math.round(session.duration / 60) // Convertir en minutes
-      })).reverse();
+      const focusByDay: Record<string, number> = {};
+      const last7Days = Array.from({ length: 7 }).map((_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        focusByDay[formattedDate] = 0;
+        return formattedDate;
+      }).reverse();
       
-      setFocusData(formattedFocusData.length > 0 ? formattedFocusData : [
-        { date: "Aujourd'hui", minutes: 0 },
-        { date: "Hier", minutes: 0 },
-      ]);
+      // Agréger les sessions par jour
+      (focusRawData || []).forEach(session => {
+        const sessionDate = format(parseISO(session.created_at), 'yyyy-MM-dd');
+        const durationMinutes = Math.round(session.duration / 60);
+        totalMinutes += durationMinutes;
+        
+        if (last7Days.includes(sessionDate)) {
+          focusByDay[sessionDate] = (focusByDay[sessionDate] || 0) + durationMinutes;
+        }
+      });
+      
+      // Mettre à jour le temps total de focus
+      setTotalFocusTime(totalMinutes);
+      
+      // Formater les données pour le graphique
+      const formattedFocusData = Object.entries(focusByDay).map(([date, minutes]) => ({
+        date: format(parseISO(date), 'dd MMM'),
+        minutes
+      }));
+      
+      setFocusData(formattedFocusData);
       
       // Récupérer les données d'activité générale
-      const last7Days = [...Array(7)].map((_, i) => {
+      const last7DaysDates = [...Array(7)].map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - i);
         return date.toISOString().split('T')[0];
       }).reverse();
       
       // Compter toutes les activités par jour - using a direct query instead of RPC
-      const startDate = last7Days[0];
-      const endDate = last7Days[last7Days.length - 1];
+      const startDate = last7DaysDates[0];
+      const endDate = last7DaysDates[last7DaysDates.length - 1];
       
-      // Get habits completions
+      // Get habits activity
       const { data: habitsActivityData, error: habitsActivityError } = await supabase
         .from('habits')
         .select('updated_at')
@@ -138,20 +183,30 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .gte('created_at', startDate)
         .lte('created_at', endDate + 'T23:59:59');
         
-      if (habitsActivityError || tasksActivityError || focusActivityError) {
-        throw habitsActivityError || tasksActivityError || focusActivityError;
+      // Get journal entries activity
+      const { data: journalActivityData, error: journalActivityError } = await supabase
+        .from('journal_entries')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate + 'T23:59:59');
+        
+      if (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError) {
+        throw new Error("Erreur lors de la récupération des données d'activité: " 
+          + (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError).message);
       }
       
       // Combine all activity data
       const allActivityData = [
         ...(habitsActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
         ...(tasksActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
+        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] })),
+        ...(journalActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
       ];
       
       // Mapper les activités par jour
       const activityByDay: Record<string, number> = {};
-      last7Days.forEach(day => {
+      last7DaysDates.forEach(day => {
         activityByDay[day] = 0;
       });
       
@@ -162,7 +217,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       });
       
       const formattedActivityData = Object.entries(activityByDay).map(([date, count]) => ({
-        date: new Date(date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
+        date: format(parseISO(date), 'dd MMM'),
         count
       }));
       
@@ -188,19 +243,22 @@ export const useAnalyticsData = (): AnalyticsDataType => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       fetchData();
     }
-  }, [user]);
+  }, [user, fetchData]);
 
   return {
     habitsData,
     tasksData,
     focusData,
     activityData,
+    taskCompletionRate,
+    totalFocusTime,
+    streakCount,
     isLoading,
     error,
     refetch: fetchData

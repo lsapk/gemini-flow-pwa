@@ -99,6 +99,10 @@
     {
       "platform": "itunes",
       "url": "https://apps.apple.com/app/deepflow/id123456789"
+    },
+    {
+      "platform": "webapp",
+      "url": "https://deepflow.onrender.com"
     }
   ],
   "prefer_related_applications": false,
@@ -124,5 +128,20 @@
       "url": "/focus",
       "icons": [{ "src": "icons/focus-shortcut.png", "sizes": "96x96" }]
     }
-  ]
+  ],
+  "rendering": {
+    "browser": ["chromium", "gecko", "webkit"]
+  },
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }

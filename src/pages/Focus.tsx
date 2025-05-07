@@ -1,20 +1,44 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimerIcon } from "@/components/icons/DeepFlowIcons";
 import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Clock, RefreshCcw, Play, Pause, PlayCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Focus = () => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [mode, setMode] = useState<"focus" | "break">("focus");
   const [secondsLeft, setSecondsLeft] = useState(25 * 60); // 25 minutes in seconds
+  const [focusDuration, setFocusDuration] = useState(25); // Focus duration in minutes
+  const [breakDuration, setBreakDuration] = useState(5); // Break duration in minutes
   const [progress, setProgress] = useState(0);
+  const [sessionsCompleted, setSessionsCompleted] = useState(0);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const focusTime = 25 * 60; // 25 minutes in seconds
-  const breakTime = 5 * 60; // 5 minutes in seconds
+  // Update secondsLeft when focus or break duration changes
+  useEffect(() => {
+    if (!isActive) {
+      setSecondsLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60);
+    }
+  }, [focusDuration, breakDuration, mode, isActive]);
 
+  // Timer effect
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -23,10 +47,43 @@ const Focus = () => {
         setSecondsLeft((seconds) => {
           if (seconds <= 1) {
             clearInterval(interval!);
+            
+            // Play sound when timer completes
+            try {
+              const audio = new Audio(mode === "focus" 
+                ? "/sounds/focus-complete.mp3" 
+                : "/sounds/break-complete.mp3");
+              audio.volume = 0.7;
+              audio.play().catch(err => console.log('Audio play prevented:', err));
+            } catch (error) {
+              console.log('Audio error:', error);
+            }
+            
+            // Show notification when timer ends
+            if (Notification.permission === "granted") {
+              new Notification(
+                mode === "focus" ? "Temps de concentration terminé!" : "Pause terminée!",
+                {
+                  body: mode === "focus" 
+                    ? "C'est l'heure de faire une pause!" 
+                    : "Prêt à reprendre le travail?",
+                  icon: "/icons/icon-192x192.png"
+                }
+              );
+            }
+            
+            // Save focus session when completed
+            if (mode === "focus" && sessionStartTime) {
+              saveFocusSession();
+              setSessionsCompleted(prev => prev + 1);
+            }
+            
+            // Switch modes
             const nextMode = mode === "focus" ? "break" : "focus";
-            const nextTime = nextMode === "focus" ? focusTime : breakTime;
+            const nextTime = nextMode === "focus" ? focusDuration * 60 : breakDuration * 60;
             setMode(nextMode);
             setIsPaused(true);
+            setSessionStartTime(null);
             return nextTime;
           }
           return seconds - 1;
@@ -39,16 +96,61 @@ const Focus = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, isPaused, mode]);
+  }, [isActive, isPaused, mode, focusDuration, breakDuration]);
 
+  // Calculate progress
   useEffect(() => {
-    const totalSeconds = mode === "focus" ? focusTime : breakTime;
+    const totalSeconds = mode === "focus" ? focusDuration * 60 : breakDuration * 60;
     setProgress(((totalSeconds - secondsLeft) / totalSeconds) * 100);
-  }, [secondsLeft, mode]);
+  }, [secondsLeft, mode, focusDuration, breakDuration]);
+
+  // Save focus session to database
+  const saveFocusSession = useCallback(async () => {
+    if (!user || !sessionStartTime) return;
+    
+    try {
+      const duration = Math.round((new Date().getTime() - sessionStartTime.getTime()) / 1000);
+      
+      const { error } = await supabase
+        .from('focus_sessions')
+        .insert({
+          user_id: user.id,
+          duration: duration,
+          title: `Session de focus de ${focusDuration} minutes`,
+          completed_at: new Date().toISOString()
+        });
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Session enregistrée",
+        description: `Session de ${formatTime(duration)} sauvegardée avec succès.`,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement de la session:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer la session.",
+        variant: "destructive"
+      });
+    }
+  }, [user, sessionStartTime, focusDuration, toast]);
+
+  // Request notification permission
+  useEffect(() => {
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const startTimer = () => {
-    setIsActive(true);
-    setIsPaused(false);
+    if (!isActive || isPaused) {
+      if (!sessionStartTime && mode === "focus") {
+        setSessionStartTime(new Date());
+      }
+      setIsActive(true);
+      setIsPaused(false);
+    }
   };
 
   const pauseTimer = () => {
@@ -59,7 +161,8 @@ const Focus = () => {
     setIsActive(false);
     setIsPaused(true);
     setMode("focus");
-    setSecondsLeft(focusTime);
+    setSecondsLeft(focusDuration * 60);
+    setSessionStartTime(null);
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -111,20 +214,81 @@ const Focus = () => {
             </div>
           </div>
 
+          {!isActive && (
+            <div className="space-y-6 pt-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Durée de concentration:</label>
+                  <span className="text-sm font-bold">{focusDuration} min</span>
+                </div>
+                <Select
+                  value={focusDuration.toString()}
+                  onValueChange={(value) => setFocusDuration(parseInt(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Durée de concentration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 minutes</SelectItem>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="25">25 minutes (Pomodoro)</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                    <SelectItem value="90">90 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Durée de pause:</label>
+                  <span className="text-sm font-bold">{breakDuration} min</span>
+                </div>
+                <Select
+                  value={breakDuration.toString()}
+                  onValueChange={(value) => setBreakDuration(parseInt(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Durée de pause" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 minutes</SelectItem>
+                    <SelectItem value="5">5 minutes</SelectItem>
+                    <SelectItem value="10">10 minutes</SelectItem>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="20">20 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-center space-x-4 pt-4">
             {isPaused ? (
-              <Button onClick={startTimer} size="lg">
+              <Button onClick={startTimer} size="lg" className="flex items-center gap-2">
+                {isActive ? <Play className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
                 {isActive ? "Reprendre" : "Démarrer"}
               </Button>
             ) : (
-              <Button onClick={pauseTimer} variant="outline" size="lg">
+              <Button onClick={pauseTimer} variant="outline" size="lg" className="flex items-center gap-2">
+                <Pause className="h-4 w-4" />
                 Pause
               </Button>
             )}
-            <Button onClick={resetTimer} variant="outline" size="lg">
+            <Button onClick={resetTimer} variant="outline" size="lg" className="flex items-center gap-2">
+              <RefreshCcw className="h-4 w-4" />
               Réinitialiser
             </Button>
           </div>
+          
+          {sessionsCompleted > 0 && (
+            <div className="text-center pt-2">
+              <p className="text-sm text-muted-foreground">
+                Sessions complétées aujourd'hui: <span className="font-bold text-primary">{sessionsCompleted}</span>
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

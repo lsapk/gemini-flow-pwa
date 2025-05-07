@@ -1,7 +1,6 @@
-
-const CACHE_NAME = 'deepflow-v3';
-const STATIC_CACHE_NAME = 'deepflow-static-v3';
-const DATA_CACHE_NAME = 'deepflow-data-v3';
+const CACHE_NAME = 'deepflow-v4';
+const STATIC_CACHE_NAME = 'deepflow-static-v4';
+const DATA_CACHE_NAME = 'deepflow-data-v4';
 
 const urlsToCache = [
   '/',
@@ -11,7 +10,8 @@ const urlsToCache = [
   '/assets/index.js',
   '/favicon.ico',
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  '/offline.html'
 ];
 
 // Installation du service worker avec mise en cache des ressources importantes
@@ -53,20 +53,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Stratégie de cache: Network First puis cache
+// Stratégie de cache améliorée: Network First puis cache pour les API
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin) || 
-      event.request.url.includes('/supabase/') ||
       event.request.method !== 'GET') {
     return;
   }
   
-  // For API requests, use Network only
-  if (event.request.url.includes('/rest/v1/') || 
+  // For API requests, use Network First strategy
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('/rest/v1/') || 
       event.request.url.includes('/auth/v1/') || 
       event.request.url.includes('/storage/v1/')) {
-    // Let these go straight to network
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // If valid response, clone it and store in cache
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(DATA_CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
     return;
   }
 
@@ -97,7 +113,7 @@ self.addEventListener('fetch', (event) => {
             .catch(() => {
               // If fetch fails, return fallback or error
               if (event.request.headers.get('accept').includes('text/html')) {
-                return caches.match('/index.html'); // Fallback for HTML
+                return caches.match('/offline.html') || caches.match('/index.html');
               }
               
               return new Response('Network error', {
@@ -110,7 +126,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For HTML pages, use Network First strategy
+  // For HTML pages, use Network First strategy with improved fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -128,7 +144,7 @@ self.addEventListener('fetch', (event) => {
       .catch(() => {
         return caches.match(event.request)
           .then((cachedResponse) => {
-            return cachedResponse || caches.match('/index.html');
+            return cachedResponse || caches.match('/offline.html') || caches.match('/index.html');
           });
       })
   );
@@ -143,7 +159,6 @@ self.addEventListener('sync', (event) => {
 
 async function syncData() {
   // This function will be called when online connectivity is restored
-  // and will attempt to sync any pending data
   try {
     // Send a message to the client to trigger synchronization
     self.clients.matchAll().then((clients) => {
@@ -162,37 +177,82 @@ async function syncData() {
   }
 }
 
-// Handle push notifications
+// Handle push notifications with improved security
 self.addEventListener('push', (event) => {
   if (!event.data) {
     return;
   }
   
   try {
-    const data = event.data.json();
+    const data = JSON.parse(event.data.text());
+    
+    // Sanitize notification data for security
+    const sanitizedTitle = (data.title || 'DeepFlow').replace(/[<>]/g, '');
+    const sanitizedBody = (data.body || 'Nouvelle notification').replace(/[<>]/g, '');
     
     const options = {
-      body: data.body || 'Nouvelle notification',
+      body: sanitizedBody,
       icon: '/icons/icon-192x192.png',
       badge: '/favicon.ico',
       data: {
         url: data.url || '/'
-      }
+      },
+      vibrate: [100, 50, 100],
+      actions: [
+        { action: 'explore', title: 'Voir' },
+        { action: 'close', title: 'Fermer' }
+      ]
     };
     
     event.waitUntil(
-      self.registration.showNotification(data.title || 'DeepFlow', options)
+      self.registration.showNotification(sanitizedTitle, options)
     );
   } catch (err) {
     console.error('Error showing notification:', err);
   }
 });
 
-// Handle notification clicks
+// Handle notification clicks with improved security
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  if (event.action === 'close') {
+    return;
+  }
+  
+  // Ensure URL is safe by constraining it to our origin
+  const urlToOpen = new URL(
+    event.notification.data.url || '/',
+    self.location.origin
+  ).href;
+  
   event.waitUntil(
-    clients.openWindow(event.notification.data.url || '/')
+    clients.openWindow(urlToOpen)
   );
 });
+
+// Periodic background sync for keeping data fresh
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'refresh-data') {
+    event.waitUntil(refreshData());
+  }
+});
+
+async function refreshData() {
+  try {
+    // Send a message to the client to refresh data
+    self.clients.matchAll().then((clients) => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'REFRESH_DATA'
+        });
+      });
+    });
+    
+    console.log('Periodic data refresh completed');
+    return true;
+  } catch (err) {
+    console.error('Periodic data refresh failed:', err);
+    return false;
+  }
+}

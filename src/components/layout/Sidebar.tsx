@@ -42,7 +42,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     return <MonitorIcon className="h-5 w-5" />;
   };
 
-  // Navigation items with their icons (removed Assistant IA)
+  // Navigation items with their icons
   const navItems = [
     { name: "Tableau de bord", to: "/dashboard", icon: <ChartLineIcon className="h-5 w-5" /> },
     { name: "Tâches", to: "/tasks", icon: <ListTodoIcon className="h-5 w-5" /> },
@@ -66,7 +66,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:w-64",
+        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-64 md:w-72 lg:w-80 lg:static border-r border-border/30",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
