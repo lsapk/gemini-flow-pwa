@@ -1,4 +1,3 @@
-
 {
   "name": "DeepFlow - Productivité et développement personnel",
   "short_name": "DeepFlow",
@@ -10,9 +9,16 @@
   "scope": "/",
   "start_url": "/",
   "orientation": "portrait",
-  "categories": ["productivity", "lifestyle", "education"],
+  "categories": [
+    "productivity",
+    "lifestyle",
+    "education"
+  ],
   "launch_handler": {
-    "client_mode": ["focus-existing", "auto"]
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
   },
   "icons": [
     {
@@ -112,25 +118,44 @@
       "short_name": "Tâches",
       "description": "Ajouter une nouvelle tâche",
       "url": "/tasks",
-      "icons": [{ "src": "icons/tasks-shortcut.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "icons/tasks-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Habitudes",
       "short_name": "Habitudes",
       "description": "Voir vos habitudes",
       "url": "/habits",
-      "icons": [{ "src": "icons/habits-shortcut.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "icons/habits-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Focus",
       "short_name": "Focus",
       "description": "Lancer une session de concentration",
       "url": "/focus",
-      "icons": [{ "src": "icons/focus-shortcut.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "icons/focus-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "rendering": {
-    "browser": ["chromium", "gecko", "webkit"]
+    "browser": [
+      "chromium",
+      "gecko",
+      "webkit"
+    ]
   },
   "share_target": {
     "action": "/share-target",
@@ -147,13 +172,20 @@
   "handle_links": "preferred",
   "dir": "auto",
   "lang": "fr",
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
   "file_handlers": [
     {
       "action": "/open-task",
       "accept": {
-        "text/plain": [".txt"],
-        "application/json": [".json"]
+        "text/plain": [
+          ".txt"
+        ],
+        "application/json": [
+          ".json"
+        ]
       }
     }
   ],
