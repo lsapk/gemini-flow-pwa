@@ -5,7 +5,7 @@
   "description": "Application de productivité et développement personnel avec suivi de tâches, habitudes et concentration",
   "id": "app.deepflow.productivity",
   "theme_color": "#6077f5",
-  "background_color": "#ffffff",
+  "background_color": "#1A1F2C",
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
@@ -68,12 +68,26 @@
     {
       "src": "screenshots/dashboard.png",
       "sizes": "1280x720",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "wide"
     },
     {
       "src": "screenshots/tasks.png",
       "sizes": "1280x720",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshots/mobile-dashboard.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "screenshots/mobile-tasks.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
   "related_applications": [
@@ -87,5 +101,28 @@
       "url": "https://apps.apple.com/app/deepflow/id123456789"
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Tâches",
+      "short_name": "Tâches",
+      "description": "Ajouter une nouvelle tâche",
+      "url": "/tasks",
+      "icons": [{ "src": "icons/tasks-shortcut.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Habitudes",
+      "short_name": "Habitudes",
+      "description": "Voir vos habitudes",
+      "url": "/habits",
+      "icons": [{ "src": "icons/habits-shortcut.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Focus",
+      "short_name": "Focus",
+      "description": "Lancer une session de concentration",
+      "url": "/focus",
+      "icons": [{ "src": "icons/focus-shortcut.png", "sizes": "96x96" }]
+    }
+  ]
 }

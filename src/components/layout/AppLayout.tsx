@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import { useIsMobile, useOrientation } from "@/hooks/use-mobile";
+import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
 
 const AppLayout = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
-  const orientation = useOrientation();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const orientation = useMediaQuery("(orientation: portrait)") ? "portrait" : "landscape";
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
@@ -30,6 +30,15 @@ const AppLayout = () => {
       setSidebarOpen(true);
     }
   }, [isMobile]);
+
+  // Open/close sidebar on orientation change on mobile
+  useEffect(() => {
+    if (isMobile && orientation === "landscape") {
+      setSidebarOpen(true);
+    } else if (isMobile && orientation === "portrait") {
+      setSidebarOpen(false);
+    }
+  }, [orientation, isMobile]);
 
   // Show loading state
   if (isLoading) {
@@ -72,7 +81,7 @@ const AppLayout = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/50 z-20"
+          className="fixed inset-0 bg-black/50 z-20 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}

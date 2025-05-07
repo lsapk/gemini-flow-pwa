@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type Task = {
   id: string;
@@ -60,6 +61,7 @@ const Tasks = () => {
     priority: "medium",
   });
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -164,6 +166,7 @@ const Tasks = () => {
         setTasks((prev) => [...prev, data[0]]);
         setNewTask({ title: "", description: "", priority: "medium" });
         setSelectedDate(undefined);
+        setDialogOpen(false);
         toast({
           title: "Succès",
           description: "Tâche ajoutée avec succès.",
@@ -241,89 +244,97 @@ const Tasks = () => {
         </p>
       </div>
 
-      <Card className="border-primary/10 bg-card shadow-md">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-semibold text-primary">Nouvelle tâche</CardTitle>
-          <CardDescription>
-            Ajoutez une nouvelle tâche à votre liste.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-3">
-              <div className="grid gap-1.5">
-                <Label htmlFor="title">Titre</Label>
-                <Input
-                  id="title"
-                  placeholder="Entrez le titre de la tâche..."
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="bg-background"
-                />
+      {/* Bouton pour ajouter une nouvelle tâche */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button className="w-full bg-primary hover:bg-primary/90 flex items-center gap-2">
+            <Plus className="h-4 w-4" /> Nouvelle tâche
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary">Nouvelle tâche</DialogTitle>
+            <DialogDescription>
+              Ajoutez une nouvelle tâche à votre liste.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Titre</Label>
+              <Input
+                id="title"
+                placeholder="Entrez le titre de la tâche..."
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (optionnelle)</Label>
+              <Textarea
+                id="description"
+                placeholder="Entrez une description..."
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Priorité</Label>
+                <Select
+                  value={newTask.priority}
+                  onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+                >
+                  <SelectTrigger id="priority">
+                    <SelectValue placeholder="Sélectionnez la priorité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">Élevée</SelectItem>
+                    <SelectItem value="medium">Moyenne</SelectItem>
+                    <SelectItem value="low">Faible</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="description">Description (optionnelle)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Entrez une description..."
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="resize-none bg-background"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="priority">Priorité</Label>
-                  <Select
-                    value={newTask.priority}
-                    onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-                  >
-                    <SelectTrigger id="priority" className="bg-background">
-                      <SelectValue placeholder="Sélectionnez la priorité" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">Élevée</SelectItem>
-                      <SelectItem value="medium">Moyenne</SelectItem>
-                      <SelectItem value="low">Faible</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="due-date">Date d'échéance</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="due-date"
-                        variant="outline"
-                        className="w-full justify-start text-left bg-background"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? (
-                          format(selectedDate, "dd MMMM yyyy", { locale: fr })
-                        ) : (
-                          <span className="text-muted-foreground">Sélectionnez une date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="due-date">Date d'échéance</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="due-date"
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? (
+                        format(selectedDate, "dd MMMM yyyy", { locale: fr })
+                      ) : (
+                        <span className="text-muted-foreground">Sélectionnez une date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
-            <Button onClick={handleAddTask} className="w-full bg-primary hover:bg-primary/90">
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90">
               <Plus className="mr-2 h-4 w-4" /> Ajouter la tâche
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="today" className="w-full">
         <TabsList className="mb-4 bg-muted w-full justify-start overflow-auto">

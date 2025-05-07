@@ -1,143 +1,135 @@
 
-import { useState, useEffect } from 'react';
-
-// Breakpoints correspondant aux dimensions courantes d'appareils
-export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-
-const breakpointValues: Record<Breakpoint, number> = {
-  xs: 0,     // Mobile small
-  sm: 640,   // Mobile large
-  md: 768,   // Tablet
-  lg: 1024,  // Desktop small
-  xl: 1280,  // Desktop medium
-  '2xl': 1536 // Desktop large
-};
+import { useState, useEffect, useCallback } from "react";
 
 /**
- * Hook personnalisé pour détecter si la taille d'écran correspond à une requête média spécifique
+ * Hook to detect if the device is mobile
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState<boolean>(() => {
-    // Initialisation côté client uniquement pour éviter les problèmes de SSR
-    if (typeof window !== 'undefined') {
+  const getMatches = useCallback((query: string): boolean => {
+    // Check for SSR (server-side rendering)
+    if (typeof window !== "undefined") {
       return window.matchMedia(query).matches;
     }
     return false;
-  });
+  }, []);
+
+  const [matches, setMatches] = useState<boolean>(getMatches(query));
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    function handleChange() {
+      setMatches(getMatches(query));
+    }
+
+    const matchMedia = window.matchMedia(query);
     
-    const media = window.matchMedia(query);
-    
-    // Fonction pour mettre à jour l'état en fonction de la requête média
-    const updateMatch = () => {
-      setMatches(media.matches);
-    };
-    
-    // Initialiser l'état
-    updateMatch();
-    
-    // Ajouter un écouteur d'événements pour les changements
-    media.addEventListener('change', updateMatch);
-    
-    // Nettoyer l'écouteur lorsque le composant se démonte
+    // Initial check
+    handleChange();
+
+    // Listen for changes
+    if (matchMedia.addEventListener) {
+      matchMedia.addEventListener("change", handleChange);
+    } else {
+      // Fallback for older browsers
+      matchMedia.addListener(handleChange);
+    }
+
+    // Cleanup
     return () => {
-      media.removeEventListener('change', updateMatch);
+      if (matchMedia.removeEventListener) {
+        matchMedia.removeEventListener("change", handleChange);
+      } else {
+        // Fallback for older browsers
+        matchMedia.removeListener(handleChange);
+      }
     };
-  }, [query]);
+  }, [getMatches, query]);
 
   return matches;
 }
 
 /**
- * Hook personnalisé pour détecter si l'appareil est mobile
- * @param breakpoint - Le point de rupture à utiliser (par défaut 'md')
- * @returns {boolean} - true si l'écran est plus petit que le point de rupture
+ * Hook to detect if the device is mobile
  */
-export function useIsMobile(breakpoint: Breakpoint = 'md'): boolean {
-  const value = breakpointValues[breakpoint];
-  const isMobileQuery = useMediaQuery(`(max-width: ${value - 1}px)`);
-  
-  return isMobileQuery;
+export function useIsMobile(): boolean {
+  return useMediaQuery("(max-width: 768px)");
 }
 
 /**
- * Hook personnalisé pour obtenir la breakpoint actuelle
- * @returns {Breakpoint} - La breakpoint actuelle
+ * Hook to detect orientation
  */
-export function useBreakpoint(): Breakpoint {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>('xs');
-  
+export function useOrientation(): "portrait" | "landscape" {
+  const isPortrait = useMediaQuery("(orientation: portrait)");
+  return isPortrait ? "portrait" : "landscape";
+}
+
+/**
+ * Hook to detect if the device is touch enabled
+ */
+export function useIsTouchDevice(): boolean {
+  const [isTouch, setIsTouch] = useState<boolean>(false);
+
   useEffect(() => {
-    const updateBreakpoint = () => {
-      const width = window.innerWidth;
-      
-      if (width >= breakpointValues['2xl']) {
-        setBreakpoint('2xl');
-      } else if (width >= breakpointValues.xl) {
-        setBreakpoint('xl');
-      } else if (width >= breakpointValues.lg) {
-        setBreakpoint('lg');
-      } else if (width >= breakpointValues.md) {
-        setBreakpoint('md');
-      } else if (width >= breakpointValues.sm) {
-        setBreakpoint('sm');
-      } else {
-        setBreakpoint('xs');
-      }
-    };
+    const isTouchDevice = 
+      "ontouchstart" in window || 
+      navigator.maxTouchPoints > 0 ||
+      (navigator as any).msMaxTouchPoints > 0;
     
-    // Initialiser
-    updateBreakpoint();
-    
-    // Ajouter un écouteur pour les changements de taille de fenêtre
-    window.addEventListener('resize', updateBreakpoint);
-    
-    // Nettoyage
-    return () => {
-      window.removeEventListener('resize', updateBreakpoint);
-    };
+    setIsTouch(isTouchDevice);
   }, []);
-  
-  return breakpoint;
+
+  return isTouch;
 }
 
 /**
- * Hook personnalisé pour détecter l'orientation de l'appareil
- * @returns {string} - 'portrait' ou 'landscape'
+ * Hook to detect device type
  */
-export function useOrientation(): 'portrait' | 'landscape' {
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
-    typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
-  );
+export function useDeviceType(): "mobile" | "tablet" | "desktop" {
+  const isMobile = useMediaQuery("(max-width: 480px)");
+  const isTablet = useMediaQuery("(min-width: 481px) and (max-width: 1024px)");
   
+  if (isMobile) return "mobile";
+  if (isTablet) return "tablet";
+  return "desktop";
+}
+
+/**
+ * Hook to detect network status
+ */
+export function useNetworkStatus(): { online: boolean; type: string | undefined } {
+  const [online, setOnline] = useState<boolean>(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const [type, setType] = useState<string | undefined>(undefined);
+
   useEffect(() => {
-    const updateOrientation = () => {
-      const isPortrait = window.innerHeight > window.innerWidth;
-      setOrientation(isPortrait ? 'portrait' : 'landscape');
-    };
-    
-    // Initialiser
-    updateOrientation();
-    
-    // Ajouter des écouteurs pour les changements d'orientation
-    window.addEventListener('resize', updateOrientation);
-    
-    // Pour les appareils mobiles
-    if (typeof window.screen.orientation !== 'undefined') {
-      window.screen.orientation.addEventListener('change', updateOrientation);
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Try to get connection type if available
+    if ((navigator as any).connection) {
+      setType((navigator as any).connection.effectiveType);
+      
+      const handleConnectionChange = () => {
+        setType((navigator as any).connection.effectiveType);
+      };
+      
+      (navigator as any).connection.addEventListener("change", handleConnectionChange);
+      
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+        (navigator as any).connection.removeEventListener("change", handleConnectionChange);
+      };
     }
     
-    // Nettoyage
     return () => {
-      window.removeEventListener('resize', updateOrientation);
-      
-      if (typeof window.screen.orientation !== 'undefined') {
-        window.screen.orientation.removeEventListener('change', updateOrientation);
-      }
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
-  
-  return orientation;
+
+  return { online, type };
 }

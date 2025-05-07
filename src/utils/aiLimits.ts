@@ -1,9 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Maximum de requêtes IA quotidiennes pour les utilisateurs freemium
-// Retiré la limite de 5 requêtes
-export const MAX_FREEMIUM_REQUESTS_PER_DAY = Infinity; // Pas de limite
+// Pas de limite pour les utilisateurs
+export const MAX_FREEMIUM_REQUESTS_PER_DAY = Infinity;
 
 // Suivre une nouvelle requête IA dans la base de données
 export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<boolean> => {
@@ -35,8 +34,7 @@ export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<bool
   }
 };
 
-// Vérifier si l'utilisateur a atteint la limite quotidienne pour le niveau gratuit
-// Modifié pour toujours retourner qu'il n'a pas atteint la limite
+// Vérifier si l'utilisateur a atteint la limite quotidienne - toujours retourner false
 export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise<{
   hasReachedLimit: boolean;
   requestsToday: number;
@@ -48,6 +46,7 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
     
     if (!user) {
       console.error("Aucun utilisateur authentifié trouvé lors de la vérification de la limite de requêtes IA");
+      // Même sans utilisateur, pas de limite
       return { hasReachedLimit: false, requestsToday: 0, isPremium: true };
     }
 
@@ -62,14 +61,14 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       console.error("Error checking subscription:", subError);
     }
 
-    // On considère tous les utilisateurs comme premium
+    // Tous les utilisateurs sont considérés comme premium
     const isPremium = true;
     
-    // Obtenir la date du jour dans le fuseau horaire de l'utilisateur (par simplicité, utilisant UTC)
+    // Obtenir la date du jour dans le fuseau horaire de l'utilisateur 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Compter les requêtes de l'utilisateur aujourd'hui
+    // Compter les requêtes de l'utilisateur aujourd'hui pour les statistiques
     const { count, error } = await supabase
       .from('ai_requests')
       .select('*', { count: 'exact', head: false })

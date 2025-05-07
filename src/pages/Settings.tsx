@@ -16,7 +16,10 @@ import {
   CrownIcon, 
   ShieldCheck, 
   AlertCircle,
-  Loader2
+  Loader2,
+  KeyIcon,
+  UserX,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +30,11 @@ import { useTheme } from "@/components/theme-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type UserSettings = {
   notifications_enabled: boolean;
@@ -46,9 +54,19 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  
+  // Nouvelles variables d'état
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  
   const { toast } = useToast();
   const { setTheme, theme } = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
@@ -187,6 +205,83 @@ const Settings = () => {
     }
   };
 
+  // Nouvelle fonction pour la mise à jour du mot de passe
+  const handleUpdatePassword = async () => {
+    setPasswordError("");
+    
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Tous les champs sont requis");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les nouveaux mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      toast({
+        title: "Mot de passe mis à jour",
+        description: "Votre mot de passe a été modifié avec succès",
+      });
+      
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordOpen(false);
+    } catch (error: any) {
+      console.error("Erreur lors de la mise à jour du mot de passe:", error);
+      setPasswordError(error.message || "Échec de la mise à jour du mot de passe");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Nouvelle fonction pour supprimer le compte utilisateur
+  const handleDeleteAccount = async () => {
+    try {
+      const { error } = await supabase.from('user_settings').delete().eq('id', user?.id);
+      if (error) throw error;
+      
+      // Supprimer les autres données associées à l'utilisateur
+      // Note: Pas besoin de supprimer l'entrée auth.users car la suppression du compte 
+      // sera gérée par Supabase Auth
+      
+      const { error: authError } = await supabase.auth.admin.deleteUser(user?.id || '');
+      if (authError) throw authError;
+      
+      await signOut();
+      toast({
+        title: "Compte supprimé",
+        description: "Votre compte a été supprimé avec succès",
+      });
+      
+      navigate("/login");
+    } catch (error: any) {
+      console.error("Erreur lors de la suppression du compte:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer votre compte",
+        variant: "destructive",
+      });
+    }
+  };
+
   const hasCreatorPlan = roles.some(role => role.role === 'creator');
   const hasActiveSubscription = subscription?.subscribed || false;
   const subscriptionTier = subscription?.subscription_tier || null;
@@ -249,6 +344,7 @@ const Settings = () => {
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="appearance">Apparence</TabsTrigger>
+          <TabsTrigger value="security">Sécurité</TabsTrigger>
           <TabsTrigger value="subscription">Abonnement</TabsTrigger>
         </TabsList>
         
@@ -402,6 +498,150 @@ const Settings = () => {
                     <ComputerIcon className="h-5 w-5" />
                     <span>Système</span>
                   </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Paramètres de sécurité */}
+        <TabsContent value="security" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sécurité du compte</CardTitle>
+              <CardDescription>
+                Gérez la sécurité de votre compte et vos informations personnelles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Changer le mot de passe */}
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <KeyIcon className="h-4 w-4" />
+                      Mot de passe
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Modifiez votre mot de passe pour sécuriser votre compte.
+                    </p>
+                  </div>
+                  <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">Modifier</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Modifier votre mot de passe</DialogTitle>
+                        <DialogDescription>
+                          Veuillez entrer votre mot de passe actuel et votre nouveau mot de passe.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        {passwordError && (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Erreur</AlertTitle>
+                            <AlertDescription>{passwordError}</AlertDescription>
+                          </Alert>
+                        )}
+                        <div className="grid gap-2">
+                          <Label htmlFor="old-password">Mot de passe actuel</Label>
+                          <div className="relative">
+                            <Input
+                              id="old-password"
+                              type="password"
+                              value={oldPassword}
+                              onChange={(e) => setOldPassword(e.target.value)}
+                              placeholder="••••••••"
+                            />
+                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                          <div className="relative">
+                            <Input
+                              id="new-password"
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="••••••••"
+                            />
+                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
+                          <div className="relative">
+                            <Input
+                              id="confirm-password"
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              placeholder="••••••••"
+                            />
+                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setPasswordOpen(false)}
+                          disabled={passwordLoading}
+                        >
+                          Annuler
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          onClick={handleUpdatePassword}
+                          disabled={passwordLoading}
+                        >
+                          {passwordLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Mise à jour...
+                            </>
+                          ) : (
+                            "Mettre à jour"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Suppression du compte */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2 text-destructive">
+                      <UserX className="h-4 w-4" />
+                      Suppression du compte
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Supprimer définitivement votre compte et toutes vos données.
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Supprimer le compte</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette action est permanente et irréversible. Toutes vos données seront définitivement supprimées.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Supprimer définitivement
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardContent>
