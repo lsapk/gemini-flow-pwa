@@ -34,6 +34,9 @@ services:
       - path: /icons/*
         name: Cache-Control
         value: public, max-age=2592000
+      - path: /icons/*
+        name: Content-Type
+        value: image/png
       - path: /*
         name: X-Frame-Options
         value: DENY

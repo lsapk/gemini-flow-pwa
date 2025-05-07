@@ -1,17 +1,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Pas de limite pour les utilisateurs
+// No limits for users
 export const MAX_FREEMIUM_REQUESTS_PER_DAY = 100000;
 
-// Suivre une nouvelle requête IA dans la base de données
+// Track a new AI request in the database
 export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<boolean> => {
   try {
-    // Obtenir l'utilisateur actuel
+    // Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error("Aucun utilisateur authentifié trouvé lors du suivi de la requête IA");
+      console.error("No authenticated user found when tracking AI request");
       return false;
     }
     
@@ -23,34 +23,34 @@ export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<bool
       });
       
     if (error) {
-      console.error("Erreur lors du suivi de la requête IA:", error);
+      console.error("Error tracking AI request:", error);
       return false;
     }
     
     return true;
   } catch (err) {
-    console.error("Exception lors du suivi de la requête IA:", err);
+    console.error("Exception when tracking AI request:", err);
     return false;
   }
 };
 
-// Vérifier si l'utilisateur a atteint la limite quotidienne - toujours retourner false
+// Check if the user has reached the daily limit - always return false
 export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise<{
   hasReachedLimit: boolean;
   requestsToday: number;
   isPremium: boolean;
 }> => {
   try {
-    // Obtenir l'utilisateur actuel
+    // Get the current user
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      console.error("Aucun utilisateur authentifié trouvé lors de la vérification de la limite de requêtes IA");
-      // Même sans utilisateur, pas de limite
+      console.error("No authenticated user found when checking AI request limit");
+      // Even without a user, no limit
       return { hasReachedLimit: false, requestsToday: 0, isPremium: true };
     }
 
-    // Vérifier directement si l'utilisateur a un abonnement premium
+    // Check directly if the user has a premium subscription
     const { data: subscriptionData, error: subError } = await supabase
       .from('subscribers')
       .select('subscribed')
@@ -61,14 +61,14 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       console.error("Error checking subscription:", subError);
     }
 
-    // Tous les utilisateurs sont considérés comme premium
+    // All users are considered premium
     const isPremium = true;
     
-    // Obtenir la date du jour dans le fuseau horaire de l'utilisateur 
+    // Get today's date in the user's timezone
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Compter les requêtes de l'utilisateur aujourd'hui pour les statistiques
+    // Count the user's requests today for statistics
     const { count, error } = await supabase
       .from('ai_requests')
       .select('*', { count: 'exact', head: false })
@@ -77,15 +77,15 @@ export const checkAIRequestLimit = async (service: 'chat' | 'analysis'): Promise
       .gte('created_at', today.toISOString());
       
     if (error) {
-      console.error("Erreur lors de la vérification de la limite de requêtes IA:", error);
+      console.error("Error checking AI request limit:", error);
       return { hasReachedLimit: false, requestsToday: 0, isPremium };
     }
     
     const requestsToday = count || 0;
-    // Toujours retourner hasReachedLimit à false
+    // Always return hasReachedLimit as false
     return { hasReachedLimit: false, requestsToday, isPremium };
   } catch (err) {
-    console.error("Exception lors de la vérification de la limite de requêtes IA:", err);
+    console.error("Exception when checking AI request limit:", err);
     return { hasReachedLimit: false, requestsToday: 0, isPremium: true };
   }
 };

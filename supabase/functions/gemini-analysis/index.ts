@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -289,58 +288,8 @@ serve(async (req) => {
       userData.focus = focusData || [];
     }
 
-    // Check user premium status
-    let isPremium = false;
-    
-    try {
-      // Check if user is subscribed
-      const { data: subscriptionData } = await supabase
-        .from('subscribers')
-        .select('subscribed')
-        .eq('user_id', userId)
-        .single();
-      
-      // Simpler approach: assume user has premium access if they're subscribed
-      isPremium = subscriptionData?.subscribed === true;
-    } catch (error) {
-      console.error("Error checking subscription status:", error);
-    }
-
-    // If user is not premium, check request limits
-    if (!isPremium) {
-      // Get today's date (UTC midnight)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      // Count user's requests today
-      const { count, error } = await supabase
-        .from('ai_requests')
-        .select('*', { count: 'exact', head: false })
-        .eq('service', 'analysis')
-        .eq('user_id', userId)
-        .gte('created_at', today.toISOString());
-        
-      if (error) {
-        throw new Error(`Error checking AI request limit: ${error.message}`);
-      }
-      
-      const requestsToday = count || 0;
-      
-      // If user has reached the limit, return an error
-      if (requestsToday >= 5) {
-        const limitMessage = {
-          fr: "⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de 5 requêtes quotidiennes avec le compte gratuit. Passez à un abonnement premium pour bénéficier d'un accès illimité.",
-          en: "⚠️ **Limit reached**\n\nYou have reached your limit of 5 daily requests with the free account. Upgrade to a premium subscription for unlimited access.",
-          es: "⚠️ **Límite alcanzado**\n\nHas alcanzado tu límite de 5 solicitudes diarias con la cuenta gratuita. Actualiza a una suscripción premium para obtener acceso ilimitado.",
-          de: "⚠️ **Limit erreicht**\n\nSie haben Ihr Limit von 5 täglichen Anfragen mit dem kostenlosen Konto erreicht. Upgrade auf ein Premium-Abonnement für unbegrenzten Zugriff."
-        };
-        
-        return new Response(
-          JSON.stringify({ content: limitMessage[userLanguage] || limitMessage.fr }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
+    // ALL USERS ARE CONSIDERED PREMIUM NOW - Removing the premium check
+    // No limits will be applied
 
     // Track this request in the database
     try {

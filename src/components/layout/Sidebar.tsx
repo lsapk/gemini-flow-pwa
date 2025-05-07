@@ -66,7 +66,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-72 md:w-72 lg:w-80 lg:static border-r border-border/30",
+        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-72 md:w-72 lg:w-80 lg:static border-r border-border/30 h-full",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
@@ -83,7 +83,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
         </NavLink>
       </div>
 
-      <div className="flex flex-1 flex-col px-3 py-4 space-y-1">
+      <div className="flex flex-1 flex-col px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -103,7 +103,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
         ))}
       </div>
 
-      <div className="p-3 space-y-2">
+      <div className="p-3 space-y-2 mt-auto">
         <Button 
           variant="ghost" 
           size="sm" 
