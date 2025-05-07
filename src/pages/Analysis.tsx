@@ -18,7 +18,7 @@ import { Markdown } from '@/components/Markdown';
 import { supabase } from '@/integrations/supabase/client';
 import { checkAIRequestLimit, MAX_FREEMIUM_REQUESTS_PER_DAY, trackAIRequest } from '@/utils/aiLimits';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AnalysisResult {
   content: string;
@@ -55,7 +55,7 @@ const Analysis = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   const [requestsInfo, setRequestsInfo] = useState<{
     hasReachedLimit: boolean;
     requestsToday: number;
@@ -271,6 +271,18 @@ const Analysis = () => {
     }
   };
 
+  // Convert activity data to ChartData format
+  const formattedActivityData: ChartData[] = activityData.map(item => ({
+    name: item.date,
+    value: item.count
+  }));
+
+  // Convert focus data to ChartData format
+  const formattedFocusData: ChartData[] = focusData.map(item => ({
+    name: item.date,
+    value: item.minutes
+  }));
+
   return (
     <div className={`space-y-8 pb-16 ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-4 overflow-y-auto' : ''}`}>
       <div className="space-y-2 flex items-center justify-between">
@@ -360,7 +372,7 @@ const Analysis = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[250px]">
-                    <SimpleAreaChart data={activityData} xAxisKey="date" areaKey="count" />
+                    <SimpleAreaChart data={formattedActivityData} xAxisKey="name" areaKey="value" />
                   </div>
                 </CardContent>
               </Card>
@@ -405,7 +417,11 @@ const Analysis = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[250px]">
-                    <SimpleLineChart data={focusData} xAxisKey="date" lines={[{ dataKey: "minutes", name: "Minutes", color: "#9b87f5" }]} />
+                    <SimpleLineChart 
+                      data={formattedFocusData} 
+                      xAxisKey="name" 
+                      lines={[{ dataKey: "value", name: "Minutes", color: "#9b87f5" }]} 
+                    />
                   </div>
                   <div className="text-center text-sm mt-4 text-muted-foreground">
                     Total: {(totalFocusTime / 60).toFixed(1)} heures de concentration
