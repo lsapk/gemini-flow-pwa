@@ -41,29 +41,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Configure le client Supabase
-    supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Configure session persistence and automatic token refresh
+    supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log("Auth state changed:", event);
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      
+      if (event === 'SIGNED_OUT') {
+        setIsAdmin(false);
+      } else if (newSession?.user) {
+        checkAdminRole(newSession.user.id);
+      }
     });
 
-    // Vérifie s'il y a déjà une session
+    // Initial session check
     const initSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("Initial session check:", session ? "Session found" : "No session");
+        
         setSession(session);
         setUser(session?.user ?? null);
         
         // Vérifier si l'utilisateur est administrateur
         if (session?.user) {
-          const { data } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'admin')
-            .single();
-          
-          setIsAdmin(!!data);
+          await checkAdminRole(session.user.id);
         }
       } catch (error) {
         console.error("Error checking auth:", error);
@@ -75,33 +77,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initSession();
   }, []);
 
-  // Vérifier à nouveau le rôle admin lorsque l'utilisateur change
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
+  // Function to check admin role
+  const checkAdminRole = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
       
-      try {
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
-        
-        setIsAdmin(!!data);
-      } catch (error) {
-        console.error("Error checking admin role:", error);
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminRole();
-  }, [user]);
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error("Error checking admin role:", error);
+      setIsAdmin(false);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
+    console.log("Signing in with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -111,20 +105,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
+    console.log("Signing up with email:", email);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      }
     });
 
     return { data, error };
   };
 
   const signOut = async () => {
+    console.log("Signing out");
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
   const resetPassword = async (email: string) => {
+    console.log("Resetting password for:", email);
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/update-password`,
     });

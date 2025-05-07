@@ -66,13 +66,13 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-64 md:w-72 lg:w-80 lg:static border-r border-border/30",
+        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-72 md:w-72 lg:w-80 lg:static border-r border-border/30",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex h-16 flex-shrink-0 items-center px-4">
         <NavLink to="/dashboard" className="flex items-center space-x-2">
-          <div className="relative w-8 h-8">
+          <div className="relative w-10 h-10">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-700 animate-pulse"></div>
             <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-900"></div>
             <div className="absolute inset-2 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-600"></div>

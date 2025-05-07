@@ -56,7 +56,6 @@ export function useIsMobile(): boolean {
 
 /**
  * Hook alias for backward compatibility
- * @deprecated Use useIsMobile instead
  */
 export const useMobile = useIsMobile;
 

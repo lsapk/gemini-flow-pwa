@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Pas de limite pour les utilisateurs
-export const MAX_FREEMIUM_REQUESTS_PER_DAY = Infinity;
+export const MAX_FREEMIUM_REQUESTS_PER_DAY = 100000;
 
 // Suivre une nouvelle requête IA dans la base de données
 export const trackAIRequest = async (service: 'chat' | 'analysis'): Promise<boolean> => {

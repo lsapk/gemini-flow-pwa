@@ -63,9 +63,9 @@ const AppLayout = () => {
         {sidebarOpen && (
           <motion.div
             key="sidebar"
-            initial={{ x: isMobile ? -240 : 0, opacity: isMobile ? 0 : 1 }}
+            initial={{ x: isMobile ? -280 : 0, opacity: isMobile ? 0 : 1 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -240, opacity: 0 }}
+            exit={{ x: -280, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={isMobile ? "fixed z-30 h-full" : "relative"}
           >

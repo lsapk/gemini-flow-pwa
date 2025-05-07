@@ -31,6 +31,24 @@ services:
       - path: /sw.js
         name: Cache-Control
         value: public, no-cache
+      - path: /icons/*
+        name: Cache-Control
+        value: public, max-age=2592000
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /*
+        name: Content-Security-Policy
+        value: upgrade-insecure-requests
     pullRequestPreviewsEnabled: true
     buildFilter:
       paths:
@@ -41,3 +59,4 @@ services:
         - src/**/*.css
         - src/**/*.scss
         - public/**/*
+    autoDeploy: true
