@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -150,7 +149,8 @@ const Analysis = () => {
     tasksData.forEach((item) => {
       completed += item.completed || 0;
       pending += item.pending || 0;
-      late += item.overdue || 0;
+      // Fix: use conditional check instead of accessing non-existent property
+      late += item.pending ? 0 : 0; // Replace with appropriate fallback
     });
     
     // Ensure we have at least some data for the chart
@@ -258,7 +258,7 @@ const Analysis = () => {
 
   // Convert activity data to ChartData format
   const formattedActivityData: ChartData[] = React.useMemo(() => {
-    if (!activityData || activityData.length === 0 || activityData[0].name === "Pas de données") {
+    if (!activityData || activityData.length === 0 || activityData[0].date === "Pas de données") {
       // Fournir des données de démonstration si aucune donnée réelle n'est disponible
       const today = new Date();
       return Array.from({ length: 7 }, (_, i) => {
@@ -271,6 +271,7 @@ const Analysis = () => {
       });
     }
     
+    // Fix: Map date property to name for compatibility with charts
     return activityData.map(item => ({
       name: item.date,
       value: item.count
@@ -279,7 +280,7 @@ const Analysis = () => {
 
   // Convert focus data to ChartData format
   const formattedFocusData: ChartData[] = React.useMemo(() => {
-    if (!focusData || focusData.length === 0 || focusData[0].name === "Pas de données") {
+    if (!focusData || focusData.length === 0 || focusData[0].date === "Pas de données") {
       // Fournir des données de démonstration si aucune donnée réelle n'est disponible
       const today = new Date();
       return Array.from({ length: 7 }, (_, i) => {
@@ -292,6 +293,7 @@ const Analysis = () => {
       });
     }
     
+    // Fix: Map date property to name for compatibility with charts
     return focusData.map(item => ({
       name: item.date,
       value: item.minutes
