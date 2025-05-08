@@ -161,8 +161,9 @@ document.addEventListener('visibilitychange', () => {
 
 // Force portrait mode on small devices for better UX
 if (window.matchMedia("(max-width: 480px)").matches) {
-  if (screen.orientation && typeof screen.orientation.lock === 'function') {
-    screen.orientation.lock('portrait').catch((error) => {
+  // Utilisez une assertion de type pour contourner la vérification TypeScript
+  if (screen.orientation && 'lock' in screen.orientation) {
+    (screen.orientation as any).lock('portrait').catch((error: any) => {
       // It's okay if this fails, it's just a suggestion
       console.log('Could not lock orientation:', error);
     });
