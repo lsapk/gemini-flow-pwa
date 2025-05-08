@@ -26,6 +26,33 @@ if ('serviceWorker' in navigator) {
             });
           }
         });
+        
+        // Assurez-vous que les icônes sont préchargées correctement
+        if (window.caches) {
+          window.caches.open('icon-cache-v1').then(cache => {
+            // Préchargez les icônes importantes dans le cache
+            cache.addAll([
+              '/icons/icon-72x72.png',
+              '/icons/icon-96x96.png',
+              '/icons/icon-128x128.png',
+              '/icons/icon-144x144.png',
+              '/icons/icon-152x152.png',
+              '/icons/icon-192x192.png',
+              '/icons/icon-384x384.png',
+              '/icons/icon-512x512.png',
+              '/icons/maskable-icon-72x72.png',
+              '/icons/maskable-icon-96x96.png',
+              '/icons/maskable-icon-128x128.png',
+              '/icons/maskable-icon-144x144.png',
+              '/icons/maskable-icon-152x152.png',
+              '/icons/maskable-icon-192x192.png',
+              '/icons/maskable-icon-384x384.png',
+              '/icons/maskable-icon-512x512.png'
+            ]).catch(error => {
+              console.warn('Préchargement des icônes échoué, mais ce n\'est pas critique', error);
+            });
+          });
+        }
       })
       .catch(error => {
         console.error('Service Worker registration failed:', error);
@@ -134,8 +161,8 @@ document.addEventListener('visibilitychange', () => {
 
 // Force portrait mode on small devices for better UX
 if (window.matchMedia("(max-width: 480px)").matches) {
-  if ('orientation' in screen && typeof (screen.orientation as any).lock === 'function') {
-    (screen.orientation as any).lock('portrait').catch((error: any) => {
+  if (screen.orientation && typeof screen.orientation.lock === 'function') {
+    screen.orientation.lock('portrait').catch((error) => {
       // It's okay if this fails, it's just a suggestion
       console.log('Could not lock orientation:', error);
     });

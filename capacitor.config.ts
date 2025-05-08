@@ -32,6 +32,10 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: "always"
+  },
+  // Optimisations pour les builds PWABuilder
+  web: {
+    webDirWarning: false
   }
 };
 
