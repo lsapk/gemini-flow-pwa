@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarIcon, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { CalendarIcon, Pencil, PlusCircle, Trash2, SmilePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,11 +18,14 @@ import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO } from 'date-fns';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface JournalEntry {
   id: string;
   title: string;
   content: string;
+  mood?: string;
   created_at: string;
   user_id: string;
 }
@@ -29,8 +33,27 @@ interface JournalEntry {
 interface JournalEntryFormData {
   title: string;
   content: string;
+  mood?: string;
   created_at: Date | undefined;
 }
+
+// Composant pour afficher l'emoji en fonction de l'humeur
+const MoodEmoji = ({ mood }: { mood?: string }) => {
+  switch (mood) {
+    case "very_happy":
+      return <span title="Très heureux">😄</span>;
+    case "happy":
+      return <span title="Heureux">🙂</span>;
+    case "neutral":
+      return <span title="Neutre">😐</span>;
+    case "sad":
+      return <span title="Triste">😔</span>;
+    case "very_sad":
+      return <span title="Très triste">😢</span>;
+    default:
+      return null;
+  }
+};
 
 const JournalEmptyState = ({ onCreate }: { onCreate: () => void }) => (
   <div className="text-center py-12">
@@ -56,11 +79,13 @@ const Journal = () => {
   const [formData, setFormData] = useState<JournalEntryFormData>({
     title: "",
     content: "",
+    mood: undefined,
     created_at: undefined,
   });
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchJournalEntries();
@@ -104,6 +129,7 @@ const Journal = () => {
       const newEntry = {
         title: formData.title,
         content: formData.content,
+        mood: formData.mood,
         user_id: user.id,
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
@@ -147,6 +173,7 @@ const Journal = () => {
       const updatedEntry = {
         title: formData.title,
         content: formData.content,
+        mood: formData.mood,
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
@@ -201,6 +228,7 @@ const Journal = () => {
     setFormData({
       title: "",
       content: "",
+      mood: undefined,
       created_at: undefined,
     });
     setEditingEntry(null);
@@ -211,6 +239,7 @@ const Journal = () => {
     setFormData({
       title: entry.title,
       content: entry.content,
+      mood: entry.mood,
       created_at: entry.created_at ? parseISO(entry.created_at) : undefined,
     });
     setOpenDialog(true);
@@ -239,7 +268,7 @@ const Journal = () => {
               Nouvelle entrée
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className={isMobile ? "sm:max-w-[95%] w-[95%] p-4" : ""}>
             <DialogHeader>
               <DialogTitle>{editingEntry ? "Modifier l'entrée" : "Nouvelle entrée"}</DialogTitle>
               <DialogDescription>
@@ -269,6 +298,22 @@ const Journal = () => {
                   placeholder="Écrivez votre entrée de journal ici..."
                   rows={5}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Humeur</Label>
+                <ToggleGroup 
+                  type="single" 
+                  className="flex flex-wrap justify-center" 
+                  value={formData.mood}
+                  onValueChange={(value) => setFormData({ ...formData, mood: value })}
+                >
+                  <ToggleGroupItem value="very_happy" className="text-2xl" title="Très heureux">😄</ToggleGroupItem>
+                  <ToggleGroupItem value="happy" className="text-2xl" title="Heureux">🙂</ToggleGroupItem>
+                  <ToggleGroupItem value="neutral" className="text-2xl" title="Neutre">😐</ToggleGroupItem>
+                  <ToggleGroupItem value="sad" className="text-2xl" title="Triste">😔</ToggleGroupItem>
+                  <ToggleGroupItem value="very_sad" className="text-2xl" title="Très triste">😢</ToggleGroupItem>
+                </ToggleGroup>
               </div>
 
               <div className="space-y-2">
@@ -338,11 +383,16 @@ const Journal = () => {
             <div className="space-y-4">
               {journalEntries.map((entry) => (
                 <Card key={entry.id} className="glass-card">
-                  <CardHeader>
-                    <CardTitle>{entry.title}</CardTitle>
-                    <CardDescription>
-                      {format(parseISO(entry.created_at), "dd/MM/yyyy", { locale: fr })}
-                    </CardDescription>
+                  <CardHeader className="flex-row items-center justify-between space-y-0">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {entry.title}
+                        {entry.mood && <MoodEmoji mood={entry.mood} />}
+                      </CardTitle>
+                      <CardDescription>
+                        {format(parseISO(entry.created_at), "dd/MM/yyyy", { locale: fr })}
+                      </CardDescription>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
@@ -363,7 +413,7 @@ const Journal = () => {
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className={isMobile ? "sm:max-w-[95%] w-[95%] p-4" : ""}>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                             <AlertDialogDescription>

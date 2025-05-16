@@ -57,11 +57,13 @@ Voici les données réelles de l'utilisateur :
 ${dataContext}
 
 Format de réponse souhaité :
-1. Utilise du markdown riche avec des emojis pertinents
-2. Structure ta réponse avec des titres et sous-titres
-3. Sois précis et concis, en utilisant des listes à puces lorsque c'est approprié
-4. Propose des recommandations concrètes et actionnables basées spécifiquement sur les données de l'utilisateur
-5. Conclus de façon encourageante et positive
+1. Sois CONCIS et va droit au but, utilise des phrases courtes
+2. Utilise des emojis pertinents pour rendre ta réponse plus vivante
+3. Structure ta réponse avec quelques titres simples
+4. Propose des recommandations concrètes et actionnables
+5. Ne dépasse pas 3-4 paragraphes au total
+6. Adopte le ton d'un véritable analyste personnel ou coach, pas celui d'une IA
+7. Réponds comme si tu parlais directement à l'utilisateur
 
 Si la demande de l'utilisateur implique des données qui pourraient être représentées visuellement, génère également des données pour un ou plusieurs graphiques sous forme de JSON. Par exemple :
 
@@ -88,11 +90,13 @@ Here is the user's actual data:
 ${dataContext}
 
 Desired response format:
-1. Use rich markdown with relevant emojis
-2. Structure your response with headings and subheadings
-3. Be precise and concise, using bullet points when appropriate
-4. Offer concrete and actionable recommendations specifically based on the user's data
-5. Conclude in an encouraging and positive way
+1. Be CONCISE and straight to the point, use short sentences
+2. Use relevant emojis to make your response more lively
+3. Structure your response with a few simple headings
+4. Offer concrete and actionable recommendations
+5. Don't exceed 3-4 paragraphs in total
+6. Adopt the tone of a real personal analyst or coach, not that of an AI
+7. Respond as if you're speaking directly to the user
 
 If the user's request involves data that could be visually represented, also generate data for one or more charts in JSON format. For example:
 
@@ -119,11 +123,13 @@ Aquí están los datos reales del usuario:
 ${dataContext}
 
 Formato de respuesta deseado:
-1. Utiliza markdown enriquecido con emojis relevantes
-2. Estructura tu respuesta con títulos y subtítulos
-3. Sé preciso y conciso, utilizando viñetas cuando sea apropiado
-4. Ofrece recomendaciones concretas y procesables basadas específicamente en los datos del usuario
-5. Concluye de manera alentadora y positiva
+1. Sé CONCISO y ve al grano, utiliza frases cortas
+2. Utiliza emojis relevantes para hacer tu respuesta más animada
+3. Estructura tu respuesta con algunos títulos simples
+4. Ofrece recomendaciones concretas y procesables
+5. No excedas 3-4 párrafos en total
+6. Adopta el tono de un verdadero analista personal o coach, no el de una IA
+7. Responde como si estuvieras hablando directamente al usuario
 
 Si la solicitud del usuario involucra datos que podrían representarse visualmente, genera también datos para uno o más gráficos en formato JSON. Por ejemplo:
 
@@ -150,11 +156,13 @@ Hier sind die tatsächlichen Daten des Benutzers:
 ${dataContext}
 
 Gewünschtes Antwortformat:
-1. Verwende umfangreiches Markdown mit relevanten Emojis
-2. Strukturiere deine Antwort mit Überschriften und Unterüberschriften
-3. Sei präzise und prägnant, verwende Aufzählungspunkte, wenn es angebracht ist
-4. Biete konkrete und umsetzbare Empfehlungen an, die speziell auf den Daten des Benutzers basieren
-5. Schließe auf eine ermutigende und positive Weise ab
+1. Sei PRÄZISE und komme auf den Punkt, verwende kurze Sätze
+2. Verwende relevante Emojis, um deine Antwort lebendiger zu gestalten
+3. Strukturiere deine Antwort mit einigen einfachen Überschriften
+4. Biete konkrete und umsetzbare Empfehlungen an
+5. Überschreite nicht 3-4 Absätze insgesamt
+6. Nimm den Ton eines echten persönlichen Analysten oder Coaches an, nicht den einer KI
+7. Antworte, als würdest du direkt mit dem Benutzer sprechen
 
 Wenn die Anfrage des Benutzers Daten enthält, die visuell dargestellt werden könnten, generiere auch Daten für eine oder mehrere Diagramme im JSON-Format. Zum Beispiel:
 

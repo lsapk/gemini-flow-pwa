@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Configure session persistence and automatic token refresh
+    // Configure session persistence to be more reliable
     supabase.auth.onAuthStateChange((event, newSession) => {
       console.log("Auth state changed:", event);
       setSession(newSession);
@@ -50,7 +50,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
       } else if (newSession?.user) {
-        checkAdminRole(newSession.user.id);
+        // Utiliser setTimeout pour éviter les blocages potentiels
+        setTimeout(() => {
+          checkAdminRole(newSession.user.id);
+        }, 0);
       }
     });
 
@@ -73,6 +76,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoading(false);
       }
     };
+
+    // Force la session à persister en local storage
+    localStorage.setItem('supabase.auth.token', 'true');
 
     initSession();
   }, []);
@@ -99,6 +105,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        // Force la session à persister
+        storeSession: true
+      }
     });
 
     return { data, error };
@@ -111,6 +121,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
       options: {
         emailRedirectTo: window.location.origin,
+        // Force la session à persister
+        storeSession: true
       }
     });
 

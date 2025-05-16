@@ -494,7 +494,7 @@ const Analysis = () => {
                           className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                         >
                           <div
-                            className={`flex items-start gap-3 max-w-[80%] ${
+                            className={`flex items-start gap-3 max-w-[90%] ${
                               msg.role === "user" ? "flex-row-reverse" : "flex-row"
                             }`}
                           >

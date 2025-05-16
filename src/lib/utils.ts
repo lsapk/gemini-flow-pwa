@@ -50,6 +50,24 @@ export function formatDate(date: Date | string | null, language = 'fr', clockFor
 }
 
 /**
+ * Formate les minutes en heures et minutes
+ */
+export function formatMinutesToHoursMinutes(minutes: number): string {
+  if (isNaN(minutes) || minutes < 0) {
+    return '0 h 0 min';
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.round(minutes % 60);
+  
+  if (hours === 0) {
+    return `${remainingMinutes} min`;
+  } else {
+    return `${hours} h ${remainingMinutes} min`;
+  }
+}
+
+/**
  * Installe et configure le compte administrateur lors du démarrage
  */
 export async function setupAdminAccount() {
