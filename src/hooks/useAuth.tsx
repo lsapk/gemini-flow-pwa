@@ -77,9 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Force la session à persister en local storage
-    localStorage.setItem('supabase.auth.token', 'true');
-
     initSession();
   }, []);
 
@@ -104,11 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log("Signing in with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-      options: {
-        // Force la session à persister
-        storeSession: true
-      }
+      password
     });
 
     return { data, error };
@@ -120,9 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
-        // Force la session à persister
-        storeSession: true
+        emailRedirectTo: window.location.origin
       }
     });
 
