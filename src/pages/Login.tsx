@@ -1,137 +1,187 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MailIcon, LockIcon, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Link, Navigate } from "react-router-dom";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { user, signIn } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Rediriger si déjà connecté
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate("/dashboard");
+      // Stocker la préférence "Se souvenir de moi"
+      if (rememberMe) {
+        localStorage.setItem('deepflow_remember_me', 'true');
+        localStorage.setItem('deepflow_user_email', email);
+      } else {
+        localStorage.removeItem('deepflow_remember_me');
+        localStorage.removeItem('deepflow_user_email');
+      }
+
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast({
+            title: "Erreur de connexion",
+            description: "Email ou mot de passe incorrect.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email non confirmé",
+            description: "Veuillez confirmer votre email avant de vous connecter.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur DeepFlow !",
+        });
+      }
     } catch (error) {
-      console.error("Login failed:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur inattendue s'est produite.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Charger l'email sauvegardé au chargement de la page
+  useState(() => {
+    const rememberedEmail = localStorage.getItem('deepflow_user_email');
+    const shouldRemember = localStorage.getItem('deepflow_remember_me') === 'true';
+    
+    if (shouldRemember && rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  });
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-10 animate-fade-in">
-          <Link to="/" className="flex items-center justify-center mb-4 space-x-2">
-            <div className="relative w-12 h-12">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-700 animate-pulse"></div>
-              <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-900"></div>
-              <div className="absolute inset-2 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-600"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
+          <CardDescription>
+            Connectez-vous à votre compte DeepFlow
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="votre@email.com"
+                required
+                disabled={isLoading}
+              />
             </div>
-          </Link>
-          <span className="text-3xl font-bold font-heading bg-gradient-to-br from-deepflow-400 to-deepflow-700 text-transparent bg-clip-text mb-2">
-            DeepFlow
-          </span>
-          <p className="text-muted-foreground text-center max-w-xs">
-            Productivité, habitudes, et développement personnel assistés par IA
-          </p>
-        </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
 
-        <Card className="glass-card border-0 overflow-hidden animate-scale-in">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-xl"></div>
-          <CardHeader className="space-y-1 relative z-10">
-            <CardTitle className="text-2xl font-bold text-center">Connexion</CardTitle>
-            <CardDescription className="text-center">
-              Entrez vos identifiants pour accéder à votre espace
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleLogin} className="relative z-10">
-            <CardContent className="space-y-4 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <div className="absolute left-3 top-3 text-muted-foreground">
-                    <MailIcon className="h-5 w-5" />
-                  </div>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="vous@exemple.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <Link
-                    to="/login"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Mot de passe oublié?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <div className="absolute left-3 top-3 text-muted-foreground">
-                    <LockIcon className="h-5 w-5" />
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button className="w-full relative group" type="submit" disabled={isLoading}>
-                <span className={isLoading ? "opacity-0" : "group-hover:scale-105 transition-transform"}>
-                  Se connecter
-                </span>
-                {isLoading && (
-                  <Loader2 className="absolute animate-spin h-5 w-5" />
-                )}
-              </Button>
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Pas encore de compte?{" "}
-                <Link to="/register" className="text-primary hover:underline font-medium">
-                  S'inscrire
-                </Link>
-              </p>
-            </CardFooter>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="remember"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Se souvenir de moi sur cet appareil
+              </Label>
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                "Se connecter"
+              )}
+            </Button>
           </form>
-          <div className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
-        </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          En vous connectant, vous acceptez nos {" "}
-          <Link to="/" className="hover:underline">conditions d'utilisation</Link>
-          {" "} et notre {" "}
-          <Link to="/" className="hover:underline">politique de confidentialité</Link>
-        </p>
-      </div>
+          
+          <div className="mt-4 text-center text-sm">
+            <span className="text-muted-foreground">
+              Pas encore de compte ?{" "}
+            </span>
+            <Link to="/register" className="text-primary hover:underline">
+              S'inscrire
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default Login;
+}

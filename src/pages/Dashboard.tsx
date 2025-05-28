@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
 import { SimplePieChart } from "@/components/ui/charts/SimplePieChart";
@@ -10,7 +9,7 @@ import {
   CheckCircle2, ListChecks, TrendingUp, Star 
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { format, startOfWeek, addDays, parseISO, differenceInDays } from "date-fns";
+import { format, startOfWeek, addDays, parseISO, differenceInDays, endOfWeek, isWithinInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartData } from "@/components/ui/charts/types";
@@ -105,15 +104,18 @@ export default function Dashboard() {
     }
   };
   
-  // Fonction pour générer les données des graphiques
+  // Fonction pour générer les données des graphiques avec calcul hebdomadaire
   const generateChartData = (focusSessions: any[], tasks: any[]) => {
-    // Obtenir la date actuelle et le début de la semaine
+    // Obtenir le début et la fin de la semaine actuelle (lundi à dimanche)
     const today = new Date();
-    const startOfWeekDate = startOfWeek(today, { weekStartsOn: 1 });
+    const startOfWeekDate = startOfWeek(today, { weekStartsOn: 1 }); // 1 = lundi
+    const endOfWeekDate = endOfWeek(today, { weekStartsOn: 1 });
     
     console.log("Génération des données de graphiques avec:", { 
       focusSessionsCount: focusSessions.length,
-      tasksCount: tasks.length
+      tasksCount: tasks.length,
+      weekStart: startOfWeekDate,
+      weekEnd: endOfWeekDate
     });
     
     // Préparer les données pour le graphique de temps de concentration
@@ -158,18 +160,33 @@ export default function Dashboard() {
     });
   };
   
-  // Calculer des statistiques pour le tableau de bord
-  const stats = useMemo(() => ({
-    totalFocusMinutes: data.focusSessions.reduce((total, session) => total + (session.duration || 0), 0),
-    completedTasks: data.tasks.filter(task => task.completed).length,
-    pendingTasks: data.tasks.filter(task => !task.completed).length,
-    totalTasks: data.tasks.length,
-    journalEntries: data.journal.length,
-    habitStreaks: data.habits.reduce((total, habit) => total + (habit.streak || 0), 0),
-    goalProgress: data.goals.length > 0 
-      ? Math.round(data.goals.reduce((sum, goal) => sum + (goal.progress || 0), 0) / data.goals.length)
-      : 0,
-  }), [data]);
+  // Calculer des statistiques pour le tableau de bord avec temps hebdomadaire
+  const stats = useMemo(() => {
+    const today = new Date();
+    const startOfWeekDate = startOfWeek(today, { weekStartsOn: 1 });
+    const endOfWeekDate = endOfWeek(today, { weekStartsOn: 1 });
+    
+    // Filtrer les sessions de focus de cette semaine uniquement
+    const weeklyFocusSessions = data.focusSessions.filter(session => {
+      if (!session.started_at) return false;
+      const sessionDate = new Date(session.started_at);
+      return isWithinInterval(sessionDate, { start: startOfWeekDate, end: endOfWeekDate });
+    });
+    
+    const weeklyFocusMinutes = weeklyFocusSessions.reduce((total, session) => total + (session.duration || 0), 0);
+    
+    return {
+      totalFocusMinutes: weeklyFocusMinutes, // Temps hebdomadaire uniquement
+      completedTasks: data.tasks.filter(task => task.completed).length,
+      pendingTasks: data.tasks.filter(task => !task.completed).length,
+      totalTasks: data.tasks.length,
+      journalEntries: data.journal.length,
+      habitStreaks: data.habits.reduce((total, habit) => total + (habit.streak || 0), 0),
+      goalProgress: data.goals.length > 0 
+        ? Math.round(data.goals.reduce((sum, goal) => sum + (goal.progress || 0), 0) / data.goals.length)
+        : 0,
+    };
+  }, [data]);
   
   // Trouver les tâches qui arrivent à échéance bientôt
   const upcomingTasks = useMemo(() => data.tasks
@@ -220,7 +237,7 @@ export default function Dashboard() {
           <StatCard 
             title="Concentration" 
             value={`${Math.floor(stats.totalFocusMinutes / 60)}h ${stats.totalFocusMinutes % 60}m`} 
-            description="Temps total"
+            description="Cette semaine"
             icon={<Clock className="h-5 w-5 text-primary" />}
           />
         </motion.div>

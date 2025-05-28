@@ -1,133 +1,103 @@
 
-import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  ChartLineIcon,
-  CheckSquareIcon,
-  ListTodoIcon,
-  CalendarCheckIcon,
-  BookOpenTextIcon,
-  TargetIcon,
-  TimerIcon,
-  LogOutIcon,
-  SunIcon,
-  MoonIcon,
-  MonitorIcon
-} from "../icons/DeepFlowIcons";
-import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  CheckSquare, 
+  Repeat, 
+  Timer, 
+  BookOpen, 
+  Target, 
+  BarChart3, 
+  Settings, 
+  LogOut,
+  Bot
+} from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
+const navigation = [
+  { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Tâches", href: "/tasks", icon: CheckSquare },
+  { name: "Habitudes", href: "/habits", icon: Repeat },
+  { name: "Focus", href: "/focus", icon: Timer },
+  { name: "Journal", href: "/journal", icon: BookOpen },
+  { name: "Objectifs", href: "/goals", icon: Target },
+  { name: "Analyse", href: "/analysis", icon: BarChart3 },
+  { name: "Assistant IA", href: "/ai-assistant", icon: Bot },
+];
 
 interface SidebarProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  className?: string;
 }
 
-const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
-  const { setTheme, theme } = useTheme();
+export default function Sidebar({ className }: SidebarProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuth();
 
-  // Toggle theme between light, dark, and system
-  const toggleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
-  };
-
-  // Get current theme icon
-  const getThemeIcon = () => {
-    if (theme === "light") return <SunIcon className="h-5 w-5" />;
-    if (theme === "dark") return <MoonIcon className="h-5 w-5" />;
-    return <MonitorIcon className="h-5 w-5" />;
-  };
-
-  // Navigation items with their icons
-  const navItems = [
-    { name: "Tableau de bord", to: "/dashboard", icon: <ChartLineIcon className="h-5 w-5" /> },
-    { name: "Tâches", to: "/tasks", icon: <ListTodoIcon className="h-5 w-5" /> },
-    { name: "Habitudes", to: "/habits", icon: <CalendarCheckIcon className="h-5 w-5" /> },
-    { name: "Journal", to: "/journal", icon: <BookOpenTextIcon className="h-5 w-5" /> },
-    { name: "Objectifs", to: "/goals", icon: <TargetIcon className="h-5 w-5" /> },
-    { name: "Focus", to: "/focus", icon: <TimerIcon className="h-5 w-5" /> },
-    { name: "Analyse IA", to: "/analysis", icon: <ChartLineIcon className="h-5 w-5" /> },
-    { name: "Paramètres", to: "/settings", icon: <Settings className="h-5 w-5" /> },
-  ];
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   return (
-    <div
-      className={cn(
-        "fixed inset-y-0 left-0 z-40 flex flex-col glass-morphism overflow-y-auto transition-transform duration-300 ease-in-out lg:translate-x-0 w-72 md:w-72 lg:w-80 lg:static border-r border-border/30 h-full",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}
-    >
-      <div className="flex h-16 flex-shrink-0 items-center px-4">
-        <NavLink to="/dashboard" className="flex items-center space-x-2">
-          <div className="relative w-10 h-10">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-700 animate-pulse"></div>
-            <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-900"></div>
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-deepflow-400 to-deepflow-600"></div>
-          </div>
-          <span className="text-xl font-bold font-heading bg-gradient-to-br from-deepflow-400 to-deepflow-700 text-transparent bg-clip-text">
+    <div className={cn("pb-12 w-64", className)}>
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
             DeepFlow
-          </span>
-        </NavLink>
-      </div>
-
-      <div className="flex flex-1 flex-col px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-all",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              )
-            }
-          >
-            {item.icon}
-            <span className="ml-3">{item.name}</span>
-          </NavLink>
-        ))}
-      </div>
-
-      <div className="p-3 space-y-2 mt-auto">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full justify-start" 
-          onClick={toggleTheme}
-        >
-          {getThemeIcon()}
-          <span className="ml-3">
-            {theme === "light" ? "Thème clair" : theme === "dark" ? "Thème sombre" : "Thème système"}
-          </span>
-        </Button>
+          </h2>
+          <div className="space-y-1">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Button
+                  key={item.name}
+                  variant={isActive ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start",
+                    isActive && "bg-secondary"
+                  )}
+                  asChild
+                >
+                  <Link to={item.href}>
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.name}
+                  </Link>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
         
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={handleLogout}
-        >
-          <LogOutIcon className="h-5 w-5" />
-          <span className="ml-3">Déconnexion</span>
-        </Button>
+        <Separator />
+        
+        <div className="px-3 py-2">
+          <div className="space-y-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              asChild
+            >
+              <Link to="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Paramètres
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={handleSignOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Déconnexion
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Sidebar;
+}

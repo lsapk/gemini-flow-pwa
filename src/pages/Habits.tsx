@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -304,6 +303,36 @@ const Habits = () => {
     }
   };
 
+  const uncompleteHabit = async (habit: Habit) => {
+    try {
+      // Réduire le streak et supprimer la date de dernière complétion
+      const updatedStreak = Math.max(0, habit.streak - 1);
+      
+      const { data, error } = await updateHabit(habit.id, {
+        streak: updatedStreak,
+        last_completed_at: null
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      if (data) {
+        setHabits(habits.map((h) => (h.id === habit.id ? data : h)));
+        
+        toast({
+          title: "Habitude décochée",
+          description: "L'habitude a été marquée comme non complétée.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de décocher l'habitude.",
+        variant: "destructive",
+      });
+      console.error("Error uncompleting habit:", error);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
@@ -535,12 +564,13 @@ const Habits = () => {
                   // Calculer le pourcentage de progression
                   const progressPercentage = Math.min(100, (habit.streak / habit.target) * 100);
                   const isDueToday = isHabitDueToday(habit);
+                  const isCompletedToday = habit.last_completed_at && isToday(new Date(habit.last_completed_at));
                   
                   return (
                     <div 
                       key={habit.id} 
                       className={`p-4 border rounded-lg ${
-                        isDueToday ? "border-primary/30 bg-primary/5" : "border-muted bg-card"
+                        isDueToday && !isCompletedToday ? "border-primary/30 bg-primary/5" : "border-muted bg-card"
                       }`}
                     >
                       <div className="flex flex-col space-y-4">
@@ -623,14 +653,27 @@ const Habits = () => {
                             )}
                           </div>
                           
-                          <Button 
-                            variant={isDueToday ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => completeHabit(habit)}
-                            disabled={!isDueToday}
-                          >
-                            {isDueToday ? "Marquer comme fait" : "Déjà complété"}
-                          </Button>
+                          <div className="flex gap-2">
+                            {isCompletedToday ? (
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => uncompleteHabit(habit)}
+                                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                              >
+                                ✓ Fait aujourd'hui
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant={isDueToday ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => completeHabit(habit)}
+                                disabled={!isDueToday}
+                              >
+                                {isDueToday ? "Marquer comme fait" : "Pas dû aujourd'hui"}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
