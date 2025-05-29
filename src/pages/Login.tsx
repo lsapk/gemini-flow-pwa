@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,17 @@ export default function Login() {
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Charger l'email sauvegardé au chargement de la page
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('deepflow_user_email');
+    const shouldRemember = localStorage.getItem('deepflow_remember_me') === 'true';
+    
+    if (shouldRemember && rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,17 +87,6 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-
-  // Charger l'email sauvegardé au chargement de la page
-  useState(() => {
-    const rememberedEmail = localStorage.getItem('deepflow_user_email');
-    const shouldRemember = localStorage.getItem('deepflow_remember_me') === 'true';
-    
-    if (shouldRemember && rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
