@@ -19,11 +19,6 @@ export default function Login() {
   const { toast } = useToast();
   const { user, signIn } = useAuth();
 
-  // Rediriger si déjà connecté
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // Charger l'email sauvegardé au chargement de la page
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('deepflow_user_email');
@@ -34,6 +29,11 @@ export default function Login() {
       setRememberMe(true);
     }
   }, []);
+
+  // Rediriger si déjà connecté - AFTER all hooks
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
