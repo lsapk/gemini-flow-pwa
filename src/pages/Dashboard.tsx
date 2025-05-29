@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
 import { SimplePieChart } from "@/components/ui/charts/SimplePieChart";
+import { ProductivityScore } from "@/components/ui/ProductivityScore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -226,6 +227,15 @@ export default function Dashboard() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Score de productivité en haut */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <ProductivityScore />
+      </motion.div>
       
       {/* Statistiques principales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

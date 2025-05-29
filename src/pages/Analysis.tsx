@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +8,13 @@ import { SimpleAreaChart } from '@/components/ui/charts/SimpleAreaChart';
 import { SimpleBarChart } from '@/components/ui/charts/SimpleBarChart';
 import { SimpleLineChart } from '@/components/ui/charts/SimpleLineChart';
 import { SimplePieChart } from '@/components/ui/charts/SimplePieChart';
-import { LineChart, BarChart3, PieChart, TrendingUp, AlertCircle, Loader2, WifiOff, Wifi } from 'lucide-react';
+import { ProductivityScore } from '@/components/ui/ProductivityScore';
+import { InsightCard } from '@/components/ui/InsightCard';
+import { LineChart, BarChart3, PieChart, TrendingUp, AlertCircle, Loader2, WifiOff, Wifi, Brain } from 'lucide-react';
 import { ChartData } from '@/components/ui/charts/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalyticsData } from '@/hooks/useAnalyticsData';
+import { useProductivityInsights } from '@/hooks/useProductivityInsights';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,6 +37,9 @@ const Analysis = () => {
     error: dataError,
     refetch
   } = useAnalyticsData();
+
+  // Get productivity insights
+  const insights = useProductivityInsights();
 
   // Vérification périodique du statut réseau
   useEffect(() => {
@@ -167,6 +172,7 @@ const Analysis = () => {
           onClick={() => navigate('/ai-assistant')}
           className="bg-primary hover:bg-primary/90"
         >
+          <Brain className="h-4 w-4 mr-2" />
           Assistant IA
         </Button>
       </div>
@@ -202,81 +208,104 @@ const Analysis = () => {
           </AlertDescription>
         </Alert>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="glass-card hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">Productivité</CardTitle>
-              <TrendingUp className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px]">
-                <SimpleAreaChart data={formattedActivityData} xAxisKey="name" areaKey="value" />
-              </div>
-              <div className="text-center text-sm mt-4 font-medium">
-                <span className="text-lg font-bold text-primary">
-                  {formattedActivityData.reduce((sum, item) => sum + item.value, 0)}
-                </span> activités terminées
-              </div>
-            </CardContent>
-          </Card>
+        <>
+          {/* Score de productivité */}
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <ProductivityScore />
+            </div>
+            
+            {/* Graphiques principaux */}
+            <div className="md:col-span-2 grid gap-6">
+              <Card className="glass-card hover:shadow-lg transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">Productivité</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[200px]">
+                    <SimpleAreaChart data={formattedActivityData} xAxisKey="name" areaKey="value" />
+                  </div>
+                  <div className="text-center text-sm mt-2 font-medium">
+                    <span className="text-lg font-bold text-primary">
+                      {formattedActivityData.reduce((sum, item) => sum + item.value, 0)}
+                    </span> activités terminées
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
-          <Card className="glass-card hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">Complétion des tâches</CardTitle>
-              <PieChart className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px]">
-                <SimplePieChart 
-                  data={taskCompletionData} 
-                  colors={["#9b87f5", "#f5a787", "#87f5a7"]} 
-                />
-              </div>
-              <div className="text-center text-sm mt-4">
-                <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">{taskCompletionRate.toFixed(0)}%</span> 
-                <span className="text-muted-foreground"> de taux de complétion</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Insights personnalisés */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Insights personnalisés</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {insights.map((insight) => (
+                <InsightCard key={insight.id} {...insight} />
+              ))}
+            </div>
+          </div>
 
-          <Card className="glass-card hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">Habitudes</CardTitle>
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px]">
-                <SimpleBarChart data={formattedHabitsData} color="#9b87f5" />
-              </div>
-              <div className="text-center text-sm mt-4">
-                <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">{streakCount}</span> 
-                <span className="text-muted-foreground"> jours de série consécutive</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Graphiques détaillés */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="glass-card hover:shadow-lg transition-all duration-300">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-medium">Complétion des tâches</CardTitle>
+                <PieChart className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <SimplePieChart 
+                    data={taskCompletionData} 
+                    colors={["#9b87f5", "#f5a787", "#87f5a7"]} 
+                  />
+                </div>
+                <div className="text-center text-sm mt-4">
+                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">{taskCompletionRate.toFixed(0)}%</span> 
+                  <span className="text-muted-foreground"> de taux de complétion</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="glass-card hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-medium">Sessions Focus</CardTitle>
-              <LineChart className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px]">
-                <SimpleLineChart 
-                  data={formattedFocusData} 
-                  xAxisKey="name" 
-                  lines={[{ dataKey: "value", name: "Minutes", color: "#9b87f5" }]} 
-                />
-              </div>
-              <div className="text-center text-sm mt-4">
-                <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">
-                  {(totalFocusTime / 60).toFixed(1)}
-                </span>
-                <span className="text-muted-foreground"> heures de concentration</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="glass-card hover:shadow-lg transition-all duration-300">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-medium">Habitudes</CardTitle>
+                <BarChart3 className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <SimpleBarChart data={formattedHabitsData} color="#9b87f5" />
+                </div>
+                <div className="text-center text-sm mt-4">
+                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">{streakCount}</span> 
+                  <span className="text-muted-foreground"> jours de série consécutive</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card hover:shadow-lg transition-all duration-300 md:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-medium">Sessions Focus</CardTitle>
+                <LineChart className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <SimpleLineChart 
+                    data={formattedFocusData} 
+                    xAxisKey="name" 
+                    lines={[{ dataKey: "value", name: "Minutes", color: "#9b87f5" }]} 
+                  />
+                </div>
+                <div className="text-center text-sm mt-4">
+                  <span className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-400 text-transparent bg-clip-text">
+                    {(totalFocusTime / 60).toFixed(1)}
+                  </span>
+                  <span className="text-muted-foreground"> heures de concentration</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
 
       {/* Modern glow effect */}
