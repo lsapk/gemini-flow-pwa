@@ -7,7 +7,11 @@ import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
 
-const AppLayout = () => {
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
+
+const AppLayout = ({ children }: AppLayoutProps) => {
   const { user } = useAuth();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const orientation = useMediaQuery("(orientation: portrait)") ? "portrait" : "landscape";
@@ -69,7 +73,7 @@ const AppLayout = () => {
             transition={{ duration: 0.2 }}
             className={isMobile ? "fixed z-30 h-full" : "relative"}
           >
-            <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+            <Sidebar />
           </motion.div>
         )}
       </AnimatePresence>
@@ -105,7 +109,7 @@ const AppLayout = () => {
               transition={{ duration: 0.3 }}
               className="animate-fade-in"
             >
-              <Outlet />
+              {children}
             </motion.div>
           </div>
         </motion.main>

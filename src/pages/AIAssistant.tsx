@@ -178,7 +178,7 @@ export default function AIAssistant() {
                         {message.isUser ? (
                           <p className="m-0">{message.content}</p>
                         ) : (
-                          <Markdown>{message.content}</Markdown>
+                          <Markdown content={message.content} />
                         )}
                       </div>
                     )}
