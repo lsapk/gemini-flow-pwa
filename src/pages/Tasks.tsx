@@ -234,107 +234,109 @@ const Tasks = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <ListTodo className="h-8 w-8 text-primary" />
-          Tâches
-        </h1>
-        <p className="text-muted-foreground">
-          Gérez vos tâches quotidiennes et suivez votre progression.
-        </p>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <ListTodo className="h-8 w-8 text-primary" />
+            Tâches
+          </h1>
+          <p className="text-muted-foreground">
+            Gérez vos tâches quotidiennes et suivez votre progression.
+          </p>
+        </div>
 
-      {/* Bouton pour ajouter une nouvelle tâche */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button className="w-full bg-primary hover:bg-primary/90 flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Nouvelle tâche
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-primary">Nouvelle tâche</DialogTitle>
-            <DialogDescription>
-              Ajoutez une nouvelle tâche à votre liste.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Titre</Label>
-              <Input
-                id="title"
-                placeholder="Entrez le titre de la tâche..."
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description (optionnelle)</Label>
-              <Textarea
-                id="description"
-                placeholder="Entrez une description..."
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                className="resize-none"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bouton pour ajouter une nouvelle tâche */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Nouvelle tâche
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-primary">Nouvelle tâche</DialogTitle>
+              <DialogDescription>
+                Ajoutez une nouvelle tâche à votre liste.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="priority">Priorité</Label>
-                <Select
-                  value={newTask.priority}
-                  onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-                >
-                  <SelectTrigger id="priority">
-                    <SelectValue placeholder="Sélectionnez la priorité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">Élevée</SelectItem>
-                    <SelectItem value="medium">Moyenne</SelectItem>
-                    <SelectItem value="low">Faible</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Titre</Label>
+                <Input
+                  id="title"
+                  placeholder="Entrez le titre de la tâche..."
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="due-date">Date d'échéance</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="due-date"
-                      variant="outline"
-                      className="w-full justify-start text-left"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? (
-                        format(selectedDate, "dd MMMM yyyy", { locale: fr })
-                      ) : (
-                        <span className="text-muted-foreground">Sélectionnez une date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="description">Description (optionnelle)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Entrez une description..."
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  className="resize-none"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">Priorité</Label>
+                  <Select
+                    value={newTask.priority}
+                    onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+                  >
+                    <SelectTrigger id="priority">
+                      <SelectValue placeholder="Sélectionnez la priorité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">Élevée</SelectItem>
+                      <SelectItem value="medium">Moyenne</SelectItem>
+                      <SelectItem value="low">Faible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="due-date">Date d'échéance</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="due-date"
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, "dd MMMM yyyy", { locale: fr })
+                        ) : (
+                          <span className="text-muted-foreground">Sélectionnez une date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90">
-              <Plus className="mr-2 h-4 w-4" /> Ajouter la tâche
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90">
+                <Plus className="mr-2 h-4 w-4" /> Ajouter la tâche
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Tabs defaultValue="today" className="w-full">
         <TabsList className="mb-4 bg-muted w-full justify-start overflow-auto">
