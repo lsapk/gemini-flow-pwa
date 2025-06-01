@@ -1,879 +1,587 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  SettingsIcon, 
-  BellIcon, 
-  MoonIcon, 
-  ComputerIcon, 
-  SunIcon, 
-  CreditCard, 
-  CheckCircle, 
-  CrownIcon, 
-  ShieldCheck, 
-  AlertCircle,
-  Loader2,
-  KeyIcon,
-  UserX,
-  Lock
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getUserSettings, updateUserSettings, getUserSubscription, getUserRoles, isUserAdmin } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/components/theme-provider";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { motion } from "framer-motion";
+import { 
+  User, Bell, Shield, Eye, EyeOff, Key, 
+  Smartphone, Download, Trash2, AlertTriangle,
+  Moon, Sun, Monitor, Lock, Mail, Database
+} from "lucide-react";
 
-type UserSettings = {
-  notifications_enabled: boolean;
-  sound_enabled: boolean;
-  focus_mode: boolean;
-  theme: string;
-  language: string;
-  clock_format: string;
-};
-
-const Settings = () => {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-  
-  // Nouvelles variables d'état
-  const [passwordOpen, setPasswordOpen] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
-  
-  const { toast } = useToast();
-  const { setTheme, theme } = useTheme();
+export default function Settings() {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [settings, setSettings] = useState({
+    notifications: true,
+    darkMode: 'system',
+    language: 'fr',
+    clockFormat: '24h',
+    soundEnabled: true,
+    focusMode: false,
+    emailNotifications: true,
+    pushNotifications: true,
+    dataBackup: true,
+    twoFactorAuth: false
+  });
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        
-        // Charger les paramètres utilisateur
-        const { data: settingsData, error: settingsError } = await getUserSettings();
-        if (settingsError) throw new Error(settingsError);
-        if (settingsData) {
-          setSettings(settingsData as UserSettings);
-          // Définir le thème dans le provider de thème en fonction des paramètres utilisateur
-          if (settingsData.theme && (settingsData.theme === 'light' || settingsData.theme === 'dark' || settingsData.theme === 'system')) {
-            setTheme(settingsData.theme as "light" | "dark" | "system");
-          }
-        }
-        
-        // Charger les informations d'abonnement
-        const { data: subscriptionData } = await getUserSubscription();
-        setSubscription(subscriptionData);
-        
-        // Vérifier si l'utilisateur est administrateur
-        const adminStatus = await isUserAdmin();
-        setIsAdmin(adminStatus);
-        
-        // Charger les rôles de l'utilisateur
-        const { data: rolesData } = await getUserRoles();
-        setRoles(rolesData || []);
-        
-      } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger vos paramètres.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, [user, toast, setTheme]);
+  const [securitySettings, setSecuritySettings] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    email: user?.email || ''
+  });
+
+  const [profileSettings, setProfileSettings] = useState({
+    displayName: '',
+    bio: ''
+  });
 
   const handleSaveSettings = async () => {
-    if (!settings) return;
-    
+    setLoading(true);
     try {
-      setSaving(true);
-      const { error } = await updateUserSettings(settings);
-      
-      if (error) {
-        throw new Error(error);
-      }
-      
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          id: user?.id,
+          notifications_enabled: settings.notifications,
+          theme: settings.darkMode,
+          language: settings.language,
+          clock_format: settings.clockFormat,
+          sound_enabled: settings.soundEnabled,
+          focus_mode: settings.focusMode,
+        });
+
+      if (error) throw error;
+
       toast({
         title: "Paramètres sauvegardés",
-        description: "Vos préférences ont été mises à jour.",
+        description: "Vos préférences ont été mises à jour avec succès.",
       });
-      
-      // Mettre à jour le thème dans le provider de thème
-      if (settings.theme && (settings.theme === 'light' || settings.theme === 'dark' || settings.theme === 'system')) {
-        setTheme(settings.theme as "light" | "dark" | "system");
-      }
-      
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde des paramètres:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder vos paramètres.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSettingChange = (key: keyof UserSettings, value: any) => {
-    if (!settings) return;
-    
-    setSettings({
-      ...settings,
-      [key]: value,
-    });
-  };
-
-  const handleCheckout = async (planType: 'basic' | 'premium' | 'ultimate') => {
-    try {
-      setCheckoutLoading(true);
-      
-      const { url, error } = await createCheckoutSession(planType);
-      
-      if (error) {
-        throw new Error(error);
-      }
-      
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création de la session de paiement:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer la session de paiement.",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
-
-  const handlePortal = async () => {
-    try {
-      setPortalLoading(true);
-      
-      const { url, error } = await createCustomerPortal();
-      
-      if (error) {
-        throw new Error(error);
-      }
-      
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création du portail client:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'accéder au portail client.",
-        variant: "destructive",
-      });
-    } finally {
-      setPortalLoading(false);
-    }
-  };
-
-  // Nouvelle fonction pour la mise à jour du mot de passe
-  const handleUpdatePassword = async () => {
-    setPasswordError("");
-    
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Tous les champs sont requis");
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Les nouveaux mots de passe ne correspondent pas");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères");
-      return;
-    }
-
-    try {
-      setPasswordLoading(true);
-      
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      toast({
-        title: "Mot de passe mis à jour",
-        description: "Votre mot de passe a été modifié avec succès",
-      });
-      
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordOpen(false);
     } catch (error: any) {
-      console.error("Erreur lors de la mise à jour du mot de passe:", error);
-      setPasswordError(error.message || "Échec de la mise à jour du mot de passe");
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les paramètres.",
+        variant: "destructive",
+      });
     } finally {
-      setPasswordLoading(false);
+      setLoading(false);
     }
   };
 
-  // Nouvelle fonction pour supprimer le compte utilisateur
-  const handleDeleteAccount = async () => {
+  const handlePasswordChange = async () => {
+    if (securitySettings.newPassword !== securitySettings.confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      const { error } = await supabase.from('user_settings').delete().eq('id', user?.id);
+      const { error } = await supabase.auth.updateUser({
+        password: securitySettings.newPassword
+      });
+
       if (error) throw error;
-      
-      // Supprimer les autres données associées à l'utilisateur
-      // Note: Pas besoin de supprimer l'entrée auth.users car la suppression du compte 
-      // sera gérée par Supabase Auth
-      
-      const { error: authError } = await supabase.auth.admin.deleteUser(user?.id || '');
-      if (authError) throw authError;
-      
-      await signOut();
+
+      toast({
+        title: "Mot de passe modifié",
+        description: "Votre mot de passe a été mis à jour avec succès.",
+      });
+
+      setSecuritySettings({
+        ...securitySettings,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de modifier le mot de passe.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDataExport = async () => {
+    setLoading(true);
+    try {
+      // Récupérer toutes les données utilisateur
+      const [tasks, habits, focusSessions, journalEntries, goals] = await Promise.all([
+        supabase.from('tasks').select('*').eq('user_id', user?.id),
+        supabase.from('habits').select('*').eq('user_id', user?.id),
+        supabase.from('focus_sessions').select('*').eq('user_id', user?.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user?.id),
+        supabase.from('goals').select('*').eq('user_id', user?.id),
+      ]);
+
+      const userData = {
+        exportDate: new Date().toISOString(),
+        user: { id: user?.id, email: user?.email },
+        tasks: tasks.data || [],
+        habits: habits.data || [],
+        focusSessions: focusSessions.data || [],
+        journalEntries: journalEntries.data || [],
+        goals: goals.data || []
+      };
+
+      const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `deepflow-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export réussi",
+        description: "Vos données ont été exportées avec succès.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur d'export",
+        description: "Impossible d'exporter vos données.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // D'abord, supprimer toutes les données utilisateur
+      await Promise.all([
+        supabase.from('tasks').delete().eq('user_id', user?.id),
+        supabase.from('habits').delete().eq('user_id', user?.id),
+        supabase.from('focus_sessions').delete().eq('user_id', user?.id),
+        supabase.from('journal_entries').delete().eq('user_id', user?.id),
+        supabase.from('goals').delete().eq('user_id', user?.id),
+        supabase.from('user_settings').delete().eq('id', user?.id),
+        supabase.from('user_profiles').delete().eq('id', user?.id),
+      ]);
+
       toast({
         title: "Compte supprimé",
-        description: "Votre compte a été supprimé avec succès",
+        description: "Votre compte et toutes vos données ont été supprimés.",
       });
-      
-      navigate("/login");
-    } catch (error: any) {
-      console.error("Erreur lors de la suppression du compte:", error);
+
+      await signOut();
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de supprimer votre compte",
+        description: "Impossible de supprimer le compte.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const hasCreatorPlan = roles.some(role => role.role === 'creator');
-  const hasActiveSubscription = subscription?.subscribed || false;
-  const subscriptionTier = subscription?.subscription_tier || null;
-  const isSubscriber = hasActiveSubscription || isAdmin || hasCreatorPlan;
-
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8" />
-            Paramètres
-          </h1>
-          <p className="text-muted-foreground">
-            Personnalisez l'application selon vos préférences.
-          </p>
-        </div>
-        
-        <div className="flex items-center justify-center p-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <SettingsIcon className="h-8 w-8" />
-          Paramètres
-        </h1>
+    <div className="space-y-6">
+      <motion.div 
+        className="flex flex-col space-y-2"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
         <p className="text-muted-foreground">
-          Personnalisez l'application selon vos préférences.
+          Gérez vos préférences et paramètres de sécurité
         </p>
-      </div>
-      
-      {isAdmin && (
-        <Alert>
-          <ShieldCheck className="h-4 w-4" />
-          <AlertTitle>Compte Administrateur</AlertTitle>
-          <AlertDescription>
-            Vous êtes connecté en tant qu'administrateur. Vous avez accès à toutes les fonctionnalités premium.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {hasCreatorPlan && !isAdmin && (
-        <Alert>
-          <CrownIcon className="h-4 w-4" />
-          <AlertTitle>Plan Créateur</AlertTitle>
-          <AlertDescription>
-            Vous bénéficiez du plan Créateur qui vous donne accès à toutes les fonctionnalités premium gratuitement.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <Tabs defaultValue="general">
-        <TabsList className="mb-6">
-          <TabsTrigger value="general">Général</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="appearance">Apparence</TabsTrigger>
-          <TabsTrigger value="security">Sécurité</TabsTrigger>
-          <TabsTrigger value="subscription">Abonnement</TabsTrigger>
-        </TabsList>
-        
-        {/* Paramètres généraux */}
-        <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Paramètres généraux</CardTitle>
-              <CardDescription>
-                Configurez les options principales de l'application.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Sélection de la langue */}
-              <div className="space-y-2">
-                <Label htmlFor="language">Langue</Label>
-                <Select 
-                  value={settings?.language || 'fr'} 
-                  onValueChange={(value) => handleSettingChange('language', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une langue" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="de">Deutsch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Format de l'horloge */}
-              <div className="space-y-2">
-                <Label>Format de l'horloge</Label>
-                <RadioGroup 
-                  value={settings?.clock_format || '24h'} 
-                  onValueChange={(value) => handleSettingChange('clock_format', value)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="12h" id="12h" />
-                    <Label htmlFor="12h">12 heures (AM/PM)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="24h" id="24h" />
-                    <Label htmlFor="24h">24 heures</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              
-              {/* Mode Focus */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Mode Focus</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Activez le mode Focus pour éliminer les distractions pendant vos sessions de concentration.
-                  </p>
-                </div>
-                <Switch 
-                  checked={settings?.focus_mode || false}
-                  onCheckedChange={(value) => handleSettingChange('focus_mode', value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Paramètres de notifications */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Configurez vos préférences de notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Notifications */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    <BellIcon className="h-4 w-4" />
-                    Notifications
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Activez ou désactivez toutes les notifications.
-                  </p>
-                </div>
-                <Switch 
-                  checked={settings?.notifications_enabled || false}
-                  onCheckedChange={(value) => handleSettingChange('notifications_enabled', value)}
-                />
-              </div>
-              
-              {/* Sons */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Sons</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Activez ou désactivez les sons de notification.
-                  </p>
-                </div>
-                <Switch 
-                  checked={settings?.sound_enabled || false}
-                  onCheckedChange={(value) => handleSettingChange('sound_enabled', value)}
-                  disabled={!settings?.notifications_enabled}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Paramètres d'apparence */}
-        <TabsContent value="appearance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Apparence</CardTitle>
-              <CardDescription>
-                Personnalisez l'apparence de l'application.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Sélection du thème */}
-              <div className="space-y-3">
-                <Label>Thème</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button 
-                    variant={settings?.theme === 'light' ? 'default' : 'outline'}
-                    className="flex flex-col items-center justify-center gap-2 h-20"
-                    onClick={() => handleSettingChange('theme', 'light')}
-                  >
-                    <SunIcon className="h-5 w-5" />
-                    <span>Clair</span>
-                  </Button>
-                  
-                  <Button 
-                    variant={settings?.theme === 'dark' ? 'default' : 'outline'}
-                    className="flex flex-col items-center justify-center gap-2 h-20"
-                    onClick={() => handleSettingChange('theme', 'dark')}
-                  >
-                    <MoonIcon className="h-5 w-5" />
-                    <span>Sombre</span>
-                  </Button>
-                  
-                  <Button 
-                    variant={settings?.theme === 'system' ? 'default' : 'outline'}
-                    className="flex flex-col items-center justify-center gap-2 h-20"
-                    onClick={() => handleSettingChange('theme', 'system')}
-                  >
-                    <ComputerIcon className="h-5 w-5" />
-                    <span>Système</span>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      </motion.div>
 
-        {/* Paramètres de sécurité */}
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sécurité du compte</CardTitle>
-              <CardDescription>
-                Gérez la sécurité de votre compte et vos informations personnelles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Changer le mot de passe */}
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <KeyIcon className="h-4 w-4" />
-                      Mot de passe
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Modifiez votre mot de passe pour sécuriser votre compte.
-                    </p>
-                  </div>
-                  <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline">Modifier</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Modifier votre mot de passe</DialogTitle>
-                        <DialogDescription>
-                          Veuillez entrer votre mot de passe actuel et votre nouveau mot de passe.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        {passwordError && (
-                          <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Erreur</AlertTitle>
-                            <AlertDescription>{passwordError}</AlertDescription>
-                          </Alert>
-                        )}
-                        <div className="grid gap-2">
-                          <Label htmlFor="old-password">Mot de passe actuel</Label>
-                          <div className="relative">
-                            <Input
-                              id="old-password"
-                              type="password"
-                              value={oldPassword}
-                              onChange={(e) => setOldPassword(e.target.value)}
-                              placeholder="••••••••"
-                            />
-                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="new-password">Nouveau mot de passe</Label>
-                          <div className="relative">
-                            <Input
-                              id="new-password"
-                              type="password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="••••••••"
-                            />
-                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
-                          <div className="relative">
-                            <Input
-                              id="confirm-password"
-                              type="password"
-                              value={confirmPassword}
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              placeholder="••••••••"
-                            />
-                            <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setPasswordOpen(false)}
-                          disabled={passwordLoading}
-                        >
-                          Annuler
-                        </Button>
-                        <Button 
-                          type="submit" 
-                          onClick={handleUpdatePassword}
-                          disabled={passwordLoading}
-                        >
-                          {passwordLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Mise à jour...
-                            </>
-                          ) : (
-                            "Mettre à jour"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                {/* Suppression du compte */}
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2 text-destructive">
-                      <UserX className="h-4 w-4" />
-                      Suppression du compte
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Supprimer définitivement votre compte et toutes vos données.
-                    </p>
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">Supprimer le compte</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Cette action est permanente et irréversible. Toutes vos données seront définitivement supprimées.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Supprimer définitivement
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Abonnement */}
-        <TabsContent value="subscription" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gérer votre abonnement</CardTitle>
-              <CardDescription>
-                Consultez et gérez votre abonnement DeepFlow
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isSubscriber ? (
-                <div className="space-y-4">
-                  <Alert className="bg-primary/10 border-primary/20">
-                    <CheckCircle className="h-4 w-4 text-primary" />
-                    <AlertTitle>
-                      {isAdmin 
-                        ? "Compte Administrateur" 
-                        : hasCreatorPlan 
-                          ? "Plan Créateur" 
-                          : `Plan ${subscriptionTier || "Premium"} actif`}
-                    </AlertTitle>
-                    <AlertDescription>
-                      {isAdmin 
-                        ? "Vous avez accès à toutes les fonctionnalités premium en tant qu'administrateur."
-                        : hasCreatorPlan
-                          ? "Vous bénéficiez de l'accès à toutes les fonctionnalités premium gratuitement."
-                          : "Vous bénéficiez de toutes les fonctionnalités premium sans limitation."}
-                    </AlertDescription>
-                  </Alert>
-                  
-                  {hasActiveSubscription && !isAdmin && !hasCreatorPlan && (
-                    <Button 
-                      onClick={handlePortal} 
-                      className="w-full"
-                      disabled={portalLoading}
-                    >
-                      {portalLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Chargement...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Gérer mon abonnement
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Compte gratuit limité</AlertTitle>
-                    <AlertDescription>
-                      Vous utilisez actuellement la version gratuite avec des limitations. Passez à un abonnement premium pour débloquer toutes les fonctionnalités.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div className="grid gap-4 md:grid-cols-3">
-                    {/* Plan Basique */}
-                    <Card className="flex flex-col">
-                      <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                          Basique
-                          <Badge variant="outline">4,99€/mois</Badge>
-                        </CardTitle>
-                        <CardDescription>Pour les débutants</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            10 requêtes IA/jour
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Synchronisation hors-ligne
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Rapports de productivité
-                          </li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => handleCheckout('basic')} 
-                          className="w-full"
-                          disabled={checkoutLoading}
-                        >
-                          {checkoutLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Chargement...
-                            </>
-                          ) : (
-                            "Choisir ce plan"
-                          )}
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                    
-                    {/* Plan Premium */}
-                    <Card className="flex flex-col border-primary relative">
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold">
-                        Populaire
-                      </div>
-                      <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                          Premium
-                          <Badge variant="outline">9,99€/mois</Badge>
-                        </CardTitle>
-                        <CardDescription>Pour les utilisateurs réguliers</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Requêtes IA illimitées
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Fonctionnalités avancées d'analyse
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Rapports personnalisés
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Synchronisation multi-appareils
-                          </li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => handleCheckout('premium')} 
-                          className="w-full"
-                          disabled={checkoutLoading}
-                        >
-                          {checkoutLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Chargement...
-                            </>
-                          ) : (
-                            "Choisir ce plan"
-                          )}
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                    
-                    {/* Plan Ultimate */}
-                    <Card className="flex flex-col">
-                      <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                          Ultimate
-                          <Badge variant="outline">19,99€/mois</Badge>
-                        </CardTitle>
-                        <CardDescription>Pour les professionnels</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <ul className="space-y-2 text-sm">
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Tout du plan Premium
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Modèles IA avancés
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Support prioritaire
-                          </li>
-                          <li className="flex items-center">
-                            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                            Fonctionnalités en avant-première
-                          </li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          onClick={() => handleCheckout('ultimate')} 
-                          className="w-full"
-                          disabled={checkoutLoading}
-                        >
-                          {checkoutLoading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Chargement...
-                            </>
-                          ) : (
-                            "Choisir ce plan"
-                          )}
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <div className="flex justify-end">
-        <Button 
-          onClick={handleSaveSettings}
-          disabled={saving || !settings}
-          className="min-w-[120px]"
+      <div className="grid gap-6">
+        {/* Profil */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
         >
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sauvegarde...
-            </>
-          ) : (
-            "Sauvegarder"
-          )}
-        </Button>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Profil
+              </CardTitle>
+              <CardDescription>
+                Informations personnelles et profil public
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="displayName">Nom d'affichage</Label>
+                  <Input
+                    id="displayName"
+                    value={profileSettings.displayName}
+                    onChange={(e) => setProfileSettings({...profileSettings, displayName: e.target.value})}
+                    placeholder="Votre nom"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Input
+                  id="bio"
+                  value={profileSettings.bio}
+                  onChange={(e) => setProfileSettings({...profileSettings, bio: e.target.value})}
+                  placeholder="Parlez-nous de vous..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Préférences */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Préférences
+              </CardTitle>
+              <CardDescription>
+                Personnalisez votre expérience utilisateur
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="theme">Thème</Label>
+                    <Select 
+                      value={settings.darkMode} 
+                      onValueChange={(value) => setSettings({...settings, darkMode: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">
+                          <div className="flex items-center gap-2">
+                            <Sun className="h-4 w-4" />
+                            Clair
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="dark">
+                          <div className="flex items-center gap-2">
+                            <Moon className="h-4 w-4" />
+                            Sombre
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="system">
+                          <div className="flex items-center gap-2">
+                            <Monitor className="h-4 w-4" />
+                            Système
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="language">Langue</Label>
+                    <Select 
+                      value={settings.language} 
+                      onValueChange={(value) => setSettings({...settings, language: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fr">Français</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="clockFormat">Format d'heure</Label>
+                    <Select 
+                      value={settings.clockFormat} 
+                      onValueChange={(value) => setSettings({...settings, clockFormat: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="12h">12 heures</SelectItem>
+                        <SelectItem value="24h">24 heures</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Sons activés</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Sons de notification et d'interface
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.soundEnabled}
+                      onCheckedChange={(checked) => setSettings({...settings, soundEnabled: checked})}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Mode focus</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Interface minimaliste pendant les sessions
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.focusMode}
+                      onCheckedChange={(checked) => setSettings({...settings, focusMode: checked})}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Sauvegarde automatique</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Sauvegarde périodique de vos données
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.dataBackup}
+                      onCheckedChange={(checked) => setSettings({...settings, dataBackup: checked})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={handleSaveSettings} disabled={loading}>
+                {loading ? "Sauvegarde..." : "Sauvegarder les préférences"}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Notifications */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>
+                Gérez vos préférences de notification
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notifications push</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Notifications dans le navigateur
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.pushNotifications}
+                  onCheckedChange={(checked) => setSettings({...settings, pushNotifications: checked})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notifications email</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Résumés hebdomadaires et rappels
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.emailNotifications}
+                  onCheckedChange={(checked) => setSettings({...settings, emailNotifications: checked})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Sécurité */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Sécurité
+              </CardTitle>
+              <CardDescription>
+                Paramètres de sécurité et mot de passe
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Changer le mot de passe
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={securitySettings.newPassword}
+                        onChange={(e) => setSecuritySettings({...securitySettings, newPassword: e.target.value})}
+                        placeholder="Minimum 8 caractères"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={securitySettings.confirmPassword}
+                      onChange={(e) => setSecuritySettings({...securitySettings, confirmPassword: e.target.value})}
+                      placeholder="Retapez le mot de passe"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handlePasswordChange} 
+                  disabled={loading || !securitySettings.newPassword || !securitySettings.confirmPassword}
+                >
+                  {loading ? "Modification..." : "Changer le mot de passe"}
+                </Button>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Authentification à deux facteurs</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Sécurité renforcée avec un code de vérification
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.twoFactorAuth}
+                  onCheckedChange={(checked) => setSettings({...settings, twoFactorAuth: checked})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Données et confidentialité */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Données et confidentialité
+              </CardTitle>
+              <CardDescription>
+                Gérez vos données personnelles
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={handleDataExport}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  {loading ? "Export..." : "Exporter mes données"}
+                </Button>
+                
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteAccount}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {loading ? "Suppression..." : "Supprimer mon compte"}
+                </Button>
+              </div>
+              
+              <div className="flex items-start gap-2 p-4 bg-destructive/10 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive">Zone dangereuse</p>
+                  <p className="text-sm text-muted-foreground">
+                    La suppression du compte est définitive et supprimera toutes vos données.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );
-};
-
-export default Settings;
+}

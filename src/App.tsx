@@ -14,6 +14,7 @@ import Habits from "./pages/Habits";
 import Focus from "./pages/Focus";
 import Journal from "./pages/Journal";
 import Goals from "./pages/Goals";
+import Badges from "./pages/Badges";
 import Analysis from "./pages/Analysis";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
@@ -97,6 +98,13 @@ function App() {
                   <ProtectedRoute>
                     <AppLayout>
                       <Goals />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/badges" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Badges />
                     </AppLayout>
                   </ProtectedRoute>
                 } />

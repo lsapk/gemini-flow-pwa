@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, Star, Target, Zap } from "lucide-react";
-import { useProductivityScore } from "@/hooks/useProductivityScore";
+import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import { motion } from "framer-motion";
 
 export function ProductivityScore() {
-  const { score, level, badges, completionRate, focusTimeScore, consistencyScore, streakBonus } = useProductivityScore();
+  const { score, level, badges, completionRate, focusTimeScore, consistencyScore, streakBonus } = useRealtimeProductivityScore();
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -31,6 +31,11 @@ export function ProductivityScore() {
         <CardTitle className="flex items-center gap-2">
           {getLevelIcon(level)}
           Score de Productivité
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-2 h-2 bg-green-500 rounded-full"
+          />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -41,6 +46,7 @@ export function ProductivityScore() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", duration: 0.6 }}
+            key={score} // Re-animer quand le score change
           >
             {score}/100
           </motion.div>

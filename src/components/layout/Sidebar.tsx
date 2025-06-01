@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,7 +13,8 @@ import {
   BarChart3, 
   Settings, 
   LogOut,
-  Bot
+  Bot,
+  Award
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -25,6 +25,7 @@ const navigation = [
   { name: "Focus", href: "/focus", icon: Timer },
   { name: "Journal", href: "/journal", icon: BookOpen },
   { name: "Objectifs", href: "/goals", icon: Target },
+  { name: "Badges", href: "/badges", icon: Award },
   { name: "Analyse", href: "/analysis", icon: BarChart3 },
   { name: "Assistant IA", href: "/ai-assistant", icon: Bot },
 ];

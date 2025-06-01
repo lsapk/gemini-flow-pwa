@@ -5,6 +5,7 @@ import { ProductivityScore } from "@/components/ui/ProductivityScore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import { 
   CalendarCheck, Clock, AlertTriangle, 
   CheckCircle2, ListChecks, TrendingUp, Star 
@@ -204,6 +205,9 @@ export default function Dashboard() {
     .sort((a, b) => (b.streak || 0) - (a.streak || 0))
     .slice(0, 3), [data.habits]);
   
+  // Utiliser le hook de score en temps réel
+  const productivityScore = useRealtimeProductivityScore();
+  
   return (
     <div className="space-y-6">
       <motion.div 
@@ -228,7 +232,7 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {/* Score de productivité en haut */}
+      {/* Score de productivité en haut - maintenant en temps réel */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
