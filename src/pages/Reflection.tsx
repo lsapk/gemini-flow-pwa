@@ -76,7 +76,7 @@ export default function Reflection() {
 
       if (error) throw error;
       
-      setReflections(data || []);
+      setReflections(data as DailyReflection[] || []);
       
       // Vérifier si l'utilisateur a déjà répondu aujourd'hui
       const today = startOfToday();

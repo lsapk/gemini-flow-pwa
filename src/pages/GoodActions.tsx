@@ -106,7 +106,7 @@ export default function GoodActions() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoodActions(data || []);
+      setGoodActions(data as GoodAction[] || []);
       
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions:', error);

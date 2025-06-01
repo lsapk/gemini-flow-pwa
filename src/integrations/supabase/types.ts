@@ -261,6 +261,30 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reflections: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_destinations: {
         Row: {
           createdAt: string
@@ -595,6 +619,42 @@ export type Database = {
           target_date?: string | null
           title?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      good_actions: {
+        Row: {
+          category: string
+          comments_count: number
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          likes_count: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          likes_count?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          likes_count?: number
+          title?: string
           user_id?: string
         }
         Relationships: []
