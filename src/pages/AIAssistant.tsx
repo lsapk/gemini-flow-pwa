@@ -129,7 +129,7 @@ export default function AIAssistant() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/analysis')}
+              onClick={() => navigate('/dashboard')}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
