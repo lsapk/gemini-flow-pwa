@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import MobileBottomNav from "./MobileBottomNav";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -17,7 +16,6 @@ interface AppLayoutProps {
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { user } = useAuth();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const orientation = useMediaQuery("(orientation: portrait)") ? "portrait" : "landscape";
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
@@ -51,14 +49,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     }
   }, [isMobile]);
 
-  // Open/close sidebar on orientation change on mobile
+  // Fermer la sidebar après navigation sur mobile
   useEffect(() => {
-    if (isMobile && orientation === "landscape") {
-      setSidebarOpen(true);
-    } else if (isMobile && orientation === "portrait") {
+    if (isMobile && sidebarOpen) {
       setSidebarOpen(false);
     }
-  }, [orientation, isMobile]);
+  }, [location.pathname, isMobile]);
 
   // Show loading state
   if (isLoading) {
@@ -80,14 +76,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <AnimatePresence mode="wait">
-        {sidebarOpen && !isMobile && (
+        {sidebarOpen && (
           <motion.div
             key="sidebar"
-            initial={{ x: -280, opacity: 0 }}
+            initial={{ x: isMobile ? -280 : 0, opacity: isMobile ? 0 : 1 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -280, opacity: 0 }}
+            exit={{ x: isMobile ? -280 : 0, opacity: isMobile ? 0 : 1 }}
             transition={{ duration: 0.2 }}
-            className="relative"
+            className={`relative ${isMobile ? 'fixed inset-y-0 left-0 z-30 w-64' : ''}`}
           >
             <Sidebar />
           </motion.div>
@@ -117,9 +113,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <div className={`py-4 px-3 sm:px-6 md:px-8 ${
-            isMobile && orientation === 'portrait' ? 'pb-32' : 'pb-4'
-          }`}>
+          <div className="py-4 px-3 sm:px-6 md:px-8 pb-4">
             <motion.div 
               key={location.pathname}
               initial={{ opacity: 0, y: 20 }}
@@ -131,9 +125,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             </motion.div>
           </div>
         </motion.main>
-
-        {/* Navigation mobile en bas */}
-        {isMobile && orientation === 'portrait' && <MobileBottomNav />}
       </div>
     </div>
   );

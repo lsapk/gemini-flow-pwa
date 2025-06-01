@@ -1,6 +1,6 @@
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -25,9 +25,9 @@ const navigation = [
   { name: "Focus", href: "/focus", icon: Timer },
   { name: "Journal", href: "/journal", icon: BookOpen },
   { name: "Objectifs", href: "/goals", icon: Target },
-  { name: "Badges", href: "/badges", icon: Award },
   { name: "Analyse", href: "/analysis", icon: BarChart3 },
   { name: "Assistant IA", href: "/ai-assistant", icon: Bot },
+  { name: "Badges", href: "/badges", icon: Award },
 ];
 
 interface SidebarProps {
@@ -45,7 +45,7 @@ export default function Sidebar({ className }: SidebarProps) {
   };
 
   return (
-    <div className={cn("pb-12 w-64", className)}>
+    <div className={cn("pb-12 w-64 bg-background border-r", className)}>
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
