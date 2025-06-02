@@ -20,7 +20,6 @@ import {
   Eye,
   EyeOff,
   Key,
-  Smartphone,
   Moon,
   Sun,
   Globe,
@@ -53,13 +52,12 @@ export default function Settings() {
   const handleAdminAccess = async () => {
     if (adminCode === 'Admin69') {
       try {
-        // Add admin role to user
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: user?.id, role: 'admin' });
+          .upsert({ user_id: user?.id, role: 'admin' });
 
-        if (error && !error.message.includes('duplicate')) {
-          throw error;
+        if (error) {
+          console.error('Error adding admin role:', error);
         }
 
         setShowAdminPanel(true);
@@ -68,9 +66,10 @@ export default function Settings() {
           description: "Vous avez maintenant les privilèges administrateur.",
         });
       } catch (error: any) {
+        console.error('Error in admin access:', error);
         toast({
           title: "Erreur",
-          description: error.message,
+          description: "Une erreur est survenue lors de l'attribution du rôle admin.",
           variant: "destructive",
         });
       }
@@ -268,7 +267,6 @@ export default function Settings() {
           </Card>
         )}
         
-        {/* Profil utilisateur */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -310,7 +308,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Sécurité */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -392,7 +389,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -432,7 +428,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Apparence */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -459,7 +454,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Données */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -498,7 +492,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Informations */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

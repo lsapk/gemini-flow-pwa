@@ -20,24 +20,6 @@ interface Message {
   timestamp: Date;
 }
 
-const SYSTEM_PROMPT = `Tu es l'assistant IA de DeepFlow, une application de productivité et développement personnel. 
-
-RÈGLES IMPORTANTES :
-- Réponds UNIQUEMENT aux questions liées à la productivité, habitudes, objectifs, focus, bien-être et développement personnel
-- Sois concis et direct (maximum 200 mots par réponse)
-- Donne des conseils pratiques et actionnables
-- Si la question n'est pas liée à ces domaines, réponds : "Je ne peux répondre qu'aux questions sur la productivité et le développement personnel."
-- Utilise un ton bienveillant mais professionnel
-- Ne donne pas de conseils médicaux, financiers ou juridiques
-
-DOMAINES D'EXPERTISE :
-- Productivité et gestion du temps
-- Formation d'habitudes positives
-- Techniques de focus et concentration
-- Développement personnel
-- Bien-être mental
-- Objectifs et motivation`;
-
 const quickPrompts = [
   {
     icon: Target,
@@ -92,8 +74,7 @@ export default function AIAssistant() {
       const { data, error } = await supabase.functions.invoke('gemini-chat', {
         body: {
           message: content,
-          context: SYSTEM_PROMPT,
-          conversation_history: messages.slice(-5)
+          userId: user.id
         }
       });
 
@@ -107,14 +88,6 @@ export default function AIAssistant() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
-
-      // Track AI usage
-      await supabase
-        .from('ai_requests')
-        .insert({
-          user_id: user.id,
-          service: 'gemini-chat'
-        });
 
     } catch (error: any) {
       console.error('Error:', error);

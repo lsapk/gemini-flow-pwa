@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import MobileBottomNav from "./MobileBottomNav";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function AppLayout() {
@@ -29,16 +28,13 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-hidden">
-          <div className="h-full px-4 py-6 md:px-8 pb-16 md:pb-6">
+          <div className="h-full px-4 py-6 md:px-8">
             <div className="mx-auto max-w-7xl">
               <Outlet />
             </div>
           </div>
         </main>
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
     </div>
   );
 }
