@@ -27,50 +27,85 @@ export const useProductivityScore = (): ProductivityMetrics => {
   } = useAnalyticsData();
 
   return useMemo(() => {
-    // Score de complétion des tâches (0-20 points)
-    const completionScore = Math.min(20, (taskCompletionRate / 100) * 20);
+    let totalPossibleScore = 0;
+    let earnedScore = 0;
     
-    // Score de temps de focus (0-20 points) - basé sur 120min par jour
-    const dailyFocusTarget = 120;
-    const avgDailyFocus = totalFocusTime / 7;
-    const focusTimeScore = Math.min(20, (avgDailyFocus / dailyFocusTarget) * 20);
+    // Score de complétion des tâches (0-20 points) - seulement si des tâches existent
+    let completionScore = 0;
+    const hasTaskData = taskCompletionRate > 0 || activityData.some(day => day.count > 0);
+    if (hasTaskData) {
+      completionScore = Math.min(20, (taskCompletionRate / 100) * 20);
+      totalPossibleScore += 20;
+      earnedScore += completionScore;
+    }
     
-    // Score de consistance des habitudes (0-15 points)
-    const avgHabitStreak = habitsData.length > 0 
-      ? habitsData.reduce((sum, habit) => sum + habit.value, 0) / habitsData.length
-      : 0;
-    const consistencyScore = Math.min(15, (avgHabitStreak / 21) * 15); // 3 semaines cible
+    // Score de temps de focus (0-20 points) - seulement si des sessions focus existent
+    let focusTimeScore = 0;
+    const hasFocusData = totalFocusTime > 0 || focusData.some(session => session.minutes > 0);
+    if (hasFocusData) {
+      const dailyFocusTarget = 120;
+      const avgDailyFocus = totalFocusTime / 7;
+      focusTimeScore = Math.min(20, (avgDailyFocus / dailyFocusTarget) * 20);
+      totalPossibleScore += 20;
+      earnedScore += focusTimeScore;
+    }
+    
+    // Score de consistance des habitudes (0-15 points) - seulement si des habitudes existent
+    let consistencyScore = 0;
+    const hasHabitsData = habitsData.length > 0 && habitsData.some(habit => habit.value > 0);
+    if (hasHabitsData) {
+      const avgHabitStreak = habitsData.reduce((sum, habit) => sum + habit.value, 0) / habitsData.length;
+      consistencyScore = Math.min(15, (avgHabitStreak / 21) * 15);
+      totalPossibleScore += 15;
+      earnedScore += consistencyScore;
+    }
     
     // Score de qualité basé sur la régularité des sessions (0-10 points)
-    const recentSessions = focusData.slice(-7);
-    const sessionConsistency = recentSessions.filter(session => session.minutes > 0).length;
-    const qualityScore = Math.min(10, (sessionConsistency / 7) * 10);
+    let qualityScore = 0;
+    if (hasFocusData) {
+      const recentSessions = focusData.slice(-7);
+      const sessionConsistency = recentSessions.filter(session => session.minutes > 0).length;
+      qualityScore = Math.min(10, (sessionConsistency / 7) * 10);
+      totalPossibleScore += 10;
+      earnedScore += qualityScore;
+    }
     
     // Score de gestion du temps basé sur l'activité quotidienne (0-10 points)
+    let timeManagementScore = 0;
     const recentActivity = activityData.slice(-7).reduce((sum, day) => sum + day.count, 0);
-    const timeManagementScore = Math.min(10, (recentActivity / 28) * 10); // 4 activités par jour
+    if (recentActivity > 0) {
+      timeManagementScore = Math.min(10, (recentActivity / 28) * 10);
+      totalPossibleScore += 10;
+      earnedScore += timeManagementScore;
+    }
     
     // Score journal basé sur la régularité d'écriture (0-10 points)
+    let journalScore = 0;
     const journalActivity = activityData.filter(day => day.count > 0).length;
-    const journalScore = Math.min(10, (journalActivity / 7) * 10);
+    if (journalActivity > 0) {
+      journalScore = Math.min(10, (journalActivity / 7) * 10);
+      totalPossibleScore += 10;
+      earnedScore += journalScore;
+    }
     
-    // Score objectifs (0-10 points) - simulé pour le moment
-    const goalScore = Math.min(10, (streakCount / 30) * 10);
+    // Score objectifs (0-10 points) - basé sur les streaks
+    let goalScore = 0;
+    if (streakCount > 0) {
+      goalScore = Math.min(10, (streakCount / 30) * 10);
+      totalPossibleScore += 10;
+      earnedScore += goalScore;
+    }
     
     // Bonus de série globale (0-5 points)
-    const streakBonus = Math.min(5, (streakCount / 50) * 5);
+    let streakBonus = 0;
+    if (streakCount > 0) {
+      streakBonus = Math.min(5, (streakCount / 50) * 5);
+      totalPossibleScore += 5;
+      earnedScore += streakBonus;
+    }
     
-    // Score total sur 100
-    const totalScore = Math.round(
-      completionScore + 
-      focusTimeScore + 
-      consistencyScore + 
-      qualityScore + 
-      timeManagementScore + 
-      journalScore +
-      goalScore +
-      streakBonus
-    );
+    // Score total calculé proportionnellement aux données disponibles
+    const totalScore = totalPossibleScore > 0 ? Math.round((earnedScore / totalPossibleScore) * 100) : 0;
     
     // Déterminer le niveau avec plus de granularité
     let level = 'Novice';
@@ -89,73 +124,64 @@ export const useProductivityScore = (): ProductivityMetrics => {
     else if (totalScore >= 35) level = 'Débutant+';
     else if (totalScore >= 30) level = 'Débutant';
     
-    // Badges plus sophistiqués et réalistes
+    // Badges basés sur les données disponibles
     const badges: string[] = [];
     
     // Badges de complétion de tâches
-    if (taskCompletionRate >= 98) badges.push('Perfectionniste Ultime');
-    else if (taskCompletionRate >= 90) badges.push('Super Organisé');
-    else if (taskCompletionRate >= 80) badges.push('Bien Organisé');
-    else if (taskCompletionRate >= 70) badges.push('Organisé');
+    if (hasTaskData) {
+      if (taskCompletionRate >= 98) badges.push('Perfectionniste Ultime');
+      else if (taskCompletionRate >= 90) badges.push('Super Organisé');
+      else if (taskCompletionRate >= 80) badges.push('Bien Organisé');
+      else if (taskCompletionRate >= 70) badges.push('Organisé');
+    }
     
     // Badges de focus
-    if (avgDailyFocus >= 480) badges.push('Moine Shaolin'); // 8h+
-    else if (avgDailyFocus >= 300) badges.push('Concentré Extrême'); // 5h+
-    else if (avgDailyFocus >= 180) badges.push('Super Focalisé'); // 3h+
-    else if (avgDailyFocus >= 120) badges.push('Focalisé'); // 2h+
-    else if (avgDailyFocus >= 60) badges.push('En Concentration'); // 1h+
+    if (hasFocusData) {
+      const avgDailyFocus = totalFocusTime / 7;
+      if (avgDailyFocus >= 480) badges.push('Moine Shaolin');
+      else if (avgDailyFocus >= 300) badges.push('Concentré Extrême');
+      else if (avgDailyFocus >= 180) badges.push('Super Focalisé');
+      else if (avgDailyFocus >= 120) badges.push('Focalisé');
+      else if (avgDailyFocus >= 60) badges.push('En Concentration');
+    }
     
     // Badges de consistance/streaks
-    if (streakCount >= 365) badges.push('Légende Immortelle');
-    else if (streakCount >= 180) badges.push('Titan de la Discipline');
-    else if (streakCount >= 100) badges.push('Centurion');
-    else if (streakCount >= 50) badges.push('Persévérant Suprême');
-    else if (streakCount >= 30) badges.push('Persévérant');
-    else if (streakCount >= 14) badges.push('Régulier');
-    else if (streakCount >= 7) badges.push('Motivé');
-    else if (streakCount >= 3) badges.push('Démarrage');
+    if (streakCount > 0) {
+      if (streakCount >= 365) badges.push('Légende Immortelle');
+      else if (streakCount >= 180) badges.push('Titan de la Discipline');
+      else if (streakCount >= 100) badges.push('Centurion');
+      else if (streakCount >= 50) badges.push('Persévérant Suprême');
+      else if (streakCount >= 30) badges.push('Persévérant');
+      else if (streakCount >= 14) badges.push('Régulier');
+      else if (streakCount >= 7) badges.push('Motivé');
+      else if (streakCount >= 3) badges.push('Démarrage');
+    }
     
     // Badges d'habitudes
-    if (avgHabitStreak >= 30) badges.push('Maître des Habitudes');
-    else if (avgHabitStreak >= 21) badges.push('Architecte d\'Habitudes');
-    else if (avgHabitStreak >= 14) badges.push('Discipliné');
-    else if (avgHabitStreak >= 7) badges.push('Constant');
-    else if (avgHabitStreak >= 3) badges.push('En Progression');
-    
-    // Badges de niveau global
-    if (totalScore >= 95) badges.push('Transcendance Totale');
-    else if (totalScore >= 90) badges.push('Maître de la Productivité');
-    else if (totalScore >= 85) badges.push('Expert Productif');
-    else if (totalScore >= 80) badges.push('Productif Avancé');
-    else if (totalScore >= 70) badges.push('Très Productif');
-    else if (totalScore >= 60) badges.push('Productif');
-    else if (totalScore >= 50) badges.push('En Développement');
-    
-    // Badges spéciaux basés sur la qualité
-    if (sessionConsistency === 7) badges.push('Semaine Parfaite');
-    if (sessionConsistency >= 5) badges.push('Très Régulier');
-    if (recentActivity >= 35) badges.push('Hyperactif');
-    else if (recentActivity >= 21) badges.push('Super Actif');
-    else if (recentActivity >= 14) badges.push('Actif');
-    
-    // Badges de combinaison avancés
-    if (taskCompletionRate >= 85 && avgDailyFocus >= 120 && avgHabitStreak >= 14) {
-      badges.push('Trinity Master');
+    if (hasHabitsData) {
+      const avgHabitStreak = habitsData.reduce((sum, habit) => sum + habit.value, 0) / habitsData.length;
+      if (avgHabitStreak >= 30) badges.push('Maître des Habitudes');
+      else if (avgHabitStreak >= 21) badges.push('Architecte d\'Habitudes');
+      else if (avgHabitStreak >= 14) badges.push('Discipliné');
+      else if (avgHabitStreak >= 7) badges.push('Constant');
+      else if (avgHabitStreak >= 3) badges.push('En Progression');
     }
     
-    if (totalScore >= 80 && streakCount >= 30) {
-      badges.push('Élite Constante');
-    }
-    
-    // Badge pour équilibre
-    if (completionScore >= 15 && focusTimeScore >= 15 && consistencyScore >= 10) {
-      badges.push('Équilibré Suprême');
+    // Badges de niveau global (seulement si on a des données)
+    if (totalPossibleScore > 0) {
+      if (totalScore >= 95) badges.push('Transcendance Totale');
+      else if (totalScore >= 90) badges.push('Maître de la Productivité');
+      else if (totalScore >= 85) badges.push('Expert Productif');
+      else if (totalScore >= 80) badges.push('Productif Avancé');
+      else if (totalScore >= 70) badges.push('Très Productif');
+      else if (totalScore >= 60) badges.push('Productif');
+      else if (totalScore >= 50) badges.push('En Développement');
     }
     
     return {
       score: totalScore,
       level,
-      badges: [...new Set(badges)], // Éviter les doublons
+      badges: [...new Set(badges)],
       streakBonus,
       completionRate: taskCompletionRate,
       focusTimeScore,

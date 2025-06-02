@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,13 +24,14 @@ import {
   Moon,
   Sun,
   Globe,
-  ArrowLeft
+  ArrowLeft,
+  Crown
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -41,12 +41,48 @@ export default function Settings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [formData, setFormData] = useState({
     displayName: user?.user_metadata?.full_name || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+
+  const handleAdminAccess = async () => {
+    if (adminCode === 'Admin69') {
+      try {
+        // Add admin role to user
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: user?.id, role: 'admin' });
+
+        if (error && !error.message.includes('duplicate')) {
+          throw error;
+        }
+
+        setShowAdminPanel(true);
+        toast({
+          title: "Accès administrateur accordé",
+          description: "Vous avez maintenant les privilèges administrateur.",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Erreur",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Code incorrect",
+        description: "Le code administrateur est incorrect.",
+        variant: "destructive",
+      });
+    }
+    setAdminCode('');
+  };
 
   const handleProfileUpdate = async () => {
     if (!user) return;
@@ -126,11 +162,9 @@ export default function Settings() {
   const handleDataExport = async () => {
     setLoading(true);
     try {
-      // Simuler l'export des données
       const userData = {
         profile: user?.user_metadata,
         exportDate: new Date().toISOString(),
-        // Ici on ajouterait les vraies données de l'utilisateur
       };
       
       const blob = new Blob([JSON.stringify(userData, null, 2)], { type: 'application/json' });
@@ -175,6 +209,7 @@ export default function Settings() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <SettingsIcon className="h-8 w-8" />
             Paramètres
+            {(isAdmin || showAdminPanel) && <Crown className="h-5 w-5 text-yellow-500" />}
           </h1>
           <p className="text-muted-foreground">
             Gérez vos préférences et paramètres de sécurité
@@ -183,6 +218,56 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6">
+        {!isAdmin && !showAdminPanel && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5" />
+                Accès Administrateur
+              </CardTitle>
+              <CardDescription>
+                Entrez le code administrateur pour accéder aux fonctionnalités avancées
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  placeholder="Code administrateur"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAdminAccess()}
+                />
+                <Button onClick={handleAdminAccess}>
+                  Valider
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(isAdmin || showAdminPanel) && (
+          <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <Crown className="h-5 w-5" />
+                Panneau Administrateur
+              </CardTitle>
+              <CardDescription className="text-yellow-700 dark:text-yellow-300">
+                Vous avez accès à toutes les fonctionnalités administrateur
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="secondary" className="bg-yellow-200 text-yellow-800">
+                Administrateur Actif
+              </Badge>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                Toutes les données et fonctionnalités de l'application sont accessibles.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+        
         {/* Profil utilisateur */}
         <Card>
           <CardHeader>

@@ -1,10 +1,9 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimerIcon } from "@/components/icons/DeepFlowIcons";
 import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
 import { 
   Select, 
   SelectContent, 
@@ -15,88 +14,136 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Clock, RefreshCcw, Play, Pause, PlayCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const Focus = () => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [mode, setMode] = useState<"focus" | "break">("focus");
-  const [secondsLeft, setSecondsLeft] = useState(25 * 60); // 25 minutes in seconds
-  const [focusDuration, setFocusDuration] = useState(25); // Focus duration in minutes
-  const [breakDuration, setBreakDuration] = useState(5); // Break duration in minutes
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [focusDuration, setFocusDuration] = useState(25);
+  const [breakDuration, setBreakDuration] = useState(5);
   const [progress, setProgress] = useState(0);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [totalSessionTime, setTotalSessionTime] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { sendNotification, requestPermission } = useNotifications();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Update secondsLeft when focus or break duration changes
+  // Load saved session state from localStorage
   useEffect(() => {
-    if (!isActive) {
-      setSecondsLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60);
+    const savedState = localStorage.getItem('deepflow-focus-session');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        const now = new Date().getTime();
+        const timePassed = Math.floor((now - state.lastUpdate) / 1000);
+        
+        if (state.isActive && !state.isPaused && state.sessionStartTime) {
+          setIsActive(true);
+          setIsPaused(false);
+          setMode(state.mode);
+          setFocusDuration(state.focusDuration);
+          setBreakDuration(state.breakDuration);
+          setSessionStartTime(new Date(state.sessionStartTime));
+          setTotalSessionTime(state.totalSessionTime + timePassed);
+          
+          const newSecondsLeft = Math.max(0, state.secondsLeft - timePassed);
+          setSecondsLeft(newSecondsLeft);
+          
+          if (newSecondsLeft === 0) {
+            handleSessionComplete();
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved session:', error);
+        localStorage.removeItem('deepflow-focus-session');
+      }
     }
-  }, [focusDuration, breakDuration, mode, isActive]);
+  }, []);
+
+  // Save session state to localStorage
+  const saveSessionState = useCallback(() => {
+    if (isActive && sessionStartTime) {
+      const state = {
+        isActive,
+        isPaused,
+        mode,
+        secondsLeft,
+        focusDuration,
+        breakDuration,
+        sessionStartTime: sessionStartTime.toISOString(),
+        totalSessionTime,
+        lastUpdate: new Date().getTime()
+      };
+      localStorage.setItem('deepflow-focus-session', JSON.stringify(state));
+    }
+  }, [isActive, isPaused, mode, secondsLeft, focusDuration, breakDuration, sessionStartTime, totalSessionTime]);
+
+  // Save state when component updates
+  useEffect(() => {
+    saveSessionState();
+  }, [saveSessionState]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    requestPermission();
+  }, []);
+
+  const handleSessionComplete = useCallback(() => {
+    if (mode === "focus" && sessionStartTime) {
+      const actualDuration = Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000);
+      saveFocusSession(actualDuration);
+      setSessionsCompleted(prev => prev + 1);
+      
+      sendNotification('Temps de concentration terminé!', {
+        body: "C'est l'heure de faire une pause!",
+        tag: 'focus-complete'
+      });
+    } else if (mode === "break") {
+      sendNotification('Pause terminée!', {
+        body: "Prêt à reprendre le travail?",
+        tag: 'break-complete'
+      });
+    }
+    
+    // Switch modes
+    const nextMode = mode === "focus" ? "break" : "focus";
+    const nextTime = nextMode === "focus" ? focusDuration * 60 : breakDuration * 60;
+    setMode(nextMode);
+    setSecondsLeft(nextTime);
+    setIsPaused(true);
+    setSessionStartTime(null);
+    setTotalSessionTime(0);
+    localStorage.removeItem('deepflow-focus-session');
+  }, [mode, sessionStartTime, focusDuration, breakDuration, sendNotification]);
 
   // Timer effect
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-
     if (isActive && !isPaused) {
-      interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         setSecondsLeft((seconds) => {
           if (seconds <= 1) {
-            clearInterval(interval!);
-            
-            // Play sound when timer completes
-            try {
-              const audio = new Audio(mode === "focus" 
-                ? "/sounds/focus-complete.mp3" 
-                : "/sounds/break-complete.mp3");
-              audio.volume = 0.7;
-              audio.play().catch(err => console.log('Audio play prevented:', err));
-            } catch (error) {
-              console.log('Audio error:', error);
-            }
-            
-            // Show notification when timer ends
-            if (Notification.permission === "granted") {
-              new Notification(
-                mode === "focus" ? "Temps de concentration terminé!" : "Pause terminée!",
-                {
-                  body: mode === "focus" 
-                    ? "C'est l'heure de faire une pause!" 
-                    : "Prêt à reprendre le travail?",
-                  icon: "/icons/icon-192x192.png"
-                }
-              );
-            }
-            
-            // Save focus session when completed
-            if (mode === "focus" && sessionStartTime) {
-              saveFocusSession();
-              setSessionsCompleted(prev => prev + 1);
-            }
-            
-            // Switch modes
-            const nextMode = mode === "focus" ? "break" : "focus";
-            const nextTime = nextMode === "focus" ? focusDuration * 60 : breakDuration * 60;
-            setMode(nextMode);
-            setIsPaused(true);
-            setSessionStartTime(null);
-            return nextTime;
+            handleSessionComplete();
+            return 0;
           }
           return seconds - 1;
         });
+        setTotalSessionTime(prev => prev + 1);
       }, 1000);
-    } else if (interval) {
-      clearInterval(interval);
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
-  }, [isActive, isPaused, mode, focusDuration, breakDuration]);
+  }, [isActive, isPaused, handleSessionComplete]);
 
   // Calculate progress
   useEffect(() => {
@@ -104,19 +151,19 @@ const Focus = () => {
     setProgress(((totalSeconds - secondsLeft) / totalSeconds) * 100);
   }, [secondsLeft, mode, focusDuration, breakDuration]);
 
-  // Save focus session to database
-  const saveFocusSession = useCallback(async () => {
+  // Save focus session to database (even if incomplete)
+  const saveFocusSession = useCallback(async (duration?: number) => {
     if (!user || !sessionStartTime) return;
     
     try {
-      const duration = Math.round((new Date().getTime() - sessionStartTime.getTime()) / 1000);
+      const actualDuration = duration || totalSessionTime;
       
       const { error } = await supabase
         .from('focus_sessions')
         .insert({
           user_id: user.id,
-          duration: duration,
-          title: `Session de focus de ${focusDuration} minutes`,
+          duration: actualDuration,
+          title: `Session de focus de ${Math.floor(actualDuration / 60)} minutes`,
           completed_at: new Date().toISOString()
         });
         
@@ -124,7 +171,7 @@ const Focus = () => {
       
       toast({
         title: "Session enregistrée",
-        description: `Session de ${formatTime(duration)} sauvegardée avec succès.`,
+        description: `Session de ${formatTime(actualDuration)} sauvegardée avec succès.`,
       });
     } catch (error) {
       console.error("Erreur lors de l'enregistrement de la session:", error);
@@ -134,35 +181,53 @@ const Focus = () => {
         variant: "destructive"
       });
     }
-  }, [user, sessionStartTime, focusDuration, toast]);
+  }, [user, sessionStartTime, totalSessionTime, toast]);
 
-  // Request notification permission
+  // Update secondsLeft when focus or break duration changes
   useEffect(() => {
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission();
+    if (!isActive) {
+      setSecondsLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60);
     }
-  }, []);
+  }, [focusDuration, breakDuration, mode, isActive]);
 
   const startTimer = () => {
     if (!isActive || isPaused) {
       if (!sessionStartTime && mode === "focus") {
         setSessionStartTime(new Date());
+        setTotalSessionTime(0);
       }
       setIsActive(true);
       setIsPaused(false);
+      
+      // Send notification when starting
+      sendNotification(`${mode === "focus" ? "Session de concentration" : "Pause"} démarrée`, {
+        body: `${formatTime(secondsLeft)} restantes`,
+        tag: 'session-start'
+      });
     }
   };
 
   const pauseTimer = () => {
     setIsPaused(true);
+    // Save session when paused (even if incomplete)
+    if (mode === "focus" && sessionStartTime && totalSessionTime > 0) {
+      saveFocusSession();
+    }
   };
 
   const resetTimer = () => {
+    // Save session before reset (even if incomplete)
+    if (mode === "focus" && sessionStartTime && totalSessionTime > 0) {
+      saveFocusSession();
+    }
+    
     setIsActive(false);
     setIsPaused(true);
     setMode("focus");
     setSecondsLeft(focusDuration * 60);
     setSessionStartTime(null);
+    setTotalSessionTime(0);
+    localStorage.removeItem('deepflow-focus-session');
   };
 
   const formatTime = (timeInSeconds: number) => {
@@ -286,6 +351,14 @@ const Focus = () => {
             <div className="text-center pt-2">
               <p className="text-sm text-muted-foreground">
                 Sessions complétées aujourd'hui: <span className="font-bold text-primary">{sessionsCompleted}</span>
+              </p>
+            </div>
+          )}
+
+          {isActive && sessionStartTime && (
+            <div className="text-center pt-2">
+              <p className="text-xs text-muted-foreground">
+                Temps total: <span className="font-bold">{formatTime(totalSessionTime)}</span>
               </p>
             </div>
           )}
