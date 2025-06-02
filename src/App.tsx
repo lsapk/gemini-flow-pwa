@@ -37,7 +37,6 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
     );
   }
   
@@ -63,60 +62,60 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Dashboard />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Dashboard />} />
+                </Route>
                 <Route path="/tasks" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Tasks />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Tasks />} />
+                </Route>
                 <Route path="/habits" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Habits />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Habits />} />
+                </Route>
                 <Route path="/focus" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Focus />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Focus />} />
+                </Route>
                 <Route path="/journal" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Journal />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Journal />} />
+                </Route>
                 <Route path="/goals" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Goals />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Goals />} />
+                </Route>
                 <Route path="/badges" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Badges />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Badges />} />
+                </Route>
                 <Route path="/analysis" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Analysis />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Analysis />} />
+                </Route>
                 <Route path="/ai-assistant" element={
                   <ProtectedRoute>
                     <AIAssistant />
@@ -124,25 +123,25 @@ function App() {
                 } />
                 <Route path="/reflection" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Reflection />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Reflection />} />
+                </Route>
                 <Route path="/good-actions" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <GoodActions />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<GoodActions />} />
+                </Route>
                 <Route path="/settings" element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <Settings />
-                    </AppLayout>
+                    <AppLayout />
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route index element={<Settings />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>
