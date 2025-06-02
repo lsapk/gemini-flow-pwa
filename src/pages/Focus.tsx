@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,19 +150,20 @@ const Focus = () => {
     setProgress(((totalSeconds - secondsLeft) / totalSeconds) * 100);
   }, [secondsLeft, mode, focusDuration, breakDuration]);
 
-  // Save focus session to database (even if incomplete)
+  // Save focus session to database (even if incomplete) - with correct duration calculation
   const saveFocusSession = useCallback(async (duration?: number) => {
     if (!user || !sessionStartTime) return;
     
     try {
+      // Calculate the actual duration in seconds, not milliseconds
       const actualDuration = duration || totalSessionTime;
       
       const { error } = await supabase
         .from('focus_sessions')
         .insert({
           user_id: user.id,
-          duration: actualDuration,
-          title: `Session de focus de ${Math.floor(actualDuration / 60)} minutes`,
+          duration: actualDuration, // This is already in seconds
+          title: `Session de focus de ${Math.floor(actualDuration / 60)}min ${actualDuration % 60}s`,
           completed_at: new Date().toISOString()
         });
         
