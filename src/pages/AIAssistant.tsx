@@ -1,99 +1,78 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Bot, Send, User, ArrowLeft, Lightbulb, Target, Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Markdown } from "@/components/Markdown";
+import { Send, Bot, User, Sparkles } from "lucide-react";
+import Markdown from "@/components/Markdown";
 
-interface Message {
-  id: string;
+interface ChatMessage {
+  role: "user" | "assistant";
   content: string;
-  isUser: boolean;
   timestamp: Date;
 }
 
-const quickPrompts = [
-  {
-    icon: Target,
-    title: "Fixer des objectifs",
-    prompt: "Comment puis-je fixer des objectifs réalisables et les atteindre ?"
-  },
-  {
-    icon: Lightbulb,
-    title: "Améliorer ma productivité",
-    prompt: "Quelles sont les meilleures techniques pour être plus productif au quotidien ?"
-  },
-  {
-    icon: Heart,
-    title: "Créer de bonnes habitudes",
-    prompt: "Comment développer des habitudes durables et positives ?"
-  }
-];
-
 export default function AIAssistant() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async (messageContent?: string) => {
-    const content = messageContent || input.trim();
-    if (!content || !user) return;
+  const sendMessage = async () => {
+    if (!currentMessage.trim() || !user || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isUser: true,
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: currentMessage.trim(),
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput("");
+    setCurrentMessage("");
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('gemini-chat', {
-        body: {
-          message: content,
-          userId: user.id
+      const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
+        body: { 
+          message: userMessage.content, 
+          chatHistory: messages,
+          userId: user.id 
         }
       });
 
       if (error) throw error;
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.response || "Désolé, je n'ai pas pu traiter votre demande.",
-        isUser: false,
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: data.response,
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, aiMessage]);
-
-    } catch (error: any) {
-      console.error('Error:', error);
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du message:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de communiquer avec l'assistant IA.",
+        description: "Impossible d'envoyer le message. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -108,153 +87,146 @@ export default function AIAssistant() {
     }
   };
 
-  const clearChat = () => {
-    setMessages([]);
-  };
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-[500px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <Bot className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Assistant IA</h3>
+            <p className="text-muted-foreground">
+              Veuillez vous connecter pour accéder à l'assistant IA.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Bot className="h-8 w-8 text-primary" />
-            Assistant IA DeepFlow
-          </h1>
-          <p className="text-muted-foreground">
-            Votre coach personnel pour la productivité et le développement
-          </p>
-        </div>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Sparkles className="h-8 w-8" />
+          Assistant IA
+        </h1>
+        <p className="text-muted-foreground">
+          Votre coach personnel pour la productivité et le bien-être
+        </p>
       </div>
 
-      <Card className="h-[calc(100vh-200px)] flex flex-col">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Conversation</CardTitle>
-            {messages.length > 0 && (
-              <Button variant="outline" size="sm" onClick={clearChat}>
-                Nouveau chat
-              </Button>
-            )}
-          </div>
+      <Card className="h-[600px] flex flex-col">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            DeepFlow Assistant
+          </CardTitle>
         </CardHeader>
-
-        <CardContent className="flex-1 flex flex-col space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-              <div className="text-center space-y-2">
-                <Bot className="h-16 w-16 text-primary mx-auto" />
-                <h3 className="text-xl font-semibold">Bonjour ! Comment puis-je vous aider ?</h3>
-                <p className="text-muted-foreground max-w-md">
-                  Je suis spécialisé dans la productivité, les habitudes, les objectifs et le développement personnel.
-                </p>
-              </div>
-
-              <div className="grid gap-3 w-full max-w-md">
-                <p className="text-sm font-medium text-center">Suggestions rapides :</p>
-                {quickPrompts.map((prompt, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="h-auto p-3 text-left justify-start"
-                    onClick={() => sendMessage(prompt.prompt)}
-                  >
-                    <prompt.icon className="h-4 w-4 mr-2 shrink-0" />
-                    <span className="text-sm">{prompt.title}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
+        
+        <CardContent className="flex-1 flex flex-col gap-4 p-4">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4">
+            <div className="space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">Bonjour ! 👋</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Je suis DeepFlow, votre assistant IA personnel. Je peux vous aider avec :
+                  </p>
+                  <div className="text-left max-w-md mx-auto space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span>📝</span>
+                      <span>Créer et gérer vos tâches</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>🎯</span>
+                      <span>Suivre vos habitudes et objectifs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>📖</span>
+                      <span>Rédiger des entrées de journal</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>💡</span>
+                      <span>Conseils personnalisés de productivité</span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-4 text-sm">
+                    Posez-moi une question ou demandez-moi de créer quelque chose !
+                  </p>
+                </div>
+              )}
+              
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {message.role === "assistant" && (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Bot className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  )}
+                  
                   <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.isUser ? 'flex-row-reverse' : 'flex-row'}`}
+                    className={`max-w-[80%] rounded-lg p-3 ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground ml-8"
+                        : "bg-muted"
+                    }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                    }`}>
-                      {message.isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                    </div>
-                    <div className={`flex-1 max-w-[80%] ${message.isUser ? 'text-right' : 'text-left'}`}>
-                      <div className={`inline-block p-3 rounded-lg ${
-                        message.isUser 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted'
-                      }`}>
-                        {message.isUser ? (
-                          <p className="text-sm">{message.content}</p>
-                        ) : (
-                          <Markdown content={message.content} />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {message.timestamp.toLocaleTimeString('fr-FR', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </p>
+                    {message.role === "assistant" ? (
+                      <Markdown content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    <div className="text-xs opacity-70 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
                     </div>
                   </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <Bot className="h-4 w-4" />
+                  
+                  {message.role === "user" && (
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 max-w-[80%]">
-                      <div className="inline-block p-3 rounded-lg bg-muted">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                      </div>
+                  )}
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="flex gap-3 justify-start">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
                     </div>
                   </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-          )}
-
-          <Separator />
-
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
           <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+            <Textarea
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Posez votre question sur la productivité, les habitudes..."
+              placeholder="Tapez votre message... (Entrée pour envoyer, Shift+Entrée pour nouvelle ligne)"
+              className="flex-1 min-h-[60px] max-h-32 resize-none"
               disabled={isLoading}
-              className="flex-1"
             />
-            <Button 
-              onClick={() => sendMessage()} 
-              disabled={!input.trim() || isLoading}
-              size="icon"
+            <Button
+              onClick={sendMessage}
+              disabled={!currentMessage.trim() || isLoading}
+              size="lg"
+              className="px-4"
             >
               <Send className="h-4 w-4" />
             </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-xs">
-              Productivité
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              Habitudes
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              Objectifs
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              Développement personnel
-            </Badge>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { generateUniqueId } from "@/lib/utils";
 
@@ -814,7 +813,8 @@ export const sendChatMessage = async (message: string, chatHistory: any[] = [], 
       };
     }
     
-    const { data, error } = await supabase.functions.invoke('gemini-chat', {
+    // Use the enhanced chat function that has access to user data
+    const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
       body: { message, chatHistory, userId }
     });
     
