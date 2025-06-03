@@ -174,6 +174,8 @@ export default function GoodActions() {
     
     setIsLoading(true);
     try {
+      console.log('Saving with isPublic:', isPublic); // Debug log
+      
       const { error } = await supabase
         .from('good_actions')
         .insert({
@@ -181,7 +183,7 @@ export default function GoodActions() {
           title: title.trim(),
           description: description.trim() || null,
           category,
-          is_public: isPublic
+          is_public: isPublic // Ensure this is correctly passed
         });
 
       if (error) throw error;
@@ -197,9 +199,8 @@ export default function GoodActions() {
       setIsPublic(true);
       setShowForm(false);
       loadMyGoodActions();
-      if (isPublic) {
-        loadPublicGoodActions();
-      }
+      // Reload public actions if it was public
+      loadPublicGoodActions();
       
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);

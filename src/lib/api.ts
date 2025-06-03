@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-const ADMIN_CODE = "DEEPFLOW_ADMIN_2024";
+const ADMIN_CODE = "Admin69";
 
 // Store admin mode in session storage for persistence
 const ADMIN_SESSION_KEY = "deepflow_admin_mode";

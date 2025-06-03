@@ -1,223 +1,105 @@
-
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format, isPast, isToday, parseISO, differenceInDays } from "date-fns";
-import { fr } from "date-fns/locale";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Flag, PlusCircle, Trash2, Calendar as CalendarIcon2, LineChart, Target } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getGoals, createGoal, updateGoal, deleteGoal } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-
-// Catégories d'objectifs
-const categoryOptions = [
-  { value: "career", label: "Carrière", icon: "💼" },
-  { value: "education", label: "Éducation", icon: "🎓" },
-  { value: "finance", label: "Finances", icon: "💰" },
-  { value: "health", label: "Santé", icon: "🏥" },
-  { value: "personal", label: "Personnel", icon: "🌱" },
-  { value: "other", label: "Autre", icon: "🔍" }
-];
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Check, Clock, Edit, Plus, Target, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { getGoals, createGoal, updateGoal, deleteGoal } from "@/lib/api";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import CreateModal from "@/components/CreateModal";
 
 interface Goal {
   id: string;
   title: string;
   description?: string;
-  category?: string;
-  target_date?: string;
-  completed: boolean;
-  progress: number;
-  user_id: string;
-  created_at: string;
-}
-
-interface GoalFormData {
-  title: string;
-  description: string;
   category: string;
-  target_date: Date | undefined;
+  target_date?: string;
   progress: number;
+  completed: boolean;
+  created_at: string;
+  updated_at?: string;
+  user_id: string;
 }
 
-const GoalsEmptyState = ({ onCreate }: { onCreate: () => void }) => (
-  <div className="text-center py-12">
-    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-      <Target className="h-8 w-8 text-primary" />
-    </div>
-    <h3 className="text-lg font-medium mb-2">Aucun objectif</h3>
-    <p className="text-muted-foreground mb-4">
-      Commencez par créer votre premier objectif pour suivre vos aspirations.
-    </p>
-    <Button onClick={onCreate}>
-      <PlusCircle className="mr-2 h-4 w-4" />
-      Nouvel objectif
-    </Button>
-  </div>
-);
-
-const CategoryBadge = ({ category }: { category?: string }) => {
-  if (!category) return null;
-  
-  const categoryOption = categoryOptions.find((option) => option.value === category);
-  
-  return (
-    <Badge variant="outline" className="bg-primary/5 text-primary">
-      {categoryOption?.icon} {categoryOption?.label || ""}
-    </Badge>
-  );
-};
-
-const Goals = () => {
+export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-  const [formData, setFormData] = useState<GoalFormData>({
-    title: "",
-    description: "",
-    category: "",
-    target_date: undefined,
-    progress: 0,
-  });
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedGoal, setEditedGoal] = useState<Partial<Goal>>({});
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [filter, setFilter] = useState<string>("all");
   
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchGoals();
+    if (user) {
+      fetchGoals();
+    }
   }, [user]);
 
   const fetchGoals = async () => {
-    if (!user) return;
-    
     try {
       setLoading(true);
       const { data, error } = await getGoals();
       
-      if (error) throw new Error(error.message);
+      if (error) throw error;
       
       setGoals(data || []);
     } catch (error) {
+      console.error("Error fetching goals:", error);
       toast({
         title: "Erreur",
         description: "Impossible de charger vos objectifs.",
         variant: "destructive",
       });
-      console.error("Error fetching goals:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateGoal = async () => {
-    if (!user) return;
-    
-    if (!formData.title) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez saisir un titre pour votre objectif.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const newGoal = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category || null,
-        target_date: formData.target_date ? formData.target_date.toISOString() : null,
-        completed: false,
-        progress: formData.progress || 0,
-        user_id: user.id,
-      };
-      
-      const { data, error } = await createGoal(newGoal);
-      
-      if (error) throw new Error(error.message);
-      
-      setGoals([...(data ? [data] : []), ...goals]);
-      
-      resetForm();
-      setOpenDialog(false);
-      
-      toast({
-        title: "Objectif créé",
-        description: "Votre nouvel objectif a été créé avec succès.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer l'objectif.",
-        variant: "destructive",
-      });
-      console.error("Error creating goal:", error);
-    }
-  };
-
   const handleUpdateGoal = async () => {
-    if (!user || !editingGoal) return;
-    
-    if (!formData.title) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez saisir un titre pour votre objectif.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!selectedGoal) return;
     
     try {
-      // Déterminer si l'objectif est complété en fonction du progrès
-      const isCompleted = formData.progress >= 100;
-
-      const updatedGoal = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category || null,
-        target_date: formData.target_date ? formData.target_date.toISOString() : null,
-        progress: formData.progress,
-        completed: isCompleted,
-      };
+      const { data, error } = await updateGoal(selectedGoal.id, {
+        ...editedGoal,
+        target_date: selectedDate ? selectedDate.toISOString() : undefined,
+      });
       
-      const { data, error } = await updateGoal(editingGoal.id, updatedGoal);
+      if (error) throw error;
       
-      if (error) throw new Error(error.message);
-      
-      if (data) {
-        setGoals(goals.map((goal) => (goal.id === editingGoal.id ? data : goal)));
-      }
-      
-      resetForm();
-      setOpenDialog(false);
+      setGoals(goals.map(goal => goal.id === selectedGoal.id ? { ...goal, ...editedGoal, target_date: selectedDate?.toISOString() } : goal));
       
       toast({
-        title: isCompleted ? "Objectif atteint ! 🎉" : "Objectif mis à jour",
-        description: isCompleted 
-          ? "Félicitations ! Vous avez atteint votre objectif."
-          : "Votre objectif a été mis à jour avec succès.",
+        title: "Objectif mis à jour",
+        description: "Votre objectif a été mis à jour avec succès.",
       });
+      
+      setIsEditing(false);
     } catch (error) {
+      console.error("Error updating goal:", error);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour l'objectif.",
         variant: "destructive",
       });
-      console.error("Error updating goal:", error);
     }
   };
 
@@ -225,429 +107,450 @@ const Goals = () => {
     try {
       const { error } = await deleteGoal(id);
       
-      if (error) throw new Error(error.message);
+      if (error) throw error;
       
-      setGoals(goals.filter((goal) => goal.id !== id));
+      setGoals(goals.filter(goal => goal.id !== id));
       
       toast({
         title: "Objectif supprimé",
         description: "Votre objectif a été supprimé avec succès.",
       });
     } catch (error) {
+      console.error("Error deleting goal:", error);
       toast({
         title: "Erreur",
         description: "Impossible de supprimer l'objectif.",
         variant: "destructive",
       });
-      console.error("Error deleting goal:", error);
     }
   };
-  
-  const updateGoalProgress = async (goal: Goal, newProgress: number) => {
-    try {
-      // Déterminer si l'objectif est complété avec le nouveau progrès
-      const isCompleted = newProgress >= 100;
 
+  const handleToggleComplete = async (goal: Goal) => {
+    try {
       const { data, error } = await updateGoal(goal.id, {
-        progress: newProgress,
-        completed: isCompleted,
+        completed: !goal.completed,
+        progress: !goal.completed ? 100 : goal.progress,
       });
       
-      if (error) throw new Error(error.message);
+      if (error) throw error;
       
-      if (data) {
-        setGoals(goals.map((g) => (g.id === goal.id ? data : g)));
-        
-        if (isCompleted && !goal.completed) {
-          toast({
-            title: "Objectif atteint ! 🎉",
-            description: "Félicitations ! Vous avez atteint votre objectif.",
-          });
-        }
-      }
+      setGoals(goals.map(g => g.id === goal.id ? { ...g, completed: !g.completed, progress: !g.completed ? 100 : g.progress } : g));
+      
+      toast({
+        title: goal.completed ? "Objectif réactivé" : "Objectif complété",
+        description: goal.completed ? "Votre objectif a été marqué comme non complété." : "Félicitations pour avoir atteint votre objectif !",
+      });
     } catch (error) {
+      console.error("Error toggling goal completion:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour l'état de l'objectif.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleProgressChange = async (id: string, progress: number) => {
+    try {
+      const { data, error } = await updateGoal(id, {
+        progress,
+        completed: progress === 100,
+      });
+      
+      if (error) throw error;
+      
+      setGoals(goals.map(goal => goal.id === id ? { ...goal, progress, completed: progress === 100 } : goal));
+    } catch (error) {
+      console.error("Error updating goal progress:", error);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour la progression.",
         variant: "destructive",
       });
-      console.error("Error updating goal progress:", error);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      category: "",
-      target_date: undefined,
-      progress: 0,
-    });
-    setEditingGoal(null);
-  };
-
-  const openEditDialog = (goal: Goal) => {
-    setEditingGoal(goal);
-    setFormData({
-      title: goal.title,
-      description: goal.description || "",
-      category: goal.category || "",
-      target_date: goal.target_date ? parseISO(goal.target_date) : undefined,
-      progress: goal.progress || 0,
-    });
-    setOpenDialog(true);
-  };
-
-  // Filtrer les objectifs en fonction de l'onglet actif
-  const filteredGoals = goals.filter((goal) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "active") return !goal.completed;
-    if (activeTab === "completed") return goal.completed;
-    if (activeTab === "dueThisMonth") {
-      if (!goal.target_date) return false;
-      const targetDate = new Date(goal.target_date);
-      const today = new Date();
-      return targetDate.getMonth() === today.getMonth() && 
-             targetDate.getFullYear() === today.getFullYear() &&
-             !goal.completed;
-    }
+  const filteredGoals = goals.filter(goal => {
+    if (filter === "all") return true;
+    if (filter === "completed") return goal.completed;
+    if (filter === "in-progress") return !goal.completed;
     return true;
   });
-  
-  // Compter les objectifs par statut
-  const activeCount = goals.filter((goal) => !goal.completed).length;
-  const completedCount = goals.filter((goal) => goal.completed).length;
-  
-  // Calculer les objectifs dus ce mois-ci
-  const today = new Date();
-  const dueThisMonthCount = goals.filter(goal => {
-    if (!goal.target_date || goal.completed) return false;
-    const targetDate = new Date(goal.target_date);
-    return targetDate.getMonth() === today.getMonth() && 
-           targetDate.getFullYear() === today.getFullYear();
-  }).length;
 
-  const getTimeRemaining = (targetDate: string) => {
-    const dueDate = parseISO(targetDate);
-    const today = new Date();
-    const daysRemaining = differenceInDays(dueDate, today);
-    
-    if (daysRemaining < 0) {
-      return { text: "En retard", variant: "destructive" };
-    } else if (daysRemaining === 0) {
-      return { text: "Aujourd'hui", variant: "default" };
-    } else if (daysRemaining <= 7) {
-      return { text: `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`, variant: "warning" };
-    } else {
-      return { text: `${daysRemaining} jours`, variant: "outline" };
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "personal":
+        return "bg-blue-100 text-blue-800";
+      case "professional":
+        return "bg-purple-100 text-purple-800";
+      case "health":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "personal":
+        return "Personnel";
+      case "professional":
+        return "Professionnel";
+      case "health":
+        return "Santé";
+      default:
+        return "Autre";
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Target className="h-8 w-8" />
-            Suivi d'objectifs
-          </h1>
-          <p className="text-muted-foreground">
-            Définissez et suivez vos objectifs à court et long terme.
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Objectifs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Définissez et atteignez vos objectifs à long terme
           </p>
         </div>
         
-        <Dialog open={openDialog} onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nouvel objectif
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingGoal ? "Modifier l'objectif" : "Nouvel objectif"}</DialogTitle>
-              <DialogDescription>
-                {editingGoal
-                  ? "Modifiez les détails de votre objectif."
-                  : "Créez un nouvel objectif pour suivre votre progression."}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Perdre 5kg, Apprendre l'espagnol..."
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Détails sur votre objectif..."
-                  rows={2}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Catégorie</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Sélectionner..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span className="flex items-center">
-                            {option.icon} <span className="ml-2">{option.label}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Date cible</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.target_date ? (
-                          format(formData.target_date, "P", { locale: fr })
-                        ) : (
-                          <span>Choisir une date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.target_date}
-                        onSelect={(date) => setFormData({ ...formData, target_date: date })}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              
-              {editingGoal && (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="progress">Progression</Label>
-                    <span className="text-sm font-medium">{formData.progress}%</span>
-                  </div>
-                  <Slider
-                    id="progress"
-                    value={[formData.progress]}
-                    min={0}
-                    max={100}
-                    step={5}
-                    onValueChange={(value) => setFormData({ ...formData, progress: value[0] })}
-                  />
-                </div>
-              )}
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                resetForm();
-                setOpenDialog(false);
-              }}>
-                Annuler
-              </Button>
-              <Button onClick={editingGoal ? handleUpdateGoal : handleCreateGoal}>
-                {editingGoal ? "Mettre à jour" : "Créer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CreateModal
+          type="goal"
+          onSuccess={fetchGoals}
+        />
       </div>
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4 grid grid-cols-4 max-w-lg mx-auto">
-          <TabsTrigger value="all">
-            Tous ({goals.length})
-          </TabsTrigger>
-          <TabsTrigger value="active">
-            En cours ({activeCount})
-          </TabsTrigger>
-          <TabsTrigger value="dueThisMonth">
-            Ce mois-ci ({dueThisMonthCount})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Atteints ({completedCount})
-          </TabsTrigger>
-        </TabsList>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {activeTab === "all" ? "Tous les objectifs" :
-               activeTab === "active" ? "Objectifs en cours" :
-               activeTab === "dueThisMonth" ? "Objectifs de ce mois-ci" :
-               "Objectifs atteints"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  </div>
-                ))}
+      {/* Stats Cards - Mobile Optimized */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-indigo-600">Total</p>
+                <p className="text-xl sm:text-2xl font-bold text-indigo-900">{goals.length}</p>
               </div>
-            ) : filteredGoals.length > 0 ? (
-              <div className="space-y-3">
-                {filteredGoals.map((goal) => {
-                  // Obtenir l'info sur le temps restant si une date cible est définie
-                  const timeRemaining = goal.target_date ? getTimeRemaining(goal.target_date) : null;
-                  
-                  return (
-                    <div 
-                      key={goal.id} 
-                      className={`p-4 border rounded-lg ${
-                        goal.completed ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900" 
-                        : "border-muted bg-card"
-                      }`}
-                    >
-                      <div className="flex flex-col space-y-4">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <h3 className="font-medium text-lg flex items-center gap-2">
-                              {goal.title}
-                              {goal.completed && (
-                                <Badge variant="default" className="bg-green-500/20 text-green-700 dark:text-green-300 border-none">
-                                  Objectif atteint
-                                </Badge>
-                              )}
-                            </h3>
-                            
-                            {goal.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {goal.description}
-                              </p>
-                            )}
-                            
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                              {goal.category && <CategoryBadge category={goal.category} />}
-                              
-                              {goal.target_date && (
-                                <Badge 
-                                  variant={goal.completed ? "outline" : (timeRemaining?.variant as "default" | "destructive" | "outline")}
-                                  className="flex items-center gap-1"
-                                >
-                                  <CalendarIcon2 className="h-3 w-3" />
-                                  {format(parseISO(goal.target_date), "d MMMM yyyy", { locale: fr })}
-                                  {!goal.completed && timeRemaining && (
-                                    <span className="ml-1">({timeRemaining.text})</span>
-                                  )}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(goal)}
-                            >
-                              <LineChart className="h-4 w-4" />
-                            </Button>
-                            
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Cette action ne peut pas être annulée. Cela supprimera définitivement cet objectif et toute votre progression.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteGoal(goal.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Supprimer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+              <div className="h-8 w-8 sm:h-12 sm:w-12 bg-indigo-200 rounded-full flex items-center justify-center">
+                <span className="text-lg sm:text-2xl">🎯</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-green-600">Atteints</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-900">
+                  {goals.filter(g => g.completed).length}
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-12 sm:w-12 bg-green-200 rounded-full flex items-center justify-center">
+                <span className="text-lg sm:text-2xl">🏆</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-orange-600">En cours</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-900">
+                  {goals.filter(g => !g.completed).length}
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-12 sm:w-12 bg-orange-200 rounded-full flex items-center justify-center">
+                <span className="text-lg sm:text-2xl">📈</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-3 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm font-medium text-purple-600">Progression</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-900">
+                  {goals.length > 0 ? Math.round((goals.reduce((acc, g) => acc + (g.progress || 0), 0) / goals.length)) : 0}%
+                </p>
+              </div>
+              <div className="h-8 w-8 sm:h-12 sm:w-12 bg-purple-200 rounded-full flex items-center justify-center">
+                <span className="text-lg sm:text-2xl">📊</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle>Vos objectifs</CardTitle>
+            <div className="flex gap-2">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrer par statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les objectifs</SelectItem>
+                  <SelectItem value="in-progress">En cours</SelectItem>
+                  <SelectItem value="completed">Complétés</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-4 p-4 rounded-md border">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredGoals.length > 0 ? (
+            <div className="space-y-4">
+              {filteredGoals.map((goal) => (
+                <div
+                  key={goal.id}
+                  className={cn(
+                    "border rounded-lg p-4 transition-all",
+                    goal.completed ? "bg-green-50 border-green-200" : "bg-white"
+                  )}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={goal.completed}
+                            onCheckedChange={() => handleToggleComplete(goal)}
+                            className={goal.completed ? "bg-green-600 text-white border-green-600" : ""}
+                          />
+                          <h3 className={cn(
+                            "font-medium",
+                            goal.completed && "line-through text-muted-foreground"
+                          )}>
+                            {goal.title}
+                          </h3>
+                        </div>
+                        <Badge className={getCategoryColor(goal.category)}>
+                          {getCategoryLabel(goal.category)}
+                        </Badge>
+                      </div>
+                      
+                      {goal.description && (
+                        <p className="text-sm text-muted-foreground ml-6">
+                          {goal.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 ml-6">
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Target className="h-3 w-3 mr-1" />
+                          <span>Progression: {goal.progress}%</span>
                         </div>
                         
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">
-                              Progression
-                            </span>
-                            <span className="font-medium">
-                              {goal.progress}%
-                            </span>
-                          </div>
-                          <Progress value={goal.progress} className="h-2" />
-                        </div>
-                        
-                        {!goal.completed && (
-                          <div className="pt-2">
-                            <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                              {[25, 50, 75, 100].map((progress) => (
-                                <Button 
-                                  key={progress}
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  disabled={goal.progress === progress}
-                                  onClick={() => updateGoalProgress(goal, progress)}
-                                >
-                                  {progress}%
-                                </Button>
-                              ))}
-                            </div>
+                        {goal.target_date && (
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>Échéance: {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}</span>
                           </div>
                         )}
                       </div>
+                      
+                      <div className="ml-6 pr-4">
+                        <Slider
+                          value={[goal.progress]}
+                          min={0}
+                          max={100}
+                          step={5}
+                          onValueChange={(value) => handleProgressChange(goal.id, value[0])}
+                          disabled={goal.completed}
+                          className={goal.completed ? "opacity-50" : ""}
+                        />
+                      </div>
                     </div>
-                  );
-                })}
+                    
+                    <div className="flex gap-2 self-end sm:self-center">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => {
+                            setSelectedGoal(goal);
+                            setEditedGoal({
+                              title: goal.title,
+                              description: goal.description,
+                              category: goal.category,
+                              progress: goal.progress,
+                              completed: goal.completed,
+                            });
+                            setSelectedDate(goal.target_date ? new Date(goal.target_date) : undefined);
+                            setIsEditing(true);
+                          }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Modifier l'objectif</DialogTitle>
+                            <DialogDescription>
+                              Modifiez les détails de votre objectif.
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="title">Titre</Label>
+                              <Input
+                                id="title"
+                                value={editedGoal.title || ""}
+                                onChange={(e) => setEditedGoal({ ...editedGoal, title: e.target.value })}
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="description">Description (optionnelle)</Label>
+                              <Textarea
+                                id="description"
+                                value={editedGoal.description || ""}
+                                onChange={(e) => setEditedGoal({ ...editedGoal, description: e.target.value })}
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="category">Catégorie</Label>
+                              <Select
+                                value={editedGoal.category}
+                                onValueChange={(value) => setEditedGoal({ ...editedGoal, category: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner une catégorie" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="personal">Personnel</SelectItem>
+                                  <SelectItem value="professional">Professionnel</SelectItem>
+                                  <SelectItem value="health">Santé</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Date cible (optionnelle)</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {selectedDate ? (
+                                      format(selectedDate, "P", { locale: fr })
+                                    ) : (
+                                      <span>Choisir une date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Progression ({editedGoal.progress || 0}%)</Label>
+                              <Slider
+                                value={[editedGoal.progress || 0]}
+                                min={0}
+                                max={100}
+                                step={5}
+                                onValueChange={(value) => setEditedGoal({ ...editedGoal, progress: value[0] })}
+                              />
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="completed"
+                                checked={editedGoal.completed}
+                                onCheckedChange={(checked) => setEditedGoal({ ...editedGoal, completed: !!checked })}
+                              />
+                              <Label htmlFor="completed">Objectif atteint</Label>
+                            </div>
+                          </div>
+                          
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsEditing(false)}>
+                              Annuler
+                            </Button>
+                            <Button onClick={handleUpdateGoal}>
+                              Enregistrer
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="icon" className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action ne peut pas être annulée. Cela supprimera définitivement cet objectif.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteGoal(goal.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                <Target className="h-8 w-8 text-primary" />
               </div>
-            ) : (
-              <GoalsEmptyState onCreate={() => setOpenDialog(true)} />
-            )}
-          </CardContent>
-        </Card>
-      </Tabs>
+              <h3 className="text-lg font-medium mb-2">Aucun objectif</h3>
+              <p className="text-muted-foreground mb-4">
+                Définissez vos premiers objectifs pour suivre votre progression.
+              </p>
+              <CreateModal
+                type="goal"
+                onSuccess={fetchGoals}
+                variant="default"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Créer un objectif
+              </CreateModal>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default Goals;
+}

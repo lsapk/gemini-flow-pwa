@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -134,11 +133,18 @@ const Journal = () => {
         created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
       };
       
+      console.log('Creating journal entry:', newEntry); // Debug log
+      
       const { data, error } = await createJournalEntry(newEntry);
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Journal creation error:', error);
+        throw new Error(error.message);
+      }
       
-      setJournalEntries([...(data ? [data] : []), ...journalEntries]);
+      if (data) {
+        setJournalEntries([data, ...journalEntries]);
+      }
       
       resetForm();
       setOpenDialog(false);
@@ -147,13 +153,16 @@ const Journal = () => {
         title: "Entrée créée",
         description: "Votre nouvelle entrée de journal a été créée avec succès.",
       });
+      
+      // Refresh the list
+      fetchJournalEntries();
     } catch (error) {
+      console.error("Error creating journal entry:", error);
       toast({
         title: "Erreur",
         description: "Impossible de créer l'entrée de journal.",
         variant: "destructive",
       });
-      console.error("Error creating journal entry:", error);
     }
   };
 
