@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,22 +52,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { isAdminModeEnabled } from "@/lib/api";
-
-interface GoodAction {
-  id: string;
-  title: string;
-  description?: string;
-  category: string;
-  created_at: string;
-  user_id: string;
-  likes_count: number;
-  comments_count: number;
-  is_public: boolean;
-  user_profiles?: {
-    display_name: string;
-    email: string;
-  };
-}
+import { GoodAction } from "@/types";
 
 const CATEGORIES = [
   { value: 'environment', label: '🌱 Environnement', color: 'bg-green-100 text-green-800' },
@@ -130,7 +114,14 @@ export default function GoodActions() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoodActions(data || []);
+      
+      // Transform data to match our interface
+      const transformedData: GoodAction[] = (data || []).map(action => ({
+        ...action,
+        user_profiles: null
+      }));
+      
+      setGoodActions(transformedData);
       
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions:', error);
@@ -144,23 +135,39 @@ export default function GoodActions() {
 
   const loadPublicGoodActions = async () => {
     try {
-      const { data, error } = await supabase
+      // First, try to get good actions with user profiles
+      const { data: actionsData, error: actionsError } = await supabase
         .from('good_actions')
-        .select(`
-          *,
-          user_profiles!inner (
-            display_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error loading public good actions:', error);
+
+      if (actionsError) {
+        console.error('Error loading good actions:', actionsError);
         return;
       }
-      setPublicActions(data || []);
+
+      // Then get user profiles separately
+      const userIds = [...new Set(actionsData?.map(action => action.user_id) || [])];
+      const { data: profilesData } = await supabase
+        .from('user_profiles')
+        .select('id, display_name, email')
+        .in('id', userIds);
+
+      // Combine the data
+      const transformedData: GoodAction[] = (actionsData || []).map(action => {
+        const userProfile = profilesData?.find(profile => profile.id === action.user_id);
+        return {
+          ...action,
+          user_profiles: userProfile ? {
+            display_name: userProfile.display_name || 'Utilisateur anonyme',
+            email: userProfile.email || ''
+          } : null
+        };
+      });
+
+      setPublicActions(transformedData);
+      
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions publiques:', error);
       toast({

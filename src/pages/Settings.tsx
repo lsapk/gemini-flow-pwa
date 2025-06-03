@@ -34,26 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-interface UserProfile {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-  photo_url: string | null;
-  bio: string | null;
-}
-
-interface UserSettings {
-  id: string;
-  notifications_enabled: boolean;
-  sound_enabled: boolean;
-  focus_mode: boolean;
-  karma_points: number;
-  unlocked_features: any[];
-  theme: string;
-  language: string;
-  clock_format: string;
-}
+import { UserProfile, UserSettings } from "@/types";
 
 export default function Settings() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -107,7 +88,14 @@ export default function Settings() {
       if (settingsError && settingsError.code !== 'PGRST116') {
         console.error('Error loading settings:', settingsError);
       } else if (settingsData) {
-        setSettings(settingsData);
+        // Transform the data to match our interface
+        const transformedSettings: UserSettings = {
+          ...settingsData,
+          unlocked_features: Array.isArray(settingsData.unlocked_features) 
+            ? settingsData.unlocked_features 
+            : []
+        };
+        setSettings(transformedSettings);
       }
       
     } catch (error) {
