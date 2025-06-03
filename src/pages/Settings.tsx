@@ -6,46 +6,72 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { 
+  Settings as SettingsIcon, 
+  User, 
+  Bell, 
+  Palette, 
+  Globe,
+  Shield,
+  Loader2,
+  Check,
+  X
+} from "lucide-react";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Settings as SettingsIcon, 
-  User, 
-  Bell, 
-  Palette, 
-  Clock,
-  Shield,
-  Globe,
-  Save
-} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { enableAdminMode, disableAdminMode, isAdminModeEnabled } from "@/lib/api";
+
+interface UserProfile {
+  display_name: string;
+  email: string;
+  bio: string;
+  photo_url: string;
+}
+
+interface UserSettings {
+  notifications_enabled: boolean;
+  sound_enabled: boolean;
+  focus_mode: boolean;
+  theme: string;
+  language: string;
+  clock_format: string;
+}
 
 export default function Settings() {
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<UserProfile>({
     display_name: "",
+    email: "",
     bio: "",
-    email: ""
+    photo_url: ""
   });
-  
-  const [settings, setSettings] = useState({
-    theme: "system",
-    language: "fr",
+  const [settings, setSettings] = useState<UserSettings>({
     notifications_enabled: true,
     sound_enabled: true,
     focus_mode: false,
+    theme: "system",
+    language: "fr",
     clock_format: "24h"
   });
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState("");
+  const [isAdminEnabled, setIsAdminEnabled] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -53,26 +79,9 @@ export default function Settings() {
     if (user) {
       loadProfile();
       loadSettings();
-      checkAdminStatus();
     }
+    setIsAdminEnabled(isAdminModeEnabled());
   }, [user]);
-
-  const checkAdminStatus = async () => {
-    if (!user) return;
-    
-    try {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      setIsAdmin(!!data);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-    }
-  };
 
   const loadProfile = async () => {
     if (!user) return;
@@ -83,14 +92,23 @@ export default function Settings() {
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
-      
-      if (error) throw error;
+
+      if (error && error.code !== 'PGRST116') throw error;
       
       if (data) {
         setProfile({
           display_name: data.display_name || "",
+          email: data.email || user.email || "",
           bio: data.bio || "",
-          email: data.email || ""
+          photo_url: data.photo_url || ""
+        });
+      } else {
+        // Create profile if it doesn't exist
+        setProfile({
+          display_name: "",
+          email: user.email || "",
+          bio: "",
+          photo_url: ""
         });
       }
     } catch (error) {
@@ -107,16 +125,16 @@ export default function Settings() {
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
-      
-      if (error) throw error;
+
+      if (error && error.code !== 'PGRST116') throw error;
       
       if (data) {
         setSettings({
-          theme: data.theme || "system",
-          language: data.language || "fr",
           notifications_enabled: data.notifications_enabled ?? true,
           sound_enabled: data.sound_enabled ?? true,
           focus_mode: data.focus_mode ?? false,
+          theme: data.theme || "system",
+          language: data.language || "fr",
           clock_format: data.clock_format || "24h"
         });
       }
@@ -128,38 +146,43 @@ export default function Settings() {
   const saveProfile = async () => {
     if (!user) return;
     
-    setIsLoading(true);
+    setIsLoadingProfile(true);
     try {
       const { error } = await supabase
         .from('user_profiles')
         .upsert({
           id: user.id,
-          ...profile,
+          display_name: profile.display_name.trim() || null,
+          email: profile.email.trim() || null,
+          bio: profile.bio.trim() || null,
+          photo_url: profile.photo_url.trim() || null,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         });
-      
+
       if (error) throw error;
-      
+
       toast({
-        title: "Profil mis à jour",
-        description: "Vos informations de profil ont été sauvegardées.",
+        title: "Profil sauvegardé",
+        description: "Vos informations ont été mises à jour avec succès.",
       });
     } catch (error) {
       console.error('Error saving profile:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder le profil.",
+        description: "Impossible de sauvegarder le profil. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingProfile(false);
     }
   };
 
   const saveSettings = async () => {
     if (!user) return;
     
-    setIsLoading(true);
+    setIsLoadingSettings(true);
     try {
       const { error } = await supabase
         .from('user_settings')
@@ -167,53 +190,64 @@ export default function Settings() {
           id: user.id,
           ...settings,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         });
-      
+
       if (error) throw error;
-      
+
       toast({
-        title: "Paramètres mis à jour",
-        description: "Vos préférences ont été sauvegardées.",
+        title: "Paramètres sauvegardés",
+        description: "Vos préférences ont été mises à jour avec succès.",
       });
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les paramètres.",
+        description: "Impossible de sauvegarder les paramètres. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingSettings(false);
     }
   };
 
-  const makeAdmin = async () => {
-    if (!user || adminCode !== "deepflow2024") return;
-    
+  const handleAdminCode = async () => {
+    if (!adminCode.trim()) return;
+
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: user.id,
-          role: 'admin'
+      const success = await enableAdminMode(adminCode.trim());
+      if (success) {
+        setIsAdminEnabled(true);
+        setShowAdminDialog(false);
+        setAdminCode("");
+        toast({
+          title: "Mode administrateur activé",
+          description: "Vous avez maintenant accès aux fonctionnalités d'administration.",
         });
-      
-      if (error) throw error;
-      
-      setIsAdmin(true);
-      setAdminCode("");
-      toast({
-        title: "Accès administrateur accordé",
-        description: "Vous avez maintenant les privilèges administrateur.",
-      });
+      } else {
+        toast({
+          title: "Code incorrect",
+          description: "Le code administrateur est incorrect.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-      console.error('Error granting admin access:', error);
       toast({
         title: "Erreur",
-        description: "Code administrateur incorrect.",
+        description: "Impossible d'activer le mode administrateur.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleDisableAdmin = () => {
+    disableAdminMode();
+    setIsAdminEnabled(false);
+    toast({
+      title: "Mode administrateur désactivé",
+      description: "Les fonctionnalités d'administration sont maintenant désactivées.",
+    });
   };
 
   if (!user) {
@@ -233,14 +267,11 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <SettingsIcon className="h-8 w-8" />
-          Paramètres
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Paramètres</h1>
         <p className="text-muted-foreground">
-          Gérez votre profil et personnalisez votre expérience
+          Gérez votre profil et vos préférences
         </p>
       </div>
 
@@ -250,48 +281,116 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Profil
+              Profil utilisateur
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div>
-                <Label htmlFor="display_name">Nom d'affichage</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="display-name">Nom d'affichage</Label>
                 <Input
-                  id="display_name"
+                  id="display-name"
                   value={profile.display_name}
-                  onChange={(e) => setProfile(prev => ({...prev, display_name: e.target.value}))}
-                  placeholder="Votre nom d'affichage"
+                  onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+                  placeholder="Votre nom"
                 />
               </div>
-              
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  value={profile.email}
-                  onChange={(e) => setProfile(prev => ({...prev, email: e.target.value}))}
-                  placeholder="votre@email.com"
                   type="email"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => setProfile(prev => ({...prev, bio: e.target.value}))}
-                  placeholder="Décrivez-vous en quelques mots..."
-                  rows={3}
+                  value={profile.email}
+                  onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="votre@email.com"
                 />
               </div>
             </div>
             
-            <Button onClick={saveProfile} disabled={isLoading}>
-              <Save className="h-4 w-4 mr-2" />
-              Sauvegarder le profil
+            <div className="space-y-2">
+              <Label htmlFor="bio">Biographie</Label>
+              <Textarea
+                id="bio"
+                value={profile.bio}
+                onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+                placeholder="Parlez-nous de vous..."
+                rows={3}
+              />
+            </div>
+
+            <Button 
+              onClick={saveProfile} 
+              disabled={isLoadingProfile}
+              className="w-full sm:w-auto"
+            >
+              {isLoadingProfile ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Sauvegarder le profil
+                </>
+              )}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Notifications push</Label>
+                <p className="text-sm text-muted-foreground">
+                  Recevoir des notifications pour les rappels et mises à jour
+                </p>
+              </div>
+              <Switch
+                checked={settings.notifications_enabled}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, notifications_enabled: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Sons</Label>
+                <p className="text-sm text-muted-foreground">
+                  Activer les sons pour les notifications
+                </p>
+              </div>
+              <Switch
+                checked={settings.sound_enabled}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, sound_enabled: checked }))
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Mode focus</Label>
+                <p className="text-sm text-muted-foreground">
+                  Réduire les distractions pendant les sessions de travail
+                </p>
+              </div>
+              <Switch
+                checked={settings.focus_mode}
+                onCheckedChange={(checked) => 
+                  setSettings(prev => ({ ...prev, focus_mode: checked }))
+                }
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -304,12 +403,14 @@ export default function Settings() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Thème</Label>
                 <Select 
                   value={settings.theme} 
-                  onValueChange={(value) => setSettings(prev => ({...prev, theme: value}))}
+                  onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, theme: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -317,16 +418,18 @@ export default function Settings() {
                   <SelectContent>
                     <SelectItem value="light">Clair</SelectItem>
                     <SelectItem value="dark">Sombre</SelectItem>
-                    <SelectItem value="system">Système</SelectItem>
+                    <SelectItem value="system">Automatique</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label>Format d'heure</Label>
+
+              <div className="space-y-2">
+                <Label>Format de l'heure</Label>
                 <Select 
                   value={settings.clock_format} 
-                  onValueChange={(value) => setSettings(prev => ({...prev, clock_format: value}))}
+                  onValueChange={(value) => 
+                    setSettings(prev => ({ ...prev, clock_format: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -346,17 +449,19 @@ export default function Settings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Langue
+              Langue et région
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
               <Label>Langue de l'interface</Label>
               <Select 
                 value={settings.language} 
-                onValueChange={(value) => setSettings(prev => ({...prev, language: value}))}
+                onValueChange={(value) => 
+                  setSettings(prev => ({ ...prev, language: value }))
+                }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,96 +475,94 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Notifications activées</Label>
-                <p className="text-sm text-muted-foreground">Recevoir des notifications pour les rappels</p>
-              </div>
-              <Switch
-                checked={settings.notifications_enabled}
-                onCheckedChange={(checked) => setSettings(prev => ({...prev, notifications_enabled: checked}))}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Sons activés</Label>
-                <p className="text-sm text-muted-foreground">Jouer des sons pour les notifications</p>
-              </div>
-              <Switch
-                checked={settings.sound_enabled}
-                onCheckedChange={(checked) => setSettings(prev => ({...prev, sound_enabled: checked}))}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Mode focus</Label>
-                <p className="text-sm text-muted-foreground">Réduire les distractions pendant le travail</p>
-              </div>
-              <Switch
-                checked={settings.focus_mode}
-                onCheckedChange={(checked) => setSettings(prev => ({...prev, focus_mode: checked}))}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Administration */}
+        {/* Mode Administrateur */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Administration
+              Mode Administrateur
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isAdmin ? (
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="text-green-700 dark:text-green-300 font-medium">
-                  ✅ Vous avez les privilèges administrateur
-                </p>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                  Vous pouvez gérer les commentaires et modérer le contenu des bonnes actions.
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Statut administrateur</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isAdminEnabled ? "Mode administrateur activé" : "Mode administrateur désactivé"}
                 </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="admin_code">Code administrateur</Label>
-                  <Input
-                    id="admin_code"
-                    type="password"
-                    value={adminCode}
-                    onChange={(e) => setAdminCode(e.target.value)}
-                    placeholder="Entrez le code administrateur"
-                  />
-                </div>
-                <Button 
-                  onClick={makeAdmin}
-                  disabled={!adminCode.trim()}
-                  variant="outline"
-                >
-                  Activer les privilèges admin
-                </Button>
+              <div className="flex items-center gap-2">
+                {isAdminEnabled ? (
+                  <>
+                    <div className="flex items-center gap-1 text-green-600">
+                      <Check className="h-4 w-4" />
+                      <span className="text-sm font-medium">Actif</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDisableAdmin}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Désactiver
+                    </Button>
+                  </>
+                ) : (
+                  <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Shield className="h-4 w-4 mr-1" />
+                        Activer
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Activer le mode administrateur</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="admin-code">Code administrateur</Label>
+                          <Input
+                            id="admin-code"
+                            type="password"
+                            value={adminCode}
+                            onChange={(e) => setAdminCode(e.target.value)}
+                            placeholder="Entrez le code administrateur"
+                            onKeyDown={(e) => e.key === 'Enter' && handleAdminCode()}
+                          />
+                        </div>
+                        <Button onClick={handleAdminCode} className="w-full">
+                          Activer
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
-        <Button onClick={saveSettings} disabled={isLoading} className="w-full">
-          <Save className="h-4 w-4 mr-2" />
-          Sauvegarder tous les paramètres
-        </Button>
+        {/* Bouton de sauvegarde des paramètres */}
+        <div className="flex justify-end">
+          <Button 
+            onClick={saveSettings} 
+            disabled={isLoadingSettings}
+            className="w-full sm:w-auto"
+          >
+            {isLoadingSettings ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Sauvegarder les paramètres
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

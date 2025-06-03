@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +16,6 @@ import {
   Plus, 
   ThumbsUp, 
   MessageSquare,
-  Calendar,
   Award,
   TrendingUp,
   Users,
@@ -22,7 +23,8 @@ import {
   Target,
   Filter,
   Globe,
-  User
+  User,
+  Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -96,6 +98,7 @@ export default function GoodActions() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("public");
   const [isLoading, setIsLoading] = useState(false);
@@ -147,11 +150,11 @@ export default function GoodActions() {
   const loadPublicGoodActions = async () => {
     try {
       const data = await getAllPublicGoodActions();
-      setPublicActions(data as any); // Type assertion pour éviter l'erreur de type temporaire
+      setPublicActions(data as any);
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions publiques:', error);
       toast({
-        title: "Erreur",
+        title: "Erreur", 
         description: "Impossible de charger les bonnes actions publiques.",
         variant: "destructive",
       });
@@ -178,22 +181,25 @@ export default function GoodActions() {
           title: title.trim(),
           description: description.trim() || null,
           category,
-          is_public: true
+          is_public: isPublic
         });
 
       if (error) throw error;
       
       toast({
         title: "Bonne action enregistrée ! 🎉",
-        description: "Votre bonne action a été ajoutée avec succès.",
+        description: `Votre bonne action a été ${isPublic ? 'publiée' : 'enregistrée en privé'}.`,
       });
       
       setTitle("");
       setDescription("");
       setCategory("");
+      setIsPublic(true);
       setShowForm(false);
       loadMyGoodActions();
-      loadPublicGoodActions();
+      if (isPublic) {
+        loadPublicGoodActions();
+      }
       
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -223,7 +229,7 @@ export default function GoodActions() {
   const impactScore = totalActions * 10 + thisWeekActions * 5;
 
   return (
-    <div className="container mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
+    <div className="container mx-auto p-3 sm:p-4 space-y-4 sm:space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Bonnes Actions</h1>
@@ -235,16 +241,16 @@ export default function GoodActions() {
           <DialogTrigger asChild>
             <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              <span className="sm:inline">Ajouter une BA</span>
+              <span>Ajouter une BA</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="mx-2 sm:mx-0">
+          <DialogContent className="mx-2 sm:mx-0 max-w-md">
             <DialogHeader>
               <DialogTitle>Nouvelle Bonne Action</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Titre</label>
+                <Label className="text-sm font-medium">Titre</Label>
                 <Input
                   placeholder="Ex: Aider mon voisin avec ses courses"
                   value={title}
@@ -253,7 +259,7 @@ export default function GoodActions() {
               </div>
               
               <div>
-                <label className="text-sm font-medium">Catégorie</label>
+                <Label className="text-sm font-medium">Catégorie</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choisir une catégorie" />
@@ -269,13 +275,25 @@ export default function GoodActions() {
               </div>
               
               <div>
-                <label className="text-sm font-medium">Description (optionnel)</label>
+                <Label className="text-sm font-medium">Description (optionnel)</Label>
                 <Textarea
                   placeholder="Décrivez brièvement votre bonne action..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                 />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="public-mode"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                />
+                <Label htmlFor="public-mode" className="flex items-center gap-2">
+                  {isPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                  {isPublic ? "Publique" : "Privée"}
+                </Label>
               </div>
               
               <Button 
@@ -291,43 +309,43 @@ export default function GoodActions() {
       </div>
 
       {user && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          <Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <Card className="bg-gradient-to-br from-red-50 to-red-100">
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-red-500" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{totalActions}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">BA totales</p>
+              <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totalActions}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">BA totales</p>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100">
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{thisWeekActions}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Cette semaine</p>
+              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{thisWeekActions}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Cette semaine</p>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{categoriesCount}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Catégories</p>
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{categoriesCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Catégories</p>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100">
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <Award className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{impactScore}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Score d'impact</p>
+              <Award className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{impactScore}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Score d'impact</p>
               </div>
             </CardContent>
           </Card>
@@ -342,7 +360,7 @@ export default function GoodActions() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm sm:text-lg font-medium mb-3">{getTodaysPrompt()}</p>
+          <p className="text-sm sm:text-base font-medium mb-3">{getTodaysPrompt()}</p>
           <Button 
             variant="outline" 
             size="sm"
@@ -445,18 +463,21 @@ export default function GoodActions() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className="border rounded-lg p-3 sm:p-4 space-y-3"
+                            className="border rounded-lg p-3 sm:p-4 space-y-3 bg-white shadow-sm hover:shadow-md transition-shadow"
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <h3 className="font-medium text-sm sm:text-base">{action.title}</h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-medium text-sm sm:text-base">{action.title}</h3>
+                                  {!action.is_public && <Lock className="h-3 w-3 text-gray-400" />}
+                                </div>
                                 {action.description && (
                                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                                     {action.description}
                                   </p>
                                 )}
                               </div>
-                              <Badge className={`${categoryInfo?.color} text-xs ml-2`}>
+                              <Badge className={`${categoryInfo?.color} text-xs ml-2 flex-shrink-0`}>
                                 <span className="hidden sm:inline">{categoryInfo?.label}</span>
                                 <span className="sm:hidden">{categoryInfo?.label.split(' ')[0]}</span>
                               </Badge>
