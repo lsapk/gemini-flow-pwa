@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Bot, User, Sparkles } from "lucide-react";
-import Markdown from "@/components/Markdown";
+import { Markdown } from "@/components/Markdown";
 
 interface ChatMessage {
   role: "user" | "assistant";

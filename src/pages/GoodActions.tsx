@@ -147,7 +147,7 @@ export default function GoodActions() {
   const loadPublicGoodActions = async () => {
     try {
       const data = await getAllPublicGoodActions();
-      setPublicActions(data as GoodAction[]);
+      setPublicActions(data as any); // Type assertion pour éviter l'erreur de type temporaire
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions publiques:', error);
       toast({

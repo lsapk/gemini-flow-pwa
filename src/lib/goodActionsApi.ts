@@ -93,7 +93,7 @@ export const getAllPublicGoodActions = async () => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles (
+      user_profiles!inner (
         display_name,
         email
       )
