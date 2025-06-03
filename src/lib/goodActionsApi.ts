@@ -22,7 +22,7 @@ export interface GoodActionLike {
 }
 
 export const likeGoodAction = async (goodActionId: string) => {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('good_action_likes')
     .insert({ good_action_id: goodActionId })
     .select();
@@ -32,7 +32,7 @@ export const likeGoodAction = async (goodActionId: string) => {
 };
 
 export const unlikeGoodAction = async (goodActionId: string) => {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('good_action_likes')
     .delete()
     .eq('good_action_id', goodActionId)
@@ -41,8 +41,8 @@ export const unlikeGoodAction = async (goodActionId: string) => {
   if (error) throw error;
 };
 
-export const getGoodActionLikes = async (goodActionId: string) => {
-  const { data, error } = await supabase
+export const getGoodActionLikes = async (goodActionId: string): Promise<GoodActionLike[]> => {
+  const { data, error } = await (supabase as any)
     .from('good_action_likes')
     .select('*')
     .eq('good_action_id', goodActionId);
@@ -52,7 +52,7 @@ export const getGoodActionLikes = async (goodActionId: string) => {
 };
 
 export const addComment = async (goodActionId: string, content: string) => {
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('good_action_comments')
     .insert({ good_action_id: goodActionId, content })
     .select();
@@ -61,8 +61,8 @@ export const addComment = async (goodActionId: string, content: string) => {
   return data;
 };
 
-export const getComments = async (goodActionId: string) => {
-  const { data, error } = await supabase
+export const getComments = async (goodActionId: string): Promise<GoodActionComment[]> => {
+  const { data, error } = await (supabase as any)
     .from('good_action_comments')
     .select(`
       *,
@@ -80,7 +80,7 @@ export const getComments = async (goodActionId: string) => {
 };
 
 export const deleteComment = async (commentId: string) => {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('good_action_comments')
     .update({ is_deleted: true })
     .eq('id', commentId);
