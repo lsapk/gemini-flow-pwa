@@ -24,7 +24,10 @@ import {
   Filter,
   Globe,
   User,
-  Lock
+  Lock,
+  Edit,
+  Trash2,
+  Camera
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -49,9 +52,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import GoodActionCard from "@/components/GoodActionCard";
-import { getAllPublicGoodActions } from "@/lib/goodActionsApi";
-import { isUserAdmin } from "@/lib/api";
+import { isAdminModeEnabled } from "@/lib/api";
 
 interface GoodAction {
   id: string;
@@ -103,6 +104,7 @@ export default function GoodActions() {
   const [activeTab, setActiveTab] = useState("public");
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingAction, setEditingAction] = useState<GoodAction | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -113,15 +115,8 @@ export default function GoodActions() {
     return DAILY_PROMPTS[dayOfYear % DAILY_PROMPTS.length];
   };
 
-  const checkAdminStatus = async () => {
-    if (user) {
-      try {
-        const adminStatus = await isUserAdmin();
-        setIsAdmin(adminStatus);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-      }
-    }
+  const checkAdminStatus = () => {
+    setIsAdmin(isAdminModeEnabled());
   };
 
   const loadMyGoodActions = async () => {
@@ -135,7 +130,7 @@ export default function GoodActions() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoodActions(data as GoodAction[] || []);
+      setGoodActions(data || []);
       
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions:', error);
@@ -149,8 +144,23 @@ export default function GoodActions() {
 
   const loadPublicGoodActions = async () => {
     try {
-      const data = await getAllPublicGoodActions();
-      setPublicActions(data as any);
+      const { data, error } = await supabase
+        .from('good_actions')
+        .select(`
+          *,
+          user_profiles!inner (
+            display_name,
+            email
+          )
+        `)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading public good actions:', error);
+        return;
+      }
+      setPublicActions(data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des bonnes actions publiques:', error);
       toast({
@@ -174,32 +184,43 @@ export default function GoodActions() {
     
     setIsLoading(true);
     try {
-      console.log('Saving with isPublic:', isPublic); // Debug log
-      
-      const { error } = await supabase
-        .from('good_actions')
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          description: description.trim() || null,
-          category,
-          is_public: isPublic // Ensure this is correctly passed
-        });
+      const actionData = {
+        user_id: user.id,
+        title: title.trim(),
+        description: description.trim() || null,
+        category,
+        is_public: isPublic,
+        likes_count: editingAction?.likes_count || 0,
+        comments_count: editingAction?.comments_count || 0,
+      };
 
-      if (error) throw error;
+      if (editingAction) {
+        const { error } = await supabase
+          .from('good_actions')
+          .update(actionData)
+          .eq('id', editingAction.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Bonne action modifiée ! 🎉",
+          description: "Votre bonne action a été mise à jour.",
+        });
+      } else {
+        const { error } = await supabase
+          .from('good_actions')
+          .insert(actionData);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Bonne action enregistrée ! 🎉",
+          description: `Votre bonne action a été ${isPublic ? 'publiée' : 'enregistrée en privé'}.`,
+        });
+      }
       
-      toast({
-        title: "Bonne action enregistrée ! 🎉",
-        description: `Votre bonne action a été ${isPublic ? 'publiée' : 'enregistrée en privé'}.`,
-      });
-      
-      setTitle("");
-      setDescription("");
-      setCategory("");
-      setIsPublic(true);
-      setShowForm(false);
+      resetForm();
       loadMyGoodActions();
-      // Reload public actions if it was public
       loadPublicGoodActions();
       
     } catch (error) {
@@ -214,6 +235,77 @@ export default function GoodActions() {
     }
   };
 
+  const deleteGoodAction = async (actionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('good_actions')
+        .delete()
+        .eq('id', actionId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Bonne action supprimée",
+        description: "La bonne action a été supprimée avec succès.",
+      });
+      
+      loadMyGoodActions();
+      loadPublicGoodActions();
+    } catch (error) {
+      console.error('Error deleting good action:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la bonne action.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const likeAction = async (actionId: string) => {
+    try {
+      const action = publicActions.find(a => a.id === actionId);
+      if (!action) return;
+
+      const { error } = await supabase
+        .from('good_actions')
+        .update({ likes_count: action.likes_count + 1 })
+        .eq('id', actionId);
+
+      if (error) throw error;
+      
+      loadPublicGoodActions();
+      toast({
+        title: "J'aime ajouté ! ❤️",
+        description: "Merci d'encourager cette bonne action !",
+      });
+    } catch (error) {
+      console.error('Error liking action:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'aimer cette action.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setCategory("");
+    setIsPublic(true);
+    setEditingAction(null);
+    setShowForm(false);
+  };
+
+  const editAction = (action: GoodAction) => {
+    setTitle(action.title);
+    setDescription(action.description || "");
+    setCategory(action.category);
+    setIsPublic(action.is_public);
+    setEditingAction(action);
+    setShowForm(true);
+  };
+
   const filteredMyActions = goodActions.filter(action => 
     selectedFilter === "all" || action.category === selectedFilter
   );
@@ -223,11 +315,11 @@ export default function GoodActions() {
   );
 
   const totalActions = goodActions.length;
+  const publicActionsCount = goodActions.filter(a => a.is_public).length;
   const thisWeekActions = goodActions.filter(action => 
     new Date(action.created_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
   const categoriesCount = [...new Set(goodActions.map(a => a.category))].length;
-  const impactScore = totalActions * 10 + thisWeekActions * 5;
 
   return (
     <div className="container mx-auto p-3 sm:p-4 space-y-4 sm:space-y-6 max-w-6xl">
@@ -242,12 +334,14 @@ export default function GoodActions() {
           <DialogTrigger asChild>
             <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              <span>Ajouter une BA</span>
+              <span>Nouvelle BA</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="mx-2 sm:mx-0 max-w-md">
             <DialogHeader>
-              <DialogTitle>Nouvelle Bonne Action</DialogTitle>
+              <DialogTitle>
+                {editingAction ? "Modifier la bonne action" : "Nouvelle Bonne Action"}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -297,13 +391,18 @@ export default function GoodActions() {
                 </Label>
               </div>
               
-              <Button 
-                onClick={saveGoodAction}
-                disabled={!title.trim() || !category || isLoading}
-                className="w-full"
-              >
-                {isLoading ? "Sauvegarde..." : "Publier ma BA"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={saveGoodAction}
+                  disabled={!title.trim() || !category || isLoading}
+                  className="flex-1"
+                >
+                  {isLoading ? "Sauvegarde..." : editingAction ? "Modifier" : "Publier ma BA"}
+                </Button>
+                <Button variant="outline" onClick={resetForm}>
+                  Annuler
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -333,10 +432,10 @@ export default function GoodActions() {
           
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+              <Globe className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">{categoriesCount}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Catégories</p>
+                <p className="text-xl sm:text-2xl font-bold">{publicActionsCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Publiques</p>
               </div>
             </CardContent>
           </Card>
@@ -345,8 +444,8 @@ export default function GoodActions() {
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
               <Award className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">{impactScore}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Score d'impact</p>
+                <p className="text-xl sm:text-2xl font-bold">{categoriesCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Catégories</p>
               </div>
             </CardContent>
           </Card>
@@ -414,19 +513,77 @@ export default function GoodActions() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                Bonnes actions de la communauté ({filteredPublicActions.length})
+                Communauté ({filteredPublicActions.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px]">
                 <div className="space-y-3 sm:space-y-4">
-                  {filteredPublicActions.map((action) => (
-                    <GoodActionCard 
-                      key={action.id} 
-                      action={action} 
-                      isAdmin={isAdmin}
-                    />
-                  ))}
+                  {filteredPublicActions.map((action) => {
+                    const categoryInfo = CATEGORIES.find(c => c.value === action.category);
+                    return (
+                      <motion.div
+                        key={action.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="border rounded-lg p-3 sm:p-4 space-y-3 bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-sm sm:text-base">{action.title}</h3>
+                              <Badge className={`${categoryInfo?.color} text-xs ml-2 flex-shrink-0`}>
+                                <span className="hidden sm:inline">{categoryInfo?.label}</span>
+                                <span className="sm:hidden">{categoryInfo?.label.split(' ')[0]}</span>
+                              </Badge>
+                            </div>
+                            {action.description && (
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                {action.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                Par {action.user_profiles?.display_name || 'Utilisateur anonyme'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(action.created_at), 'dd MMM yyyy', { locale: fr })}
+                              </span>
+                            </div>
+                          </div>
+                          {isAdmin && action.user_id !== user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteGoodAction(action.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                          <div className="flex gap-3 sm:gap-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => likeAction(action.id)}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                            >
+                              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+                              {action.likes_count || 0}
+                            </Button>
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                              {action.comments_count || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                   
                   {filteredPublicActions.length === 0 && (
                     <div className="text-center py-12">
@@ -478,17 +635,31 @@ export default function GoodActions() {
                                   </p>
                                 )}
                               </div>
-                              <Badge className={`${categoryInfo?.color} text-xs ml-2 flex-shrink-0`}>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => editAction(action)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteGoodAction(action.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                              <Badge className={`${categoryInfo?.color} text-xs flex-shrink-0`}>
                                 <span className="hidden sm:inline">{categoryInfo?.label}</span>
                                 <span className="sm:hidden">{categoryInfo?.label.split(' ')[0]}</span>
                               </Badge>
-                            </div>
-                            
-                            <div className="flex justify-between items-center text-xs sm:text-sm text-muted-foreground">
-                              <span>
-                                {format(new Date(action.created_at), 'dd MMM yyyy', { locale: fr })}
-                              </span>
-                              <div className="flex gap-3 sm:gap-4">
+                              <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4" />
                                   {action.likes_count || 0}
@@ -496,6 +667,9 @@ export default function GoodActions() {
                                 <span className="flex items-center gap-1">
                                   <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
                                   {action.comments_count || 0}
+                                </span>
+                                <span>
+                                  {format(new Date(action.created_at), 'dd MMM yyyy', { locale: fr })}
                                 </span>
                               </div>
                             </div>

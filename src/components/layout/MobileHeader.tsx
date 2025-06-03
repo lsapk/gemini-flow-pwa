@@ -12,6 +12,15 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
       <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMenuClick}
+            className="h-8 w-8"
+          >
+            <Menu className="h-4 w-4" />
+            <span className="sr-only">Ouvrir le menu</span>
+          </Button>
           <h1 className="text-lg font-semibold">DeepFlow</h1>
         </div>
         
@@ -21,15 +30,6 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
               <Settings className="h-4 w-4" />
               <span className="sr-only">Paramètres</span>
             </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMenuClick}
-            className="h-8 w-8"
-          >
-            <Menu className="h-4 w-4" />
-            <span className="sr-only">Ouvrir le menu</span>
           </Button>
         </div>
       </div>
