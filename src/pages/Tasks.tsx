@@ -5,7 +5,7 @@ import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { CreateModal } from "@/components/modals/CreateModal";
+import CreateModal from "@/components/modals/CreateModal";
 
 interface Task {
   id: string;
@@ -15,6 +15,8 @@ interface Task {
   priority: 'high' | 'medium' | 'low';
   due_date?: string;
   user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function Tasks() {
@@ -42,7 +44,11 @@ export default function Tasks() {
         return;
       }
 
-      setTasks(data || []);
+      // Type assertion to handle the priority field
+      setTasks((data || []).map(task => ({
+        ...task,
+        priority: (task.priority as 'high' | 'medium' | 'low') || 'medium'
+      })));
     } catch (error) {
       console.error("Error fetching tasks:", error);
       toast({

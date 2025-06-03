@@ -6,10 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Habit } from "@/types";
 import { getHabits, deleteHabit } from "@/lib/api";
-import { CalendarDays, Flame, ListChecks, Repeat } from "@/components/icons/DeepFlowIcons";
 import CreateModal from "@/components/modals/CreateModal";
 import FrequencyTabs from "@/components/ui/FrequencyTabs";
 import HabitList from "@/components/HabitList";
+import { CalendarDays, Flame, ListChecks, Repeat } from "@/components/icons/DeepFlowIcons";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);

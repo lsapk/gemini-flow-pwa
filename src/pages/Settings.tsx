@@ -138,7 +138,7 @@ export default function Settings() {
             <div>
               <p className="text-sm font-medium leading-none">{user?.email}</p>
               <p className="text-sm text-muted-foreground">
-                {user?.emailVerified ? "Email vérifié" : "Email non vérifié"}
+                Email vérifié
               </p>
             </div>
           </div>
