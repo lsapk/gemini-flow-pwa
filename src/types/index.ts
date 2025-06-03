@@ -11,6 +11,7 @@ export interface Habit {
   created_at: string;
   updated_at?: string;
   user_id: string;
+  is_completed_today?: boolean;
 }
 
 export interface Goal {
@@ -63,6 +64,34 @@ export interface GoodAction {
     display_name: string;
     email: string;
   } | null;
+}
+
+export interface GoodActionComment {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  good_action_id: string;
+  is_deleted: boolean;
+  user_profiles?: {
+    display_name: string;
+    email: string;
+  };
+}
+
+export interface GoodActionLike {
+  id: string;
+  user_id: string;
+  good_action_id: string;
+  created_at: string;
+}
+
+export interface HabitCompletion {
+  id: string;
+  habit_id: string;
+  user_id: string;
+  completed_date: string;
+  created_at: string;
 }
 
 export interface UserSettings {

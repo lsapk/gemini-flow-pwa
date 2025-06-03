@@ -1,40 +1,65 @@
+import { useState, useEffect } from "react";
+import { MobileHeader } from "./MobileHeader";
+import { Sidebar } from "./Sidebar";
 
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import MobileHeader from "./MobileHeader";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
 
-export default function AppLayout() {
+export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Close sidebar on route change (example using the 'hashchange' event)
+    const handleRouteChange = () => {
+      setSidebarOpen(false);
+    };
+
+    window.addEventListener('hashchange', handleRouteChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleRouteChange);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-
       <div className="flex">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <Sidebar />
+        {/* Sidebar Desktop */}
+        <div className={`hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ${
+          sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
+        } transition-transform duration-300`}>
+          <Sidebar onClose={() => setSidebarOpen(false)} />
         </div>
 
-        {/* Mobile Sidebar */}
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="left" className="p-0 w-64">
-            <Sidebar className="border-0" />
-          </SheetContent>
-        </Sheet>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full px-4 py-6 md:px-8">
-            <div className="mx-auto max-w-7xl">
-              <Outlet />
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 lg:hidden bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <div className="w-64 h-full bg-background" onClick={(e) => e.stopPropagation()}>
+              <Sidebar onClose={() => setSidebarOpen(false)} />
             </div>
           </div>
-        </main>
+        )}
+
+        {/* Main Content */}
+        <div className={`flex-1 ${sidebarOpen ? 'lg:ml-64' : ''} transition-all duration-300`}>
+          {/* Mobile Header */}
+          <div className="lg:hidden">
+            <MobileHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+          </div>
+
+          {/* Page Content */}
+          <main className="min-h-screen lg:min-h-0">
+            {children}
+          </main>
+        </div>
       </div>
+
+      {/* Focus Timer - persiste pendant la navigation */}
+      <FocusTimer />
     </div>
   );
 }

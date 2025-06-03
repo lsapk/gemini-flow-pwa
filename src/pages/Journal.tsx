@@ -1,457 +1,502 @@
+
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { CalendarIcon, Pencil, PlusCircle, Trash2, SmilePlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { BookOpenCheckIcon } from "@/components/icons/DeepFlowIcons";
-import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { parseISO } from 'date-fns';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
+import { createJournalEntry, getJournalEntries } from "@/lib/api";
+import { 
+  Plus, 
+  BookOpen, 
+  Calendar,
+  Edit,
+  Trash2,
+  Filter,
+  Search
+} from "lucide-react";
+import { JournalEntry } from "@/types";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  mood?: string;
-  created_at: string;
-  user_id: string;
-}
-
-interface JournalEntryFormData {
-  title: string;
-  content: string;
-  mood?: string;
-  created_at: Date | undefined;
-}
-
-// Composant pour afficher l'emoji en fonction de l'humeur
-const MoodEmoji = ({ mood }: { mood?: string }) => {
-  switch (mood) {
-    case "very_happy":
-      return <span title="Très heureux">😄</span>;
-    case "happy":
-      return <span title="Heureux">🙂</span>;
-    case "neutral":
-      return <span title="Neutre">😐</span>;
-    case "sad":
-      return <span title="Triste">😔</span>;
-    case "very_sad":
-      return <span title="Très triste">😢</span>;
-    default:
-      return null;
-  }
-};
-
-const JournalEmptyState = ({ onCreate }: { onCreate: () => void }) => (
-  <div className="text-center py-12">
-    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-      <BookOpenCheckIcon className="h-8 w-8 text-primary" />
-    </div>
-    <h3 className="text-lg font-medium mb-2">Aucune entrée de journal</h3>
-    <p className="text-muted-foreground mb-4">
-      Commencez à écrire votre première entrée de journal pour suivre vos pensées et vos expériences.
-    </p>
-    <Button onClick={onCreate}>
-      <PlusCircle className="mr-2 h-4 w-4" />
-      Nouvelle entrée
-    </Button>
-  </div>
-);
-
-const Journal = () => {
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+export default function Journal() {
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [filteredEntries, setFilteredEntries] = useState<JournalEntry[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [moodFilter, setMoodFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-  const [formData, setFormData] = useState<JournalEntryFormData>({
-    title: "",
-    content: "",
-    mood: undefined,
-    created_at: undefined,
-  });
   
-  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    mood: '',
+    tags: ''
+  });
+
   const { user } = useAuth();
-  const isMobile = useIsMobile();
+  const { toast } = useToast();
+
+  const moods = [
+    { value: 'happy', label: '😊 Heureux', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'sad', label: '😢 Triste', color: 'bg-blue-100 text-blue-800' },
+    { value: 'excited', label: '🤩 Excité', color: 'bg-orange-100 text-orange-800' },
+    { value: 'calm', label: '😌 Calme', color: 'bg-green-100 text-green-800' },
+    { value: 'stressed', label: '😰 Stressé', color: 'bg-red-100 text-red-800' },
+    { value: 'grateful', label: '🙏 Reconnaissant', color: 'bg-purple-100 text-purple-800' },
+    { value: 'motivated', label: '💪 Motivé', color: 'bg-indigo-100 text-indigo-800' },
+    { value: 'thoughtful', label: '🤔 Pensif', color: 'bg-gray-100 text-gray-800' }
+  ];
 
   useEffect(() => {
-    fetchJournalEntries();
+    if (user) {
+      loadEntries();
+    }
   }, [user]);
 
-  const fetchJournalEntries = async () => {
-    if (!user) return;
-    
+  useEffect(() => {
+    filterEntries();
+  }, [entries, searchTerm, moodFilter]);
+
+  const loadEntries = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const { data, error } = await getJournalEntries();
-      
-      if (error) throw new Error(error.message);
-      
-      setJournalEntries(data || []);
+      if (error) throw error;
+      setEntries(data || []);
     } catch (error) {
+      console.error('Error loading journal entries:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger vos entrées de journal.",
+        description: "Impossible de charger les entrées du journal.",
         variant: "destructive",
       });
-      console.error("Error fetching journal entries:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateEntry = async () => {
-    if (!user) return;
-    
-    if (!formData.title || !formData.content) {
+  const filterEntries = () => {
+    let filtered = entries;
+
+    if (searchTerm) {
+      filtered = filtered.filter(entry => 
+        entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.content.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (moodFilter !== 'all') {
+      filtered = filtered.filter(entry => entry.mood === moodFilter);
+    }
+
+    setFilteredEntries(filtered);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) {
       toast({
         title: "Erreur",
-        description: "Veuillez saisir un titre et un contenu pour votre entrée de journal.",
+        description: "Le titre et le contenu sont obligatoires.",
         variant: "destructive",
       });
       return;
     }
-    
-    try {
-      const newEntry = {
-        title: formData.title,
-        content: formData.content,
-        mood: formData.mood,
-        user_id: user.id,
-        created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
-      };
-      
-      console.log('Creating journal entry:', newEntry); // Debug log
-      
-      const { data, error } = await createJournalEntry(newEntry);
-      
-      if (error) {
-        console.error('Journal creation error:', error);
-        throw new Error(error.message);
-      }
-      
-      if (data) {
-        setJournalEntries([data, ...journalEntries]);
-      }
-      
-      resetForm();
-      setOpenDialog(false);
-      
-      toast({
-        title: "Entrée créée",
-        description: "Votre nouvelle entrée de journal a été créée avec succès.",
-      });
-      
-      // Refresh the list
-      fetchJournalEntries();
-    } catch (error) {
-      console.error("Error creating journal entry:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer l'entrée de journal.",
-        variant: "destructive",
-      });
-    }
-  };
 
-  const handleUpdateEntry = async () => {
-    if (!user || !editingEntry) return;
-    
-    if (!formData.title || !formData.content) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez saisir un titre et un contenu pour votre entrée de journal.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
-      const updatedEntry = {
-        title: formData.title,
-        content: formData.content,
-        mood: formData.mood,
-        created_at: formData.created_at ? formData.created_at.toISOString() : new Date().toISOString(),
+      const entryData = {
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        mood: formData.mood || null,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : null,
+        user_id: user!.id
       };
-      
-      const { data, error } = await updateJournalEntry(editingEntry.id, updatedEntry);
-      
-      if (error) throw new Error(error.message);
-      
-      if (data) {
-        setJournalEntries(journalEntries.map((entry) => (entry.id === editingEntry.id ? data : entry)));
-      }
-      
-      resetForm();
-      setOpenDialog(false);
-      
-      toast({
-        title: "Entrée mise à jour",
-        description: "Votre entrée de journal a été mise à jour avec succès.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour l'entrée de journal.",
-        variant: "destructive",
-      });
-      console.error("Error updating journal entry:", error);
-    }
-  };
 
-  const handleDeleteEntry = async (id: string) => {
-    try {
-      const { error } = await deleteJournalEntry(id);
-      
-      if (error) throw new Error(error.message);
-      
-      setJournalEntries(journalEntries.filter((entry) => entry.id !== id));
-      
-      toast({
-        title: "Entrée supprimée",
-        description: "Votre entrée de journal a été supprimée avec succès.",
-      });
+      if (editingEntry) {
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .update({
+            ...entryData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingEntry.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setEntries(prev => prev.map(entry => 
+          entry.id === editingEntry.id ? data : entry
+        ));
+
+        toast({
+          title: "Entrée modifiée",
+          description: "Votre entrée de journal a été mise à jour avec succès.",
+        });
+      } else {
+        const { data, error } = await createJournalEntry(entryData);
+        if (error) throw error;
+
+        setEntries(prev => [data, ...prev]);
+
+        toast({
+          title: "Entrée créée",
+          description: "Votre nouvelle entrée de journal a été créée avec succès.",
+        });
+      }
+
+      resetForm();
     } catch (error) {
+      console.error('Error saving journal entry:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer l'entrée de journal.",
+        description: "Impossible de sauvegarder l'entrée du journal.",
         variant: "destructive",
       });
-      console.error("Error deleting journal entry:", error);
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      title: "",
-      content: "",
-      mood: undefined,
-      created_at: undefined,
-    });
+    setFormData({ title: '', content: '', mood: '', tags: '' });
     setEditingEntry(null);
+    setIsCreateOpen(false);
   };
 
-  const openEditDialog = (entry: JournalEntry) => {
-    setEditingEntry(entry);
+  const handleEdit = (entry: JournalEntry) => {
     setFormData({
       title: entry.title,
       content: entry.content,
-      mood: entry.mood,
-      created_at: entry.created_at ? parseISO(entry.created_at) : undefined,
+      mood: entry.mood || '',
+      tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : ''
     });
-    setOpenDialog(true);
+    setEditingEntry(entry);
+    setIsCreateOpen(true);
   };
 
+  const handleDelete = async (entryId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', entryId);
+
+      if (error) throw error;
+
+      setEntries(prev => prev.filter(entry => entry.id !== entryId));
+      
+      toast({
+        title: "Entrée supprimée",
+        description: "L'entrée du journal a été supprimée avec succès.",
+      });
+    } catch (error) {
+      console.error('Error deleting journal entry:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'entrée du journal.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getMoodInfo = (moodValue: string) => {
+    return moods.find(mood => mood.value === moodValue);
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <BookOpenCheckIcon className="h-8 w-8" />
-            Journal
-          </h1>
-          <p className="text-muted-foreground">
-            Écrivez vos pensées et vos expériences.
-          </p>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-6 w-6" />
+          <h1 className="text-2xl sm:text-3xl font-bold">Mon Journal</h1>
         </div>
         
-        <Dialog open={openDialog} onOpenChange={(open) => {
-          setOpenDialog(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
               Nouvelle entrée
             </Button>
           </DialogTrigger>
-          <DialogContent className={isMobile ? "sm:max-w-[95%] w-[95%] p-4" : ""}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingEntry ? "Modifier l'entrée" : "Nouvelle entrée"}</DialogTitle>
-              <DialogDescription>
-                {editingEntry
-                  ? "Modifiez les détails de votre entrée de journal."
-                  : "Créez une nouvelle entrée de journal pour suivre vos pensées et vos expériences."}
-              </DialogDescription>
+              <DialogTitle>
+                {editingEntry ? 'Modifier l\'entrée' : 'Nouvelle entrée de journal'}
+              </DialogTitle>
             </DialogHeader>
-            
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
+              <div>
+                <Label htmlFor="title">Titre *</Label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Titre de l'entrée..."
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Titre de votre entrée"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="content">Contenu</Label>
+              <div>
+                <Label htmlFor="content">Contenu *</Label>
                 <Textarea
                   id="content"
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Écrivez votre entrée de journal ici..."
-                  rows={5}
+                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                  placeholder="Écrivez vos pensées, réflexions, événements du jour..."
+                  rows={8}
+                  className="resize-none"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Humeur</Label>
-                <ToggleGroup 
-                  type="single" 
-                  className="flex flex-wrap justify-center" 
+              
+              <div>
+                <Label htmlFor="mood">Humeur</Label>
+                <Select
                   value={formData.mood}
-                  onValueChange={(value) => setFormData({ ...formData, mood: value })}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, mood: value }))}
                 >
-                  <ToggleGroupItem value="very_happy" className="text-2xl" title="Très heureux">😄</ToggleGroupItem>
-                  <ToggleGroupItem value="happy" className="text-2xl" title="Heureux">🙂</ToggleGroupItem>
-                  <ToggleGroupItem value="neutral" className="text-2xl" title="Neutre">😐</ToggleGroupItem>
-                  <ToggleGroupItem value="sad" className="text-2xl" title="Triste">😔</ToggleGroupItem>
-                  <ToggleGroupItem value="very_sad" className="text-2xl" title="Très triste">😢</ToggleGroupItem>
-                </ToggleGroup>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Comment vous sentez-vous ?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {moods.map(mood => (
+                      <SelectItem key={mood.value} value={mood.value}>
+                        {mood.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label>Date de création</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.created_at ? (
-                        format(formData.created_at, "P", { locale: fr })
-                      ) : (
-                        <span>Choisir une date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.created_at}
-                      onSelect={(date) => setFormData({ ...formData, created_at: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              
+              <div>
+                <Label htmlFor="tags">Tags (séparés par des virgules)</Label>
+                <Input
+                  id="tags"
+                  value={formData.tags}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+                  placeholder="travail, famille, voyage..."
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button onClick={handleSubmit} className="flex-1">
+                  {editingEntry ? 'Modifier' : 'Créer'}
+                </Button>
+                <Button variant="outline" onClick={resetForm}>
+                  Annuler
+                </Button>
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                resetForm();
-                setOpenDialog(false);
-              }}>
-                Annuler
-              </Button>
-              <Button onClick={editingEntry ? handleUpdateEntry : handleCreateEntry}>
-                {editingEntry ? "Mettre à jour" : "Créer"}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total des entrées</p>
+                <p className="text-2xl font-bold">{entries.length}</p>
+              </div>
+              <BookOpen className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Ce mois-ci</p>
+                <p className="text-2xl font-bold">
+                  {entries.filter(entry => {
+                    const entryDate = new Date(entry.created_at);
+                    const now = new Date();
+                    return entryDate.getMonth() === now.getMonth() && 
+                           entryDate.getFullYear() === now.getFullYear();
+                  }).length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Humeur dominante</p>
+                <p className="text-sm font-bold">
+                  {(() => {
+                    const moodCounts = entries.reduce((acc, entry) => {
+                      if (entry.mood) {
+                        acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                      }
+                      return acc;
+                    }, {} as Record<string, number>);
+                    
+                    const topMood = Object.entries(moodCounts).sort(([,a], [,b]) => b - a)[0];
+                    const moodInfo = topMood ? getMoodInfo(topMood[0]) : null;
+                    
+                    return moodInfo ? moodInfo.label : 'Aucune';
+                  })()}
+                </p>
+              </div>
+              <div className="text-2xl">
+                {(() => {
+                  const moodCounts = entries.reduce((acc, entry) => {
+                    if (entry.mood) {
+                      acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                    }
+                    return acc;
+                  }, {} as Record<string, number>);
+                  
+                  const topMood = Object.entries(moodCounts).sort(([,a], [,b]) => b - a)[0];
+                  return topMood ? topMood[0].split(' ')[0] : '📝';
+                })()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtres et recherche */}
       <Card>
-        <CardHeader>
-          <CardTitle>Vos entrées de journal</CardTitle>
-          <CardDescription>
-            Suivez vos pensées et vos expériences au fil du temps.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center space-x-4 p-3 rounded-md">
-                  <Skeleton className="h-5 w-5 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </div>
-              ))}
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher dans vos entrées..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-          ) : journalEntries.length > 0 ? (
-            <div className="space-y-4">
-              {journalEntries.map((entry) => (
-                <Card key={entry.id} className="glass-card">
-                  <CardHeader className="flex-row items-center justify-between space-y-0">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        {entry.title}
-                        {entry.mood && <MoodEmoji mood={entry.mood} />}
-                      </CardTitle>
-                      <CardDescription>
-                        {format(parseISO(entry.created_at), "dd/MM/yyyy", { locale: fr })}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {entry.content.length > 200 ? entry.content.substring(0, 200) + "..." : entry.content}
-                    </p>
-                    <div className="flex justify-end space-x-2 mt-4">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(entry)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className={isMobile ? "sm:max-w-[95%] w-[95%] p-4" : ""}>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action ne peut pas être annulée. Cela supprimera définitivement cette entrée de journal.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteEntry(entry.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <Select value={moodFilter} onValueChange={setMoodFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrer par humeur" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les humeurs</SelectItem>
+                  {moods.map(mood => (
+                    <SelectItem key={mood.value} value={mood.value}>
+                      {mood.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <JournalEmptyState onCreate={() => setOpenDialog(true)} />
-          )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* Liste des entrées */}
+      <div className="space-y-4">
+        {filteredEntries.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium mb-2">
+                {entries.length === 0 ? 'Aucune entrée de journal' : 'Aucune entrée trouvée'}
+              </p>
+              <p className="text-muted-foreground mb-4">
+                {entries.length === 0 
+                  ? 'Commencez votre voyage de réflexion en créant votre première entrée.'
+                  : 'Essayez de modifier vos critères de recherche.'
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredEntries.map((entry) => (
+            <Card key={entry.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg mb-2">{entry.title}</CardTitle>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {format(new Date(entry.created_at), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
+                      </span>
+                      
+                      {entry.mood && (
+                        <>
+                          <span>•</span>
+                          <Badge className={getMoodInfo(entry.mood)?.color}>
+                            {getMoodInfo(entry.mood)?.label}
+                          </Badge>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 ml-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(entry)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(entry.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="prose max-w-none">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {entry.content}
+                  </p>
+                </div>
+                
+                {entry.tags && Array.isArray(entry.tags) && entry.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-4">
+                    {entry.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
-};
-
-export default Journal;
+}

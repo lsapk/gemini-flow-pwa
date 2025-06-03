@@ -623,6 +623,73 @@ export type Database = {
         }
         Relationships: []
       }
+      good_action_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          good_action_id: string | null
+          id: string
+          is_deleted: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          good_action_id?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          good_action_id?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "good_action_comments_good_action_id_fkey"
+            columns: ["good_action_id"]
+            isOneToOne: false
+            referencedRelation: "good_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      good_action_likes: {
+        Row: {
+          created_at: string | null
+          good_action_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          good_action_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          good_action_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "good_action_likes_good_action_id_fkey"
+            columns: ["good_action_id"]
+            isOneToOne: false
+            referencedRelation: "good_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       good_actions: {
         Row: {
           category: string
@@ -658,6 +725,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      habit_completions: {
+        Row: {
+          completed_date: string | null
+          created_at: string | null
+          habit_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string | null
+          habit_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string | null
+          habit_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       habits: {
         Row: {

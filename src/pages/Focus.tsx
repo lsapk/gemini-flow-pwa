@@ -1,371 +1,245 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TimerIcon } from "@/components/icons/DeepFlowIcons";
-import { Progress } from "@/components/ui/progress";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Clock, RefreshCcw, Play, Pause, PlayCircle } from "lucide-react";
 
-const Focus = () => {
-  const [isActive, setIsActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(true);
-  const [mode, setMode] = useState<"focus" | "break">("focus");
-  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
-  const [focusDuration, setFocusDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
-  const [progress, setProgress] = useState(0);
-  const [sessionsCompleted, setSessionsCompleted] = useState(0);
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [totalSessionTime, setTotalSessionTime] = useState(0);
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Clock, Play, Target, TrendingUp, Calendar } from "lucide-react";
+
+export default function Focus() {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [duration, setDuration] = useState(25);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { sendNotification, requestPermission } = useNotifications();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load saved session state from localStorage
+  const presetSessions = [
+    { name: "Pomodoro", duration: 25 },
+    { name: "Travail intense", duration: 45 },
+    { name: "Étude approfondie", duration: 60 },
+    { name: "Sprint court", duration: 15 },
+    { name: "Session longue", duration: 90 }
+  ];
+
   useEffect(() => {
-    const savedState = localStorage.getItem('deepflow-focus-session');
-    if (savedState) {
-      try {
-        const state = JSON.parse(savedState);
-        const now = new Date().getTime();
-        const timePassed = Math.floor((now - state.lastUpdate) / 1000);
-        
-        if (state.isActive && !state.isPaused && state.sessionStartTime) {
-          setIsActive(true);
-          setIsPaused(false);
-          setMode(state.mode);
-          setFocusDuration(state.focusDuration);
-          setBreakDuration(state.breakDuration);
-          setSessionStartTime(new Date(state.sessionStartTime));
-          setTotalSessionTime(state.totalSessionTime + timePassed);
-          
-          const newSecondsLeft = Math.max(0, state.secondsLeft - timePassed);
-          setSecondsLeft(newSecondsLeft);
-          
-          if (newSecondsLeft === 0) {
-            handleSessionComplete();
-          }
-        }
-      } catch (error) {
-        console.error('Error loading saved session:', error);
-        localStorage.removeItem('deepflow-focus-session');
-      }
+    if (user) {
+      loadSessions();
     }
-  }, []);
+  }, [user]);
 
-  // Save session state to localStorage
-  const saveSessionState = useCallback(() => {
-    if (isActive && sessionStartTime) {
-      const state = {
-        isActive,
-        isPaused,
-        mode,
-        secondsLeft,
-        focusDuration,
-        breakDuration,
-        sessionStartTime: sessionStartTime.toISOString(),
-        totalSessionTime,
-        lastUpdate: new Date().getTime()
-      };
-      localStorage.setItem('deepflow-focus-session', JSON.stringify(state));
-    }
-  }, [isActive, isPaused, mode, secondsLeft, focusDuration, breakDuration, sessionStartTime, totalSessionTime]);
-
-  // Save state when component updates
-  useEffect(() => {
-    saveSessionState();
-  }, [saveSessionState]);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    requestPermission();
-  }, []);
-
-  const handleSessionComplete = useCallback(() => {
-    if (mode === "focus" && sessionStartTime) {
-      const actualDuration = Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000);
-      saveFocusSession(actualDuration);
-      setSessionsCompleted(prev => prev + 1);
-      
-      sendNotification('Temps de concentration terminé!', {
-        body: "C'est l'heure de faire une pause!",
-        tag: 'focus-complete'
-      });
-    } else if (mode === "break") {
-      sendNotification('Pause terminée!', {
-        body: "Prêt à reprendre le travail?",
-        tag: 'break-complete'
-      });
-    }
-    
-    // Switch modes
-    const nextMode = mode === "focus" ? "break" : "focus";
-    const nextTime = nextMode === "focus" ? focusDuration * 60 : breakDuration * 60;
-    setMode(nextMode);
-    setSecondsLeft(nextTime);
-    setIsPaused(true);
-    setSessionStartTime(null);
-    setTotalSessionTime(0);
-    localStorage.removeItem('deepflow-focus-session');
-  }, [mode, sessionStartTime, focusDuration, breakDuration, sendNotification]);
-
-  // Timer effect
-  useEffect(() => {
-    if (isActive && !isPaused) {
-      intervalRef.current = setInterval(() => {
-        setSecondsLeft((seconds) => {
-          if (seconds <= 1) {
-            handleSessionComplete();
-            return 0;
-          }
-          return seconds - 1;
-        });
-        setTotalSessionTime(prev => prev + 1);
-      }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isActive, isPaused, handleSessionComplete]);
-
-  // Calculate progress
-  useEffect(() => {
-    const totalSeconds = mode === "focus" ? focusDuration * 60 : breakDuration * 60;
-    setProgress(((totalSeconds - secondsLeft) / totalSeconds) * 100);
-  }, [secondsLeft, mode, focusDuration, breakDuration]);
-
-  // Save focus session to database (even if incomplete) - with correct duration calculation
-  const saveFocusSession = useCallback(async (duration?: number) => {
-    if (!user || !sessionStartTime) return;
+  const loadSessions = async () => {
+    if (!user) return;
     
     try {
-      // Calculate the actual duration in seconds, not milliseconds
-      const actualDuration = duration || totalSessionTime;
-      
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('focus_sessions')
-        .insert({
-          user_id: user.id,
-          duration: actualDuration, // This is already in seconds
-          title: `Session de focus de ${Math.floor(actualDuration / 60)}min ${actualDuration % 60}s`,
-          completed_at: new Date().toISOString()
-        });
-        
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
       if (error) throw error;
-      
-      toast({
-        title: "Session enregistrée",
-        description: `Session de ${formatTime(actualDuration)} sauvegardée avec succès.`,
-      });
+      setSessions(data || []);
     } catch (error) {
-      console.error("Erreur lors de l'enregistrement de la session:", error);
+      console.error('Error loading focus sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startFocusSession = () => {
+    if (!title.trim()) {
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer la session.",
-        variant: "destructive"
+        description: "Veuillez entrer un titre pour votre session.",
+        variant: "destructive",
       });
+      return;
     }
-  }, [user, sessionStartTime, totalSessionTime, toast]);
 
-  // Update secondsLeft when focus or break duration changes
-  useEffect(() => {
-    if (!isActive) {
-      setSecondsLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60);
-    }
-  }, [focusDuration, breakDuration, mode, isActive]);
+    // Déclencher l'événement pour le timer global
+    window.dispatchEvent(new CustomEvent('focus-start', {
+      detail: { title: title.trim(), duration }
+    }));
 
-  const startTimer = () => {
-    if (!isActive || isPaused) {
-      if (!sessionStartTime && mode === "focus") {
-        setSessionStartTime(new Date());
-        setTotalSessionTime(0);
-      }
-      setIsActive(true);
-      setIsPaused(false);
-      
-      // Send notification when starting
-      sendNotification(`${mode === "focus" ? "Session de concentration" : "Pause"} démarrée`, {
-        body: `${formatTime(secondsLeft)} restantes`,
-        tag: 'session-start'
-      });
-    }
+    // Réinitialiser le formulaire
+    setTitle("");
+    setDuration(25);
   };
 
-  const pauseTimer = () => {
-    setIsPaused(true);
-    // Save session when paused (even if incomplete)
-    if (mode === "focus" && sessionStartTime && totalSessionTime > 0) {
-      saveFocusSession();
-    }
-  };
-
-  const resetTimer = () => {
-    // Save session before reset (even if incomplete)
-    if (mode === "focus" && sessionStartTime && totalSessionTime > 0) {
-      saveFocusSession();
-    }
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     
-    setIsActive(false);
-    setIsPaused(true);
-    setMode("focus");
-    setSecondsLeft(focusDuration * 60);
-    setSessionStartTime(null);
-    setTotalSessionTime(0);
-    localStorage.removeItem('deepflow-focus-session');
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
-  const formatTime = (timeInSeconds: number) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = timeInSeconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+  if (loading) {
+    return (
+      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalFocusTime = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+  const completedSessions = sessions.filter(s => s.completed_at).length;
+  const averageSession = sessions.length > 0 ? Math.round(totalFocusTime / sessions.length / 60) : 0;
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <TimerIcon className="h-8 w-8" />
-          Mode Focus
-        </h1>
-        <p className="text-muted-foreground">
-          Utilisez la technique Pomodoro pour rester concentré et productif.
-        </p>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+      <div className="flex items-center gap-2 mb-6">
+        <Clock className="h-6 w-6" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Mode Focus</h1>
       </div>
 
-      <Card className="glass-card mx-auto max-w-md">
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Temps total</p>
+                <p className="text-2xl font-bold">{formatDuration(totalFocusTime)}</p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Sessions</p>
+                <p className="text-2xl font-bold">{completedSessions}</p>
+              </div>
+              <Target className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Moyenne</p>
+                <p className="text-2xl font-bold">{averageSession}min</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Démarrer une session */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-center">
-            {mode === "focus" ? "Temps de travail" : "Pause"}
+          <CardTitle className="flex items-center gap-2">
+            <Play className="h-5 w-5" />
+            Nouvelle session de focus
           </CardTitle>
-          <CardDescription className="text-center">
-            {mode === "focus"
-              ? "Concentrez-vous sur votre tâche"
-              : "Prenez une courte pause"}
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex justify-center">
-            <div className="w-48 h-48 rounded-full border-8 border-primary/20 flex items-center justify-center relative">
-              <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="88"
-                  fill="none"
-                  strokeWidth="8"
-                  stroke="currentColor"
-                  className="text-primary"
-                  strokeDasharray="552.9"
-                  strokeDashoffset={552.9 - (progress / 100) * 552.9}
-                />
-              </svg>
-              <span className="text-4xl font-bold">{formatTime(secondsLeft)}</span>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="title">Titre de la session</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Sur quoi allez-vous vous concentrer ?"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="duration">Durée (minutes)</Label>
+            <div className="flex gap-2 mt-2">
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                max="180"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value) || 25)}
+                className="w-24"
+              />
+              <div className="flex flex-wrap gap-2">
+                {presetSessions.map((preset) => (
+                  <Button
+                    key={preset.name}
+                    variant={duration === preset.duration ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setDuration(preset.duration)}
+                  >
+                    {preset.name} ({preset.duration}min)
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {!isActive && (
-            <div className="space-y-6 pt-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Durée de concentration:</label>
-                  <span className="text-sm font-bold">{focusDuration} min</span>
-                </div>
-                <Select
-                  value={focusDuration.toString()}
-                  onValueChange={(value) => setFocusDuration(parseInt(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Durée de concentration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 minutes</SelectItem>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="25">25 minutes (Pomodoro)</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                    <SelectItem value="90">90 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <Button onClick={startFocusSession} className="w-full" size="lg">
+            <Play className="h-4 w-4 mr-2" />
+            Commencer la session ({duration} min)
+          </Button>
+        </CardContent>
+      </Card>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Durée de pause:</label>
-                  <span className="text-sm font-bold">{breakDuration} min</span>
-                </div>
-                <Select
-                  value={breakDuration.toString()}
-                  onValueChange={(value) => setBreakDuration(parseInt(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Durée de pause" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 minutes</SelectItem>
-                    <SelectItem value="5">5 minutes</SelectItem>
-                    <SelectItem value="10">10 minutes</SelectItem>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="20">20 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-center space-x-4 pt-4">
-            {isPaused ? (
-              <Button onClick={startTimer} size="lg" className="flex items-center gap-2">
-                {isActive ? <Play className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
-                {isActive ? "Reprendre" : "Démarrer"}
-              </Button>
-            ) : (
-              <Button onClick={pauseTimer} variant="outline" size="lg" className="flex items-center gap-2">
-                <Pause className="h-4 w-4" />
-                Pause
-              </Button>
-            )}
-            <Button onClick={resetTimer} variant="outline" size="lg" className="flex items-center gap-2">
-              <RefreshCcw className="h-4 w-4" />
-              Réinitialiser
-            </Button>
-          </div>
-          
-          {sessionsCompleted > 0 && (
-            <div className="text-center pt-2">
-              <p className="text-sm text-muted-foreground">
-                Sessions complétées aujourd'hui: <span className="font-bold text-primary">{sessionsCompleted}</span>
+      {/* Historique des sessions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Historique récent
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sessions.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium mb-2">Aucune session enregistrée</p>
+              <p className="text-muted-foreground">
+                Commencez votre première session de focus pour améliorer votre productivité.
               </p>
             </div>
-          )}
-
-          {isActive && sessionStartTime && (
-            <div className="text-center pt-2">
-              <p className="text-xs text-muted-foreground">
-                Temps total: <span className="font-bold">{formatTime(totalSessionTime)}</span>
-              </p>
+          ) : (
+            <div className="space-y-3">
+              {sessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div>
+                    <h3 className="font-medium">{session.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(session.created_at).toLocaleDateString('fr', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatDuration(session.duration || 0)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {session.completed_at ? 'Terminée' : 'Interrompue'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default Focus;
+}
