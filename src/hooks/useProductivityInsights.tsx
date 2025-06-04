@@ -12,6 +12,8 @@ export interface ProductivityInsight {
   title: string;
   insight: string;
   recommendation: string;
+  description?: string;
+  suggestion?: string;
   priority: 'high' | 'medium' | 'low';
   icon: any;
   metric?: string;
@@ -46,6 +48,8 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
         title: 'Performance critique',
         insight: `Votre taux de complétion de ${taskCompletionRate.toFixed(0)}% nécessite une action immédiate.`,
         recommendation: 'Utilisez la technique des 3 tâches prioritaires par jour. Commencez petit et célébrez chaque victoire.',
+        description: `Votre taux de complétion de ${taskCompletionRate.toFixed(0)}% nécessite une action immédiate.`,
+        suggestion: 'Utilisez la technique des 3 tâches prioritaires par jour. Commencez petit et célébrez chaque victoire.',
         priority: 'high',
         icon: AlertTriangle,
         metric: `${taskCompletionRate.toFixed(0)}%`,
@@ -57,6 +61,8 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
         title: 'Performance exceptionnelle',
         insight: `Votre taux de ${taskCompletionRate.toFixed(0)}% vous place dans l'élite des utilisateurs productifs.`,
         recommendation: 'Partagez vos méthodes avec d\'autres et challengez-vous avec des projets plus ambitieux.',
+        description: `Votre taux de ${taskCompletionRate.toFixed(0)}% vous place dans l'élite des utilisateurs productifs.`,
+        suggestion: 'Partagez vos méthodes avec d\'autres et challengez-vous avec des projets plus ambitieux.',
         priority: 'low',
         icon: Trophy,
         metric: `${taskCompletionRate.toFixed(0)}%`,
@@ -68,6 +74,8 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
         title: 'Potentiel d\'amélioration',
         insight: `À ${taskCompletionRate.toFixed(0)}%, vous avez une belle marge de progression.`,
         recommendation: 'Analysez vos tâches non terminées et identifiez les obstacles récurrents.',
+        description: `À ${taskCompletionRate.toFixed(0)}%, vous avez une belle marge de progression.`,
+        suggestion: 'Analysez vos tâches non terminées et identifiez les obstacles récurrents.',
         priority: 'medium',
         icon: TrendingUp,
         metric: `${taskCompletionRate.toFixed(0)}%`,

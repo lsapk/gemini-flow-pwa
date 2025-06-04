@@ -123,6 +123,8 @@ export default function Analysis() {
         
         return {
           date: format(new Date(date), 'dd/MM'),
+          name: format(new Date(date), 'dd/MM'),
+          value: data?.filter(t => t.completed).length || 0,
           total: data?.length || 0,
           completed: data?.filter(t => t.completed).length || 0
         };
@@ -140,6 +142,8 @@ export default function Analysis() {
         
         return {
           date: format(new Date(date), 'dd/MM'),
+          name: format(new Date(date), 'dd/MM'),
+          value: data?.length || 0,
           completed: data?.length || 0
         };
       })
@@ -160,7 +164,9 @@ export default function Analysis() {
     // Tendance de productivité
     const productivityTrend = last7Days.map((date, index) => ({
       date: format(new Date(date), 'dd/MM'),
-      score: Math.floor(Math.random() * 30) + 70 + index * 2 // Simulation d'amélioration
+      name: format(new Date(date), 'dd/MM'),
+      value: Math.floor(Math.random() * 30) + 70 + index * 2, // Simulation d'amélioration
+      score: Math.floor(Math.random() * 30) + 70 + index * 2
     }));
 
     setChartData({
@@ -290,7 +296,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleBarChart 
               data={chartData.tasksOverTime}
-              dataKey="completed"
+              barKey="value"
               color="#3b82f6"
             />
           </CardContent>
@@ -303,8 +309,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleLineChart 
               data={chartData.habitsOverTime}
-              dataKey="completed"
-              color="#10b981"
+              lines={[{ dataKey: "value", name: "Habitudes", color: "#10b981" }]}
             />
           </CardContent>
         </Card>
@@ -325,8 +330,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleLineChart 
               data={chartData.productivityTrend}
-              dataKey="score"
-              color="#8b5cf6"
+              lines={[{ dataKey: "value", name: "Score", color: "#8b5cf6" }]}
             />
           </CardContent>
         </Card>
@@ -350,10 +354,10 @@ export default function Analysis() {
                   </div>
                   <div>
                     <h4 className="font-medium mb-1">{insight.title}</h4>
-                    <p className="text-sm text-muted-foreground">{insight.description}</p>
-                    {insight.suggestion && (
+                    <p className="text-sm text-muted-foreground">{insight.insight}</p>
+                    {insight.recommendation && (
                       <p className="text-sm text-blue-600 mt-2 font-medium">
-                        💡 {insight.suggestion}
+                        💡 {insight.recommendation}
                       </p>
                     )}
                   </div>
