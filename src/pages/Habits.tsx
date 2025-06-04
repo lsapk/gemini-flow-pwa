@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import CreateModal from "@/components/modals/CreateModal";
-import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { 
   Plus, 
   Calendar, 
@@ -51,7 +51,13 @@ export default function Habits() {
 
       if (error) throw error;
 
-      setHabits(data || []);
+      // Transform the data to ensure proper typing
+      const typedHabits: Habit[] = (data || []).map(habit => ({
+        ...habit,
+        frequency: habit.frequency as 'daily' | 'weekly' | 'monthly'
+      }));
+
+      setHabits(typedHabits);
     } catch (error) {
       console.error('Error loading habits:', error);
       toast({

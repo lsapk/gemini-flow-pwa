@@ -31,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className={`hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ${
           sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
         } transition-transform duration-300`}>
-          <Sidebar onClose={() => setSidebarOpen(false)} />
+          <Sidebar />
         </div>
 
         {/* Mobile Sidebar Overlay */}
@@ -41,7 +41,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             onClick={() => setSidebarOpen(false)}
           >
             <div className="w-64 h-full bg-background" onClick={(e) => e.stopPropagation()}>
-              <Sidebar onClose={() => setSidebarOpen(false)} />
+              <Sidebar />
             </div>
           </div>
         )}

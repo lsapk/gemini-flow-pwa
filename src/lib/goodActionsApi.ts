@@ -95,13 +95,7 @@ export const addComment = async (goodActionId: string, content: string) => {
       user_id: user.id,
       content: content.trim()
     })
-    .select(`
-      *,
-      user_profiles (
-        display_name,
-        email
-      )
-    `)
+    .select('*')
     .single();
 
   if (error) throw error;
@@ -124,19 +118,23 @@ export const addComment = async (goodActionId: string, content: string) => {
 export const getComments = async (goodActionId: string): Promise<GoodActionComment[]> => {
   const { data, error } = await supabase
     .from('good_action_comments')
-    .select(`
-      *,
-      user_profiles (
-        display_name,
-        email
-      )
-    `)
+    .select('*')
     .eq('good_action_id', goodActionId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  
+  // Transform the data to match our interface
+  const transformedData: GoodActionComment[] = (data || []).map(comment => ({
+    ...comment,
+    user_profiles: {
+      display_name: null,
+      email: null
+    }
+  }));
+
+  return transformedData;
 };
 
 export const deleteComment = async (commentId: string) => {
@@ -165,13 +163,7 @@ export const moderateComment = async (commentId: string) => {
 export const getAllPublicGoodActions = async () => {
   const { data, error } = await supabase
     .from('good_actions')
-    .select(`
-      *,
-      user_profiles (
-        display_name,
-        email
-      )
-    `)
+    .select('*')
     .eq('is_public', true)
     .order('created_at', { ascending: false });
   
@@ -179,7 +171,17 @@ export const getAllPublicGoodActions = async () => {
     console.error('Error loading public good actions:', error);
     return [];
   }
-  return data || [];
+  
+  // Transform the data to match our interface
+  const transformedData = (data || []).map(action => ({
+    ...action,
+    user_profiles: {
+      display_name: null,
+      email: null
+    }
+  }));
+  
+  return transformedData;
 };
 
 export const getUserGoodActions = async (userId?: string) => {
@@ -190,18 +192,22 @@ export const getUserGoodActions = async (userId?: string) => {
 
   const { data, error } = await supabase
     .from('good_actions')
-    .select(`
-      *,
-      user_profiles (
-        display_name,
-        email
-      )
-    `)
+    .select('*')
     .eq('user_id', targetUserId)
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  
+  // Transform the data to match our interface
+  const transformedData = (data || []).map(action => ({
+    ...action,
+    user_profiles: {
+      display_name: null,
+      email: null
+    }
+  }));
+  
+  return transformedData;
 };
 
 export const createGoodAction = async (actionData: {

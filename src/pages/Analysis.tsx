@@ -26,8 +26,8 @@ import { fr } from "date-fns/locale";
 
 export default function Analysis() {
   const { user } = useAuth();
-  const { insights, loading: insightsLoading } = useProductivityInsights();
-  const { score, loading: scoreLoading } = useProductivityScore();
+  const insights = useProductivityInsights();
+  const scoreData = useProductivityScore();
   
   const [stats, setStats] = useState({
     totalTasks: 0,
@@ -182,7 +182,12 @@ export default function Analysis() {
   const habitCompletionRate = stats.totalHabits > 0 ? (stats.completedHabitsToday / stats.totalHabits * 100) : 0;
   const goalCompletionRate = stats.totalGoals > 0 ? (stats.completedGoals / stats.totalGoals * 100) : 0;
 
-  if (loading || insightsLoading || scoreLoading) {
+  // Get data from hooks
+  const productivityInsights = Array.isArray(insights) ? insights : [];
+  const score = typeof scoreData === 'object' && scoreData.score ? scoreData.score : 75;
+  const isLoading = loading;
+
+  if (isLoading) {
     return (
       <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
         <div className="text-center py-8">
@@ -285,8 +290,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleBarChart 
               data={chartData.tasksOverTime}
-              xKey="date"
-              yKey="completed"
+              dataKey="completed"
               color="#3b82f6"
             />
           </CardContent>
@@ -299,8 +303,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleLineChart 
               data={chartData.habitsOverTime}
-              xKey="date"
-              yKey="completed"
+              dataKey="completed"
               color="#10b981"
             />
           </CardContent>
@@ -322,8 +325,7 @@ export default function Analysis() {
           <CardContent>
             <SimpleLineChart 
               data={chartData.productivityTrend}
-              xKey="date"
-              yKey="score"
+              dataKey="score"
               color="#8b5cf6"
             />
           </CardContent>
@@ -340,7 +342,7 @@ export default function Analysis() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {insights.map((insight, index) => (
+            {productivityInsights.map((insight, index) => (
               <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
