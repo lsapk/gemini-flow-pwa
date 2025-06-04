@@ -18,13 +18,12 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   likeGoodAction,
-  unlikeGoodAction,
   getGoodActionLikes,
   addComment,
   getComments,
-  deleteComment,
-  GoodActionComment
+  deleteComment
 } from "@/lib/goodActionsApi";
+import { GoodActionComment } from "@/types";
 
 const CATEGORIES = [
   { value: 'environment', label: '🌱 Environnement', color: 'bg-green-100 text-green-800' },
@@ -47,9 +46,9 @@ interface GoodActionCardProps {
     likes_count: number;
     comments_count: number;
     user_profiles?: {
-      display_name: string;
-      email: string;
-    };
+      display_name: string | null;
+      email: string | null;
+    } | null;
   };
   isAdmin?: boolean;
 }
@@ -85,15 +84,9 @@ export default function GoodActionCard({ action, isAdmin = false }: GoodActionCa
     if (!user) return;
     
     try {
-      if (isLiked) {
-        await unlikeGoodAction(action.id);
-        setIsLiked(false);
-        setLikesCount(prev => prev - 1);
-      } else {
-        await likeGoodAction(action.id);
-        setIsLiked(true);
-        setLikesCount(prev => prev + 1);
-      }
+      const liked = await likeGoodAction(action.id);
+      setIsLiked(liked);
+      setLikesCount(prev => liked ? prev + 1 : prev - 1);
     } catch (error) {
       console.error('Error toggling like:', error);
       toast({

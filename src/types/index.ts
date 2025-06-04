@@ -61,8 +61,8 @@ export interface GoodAction {
   comments_count: number;
   is_public: boolean;
   user_profiles?: {
-    display_name: string;
-    email: string;
+    display_name: string | null;
+    email: string | null;
   } | null;
 }
 
@@ -74,9 +74,9 @@ export interface GoodActionComment {
   good_action_id: string;
   is_deleted: boolean;
   user_profiles?: {
-    display_name: string;
-    email: string;
-  };
+    display_name: string | null;
+    email: string | null;
+  } | null;
 }
 
 export interface GoodActionLike {

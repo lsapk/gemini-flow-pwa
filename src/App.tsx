@@ -21,7 +21,7 @@ import Reflection from "./pages/Reflection";
 import GoodActions from "./pages/GoodActions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import AppLayout from "./components/layout/AppLayout";
+import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -63,60 +63,60 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Dashboard />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Dashboard />} />
-                </Route>
+                } />
                 <Route path="/tasks" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Tasks />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Tasks />} />
-                </Route>
+                } />
                 <Route path="/habits" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Habits />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Habits />} />
-                </Route>
+                } />
                 <Route path="/focus" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Focus />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Focus />} />
-                </Route>
+                } />
                 <Route path="/journal" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Journal />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Journal />} />
-                </Route>
+                } />
                 <Route path="/goals" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Goals />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Goals />} />
-                </Route>
+                } />
                 <Route path="/badges" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Badges />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Badges />} />
-                </Route>
+                } />
                 <Route path="/analysis" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Analysis />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Analysis />} />
-                </Route>
+                } />
                 <Route path="/ai-assistant" element={
                   <ProtectedRoute>
                     <AIAssistant />
@@ -124,25 +124,25 @@ function App() {
                 } />
                 <Route path="/reflection" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Reflection />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Reflection />} />
-                </Route>
+                } />
                 <Route path="/good-actions" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <GoodActions />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<GoodActions />} />
-                </Route>
+                } />
                 <Route path="/settings" element={
                   <ProtectedRoute>
-                    <AppLayout />
+                    <AppLayout>
+                      <Settings />
+                    </AppLayout>
                   </ProtectedRoute>
-                }>
-                  <Route index element={<Settings />} />
-                </Route>
+                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>

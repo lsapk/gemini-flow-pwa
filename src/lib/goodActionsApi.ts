@@ -97,7 +97,7 @@ export const addComment = async (goodActionId: string, content: string) => {
     })
     .select(`
       *,
-      user_profiles!inner (
+      user_profiles (
         display_name,
         email
       )
@@ -126,7 +126,7 @@ export const getComments = async (goodActionId: string): Promise<GoodActionComme
     .from('good_action_comments')
     .select(`
       *,
-      user_profiles!inner (
+      user_profiles (
         display_name,
         email
       )
@@ -167,7 +167,7 @@ export const getAllPublicGoodActions = async () => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles!inner (
+      user_profiles (
         display_name,
         email
       )
@@ -192,7 +192,7 @@ export const getUserGoodActions = async (userId?: string) => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles!inner (
+      user_profiles (
         display_name,
         email
       )

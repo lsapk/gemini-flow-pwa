@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { CreateModal } from "@/components/modals/CreateModal";
-import { CreateHabitForm } from "@/components/modals/CreateHabitForm";
+import CreateModal from "@/components/modals/CreateModal";
+import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { 
   Plus, 
   Calendar, 
@@ -241,16 +240,9 @@ export default function Habits() {
         </div>
         
         <CreateModal
-          trigger={
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle habitude
-            </Button>
-          }
-          title="Créer une nouvelle habitude"
-        >
-          <CreateHabitForm onSuccess={loadHabits} />
-        </CreateModal>
+          type="habit"
+          onSuccess={loadHabits}
+        />
       </div>
 
       {/* Statistiques */}
@@ -440,19 +432,12 @@ export default function Habits() {
       {/* Modal d'édition */}
       {editingHabit && (
         <CreateModal
-          trigger={<></>}
-          title="Modifier l'habitude"
-          open={!!editingHabit}
-          onOpenChange={(open) => !open && setEditingHabit(null)}
-        >
-          <CreateHabitForm 
-            habit={editingHabit}
-            onSuccess={() => {
-              loadHabits();
-              setEditingHabit(null);
-            }} 
-          />
-        </CreateModal>
+          type="habit"
+          onSuccess={() => {
+            loadHabits();
+            setEditingHabit(null);
+          }}
+        />
       )}
     </div>
   );

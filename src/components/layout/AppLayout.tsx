@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
-import { MobileHeader } from "./MobileHeader";
-import { Sidebar } from "./Sidebar";
+import MobileHeader from "./MobileHeader";
+import Sidebar from "./Sidebar";
+import { FocusTimer } from "./FocusTimer";
 
 interface AppLayoutProps {
   children: React.ReactNode;
