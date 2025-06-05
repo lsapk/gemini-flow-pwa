@@ -1,87 +1,167 @@
 
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Bot, User, Sparkles, ArrowLeft, Menu, X } from "lucide-react";
-import { Markdown } from "@/components/Markdown";
-import { useNavigate } from "react-router-dom";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import Sidebar from "@/components/layout/Sidebar";
+import { 
+  Bot, 
+  Send, 
+  User, 
+  Loader2,
+  Brain,
+  Database,
+  Zap
+} from "lucide-react";
 
-interface ChatMessage {
-  role: "user" | "assistant";
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
 }
 
+interface UserData {
+  habits: any[];
+  goals: any[];
+  tasks: any[];
+  journal_entries: any[];
+  good_actions: any[];
+  user_settings: any;
+}
+
 export default function AIAssistant() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+      
+      // Charger l'historique des messages depuis localStorage
+      const savedMessages = localStorage.getItem(`ai_messages_${user.id}`);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })));
       }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Sauvegarder les messages dans localStorage
+    if (user && messages.length > 0) {
+      // Garder seulement les 10 derniers messages (5 conversations)
+      const recentMessages = messages.slice(-10);
+      localStorage.setItem(`ai_messages_${user.id}`, JSON.stringify(recentMessages));
+    }
+  }, [messages, user]);
+
+  useEffect(() => {
+    // Auto-scroll vers le bas
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const loadUserData = async () => {
+    if (!user) return;
+
+    try {
+      const [habitsRes, goalsRes, tasksRes, journalRes, actionsRes, settingsRes] = await Promise.all([
+        supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id),
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('good_actions').select('*').eq('user_id', user.id).limit(5),
+        supabase.from('user_settings').select('*').eq('id', user.id).single()
+      ]);
+
+      setUserData({
+        habits: habitsRes.data || [],
+        goals: goalsRes.data || [],
+        tasks: tasksRes.data || [],
+        journal_entries: journalRes.data || [],
+        good_actions: actionsRes.data || [],
+        user_settings: settingsRes.data
+      });
+    } catch (error) {
+      console.error('Error loading user data:', error);
     }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const sendMessage = async () => {
-    if (!currentMessage.trim() || !user || isLoading) return;
+    if (!input.trim() || loading || !user) return;
 
-    const userMessage: ChatMessage = {
-      role: "user",
-      content: currentMessage.trim(),
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setCurrentMessage("");
-    setIsLoading(true);
+    setInput("");
+    setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
-        body: { 
-          message: userMessage.content, 
-          chatHistory: messages,
-          userId: user.id 
-        }
+      // Recharger les données utilisateur en temps réel
+      await loadUserData();
+
+      // Créer le contexte avec les données utilisateur
+      const context = {
+        user_data: userData,
+        recent_messages: messages.slice(-8) // 4 dernières conversations
+      };
+
+      const response = await fetch('/api/gemini-chat-enhanced', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: input.trim(),
+          context: context,
+          user_id: user.id
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Erreur réseau');
+      }
 
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
+      const data = await response.json();
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
         content: data.response,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
     } catch (error) {
-      console.error("Erreur lors de l'envoi du message:", error);
+      console.error('Error sending message:', error);
       toast({
         title: "Erreur",
         description: "Impossible d'envoyer le message. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -92,191 +172,168 @@ export default function AIAssistant() {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <Bot className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">Assistant IA</h3>
-            <p className="text-muted-foreground">
-              Veuillez vous connecter pour accéder à l'assistant IA.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const clearHistory = () => {
+    setMessages([]);
+    if (user) {
+      localStorage.removeItem(`ai_messages_${user.id}`);
+    }
+    toast({
+      title: "Historique effacé",
+      description: "L'historique des conversations a été supprimé.",
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Mobile Header */}
-      <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur md:hidden">
-        <div className="container flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-semibold">Assistant IA</h1>
-          </div>
-          
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <Sidebar className="border-0" />
-            </SheetContent>
-          </Sheet>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Bot className="h-6 w-6" />
+          <h1 className="text-2xl sm:text-3xl font-bold">Assistant IA</h1>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Brain className="h-3 w-3" />
+            Amélioré
+          </Badge>
+        </div>
+        
+        <div className="flex gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Database className="h-3 w-3" />
+            Données temps réel
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            Mémoire: {messages.length}/10
+          </Badge>
+          <Button variant="outline" size="sm" onClick={clearHistory}>
+            Effacer l'historique
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
+      {/* Zone de statistiques des données */}
+      {userData && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Données disponibles pour l'IA</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
+              <div>
+                <p className="text-lg font-bold text-blue-600">{userData.habits.length}</p>
+                <p className="text-xs text-muted-foreground">Habitudes</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-green-600">{userData.goals.length}</p>
+                <p className="text-xs text-muted-foreground">Objectifs</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-orange-600">{userData.tasks.length}</p>
+                <p className="text-xs text-muted-foreground">Tâches</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-purple-600">{userData.journal_entries.length}</p>
+                <p className="text-xs text-muted-foreground">Journaux</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-pink-600">{userData.good_actions.length}</p>
+                <p className="text-xs text-muted-foreground">Bonnes actions</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="hidden md:block p-6 border-b">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                <Sparkles className="h-8 w-8" />
-                Assistant IA
-              </h1>
-              <p className="text-muted-foreground">
-                Votre coach personnel pour la productivité et le bien-être
-              </p>
+      {/* Zone de chat */}
+      <Card className="h-[600px] flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Assistant personnel</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Votre assistant IA avec accès à toutes vos données en temps réel et une mémoire des conversations récentes.
+          </p>
+        </CardHeader>
+        
+        <CardContent className="flex-1 flex flex-col p-0">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+            <div className="space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Commencez une conversation avec votre assistant IA !</p>
+                  <p className="text-sm mt-2">
+                    Il a accès à toutes vos données et se souvient de vos conversations récentes.
+                  </p>
+                </div>
+              )}
+              
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === 'user' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <User className="h-4 w-4" />
+                      ) : (
+                        <Bot className="h-4 w-4" />
+                      )}
+                    </div>
+                    
+                    <div className={`rounded-lg p-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className={`text-xs mt-1 opacity-70`}>
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {loading && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">L'assistant réfléchit...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          <div className="border-t p-4">
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Demandez-moi des conseils sur vos habitudes, objectifs, ou tout autre sujet..."
+                className="flex-1"
+                disabled={loading}
+              />
+              <Button onClick={sendMessage} disabled={loading || !input.trim()}>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
-
-          <div className="flex-1 flex flex-col p-3 md:p-6">
-            <Card className="flex-1 flex flex-col h-full">
-              <CardHeader className="border-b pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  DeepFlow Assistant
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="flex-1 flex flex-col gap-4 p-3 md:p-4 overflow-hidden">
-                <ScrollArea ref={scrollAreaRef} className="flex-1 pr-2 md:pr-4">
-                  <div className="space-y-4">
-                    {messages.length === 0 && (
-                      <div className="text-center py-8">
-                        <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <h3 className="text-lg font-medium mb-2">Bonjour ! 👋</h3>
-                        <p className="text-muted-foreground mb-4 text-sm md:text-base">
-                          Je suis DeepFlow, votre assistant IA personnel. Je peux vous aider avec :
-                        </p>
-                        <div className="text-left max-w-md mx-auto space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>📝</span>
-                            <span>Créer et gérer vos tâches</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>🎯</span>
-                            <span>Suivre vos habitudes et objectifs</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>📖</span>
-                            <span>Rédiger des entrées de journal</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>💡</span>
-                            <span>Conseils personnalisés de productivité</span>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground mt-4 text-sm">
-                          Posez-moi une question ou demandez-moi de créer quelque chose !
-                        </p>
-                      </div>
-                    )}
-                    
-                    {messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex gap-2 md:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        {message.role === "assistant" && (
-                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                            <Bot className="h-3 w-3 md:h-4 md:w-4 text-primary-foreground" />
-                          </div>
-                        )}
-                        
-                        <div
-                          className={`max-w-[85%] md:max-w-[80%] rounded-lg p-2 md:p-3 ${
-                            message.role === "user"
-                              ? "bg-primary text-primary-foreground ml-6 md:ml-8"
-                              : "bg-muted"
-                          }`}
-                        >
-                          {message.role === "assistant" ? (
-                            <Markdown content={message.content} />
-                          ) : (
-                            <p className="whitespace-pre-wrap text-sm md:text-base">{message.content}</p>
-                          )}
-                          <div className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
-                          </div>
-                        </div>
-                        
-                        {message.role === "user" && (
-                          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                            <User className="h-3 w-3 md:h-4 md:w-4" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    
-                    {isLoading && (
-                      <div className="flex gap-2 md:gap-3 justify-start">
-                        <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                          <Bot className="h-3 w-3 md:h-4 md:w-4 text-primary-foreground" />
-                        </div>
-                        <div className="bg-muted rounded-lg p-2 md:p-3">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-                
-                <div className="flex gap-2">
-                  <Textarea
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Tapez votre message... (Entrée pour envoyer)"
-                    className="flex-1 min-h-[50px] md:min-h-[60px] max-h-32 resize-none text-sm md:text-base"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!currentMessage.trim() || isLoading}
-                    size="lg"
-                    className="px-3 md:px-4"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,48 +2,56 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { 
   Plus, 
-  Calendar, 
   Target, 
-  TrendingUp, 
-  CheckCircle2,
-  Circle,
-  Edit,
-  Trash2,
+  Calendar,
+  Flame,
+  CheckCircle,
   Filter
 } from "lucide-react";
 import { Habit, HabitCompletion } from "@/types";
-import { format, isToday } from "date-fns";
+import CreateHabitForm from "@/components/modals/CreateHabitForm";
+import { format, isToday, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [completions, setCompletions] = useState<HabitCompletion[]>([]);
-  const [filter, setFilter] = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
+  const [completions, setCompletions] = useState<{ [key: string]: HabitCompletion[] }>({});
+  const [filteredHabits, setFilteredHabits] = useState<Habit[]>([]);
+  const [frequencyFilter, setFrequencyFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       loadHabits();
-      loadCompletions();
     }
   }, [user]);
+
+  useEffect(() => {
+    filterHabits();
+  }, [habits, frequencyFilter]);
+
+  const filterHabits = () => {
+    let filtered = habits;
+    if (frequencyFilter !== 'all') {
+      filtered = habits.filter(habit => habit.frequency === frequencyFilter);
+    }
+    setFilteredHabits(filtered);
+  };
 
   const loadHabits = async () => {
     if (!user) return;
     
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('habits')
@@ -53,13 +61,19 @@ export default function Habits() {
 
       if (error) throw error;
 
-      // Transform the data to ensure proper typing
-      const typedHabits: Habit[] = (data || []).map(habit => ({
-        ...habit,
-        frequency: habit.frequency as 'daily' | 'weekly' | 'monthly'
-      }));
+      const habitsWithStatus = await Promise.all(
+        (data || []).map(async (habit) => {
+          const completionData = await loadHabitCompletions(habit.id);
+          return {
+            ...habit,
+            is_completed_today: completionData.some(comp => 
+              isToday(new Date(comp.completed_date))
+            )
+          };
+        })
+      );
 
-      setHabits(typedHabits);
+      setHabits(habitsWithStatus);
     } catch (error) {
       console.error('Error loading habits:', error);
       toast({
@@ -72,34 +86,37 @@ export default function Habits() {
     }
   };
 
-  const loadCompletions = async () => {
-    if (!user) return;
-    
+  const loadHabitCompletions = async (habitId: string) => {
     try {
       const { data, error } = await supabase
         .from('habit_completions')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('habit_id', habitId)
+        .eq('user_id', user?.id)
+        .order('completed_date', { ascending: false });
 
       if (error) throw error;
 
-      setCompletions(data || []);
+      const completionData = data || [];
+      setCompletions(prev => ({ ...prev, [habitId]: completionData }));
+      return completionData;
     } catch (error) {
-      console.error('Error loading completions:', error);
+      console.error('Error loading habit completions:', error);
+      return [];
     }
   };
 
   const toggleHabitCompletion = async (habit: Habit) => {
     if (!user) return;
 
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const existingCompletion = completions.find(
-      c => c.habit_id === habit.id && c.completed_date === today
-    );
-
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const existingCompletion = completions[habit.id]?.find(
+        comp => comp.completed_date === today
+      );
+
       if (existingCompletion) {
-        // Décocher - supprimer la completion
+        // Remove completion
         const { error } = await supabase
           .from('habit_completions')
           .delete()
@@ -107,65 +124,29 @@ export default function Habits() {
 
         if (error) throw error;
 
-        // Mettre à jour la streak
-        const newStreak = Math.max((habit.streak || 0) - 1, 0);
-        await supabase
-          .from('habits')
-          .update({ 
-            streak: newStreak,
-            last_completed_at: null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', habit.id);
-
-        setCompletions(prev => prev.filter(c => c.id !== existingCompletion.id));
-        setHabits(prev => prev.map(h => 
-          h.id === habit.id 
-            ? { ...h, streak: newStreak, last_completed_at: null }
-            : h
-        ));
-
         toast({
-          title: "Habitude décochée",
-          description: `${habit.title} a été marquée comme non complétée aujourd'hui.`,
+          title: "Habitude non marquée",
+          description: `${habit.title} n'est plus marquée comme complétée aujourd'hui.`,
         });
       } else {
-        // Cocher - ajouter une completion
-        const { data: newCompletion, error } = await supabase
+        // Add completion
+        const { error } = await supabase
           .from('habit_completions')
           .insert({
             habit_id: habit.id,
             user_id: user.id,
             completed_date: today
-          })
-          .select()
-          .single();
+          });
 
         if (error) throw error;
 
-        // Mettre à jour la streak
-        const newStreak = (habit.streak || 0) + 1;
-        await supabase
-          .from('habits')
-          .update({ 
-            streak: newStreak,
-            last_completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', habit.id);
-
-        setCompletions(prev => [...prev, newCompletion]);
-        setHabits(prev => prev.map(h => 
-          h.id === habit.id 
-            ? { ...h, streak: newStreak, last_completed_at: new Date().toISOString() }
-            : h
-        ));
-
         toast({
           title: "Habitude complétée !",
-          description: `Félicitations ! Votre série pour ${habit.title} est maintenant de ${newStreak} jour(s).`,
+          description: `Bravo ! Vous avez complété ${habit.title} aujourd'hui.`,
         });
       }
+
+      loadHabits();
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast({
@@ -176,72 +157,51 @@ export default function Habits() {
     }
   };
 
-  const deleteHabit = async (habitId: string) => {
-    try {
-      const { error } = await supabase
-        .from('habits')
-        .delete()
-        .eq('id', habitId);
+  const getStreakCount = (habitId: string) => {
+    const habitCompletions = completions[habitId] || [];
+    if (habitCompletions.length === 0) return 0;
 
-      if (error) throw error;
+    let streak = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      const hasCompletion = habitCompletions.some(
+        comp => comp.completed_date === dateString
+      );
+      
+      if (hasCompletion) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+    
+    return streak;
+  };
 
-      setHabits(prev => prev.filter(h => h.id !== habitId));
-      toast({
-        title: "Habitude supprimée",
-        description: "L'habitude a été supprimée avec succès.",
+  const getWeeklyCompletions = () => {
+    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+    
+    let weeklyCount = 0;
+    Object.values(completions).forEach(habitCompletions => {
+      habitCompletions.forEach(completion => {
+        const completionDate = new Date(completion.completed_date);
+        if (completionDate >= start && completionDate <= end) {
+          weeklyCount++;
+        }
       });
-    } catch (error) {
-      console.error('Error deleting habit:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer l'habitude.",
-        variant: "destructive",
-      });
-    }
+    });
+    
+    return weeklyCount;
   };
 
-  const isHabitCompletedToday = (habitId: string) => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    return completions.some(c => c.habit_id === habitId && c.completed_date === today);
-  };
-
-  const handleEdit = (habit: Habit) => {
-    setEditingHabit(habit);
-    setIsEditOpen(true);
-  };
-
-  const handleEditSuccess = () => {
-    loadHabits();
-    setIsEditOpen(false);
-    setEditingHabit(null);
-  };
-
-  const handleCreateSuccess = () => {
-    loadHabits();
-    setIsCreateOpen(false);
-  };
-
-  const filteredHabits = habits.filter(habit => {
-    if (filter === 'all') return true;
-    return habit.frequency === filter;
-  });
-
-  const getFrequencyColor = (frequency: string) => {
-    switch (frequency) {
-      case 'daily': return 'bg-green-100 text-green-800';
-      case 'weekly': return 'bg-blue-100 text-blue-800';
-      case 'monthly': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getFrequencyText = (frequency: string) => {
-    switch (frequency) {
-      case 'daily': return 'Quotidien';
-      case 'weekly': return 'Hebdomadaire';
-      case 'monthly': return 'Mensuel';
-      default: return frequency;
-    }
+  const getTodayCompletions = () => {
+    return habits.filter(habit => habit.is_completed_today).length;
   };
 
   if (loading) {
@@ -260,113 +220,102 @@ export default function Habits() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Target className="h-6 w-6" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Mes Habitudes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Habitudes</h1>
         </div>
         
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle habitude
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nouvelle habitude</DialogTitle>
-            </DialogHeader>
-            <CreateHabitForm onSuccess={handleCreateSuccess} />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle habitude
+        </Button>
       </div>
 
-      {/* Statistiques - Fixed to match tasks style */}
+      {/* Statistiques améliorées */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{habits.length}</p>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total</p>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{habits.length}</p>
               </div>
               <Target className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Complétées aujourd'hui</p>
-                <p className="text-2xl font-bold">
-                  {habits.filter(h => isHabitCompletedToday(h.id)).length}
-                </p>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Complétées</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">{getTodayCompletions()}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Série moyenne</p>
-                <p className="text-2xl font-bold">
-                  {habits.length > 0 
-                    ? Math.round(habits.reduce((sum, h) => sum + (h.streak || 0), 0) / habits.length)
-                    : 0
-                  }
-                </p>
+                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Aujourd'hui</p>
+                <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{getTodayCompletions()}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-orange-500" />
+              <Calendar className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Cette semaine</p>
-                <p className="text-2xl font-bold">
-                  {completions.filter(c => {
-                    const completionDate = new Date(c.completed_date);
-                    const now = new Date();
-                    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-                    return completionDate >= weekStart;
-                  }).length}
-                </p>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Cette semaine</p>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{getWeeklyCompletions()}</p>
               </div>
-              <Calendar className="h-8 w-8 text-purple-500" />
+              <Flame className="h-8 w-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtres */}
+      {/* Filtres compacts */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filtrer par fréquence :</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'all', label: 'Toutes' },
-              { key: 'daily', label: 'Quotidiennes' },
-              { key: 'weekly', label: 'Hebdomadaires' },
-              { key: 'monthly', label: 'Mensuelles' }
-            ].map(({ key, label }) => (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Fréquence:</span>
+            <div className="flex gap-1">
               <Button
-                key={key}
-                variant={filter === key ? "default" : "outline"}
+                variant={frequencyFilter === 'all' ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFilter(key as any)}
+                onClick={() => setFrequencyFilter('all')}
               >
-                {label}
+                Toutes
               </Button>
-            ))}
+              <Button
+                variant={frequencyFilter === 'daily' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFrequencyFilter('daily')}
+              >
+                Quotidiennes
+              </Button>
+              <Button
+                variant={frequencyFilter === 'weekly' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFrequencyFilter('weekly')}
+              >
+                Hebdo
+              </Button>
+              <Button
+                variant={frequencyFilter === 'monthly' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFrequencyFilter('monthly')}
+              >
+                Mensuelles
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -377,125 +326,79 @@ export default function Habits() {
           <Card>
             <CardContent className="text-center py-8">
               <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium mb-2">Aucune habitude trouvée</p>
+              <p className="text-lg font-medium mb-2">
+                {habits.length === 0 ? 'Aucune habitude créée' : 'Aucune habitude trouvée'}
+              </p>
               <p className="text-muted-foreground mb-4">
-                Commencez par créer votre première habitude pour développer une routine positive.
+                {habits.length === 0 
+                  ? 'Commencez par créer votre première habitude pour développer de bonnes routines.'
+                  : 'Essayez de modifier vos filtres pour voir d\'autres habitudes.'
+                }
               </p>
             </CardContent>
           </Card>
         ) : (
-          filteredHabits.map((habit) => {
-            const isCompleted = isHabitCompletedToday(habit.id);
-            const progress = habit.target > 0 ? Math.min((habit.streak || 0) / habit.target * 100, 100) : 0;
-            
-            return (
-              <Card key={habit.id} className={`transition-all duration-200 ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`p-1 h-8 w-8 rounded-full ${isCompleted ? 'text-green-600' : 'text-muted-foreground'}`}
-                          onClick={() => toggleHabitCompletion(habit)}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-6 w-6" />
-                          ) : (
-                            <Circle className="h-6 w-6" />
-                          )}
-                        </Button>
-                        <h3 className={`font-semibold ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                          {habit.title}
-                        </h3>
-                      </div>
-                      
-                      {habit.description && (
-                        <p className="text-sm text-muted-foreground mb-2 ml-11">
-                          {habit.description}
-                        </p>
-                      )}
-                      
-                      <div className="flex flex-wrap items-center gap-2 ml-11">
-                        <Badge className={getFrequencyColor(habit.frequency)}>
-                          {getFrequencyText(habit.frequency)}
+          filteredHabits.map((habit) => (
+            <Card key={habit.id} className={`transition-all ${habit.is_completed_today ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' : ''}`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg">{habit.title}</CardTitle>
+                      <Badge variant="outline" className="text-xs">
+                        {habit.frequency === 'daily' ? 'Quotidienne' : 
+                         habit.frequency === 'weekly' ? 'Hebdomadaire' : 'Mensuelle'}
+                      </Badge>
+                      {habit.category && (
+                        <Badge variant="secondary" className="text-xs">
+                          {habit.category}
                         </Badge>
-                        
-                        {habit.category && (
-                          <Badge variant="outline">{habit.category}</Badge>
-                        )}
-                        
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <TrendingUp className="h-3 w-3" />
-                          <span>{habit.streak || 0} jour(s)</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Target className="h-3 w-3" />
-                          <span>Objectif: {habit.target}</span>
-                        </div>
-                      </div>
-                      
-                      {habit.target > 0 && (
-                        <div className="ml-11 mt-3">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>Progrès vers l'objectif</span>
-                            <span>{habit.streak || 0}/{habit.target}</span>
-                          </div>
-                          <Progress value={progress} className="h-2" />
-                        </div>
                       )}
                     </div>
-                    
-                    <div className="flex items-center gap-1 ml-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(habit)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm('Êtes-vous sûr de vouloir supprimer cette habitude ?')) {
-                            deleteHabit(habit.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    {habit.description && (
+                      <p className="text-muted-foreground text-sm">{habit.description}</p>
+                    )}
+                  </div>
+                  
+                  <Button
+                    variant={habit.is_completed_today ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleHabitCompletion(habit)}
+                    className={habit.is_completed_today ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-orange-500" />
+                      <span>Série: {getStreakCount(habit.id)} jours</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      <span>Objectif: {habit.target}</span>
                     </div>
                   </div>
                   
-                  {habit.last_completed_at && (
-                    <div className="ml-11 text-xs text-muted-foreground">
-                      Dernière fois: {format(new Date(habit.last_completed_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
+                  <span className="text-muted-foreground">
+                    Créée le {format(new Date(habit.created_at), 'dd MMM yyyy', { locale: fr })}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
 
-      {/* Modal d'édition */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modifier l'habitude</DialogTitle>
-          </DialogHeader>
-          {editingHabit && (
-            <CreateHabitForm 
-              onSuccess={handleEditSuccess}
-              editingHabit={editingHabit}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <CreateHabitForm 
+        open={isCreateOpen} 
+        onOpenChange={setIsCreateOpen}
+        onHabitCreated={loadHabits}
+      />
     </div>
   );
 }

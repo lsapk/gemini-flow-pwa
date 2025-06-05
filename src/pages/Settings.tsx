@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings as SettingsIcon, User, Bell, Palette, Globe, Shield } from "lucide-react";
+import { enableAdminMode, disableAdminMode, isAdminModeEnabled } from "@/lib/api";
+import { Settings as SettingsIcon, User, Bell, Palette, Globe, Shield, Key } from "lucide-react";
 import { UserProfile, UserSettings } from "@/types";
 
 export default function Settings() {
@@ -18,6 +19,8 @@ export default function Settings() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const [profile, setProfile] = useState<UserProfile>({
     id: '',
@@ -41,6 +44,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (user) {
+      setIsAdmin(isAdminModeEnabled());
       loadUserData();
     }
   }, [user]);
@@ -146,6 +150,33 @@ export default function Settings() {
     }
   };
 
+  const handleAdminModeToggle = async () => {
+    if (isAdmin) {
+      disableAdminMode();
+      setIsAdmin(false);
+      toast({
+        title: "Mode admin désactivé",
+        description: "Vous n'êtes plus en mode administrateur.",
+      });
+    } else {
+      const success = await enableAdminMode(adminCode);
+      if (success) {
+        setIsAdmin(true);
+        setAdminCode("");
+        toast({
+          title: "Mode admin activé",
+          description: "Vous êtes maintenant en mode administrateur.",
+        });
+      } else {
+        toast({
+          title: "Code incorrect",
+          description: "Le code administrateur est incorrect.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const saveProfile = async () => {
     if (!user) return;
     
@@ -231,6 +262,42 @@ export default function Settings() {
         <SettingsIcon className="h-6 w-6" />
         <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
       </div>
+
+      {/* Mode Admin */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            Mode Administrateur
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!isAdmin ? (
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                placeholder="Code administrateur"
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={handleAdminModeToggle}>
+                Activer
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-green-600">
+                <Shield className="h-5 w-5" />
+                <span className="font-medium">Mode admin activé</span>
+              </div>
+              <Button variant="outline" onClick={handleAdminModeToggle}>
+                Désactiver
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Profil utilisateur */}
       <Card>
