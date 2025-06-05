@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { GoodActionComment, GoodActionLike } from "@/types";
+import { isAdminModeEnabled } from "@/lib/api";
 
 export const likeGoodAction = async (goodActionId: string) => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -141,10 +142,10 @@ export const deleteComment = async (commentId: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  // Marquer comme supprimé
+  // Supprimer définitivement
   const { error } = await supabase
     .from('good_action_comments')
-    .update({ is_deleted: true })
+    .delete()
     .eq('id', commentId)
     .eq('user_id', user.id);
 
@@ -152,9 +153,18 @@ export const deleteComment = async (commentId: string) => {
 };
 
 export const moderateComment = async (commentId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Vérifier si l'utilisateur est admin
+  if (!isAdminModeEnabled()) {
+    throw new Error('Admin privileges required');
+  }
+
+  // Supprimer définitivement
   const { error } = await supabase
     .from('good_action_comments')
-    .update({ is_deleted: true })
+    .delete()
     .eq('id', commentId);
 
   if (error) throw error;
@@ -253,15 +263,20 @@ export const updateGoodAction = async (id: string, updates: {
   return data;
 };
 
-export const deleteGoodAction = async (id: string) => {
+export const deleteGoodAction = async (id: string, isAdmin: boolean = false) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  const { error } = await supabase
+  let query = supabase
     .from('good_actions')
     .delete()
-    .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('id', id);
 
+  // Si l'utilisateur n'est pas admin, il ne peut supprimer que ses propres actions
+  if (!isAdmin) {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
   if (error) throw error;
 };

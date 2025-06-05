@@ -113,6 +113,7 @@ export default function AIAssistant() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input.trim();
     setInput("");
     setLoading(true);
 
@@ -126,28 +127,22 @@ export default function AIAssistant() {
         recent_messages: messages.slice(-8) // 4 dernières conversations
       };
 
-      const response = await fetch('/api/gemini-chat-enhanced', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: input.trim(),
+      const response = await supabase.functions.invoke('gemini-chat-enhanced', {
+        body: {
+          message: currentInput,
           context: context,
           user_id: user.id
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Erreur réseau');
+      if (response.error) {
+        throw new Error(response.error.message || 'Erreur de communication');
       }
 
-      const data = await response.json();
-      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response,
+        content: response.data?.response || "Désolé, je n'ai pas pu traiter votre demande.",
         timestamp: new Date()
       };
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Plus, 
   BookOpen, 
@@ -22,6 +22,7 @@ import {
 import { JournalEntry } from "@/types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import * as journalApi from "@/lib/journalApi";
 
 export default function Journal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -68,14 +69,8 @@ export default function Journal() {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setEntries(data || []);
+      const data = await journalApi.getJournalEntries();
+      setEntries(data);
     } catch (error) {
       console.error('Error loading journal entries:', error);
       toast({
@@ -119,27 +114,14 @@ export default function Journal() {
       const entryData = {
         title: formData.title.trim(),
         content: formData.content.trim(),
-        mood: formData.mood || null,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : null,
-        user_id: user.id
+        mood: formData.mood || undefined,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : undefined
       };
 
       if (editingEntry) {
-        const { data, error } = await supabase
-          .from('journal_entries')
-          .update({
-            ...entryData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingEntry.id)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
+        const updatedEntry = await journalApi.updateJournalEntry(editingEntry.id, entryData);
         setEntries(prev => prev.map(entry => 
-          entry.id === editingEntry.id ? data : entry
+          entry.id === editingEntry.id ? updatedEntry : entry
         ));
 
         toast({
@@ -147,15 +129,8 @@ export default function Journal() {
           description: "Votre entrée de journal a été mise à jour avec succès.",
         });
       } else {
-        const { data, error } = await supabase
-          .from('journal_entries')
-          .insert(entryData)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setEntries(prev => [data, ...prev]);
+        const newEntry = await journalApi.createJournalEntry(entryData);
+        setEntries(prev => [newEntry, ...prev]);
 
         toast({
           title: "Entrée créée",
@@ -195,14 +170,7 @@ export default function Journal() {
     if (!user || !confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
 
     try {
-      const { error } = await supabase
-        .from('journal_entries')
-        .delete()
-        .eq('id', entryId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
+      await journalApi.deleteJournalEntry(entryId);
       setEntries(prev => prev.filter(entry => entry.id !== entryId));
       
       toast({

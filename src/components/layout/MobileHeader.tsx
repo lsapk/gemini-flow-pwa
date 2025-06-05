@@ -9,7 +9,7 @@ interface MobileHeaderProps {
 
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
       <div className="container flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Button

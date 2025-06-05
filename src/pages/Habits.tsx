@@ -13,7 +13,9 @@ import {
   Calendar,
   Flame,
   CheckCircle,
-  Filter
+  Filter,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { Habit, HabitCompletion } from "@/types";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
@@ -28,6 +30,7 @@ export default function Habits() {
   const [frequencyFilter, setFrequencyFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -160,6 +163,39 @@ export default function Habits() {
     }
   };
 
+  const handleEditHabit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setIsCreateOpen(true);
+  };
+
+  const handleDeleteHabit = async (habitId: string) => {
+    if (!user || !confirm('Êtes-vous sûr de vouloir supprimer cette habitude ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setHabits(prev => prev.filter(habit => habit.id !== habitId));
+      
+      toast({
+        title: "Habitude supprimée",
+        description: "L'habitude a été supprimée avec succès.",
+      });
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'habitude.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStreakCount = (habitId: string) => {
     const habitCompletions = completions[habitId] || [];
     if (habitCompletions.length === 0) return 0;
@@ -207,6 +243,12 @@ export default function Habits() {
     return habits.filter(habit => habit.is_completed_today).length;
   };
 
+  const handleFormSuccess = () => {
+    setIsCreateOpen(false);
+    setEditingHabit(null);
+    loadHabits();
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
@@ -226,7 +268,10 @@ export default function Habits() {
           <h1 className="text-2xl sm:text-3xl font-bold">Habitudes</h1>
         </div>
         
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) setEditingHabit(null);
+        }}>
           <DialogTrigger asChild>
             <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
@@ -235,13 +280,13 @@ export default function Habits() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Créer une nouvelle habitude</DialogTitle>
+              <DialogTitle>
+                {editingHabit ? 'Modifier l\'habitude' : 'Créer une nouvelle habitude'}
+              </DialogTitle>
             </DialogHeader>
             <CreateHabitForm 
-              onSuccess={() => {
-                setIsCreateOpen(false);
-                loadHabits();
-              }}
+              habit={editingHabit}
+              onSuccess={handleFormSuccess}
             />
           </DialogContent>
         </Dialog>
@@ -378,14 +423,30 @@ export default function Habits() {
                     )}
                   </div>
                   
-                  <Button
-                    variant={habit.is_completed_today ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleHabitCompletion(habit)}
-                    className={habit.is_completed_today ? "bg-green-600 hover:bg-green-700" : ""}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditHabit(habit)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteHabit(habit.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={habit.is_completed_today ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleHabitCompletion(habit)}
+                      className={habit.is_completed_today ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               

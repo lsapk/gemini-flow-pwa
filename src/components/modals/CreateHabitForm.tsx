@@ -7,122 +7,146 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { createHabit } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { Habit } from "@/types";
 
 interface CreateHabitFormProps {
   onSuccess: () => void;
-  editingHabit?: Habit;
+  habit?: Habit | null;
 }
 
-export default function CreateHabitForm({ onSuccess, editingHabit }: CreateHabitFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [frequency, setFrequency] = useState("");
-  const [target, setTarget] = useState("1");
-  const [category, setCategory] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormProps) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    frequency: 'daily',
+    category: '',
+    target: 1
+  });
+  const [loading, setLoading] = useState(false);
+
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (editingHabit) {
-      setTitle(editingHabit.title);
-      setDescription(editingHabit.description || "");
-      setFrequency(editingHabit.frequency);
-      setTarget(editingHabit.target.toString());
-      setCategory(editingHabit.category || "");
+    if (habit) {
+      setFormData({
+        title: habit.title,
+        description: habit.description || '',
+        frequency: habit.frequency,
+        category: habit.category || '',
+        target: habit.target
+      });
+    } else {
+      setFormData({
+        title: '',
+        description: '',
+        frequency: 'daily',
+        category: '',
+        target: 1
+      });
     }
-  }, [editingHabit]);
+  }, [habit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !frequency) return;
+    
+    if (!user || !formData.title.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le titre est obligatoire.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      if (editingHabit) {
-        // Update existing habit
+      const habitData = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        frequency: formData.frequency,
+        category: formData.category.trim() || null,
+        target: formData.target,
+        user_id: user.id
+      };
+
+      if (habit) {
+        // Modifier l'habitude existante
         const { error } = await supabase
           .from('habits')
           .update({
-            title: title.trim(),
-            description: description.trim() || null,
-            frequency,
-            target: parseInt(target),
-            category: category || null,
+            ...habitData,
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingHabit.id);
+          .eq('id', habit.id)
+          .eq('user_id', user.id);
 
         if (error) throw error;
 
         toast({
           title: "Habitude modifiée",
-          description: "Votre habitude a été modifiée avec succès.",
+          description: "Votre habitude a été mise à jour avec succès.",
         });
       } else {
-        // Create new habit
-        const { error } = await createHabit({
-          title: title.trim(),
-          description: description.trim() || null,
-          frequency,
-          target: parseInt(target),
-          category: category || null,
-          user_id: user.id,
-          streak: 0,
-        });
+        // Créer une nouvelle habitude
+        const { error } = await supabase
+          .from('habits')
+          .insert(habitData);
 
         if (error) throw error;
 
         toast({
           title: "Habitude créée",
-          description: "Votre habitude a été créée avec succès.",
+          description: "Votre nouvelle habitude a été créée avec succès.",
         });
       }
-      
+
       onSuccess();
     } catch (error) {
-      console.error("Error saving habit:", error);
+      console.error('Error saving habit:', error);
       toast({
         title: "Erreur",
         description: "Impossible de sauvegarder l'habitude.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
+      <div>
         <Label htmlFor="title">Titre *</Label>
         <Input
           id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nom de votre habitude"
+          value={formData.title}
+          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+          placeholder="Ex: Faire du sport"
           required
         />
       </div>
-      
-      <div className="space-y-2">
+
+      <div>
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description de votre habitude (optionnel)"
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Description optionnelle de l'habitude"
+          rows={3}
         />
       </div>
-      
-      <div className="space-y-2">
+
+      <div>
         <Label htmlFor="frequency">Fréquence *</Label>
-        <Select value={frequency} onValueChange={setFrequency} required>
+        <Select
+          value={formData.frequency}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
+        >
           <SelectTrigger>
-            <SelectValue placeholder="Sélectionner la fréquence" />
+            <SelectValue placeholder="Choisir la fréquence" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="daily">Quotidienne</SelectItem>
@@ -131,35 +155,31 @@ export default function CreateHabitForm({ onSuccess, editingHabit }: CreateHabit
           </SelectContent>
         </Select>
       </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="target">Objectif quotidien</Label>
+
+      <div>
+        <Label htmlFor="category">Catégorie</Label>
+        <Input
+          id="category"
+          value={formData.category}
+          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+          placeholder="Ex: Santé, Travail, Personnel"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="target">Objectif numérique</Label>
         <Input
           id="target"
           type="number"
           min="1"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
+          value={formData.target}
+          onChange={(e) => setFormData(prev => ({ ...prev, target: parseInt(e.target.value) || 1 }))}
           placeholder="1"
         />
       </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="category">Catégorie</Label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner une catégorie (optionnel)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="health">Santé</SelectItem>
-            <SelectItem value="productivity">Productivité</SelectItem>
-            <SelectItem value="personal">Personnel</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <Button type="submit" disabled={isSubmitting || !title.trim() || !frequency} className="w-full">
-        {isSubmitting ? "Sauvegarde..." : editingHabit ? "Modifier l'habitude" : "Créer l'habitude"}
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Sauvegarde..." : (habit ? "Modifier" : "Créer")}
       </Button>
     </form>
   );

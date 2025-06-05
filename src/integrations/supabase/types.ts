@@ -627,29 +627,29 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
-          good_action_id: string | null
+          good_action_id: string
           id: string
           is_deleted: boolean | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           content: string
           created_at?: string | null
-          good_action_id?: string | null
+          good_action_id: string
           id?: string
           is_deleted?: boolean | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           content?: string
           created_at?: string | null
-          good_action_id?: string | null
+          good_action_id?: string
           id?: string
           is_deleted?: boolean | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -664,21 +664,21 @@ export type Database = {
       good_action_likes: {
         Row: {
           created_at: string | null
-          good_action_id: string | null
+          good_action_id: string
           id: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
-          good_action_id?: string | null
+          good_action_id: string
           id?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
-          good_action_id?: string | null
+          good_action_id?: string
           id?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -694,7 +694,7 @@ export type Database = {
         Row: {
           category: string
           comments_count: number
-          created_at: string
+          created_at: string | null
           description: string | null
           id: string
           is_public: boolean
@@ -705,7 +705,7 @@ export type Database = {
         Insert: {
           category: string
           comments_count?: number
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           is_public?: boolean
@@ -716,7 +716,7 @@ export type Database = {
         Update: {
           category?: string
           comments_count?: number
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           is_public?: boolean
