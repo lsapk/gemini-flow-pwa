@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,7 +96,14 @@ export default function Settings() {
       }
 
       if (settingsData) {
-        setSettings(settingsData);
+        // Convert Json type to any[] for unlocked_features
+        const processedSettings: UserSettings = {
+          ...settingsData,
+          unlocked_features: Array.isArray(settingsData.unlocked_features) 
+            ? settingsData.unlocked_features 
+            : []
+        };
+        setSettings(processedSettings);
       } else {
         // Create settings if they don't exist
         const newSettings = {
@@ -119,7 +125,13 @@ export default function Settings() {
           .single();
           
         if (!error && data) {
-          setSettings(data);
+          const processedSettings: UserSettings = {
+            ...data,
+            unlocked_features: Array.isArray(data.unlocked_features) 
+              ? data.unlocked_features 
+              : []
+          };
+          setSettings(processedSettings);
         }
       }
     } catch (error) {
