@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Habit, HabitCompletion } from "@/types";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { format, isToday, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -66,6 +68,7 @@ export default function Habits() {
           const completionData = await loadHabitCompletions(habit.id);
           return {
             ...habit,
+            frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
             is_completed_today: completionData.some(comp => 
               isToday(new Date(comp.completed_date))
             )
@@ -223,10 +226,25 @@ export default function Habits() {
           <h1 className="text-2xl sm:text-3xl font-bold">Habitudes</h1>
         </div>
         
-        <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle habitude
-        </Button>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle habitude
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Créer une nouvelle habitude</DialogTitle>
+            </DialogHeader>
+            <CreateHabitForm 
+              onSuccess={() => {
+                setIsCreateOpen(false);
+                loadHabits();
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Statistiques améliorées */}
@@ -282,7 +300,7 @@ export default function Habits() {
 
       {/* Filtres compacts */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Fréquence:</span>
@@ -393,12 +411,6 @@ export default function Habits() {
           ))
         )}
       </div>
-
-      <CreateHabitForm 
-        open={isCreateOpen} 
-        onOpenChange={setIsCreateOpen}
-        onHabitCreated={loadHabits}
-      />
     </div>
   );
 }
