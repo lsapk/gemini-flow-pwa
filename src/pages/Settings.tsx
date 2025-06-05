@@ -6,64 +6,52 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  User, 
-  Settings as SettingsIcon, 
-  Bell, 
-  Shield, 
-  Palette, 
-  Globe,
-  Volume2,
-  Moon,
-  Sun,
-  Monitor,
-  Crown,
-  Key
-} from "lucide-react";
-import { useTheme } from "next-themes";
-import { enableAdminMode, disableAdminMode, isAdminModeEnabled } from "@/lib/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Settings as SettingsIcon, User, Bell, Palette, Globe, Shield } from "lucide-react";
 import { UserProfile, UserSettings } from "@/types";
 
 export default function Settings() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [adminCode, setAdminCode] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
+  
+  const [profile, setProfile] = useState<UserProfile>({
+    id: '',
+    display_name: '',
+    email: '',
+    photo_url: '',
+    bio: ''
+  });
+  
+  const [settings, setSettings] = useState<UserSettings>({
+    id: '',
+    notifications_enabled: true,
+    sound_enabled: true,
+    focus_mode: false,
+    karma_points: 0,
+    unlocked_features: [],
+    theme: 'system',
+    language: 'fr',
+    clock_format: '24h'
+  });
 
   useEffect(() => {
     if (user) {
       loadUserData();
-      setIsAdmin(isAdminModeEnabled());
     }
   }, [user]);
 
   const loadUserData = async () => {
     if (!user) return;
     
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Load profile
+      // Load user profile
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -71,14 +59,33 @@ export default function Settings() {
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error loading profile:', profileError);
-      } else if (profileData) {
-        setProfile(profileData);
-        setDisplayName(profileData.display_name || "");
-        setBio(profileData.bio || "");
+        throw profileError;
       }
 
-      // Load settings
+      if (profileData) {
+        setProfile(profileData);
+      } else {
+        // Create profile if it doesn't exist
+        const newProfile = {
+          id: user.id,
+          display_name: user.user_metadata?.display_name || '',
+          email: user.email || '',
+          photo_url: null,
+          bio: null
+        };
+        
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+          
+        if (!error && data) {
+          setProfile(data);
+        }
+      }
+
+      // Load user settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
@@ -86,18 +93,35 @@ export default function Settings() {
         .single();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
-        console.error('Error loading settings:', settingsError);
-      } else if (settingsData) {
-        // Transform the data to match our interface
-        const transformedSettings: UserSettings = {
-          ...settingsData,
-          unlocked_features: Array.isArray(settingsData.unlocked_features) 
-            ? settingsData.unlocked_features 
-            : []
-        };
-        setSettings(transformedSettings);
+        throw settingsError;
       }
-      
+
+      if (settingsData) {
+        setSettings(settingsData);
+      } else {
+        // Create settings if they don't exist
+        const newSettings = {
+          id: user.id,
+          notifications_enabled: true,
+          sound_enabled: true,
+          focus_mode: false,
+          karma_points: 0,
+          unlocked_features: [],
+          theme: 'system',
+          language: 'fr',
+          clock_format: '24h'
+        };
+        
+        const { data, error } = await supabase
+          .from('user_settings')
+          .insert(newSettings)
+          .select()
+          .single();
+          
+        if (!error && data) {
+          setSettings(data);
+        }
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
       toast({
@@ -112,29 +136,24 @@ export default function Settings() {
 
   const saveProfile = async () => {
     if (!user) return;
-
+    
+    setSaving(true);
     try {
-      setSaving(true);
-      
-      const profileData = {
-        id: user.id,
-        display_name: displayName.trim() || null,
-        bio: bio.trim() || null,
-        email: user.email,
-      };
-
       const { error } = await supabase
         .from('user_profiles')
-        .upsert(profileData);
+        .update({
+          display_name: profile.display_name,
+          bio: profile.bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
       toast({
         title: "Profil sauvegardé",
-        description: "Vos informations ont été mises à jour avec succès.",
+        description: "Vos informations de profil ont été mises à jour.",
       });
-      
-      loadUserData();
     } catch (error) {
       console.error('Error saving profile:', error);
       toast({
@@ -147,68 +166,45 @@ export default function Settings() {
     }
   };
 
-  const updateSetting = async (key: string, value: any) => {
-    if (!user || !settings) return;
-
+  const saveSettings = async () => {
+    if (!user) return;
+    
+    setSaving(true);
     try {
-      const updatedSettings = { ...settings, [key]: value };
-      
       const { error } = await supabase
         .from('user_settings')
-        .upsert({ ...updatedSettings, id: user.id });
+        .update({
+          notifications_enabled: settings.notifications_enabled,
+          sound_enabled: settings.sound_enabled,
+          focus_mode: settings.focus_mode,
+          theme: settings.theme,
+          language: settings.language,
+          clock_format: settings.clock_format,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
-      setSettings(updatedSettings);
       toast({
-        title: "Paramètre mis à jour",
-        description: "Le paramètre a été sauvegardé avec succès.",
+        title: "Paramètres sauvegardés",
+        description: "Vos préférences ont été mises à jour.",
       });
     } catch (error) {
-      console.error('Error updating setting:', error);
+      console.error('Error saving settings:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le paramètre.",
+        description: "Impossible de sauvegarder les paramètres.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleAdminToggle = async () => {
-    if (isAdmin) {
-      disableAdminMode();
-      setIsAdmin(false);
-      toast({
-        title: "Mode admin désactivé",
-        description: "Vous n'êtes plus en mode administrateur.",
-      });
-    } else {
-      setIsAdminDialogOpen(true);
-    }
-  };
-
-  const verifyAdminCode = async () => {
-    const success = await enableAdminMode(adminCode);
-    if (success) {
-      setIsAdmin(true);
-      setIsAdminDialogOpen(false);
-      setAdminCode("");
-      toast({
-        title: "Mode admin activé",
-        description: "Vous êtes maintenant en mode administrateur.",
-      });
-    } else {
-      toast({
-        title: "Code incorrect",
-        description: "Le code administrateur est incorrect.",
-        variant: "destructive",
-      });
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 max-w-4xl">
+      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
         <div className="text-center py-8">
           <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4">Chargement...</p>
@@ -224,283 +220,214 @@ export default function Settings() {
         <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
       </div>
 
-      {/* Profile Section */}
+      {/* Profil utilisateur */}
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <User className="h-5 w-5" />
-          <CardTitle>Profil utilisateur</CardTitle>
-          {isAdmin && <Badge variant="destructive" className="ml-auto"><Crown className="h-3 w-3 mr-1" />Admin</Badge>}
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profil utilisateur
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
+              <Label htmlFor="display_name">Nom d'affichage</Label>
+              <Input
+                id="display_name"
+                value={profile.display_name || ''}
+                onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
+                placeholder="Votre nom d'affichage"
+              />
+            </div>
+            
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                value={user?.email || ""}
+                value={profile.email || ''}
                 disabled
                 className="bg-muted"
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Nom d'affichage</Label>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Votre nom d'affichage"
-              />
-            </div>
           </div>
-
-          <div className="space-y-2">
+          
+          <div>
             <Label htmlFor="bio">Biographie</Label>
-            <Input
+            <Textarea
               id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Parlez-nous de vous..."
+              value={profile.bio || ''}
+              onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Parlez-nous un peu de vous..."
+              rows={3}
             />
           </div>
-
+          
           <Button onClick={saveProfile} disabled={saving}>
             {saving ? "Sauvegarde..." : "Sauvegarder le profil"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Appearance Section */}
+      {/* Notifications */}
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Palette className="h-5 w-5" />
-          <CardTitle>Apparence</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Thème</Label>
-            <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un thème" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">
-                  <div className="flex items-center gap-2">
-                    <Sun className="h-4 w-4" />
-                    Clair
-                  </div>
-                </SelectItem>
-                <SelectItem value="dark">
-                  <div className="flex items-center gap-2">
-                    <Moon className="h-4 w-4" />
-                    Sombre
-                  </div>
-                </SelectItem>
-                <SelectItem value="system">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="h-4 w-4" />
-                    Système
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Langue</Label>
-            <Select 
-              value={settings?.language || 'fr'} 
-              onValueChange={(value) => updateSetting('language', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fr">🇫🇷 Français</SelectItem>
-                <SelectItem value="en">🇬🇧 English</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Format d'heure</Label>
-            <Select 
-              value={settings?.clock_format || '24h'} 
-              onValueChange={(value) => updateSetting('clock_format', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">24h (14:30)</SelectItem>
-                <SelectItem value="12h">12h (2:30 PM)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Bell className="h-5 w-5" />
-          <CardTitle>Notifications</CardTitle>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Notifications activées</Label>
+            <div>
+              <Label htmlFor="notifications">Notifications activées</Label>
               <p className="text-sm text-muted-foreground">
-                Recevoir des notifications sur l'application
+                Recevoir des notifications pour les rappels et événements
               </p>
             </div>
             <Switch
-              checked={settings?.notifications_enabled ?? true}
-              onCheckedChange={(checked) => updateSetting('notifications_enabled', checked)}
+              id="notifications"
+              checked={settings.notifications_enabled}
+              onCheckedChange={(checked) => 
+                setSettings(prev => ({ ...prev, notifications_enabled: checked }))
+              }
             />
           </div>
-
+          
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4" />
-                Sons activés
-              </Label>
+            <div>
+              <Label htmlFor="sound">Sons activés</Label>
               <p className="text-sm text-muted-foreground">
                 Jouer des sons pour les notifications
               </p>
             </div>
             <Switch
-              checked={settings?.sound_enabled ?? true}
-              onCheckedChange={(checked) => updateSetting('sound_enabled', checked)}
+              id="sound"
+              checked={settings.sound_enabled}
+              onCheckedChange={(checked) => 
+                setSettings(prev => ({ ...prev, sound_enabled: checked }))
+              }
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Productivity Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Globe className="h-5 w-5" />
-          <CardTitle>Productivité</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Mode focus</Label>
+            <div>
+              <Label htmlFor="focus_mode">Mode focus</Label>
               <p className="text-sm text-muted-foreground">
-                Masquer les distractions pendant les sessions de travail
+                Réduire les distractions pendant les sessions de travail
               </p>
             </div>
             <Switch
-              checked={settings?.focus_mode ?? false}
-              onCheckedChange={(checked) => updateSetting('focus_mode', checked)}
+              id="focus_mode"
+              checked={settings.focus_mode}
+              onCheckedChange={(checked) => 
+                setSettings(prev => ({ ...prev, focus_mode: checked }))
+              }
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Points Karma</Label>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-full bg-muted rounded-full">
-                <div 
-                  className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min((settings?.karma_points || 0) / 1000 * 100, 100)}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium">{settings?.karma_points || 0}</span>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Admin Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Shield className="h-5 w-5" />
-          <CardTitle>Administration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center gap-2">
-                <Crown className="h-4 w-4" />
-                Mode administrateur
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Accès aux fonctions d'administration
-              </p>
-            </div>
-            <Switch
-              checked={isAdmin}
-              onCheckedChange={handleAdminToggle}
-            />
-          </div>
-
-          <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Key className="h-5 w-5" />
-                  Code administrateur
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="adminCode">Entrez le code administrateur</Label>
-                  <Input
-                    id="adminCode"
-                    type="password"
-                    value={adminCode}
-                    onChange={(e) => setAdminCode(e.target.value)}
-                    placeholder="Code administrateur"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        verifyAdminCode();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={verifyAdminCode} className="flex-1">
-                    Vérifier
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsAdminDialogOpen(false);
-                      setAdminCode("");
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      {/* Account Section */}
+      {/* Apparence */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-red-600">Zone de danger</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Apparence
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-medium">Déconnexion</h3>
-              <p className="text-sm text-muted-foreground">
-                Se déconnecter de votre compte
-              </p>
-              <Button variant="outline" onClick={signOut}>
-                Se déconnecter
-              </Button>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="theme">Thème</Label>
+            <Select
+              value={settings.theme}
+              onValueChange={(value) => setSettings(prev => ({ ...prev, theme: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">Clair</SelectItem>
+                <SelectItem value="dark">Sombre</SelectItem>
+                <SelectItem value="system">Système</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Langue et région */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Langue et région
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="language">Langue</Label>
+              <Select
+                value={settings.language}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, language: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="clock_format">Format d'heure</Label>
+              <Select
+                value={settings.clock_format}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, clock_format: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12h">12 heures</SelectItem>
+                  <SelectItem value="24h">24 heures</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Statistiques */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Vos statistiques
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-2xl font-bold text-primary">{settings.karma_points}</p>
+              <p className="text-sm text-muted-foreground">Points Karma</p>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-2xl font-bold text-primary">{settings.unlocked_features?.length || 0}</p>
+              <p className="text-sm text-muted-foreground">Fonctionnalités débloquées</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bouton de sauvegarde global */}
+      <div className="flex justify-end">
+        <Button onClick={saveSettings} disabled={saving} size="lg">
+          {saving ? "Sauvegarde..." : "Sauvegarder tous les paramètres"}
+        </Button>
+      </div>
     </div>
   );
 }

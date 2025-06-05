@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createHabit } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
+import { Habit } from "@/types";
 
 interface CreateHabitFormProps {
   onSuccess: () => void;
+  editingHabit?: Habit;
 }
 
-export default function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
+export default function CreateHabitForm({ onSuccess, editingHabit }: CreateHabitFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState("");
@@ -23,35 +26,68 @@ export default function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (editingHabit) {
+      setTitle(editingHabit.title);
+      setDescription(editingHabit.description || "");
+      setFrequency(editingHabit.frequency);
+      setTarget(editingHabit.target.toString());
+      setCategory(editingHabit.category || "");
+    }
+  }, [editingHabit]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !title.trim() || !frequency) return;
 
     setIsSubmitting(true);
     try {
-      const { error } = await createHabit({
-        title: title.trim(),
-        description: description.trim() || null,
-        frequency,
-        target: parseInt(target),
-        category: category || null,
-        user_id: user.id,
-        streak: 0,
-      });
+      if (editingHabit) {
+        // Update existing habit
+        const { error } = await supabase
+          .from('habits')
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            frequency,
+            target: parseInt(target),
+            category: category || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingHabit.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Habitude créée",
-        description: "Votre habitude a été créée avec succès.",
-      });
+        toast({
+          title: "Habitude modifiée",
+          description: "Votre habitude a été modifiée avec succès.",
+        });
+      } else {
+        // Create new habit
+        const { error } = await createHabit({
+          title: title.trim(),
+          description: description.trim() || null,
+          frequency,
+          target: parseInt(target),
+          category: category || null,
+          user_id: user.id,
+          streak: 0,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Habitude créée",
+          description: "Votre habitude a été créée avec succès.",
+        });
+      }
       
       onSuccess();
     } catch (error) {
-      console.error("Error creating habit:", error);
+      console.error("Error saving habit:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de créer l'habitude.",
+        description: "Impossible de sauvegarder l'habitude.",
         variant: "destructive",
       });
     } finally {
@@ -123,7 +159,7 @@ export default function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
       </div>
       
       <Button type="submit" disabled={isSubmitting || !title.trim() || !frequency} className="w-full">
-        {isSubmitting ? "Création..." : "Créer l'habitude"}
+        {isSubmitting ? "Sauvegarde..." : editingHabit ? "Modifier l'habitude" : "Créer l'habitude"}
       </Button>
     </form>
   );

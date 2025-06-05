@@ -27,10 +27,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="flex">
-        {/* Sidebar Desktop */}
-        <div className={`hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 ${
-          sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
-        } transition-transform duration-300`}>
+        {/* Sidebar Desktop - Always visible on desktop */}
+        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
           <Sidebar />
         </div>
 
@@ -47,7 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
 
         {/* Main Content */}
-        <div className={`flex-1 ${sidebarOpen ? 'lg:ml-64' : ''} transition-all duration-300`}>
+        <div className="flex-1 lg:ml-64">
           {/* Mobile Header */}
           <div className="lg:hidden">
             <MobileHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />

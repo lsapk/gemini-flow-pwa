@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import CreateModal from "@/components/modals/CreateModal";
+import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { 
   Plus, 
   Calendar, 
@@ -29,6 +29,8 @@ export default function Habits() {
   const [filter, setFilter] = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
   const [loading, setLoading] = useState(true);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -203,6 +205,22 @@ export default function Habits() {
     return completions.some(c => c.habit_id === habitId && c.completed_date === today);
   };
 
+  const handleEdit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    loadHabits();
+    setIsEditOpen(false);
+    setEditingHabit(null);
+  };
+
+  const handleCreateSuccess = () => {
+    loadHabits();
+    setIsCreateOpen(false);
+  };
+
   const filteredHabits = habits.filter(habit => {
     if (filter === 'all') return true;
     return habit.frequency === filter;
@@ -245,14 +263,24 @@ export default function Habits() {
           <h1 className="text-2xl sm:text-3xl font-bold">Mes Habitudes</h1>
         </div>
         
-        <CreateModal
-          type="habit"
-          onSuccess={loadHabits}
-        />
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle habitude
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nouvelle habitude</DialogTitle>
+            </DialogHeader>
+            <CreateHabitForm onSuccess={handleCreateSuccess} />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Statistiques - Fixed to match tasks style */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -292,6 +320,25 @@ export default function Habits() {
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Cette semaine</p>
+                <p className="text-2xl font-bold">
+                  {completions.filter(c => {
+                    const completionDate = new Date(c.completed_date);
+                    const now = new Date();
+                    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+                    return completionDate >= weekStart;
+                  }).length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
@@ -405,7 +452,7 @@ export default function Habits() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingHabit(habit)}
+                        onClick={() => handleEdit(habit)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -436,15 +483,19 @@ export default function Habits() {
       </div>
 
       {/* Modal d'édition */}
-      {editingHabit && (
-        <CreateModal
-          type="habit"
-          onSuccess={() => {
-            loadHabits();
-            setEditingHabit(null);
-          }}
-        />
-      )}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier l'habitude</DialogTitle>
+          </DialogHeader>
+          {editingHabit && (
+            <CreateHabitForm 
+              onSuccess={handleEditSuccess}
+              editingHabit={editingHabit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { createJournalEntry, getJournalEntries } from "@/lib/api";
 import { 
   Plus, 
   BookOpen, 
@@ -66,9 +64,16 @@ export default function Journal() {
   }, [entries, searchTerm, moodFilter]);
 
   const loadEntries = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await getJournalEntries();
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
       setEntries(data || []);
     } catch (error) {
@@ -101,7 +106,7 @@ export default function Journal() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
+    if (!user || !formData.title.trim() || !formData.content.trim()) {
       toast({
         title: "Erreur",
         description: "Le titre et le contenu sont obligatoires.",
@@ -116,7 +121,7 @@ export default function Journal() {
         content: formData.content.trim(),
         mood: formData.mood || null,
         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : null,
-        user_id: user!.id
+        user_id: user.id
       };
 
       if (editingEntry) {
@@ -127,6 +132,7 @@ export default function Journal() {
             updated_at: new Date().toISOString()
           })
           .eq('id', editingEntry.id)
+          .eq('user_id', user.id)
           .select()
           .single();
 
@@ -141,7 +147,12 @@ export default function Journal() {
           description: "Votre entrée de journal a été mise à jour avec succès.",
         });
       } else {
-        const { data, error } = await createJournalEntry(entryData);
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .insert(entryData)
+          .select()
+          .single();
+
         if (error) throw error;
 
         setEntries(prev => [data, ...prev]);
@@ -181,13 +192,14 @@ export default function Journal() {
   };
 
   const handleDelete = async (entryId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
+    if (!user || !confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
 
     try {
       const { error } = await supabase
         .from('journal_entries')
         .delete()
-        .eq('id', entryId);
+        .eq('id', entryId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
