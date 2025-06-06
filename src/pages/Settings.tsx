@@ -89,6 +89,12 @@ export default function SettingsPage() {
     );
   }
 
+  // Gestion sécurisée des badges
+  const badges = Array.isArray(productivityData.badges) ? productivityData.badges : [];
+  const unlockedFeatures = Array.isArray(userSettings?.unlocked_features) 
+    ? userSettings.unlocked_features as string[]
+    : [];
+
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-4xl">
       <div className="flex items-center gap-2">
@@ -239,21 +245,21 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {productivityData.badges.length > 0 && (
+            {badges.length > 0 && (
               <div className="mt-6">
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Award className="h-4 w-4" />
                   Badges obtenus
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {productivityData.badges.slice(0, 6).map((badge, index) => (
+                  {badges.slice(0, 6).map((badge, index) => (
                     <Badge key={index} variant="outline">
                       {badge}
                     </Badge>
                   ))}
-                  {productivityData.badges.length > 6 && (
+                  {badges.length > 6 && (
                     <Badge variant="secondary">
-                      +{productivityData.badges.length - 6} autres
+                      +{badges.length - 6} autres
                     </Badge>
                   )}
                 </div>
@@ -272,12 +278,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(userSettings?.unlocked_features || []).map((feature, index) => (
+              {unlockedFeatures.map((feature, index) => (
                 <Badge key={index} variant="default" className="justify-center">
                   {feature}
                 </Badge>
               ))}
-              {(!userSettings?.unlocked_features || userSettings.unlocked_features.length === 0) && (
+              {unlockedFeatures.length === 0 && (
                 <p className="col-span-full text-center text-muted-foreground py-4">
                   Aucune fonctionnalité débloquée pour le moment
                 </p>

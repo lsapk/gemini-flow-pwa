@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Heart, MessageCircle, Trash2, Flag, Send } from "lucide-react";
 import { GoodAction, GoodActionComment, likeGoodAction, getGoodActionComments, addComment, deleteComment, moderateComment, deleteGoodAction } from "@/lib/goodActionsApi";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
