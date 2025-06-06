@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface GoodAction {
@@ -277,7 +276,7 @@ export const addComment = async (goodActionId: string, content: string) => {
     .insert({
       good_action_id: goodActionId,
       user_id: user.id,
-      content,
+      content: content.trim(),
     })
     .select(`
       *,
@@ -293,7 +292,7 @@ export const addComment = async (goodActionId: string, content: string) => {
       .insert({
         good_action_id: goodActionId,
         user_id: user.id,
-        content,
+        content: content.trim(),
       })
       .select('*')
       .single();
@@ -301,25 +300,18 @@ export const addComment = async (goodActionId: string, content: string) => {
     if (fallbackError) throw fallbackError;
 
     // Manually increment comments counter
-    const { data: currentAction } = await supabase
-      .from('good_actions')
-      .select('comments_count')
-      .eq('id', goodActionId)
-      .single();
-
-    if (currentAction) {
-      const { error: updateError } = await supabase
-        .from('good_actions')
-        .update({ comments_count: currentAction.comments_count + 1 })
-        .eq('id', goodActionId);
-
-      if (updateError) throw updateError;
-    }
+    await incrementCommentsCount(goodActionId);
 
     return { ...fallbackData, user_profiles: null };
   }
 
   // Manually increment comments counter
+  await incrementCommentsCount(goodActionId);
+
+  return data;
+};
+
+const incrementCommentsCount = async (goodActionId: string) => {
   const { data: currentAction } = await supabase
     .from('good_actions')
     .select('comments_count')
@@ -327,15 +319,26 @@ export const addComment = async (goodActionId: string, content: string) => {
     .single();
 
   if (currentAction) {
-    const { error: updateError } = await supabase
+    await supabase
       .from('good_actions')
       .update({ comments_count: currentAction.comments_count + 1 })
       .eq('id', goodActionId);
-
-    if (updateError) throw updateError;
   }
+};
 
-  return data;
+const decrementCommentsCount = async (goodActionId: string) => {
+  const { data: currentAction } = await supabase
+    .from('good_actions')
+    .select('comments_count')
+    .eq('id', goodActionId)
+    .single();
+
+  if (currentAction) {
+    await supabase
+      .from('good_actions')
+      .update({ comments_count: Math.max(0, currentAction.comments_count - 1) })
+      .eq('id', goodActionId);
+  }
 };
 
 export const deleteComment = async (commentId: string, goodActionId?: string) => {
@@ -359,27 +362,28 @@ export const deleteComment = async (commentId: string, goodActionId?: string) =>
   const { error } = await supabase
     .from('good_action_comments')
     .delete()
-    .eq('id', commentId);
+    .eq('id', commentId)
+    .eq('user_id', user.id); // Ensure users can only delete their own comments
 
   if (error) throw error;
 
   // Manually decrement comments counter if we have action ID
   if (actionId) {
-    const { data: currentAction } = await supabase
-      .from('good_actions')
-      .select('comments_count')
-      .eq('id', actionId)
-      .single();
-
-    if (currentAction) {
-      const { error: updateError } = await supabase
-        .from('good_actions')
-        .update({ comments_count: Math.max(0, currentAction.comments_count - 1) })
-        .eq('id', actionId);
-
-      if (updateError) throw updateError;
-    }
+    await decrementCommentsCount(actionId);
   }
+};
+
+export const deleteGoodAction = async (id: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('good_actions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id); // Ensure users can only delete their own actions
+
+  if (error) throw error;
 };
 
 export const moderateComment = async (commentId: string) => {

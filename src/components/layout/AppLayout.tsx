@@ -30,6 +30,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Add viewport meta tag prevention for zoom */}
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      
       {/* Mobile Header */}
       <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
       
@@ -41,13 +44,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </Sheet>
 
       <div className="flex">
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebar - Fixed position */}
         <div className="hidden md:block">
-          <Sidebar />
+          <Sidebar className="fixed top-0 left-0 h-full z-40" />
         </div>
 
-        {/* Main Content */}
-        <main className="flex-1 pt-14 md:pt-0 md:ml-64">
+        {/* Main Content - Reduced left margin */}
+        <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-4">
           {children}
         </main>
       </div>
