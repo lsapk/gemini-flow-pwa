@@ -1,16 +1,18 @@
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { Bot, Send, User } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Markdown } from "@/components/Markdown";
 import { supabase } from "@/integrations/supabase/client";
-import Markdown from "@/components/Markdown";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
-  role: "user" | "assistant";
+  id: string;
+  role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
 }
@@ -18,173 +20,172 @@ interface Message {
 export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      role: "assistant",
-      content: "Bonjour ! Je suis votre assistant IA spécialisé dans la productivité et le développement personnel. Comment puis-je vous aider aujourd'hui ?",
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+      id: '1',
+      role: 'assistant',
+      content: 'Bonjour ! Je suis votre assistant IA personnel pour DeepFlow. Je peux vous aider avec vos objectifs de productivité, analyser vos habitudes, et vous donner des conseils personnalisés. Comment puis-je vous aider aujourd\'hui ?',
+      timestamp: new Date()
     }
-  }, [messages]);
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim() || isLoading || !user) return;
 
     const userMessage: Message = {
-      role: "user",
-      content: inputMessage.trim(),
-      timestamp: new Date(),
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputMessage,
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
+    setInputMessage('');
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("Utilisateur non authentifié");
-      }
-
-      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+      const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: userMessage.content,
-          userId: user.id,
+          message: inputMessage,
+          user_id: user.id,
+          conversation_history: messages.slice(-10) // Derniers 10 messages pour le contexte
         }
       });
 
       if (error) {
-        console.error('Erreur de la fonction:', error);
-        throw new Error(error.message || 'Erreur lors de la communication avec l\'IA');
-      }
-
-      if (!data?.response) {
-        throw new Error('Réponse invalide de l\'IA');
+        throw error;
       }
 
       const assistantMessage: Message = {
-        role: "assistant",
-        content: data.response,
-        timestamp: new Date(),
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.response || 'Désolé, je n\'ai pas pu traiter votre demande.',
+        timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Erreur lors de l'envoi du message:", error);
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de communiquer avec l'assistant IA. Veuillez réessayer.",
-        variant: "destructive",
-      });
+      console.error('Erreur lors de l\'envoi du message:', error);
+      toast.error('Erreur lors de la communication avec l\'assistant IA');
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Désolé, je rencontre des difficultés techniques. Veuillez réessayer dans quelques instants.',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-7rem)]">
-      <Card className="h-full flex flex-col">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-6 w-6" />
-            Assistant IA DeepFlow
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="flex-1 flex flex-col gap-4 min-h-0">
-          <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4">
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 mt-1">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                  )}
-                  
+    <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-8rem)]">
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Assistant IA</h1>
+          <Bot className="h-8 w-8 text-primary" />
+        </div>
+
+        <Card className="flex-1 flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
+          </CardHeader>
+          
+          <CardContent className="flex-1 flex flex-col p-0">
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {messages.map((message) => (
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground ml-12"
-                        : "bg-muted"
+                    key={message.id}
+                    className={`flex items-start gap-3 ${
+                      message.role === 'user' ? 'justify-end' : 'justify-start'
                     }`}
                   >
-                    {message.role === "assistant" ? (
-                      <Markdown content={message.content} />
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    {message.role === 'assistant' && (
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Bot className="h-4 w-4 text-primary" />
+                      </div>
                     )}
-                    <p className={`text-xs mt-2 opacity-70 ${
-                      message.role === "user" ? "text-primary-foreground" : "text-muted-foreground"
-                    }`}>
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                  
-                  {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-1">
-                      <User className="h-4 w-4" />
+                    
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <Markdown content={message.content} />
+                      ) : (
+                        <p className="text-sm">{message.content}</p>
+                      )}
+                      <div className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </div>
                     </div>
+
+                    {message.role === 'user' && (
+                      <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="bg-muted rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">L'assistant réfléchit...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="border-t p-4">
+              <div className="flex gap-2">
+                <Textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Tapez votre message... (Appuyez sur Entrée pour envoyer)"
+                  className="min-h-[60px] resize-none"
+                  disabled={isLoading}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || isLoading}
+                  size="icon"
+                  className="self-end"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
                   )}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground flex-shrink-0 mt-1">
-                    <Bot className="h-4 w-4" />
-                  </div>
-                  <div className="bg-muted rounded-lg px-4 py-2">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
-                    </div>
-                  </div>
-                </div>
-              )}
+                </Button>
+              </div>
             </div>
-          </ScrollArea>
-          
-          <div className="flex gap-2 pt-4 border-t">
-            <Input
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Tapez votre message..."
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={isLoading || !inputMessage.trim()}
-              size="sm"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

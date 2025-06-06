@@ -1,14 +1,18 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
-import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/charts";
-import { useAnalyticsData, useProductivityScore } from "@/hooks/useAnalytics";
+import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
+import { useAnalyticsData, useProductivityScore } from "@/hooks/useAnalyticsData";
 
 export default function Analysis() {
-  const { data: analyticsData, isLoading } = useAnalyticsData();
+  const { habitsData, tasksData, focusData, activityData, isLoading } = useAnalyticsData();
   const { 
     score, 
     isLoading: scoreLoading, 
-    breakdown 
+    completionRate,
+    focusTimeScore,
+    consistencyScore,
+    qualityScore
   } = useProductivityScore();
 
   if (isLoading || scoreLoading) {
@@ -21,6 +25,20 @@ export default function Analysis() {
       </div>
     );
   }
+
+  const breakdown = {
+    tasks: Math.round(completionRate),
+    habits: Math.round(consistencyScore),
+    goals: Math.round(qualityScore),
+    focus: Math.round(focusTimeScore)
+  };
+
+  const analyticsData = {
+    tasks: tasksData,
+    habits: habitsData,
+    focus: focusData,
+    overview: activityData
+  };
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">

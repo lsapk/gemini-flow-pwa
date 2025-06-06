@@ -1,399 +1,277 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
+// Types pour les bonnes actions
 export interface GoodAction {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   category: string;
+  user_id: string;
   is_public: boolean;
   likes_count: number;
   comments_count: number;
   created_at: string;
-  user_id: string;
   user_profiles?: {
-    display_name: string | null;
-    email: string | null;
+    display_name: string;
+    email: string;
   } | null;
 }
 
 export interface GoodActionComment {
   id: string;
   content: string;
-  created_at: string;
   user_id: string;
+  good_action_id: string;
+  created_at: string;
+  updated_at: string;
   is_deleted: boolean;
   user_profiles?: {
-    display_name: string | null;
-    email: string | null;
+    display_name: string;
+    email: string;
   } | null;
 }
 
-export const getGoodActions = async (publicOnly = false) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  let query = supabase
-    .from('good_actions')
-    .select(`
-      *,
-      user_profiles!inner(display_name, email)
-    `)
-    .order('created_at', { ascending: false });
+export interface GoodActionLike {
+  id: string;
+  user_id: string;
+  good_action_id: string;
+  created_at: string;
+}
 
-  if (publicOnly) {
-    query = query.eq('is_public', true);
-  } else if (user) {
-    query = query.or(`user_id.eq.${user.id},is_public.eq.true`);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.warn('Error fetching with user_profiles, trying without:', error);
-    // Fallback without user_profiles
-    let fallbackQuery = supabase
+// Récupérer toutes les bonnes actions publiques
+export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
+  try {
+    const { data, error } = await supabase
       .from('good_actions')
-      .select('*')
+      .select(`
+        *,
+        user_profiles:user_id(display_name, email)
+      `)
+      .eq('is_public', true)
       .order('created_at', { ascending: false });
 
-    if (publicOnly) {
-      fallbackQuery = fallbackQuery.eq('is_public', true);
-    } else if (user) {
-      fallbackQuery = fallbackQuery.or(`user_id.eq.${user.id},is_public.eq.true`);
+    if (error) {
+      console.error('Erreur lors de la récupération des bonnes actions:', error);
+      throw error;
     }
 
-    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-    if (fallbackError) throw fallbackError;
-    return (fallbackData || []).map(action => ({ ...action, user_profiles: null }));
-  }
-  return data || [];
-};
-
-export const getAllPublicGoodActions = async () => {
-  return getGoodActions(true);
-};
-
-export const getUserGoodActions = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('good_actions')
-    .select(`
-      *,
-      user_profiles!inner(display_name, email)
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.warn('Error fetching user actions with profiles, trying without:', error);
-    // Fallback without user_profiles
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('good_actions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (fallbackError) throw fallbackError;
-    return (fallbackData || []).map(action => ({ ...action, user_profiles: null }));
-  }
-  return data || [];
-};
-
-export const createGoodAction = async (action: {
-  title: string;
-  description?: string;
-  category: string;
-  is_public: boolean;
-}) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('good_actions')
-    .insert({
+    // Transformer les données pour gérer les cas où user_profiles est null
+    return (data || []).map(action => ({
       ...action,
-      user_id: user.id,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const updateGoodAction = async (id: string, action: {
-  title: string;
-  description?: string;
-  category: string;
-  is_public: boolean;
-}) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('good_actions')
-    .update(action)
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-export const deleteGoodAction = async (id: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { error } = await supabase
-    .from('good_actions')
-    .delete()
-    .eq('id', id);
-
-  if (error) throw error;
-};
-
-export const likeGoodAction = async (goodActionId: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  // Check if already liked
-  const { data: existingLike } = await supabase
-    .from('good_action_likes')
-    .select('id')
-    .eq('good_action_id', goodActionId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (existingLike) {
-    // Remove like
-    const { error: deleteError } = await supabase
-      .from('good_action_likes')
-      .delete()
-      .eq('good_action_id', goodActionId)
-      .eq('user_id', user.id);
-
-    if (deleteError) throw deleteError;
-
-    // Manually decrement counter
-    const { data: currentAction } = await supabase
-      .from('good_actions')
-      .select('likes_count')
-      .eq('id', goodActionId)
-      .single();
-
-    if (currentAction) {
-      const { error: updateError } = await supabase
-        .from('good_actions')
-        .update({ likes_count: Math.max(0, currentAction.likes_count - 1) })
-        .eq('id', goodActionId);
-
-      if (updateError) throw updateError;
-    }
-    return false;
-  } else {
-    // Add like
-    const { error: insertError } = await supabase
-      .from('good_action_likes')
-      .insert({
-        good_action_id: goodActionId,
-        user_id: user.id,
-      });
-
-    if (insertError) throw insertError;
-
-    // Manually increment counter
-    const { data: currentAction } = await supabase
-      .from('good_actions')
-      .select('likes_count')
-      .eq('id', goodActionId)
-      .single();
-
-    if (currentAction) {
-      const { error: updateError } = await supabase
-        .from('good_actions')
-        .update({ likes_count: currentAction.likes_count + 1 })
-        .eq('id', goodActionId);
-
-      if (updateError) throw updateError;
-    }
-    return true;
+      user_profiles: action.user_profiles || null
+    }));
+  } catch (error) {
+    console.error('Erreur dans getPublicGoodActions:', error);
+    throw error;
   }
 };
 
-export const checkUserLike = async (goodActionId: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+// Récupérer les bonnes actions d'un utilisateur
+export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('good_actions')
+      .select(`
+        *,
+        user_profiles:user_id(display_name, email)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-  const { data } = await supabase
-    .from('good_action_likes')
-    .select('id')
-    .eq('good_action_id', goodActionId)
-    .eq('user_id', user.id)
-    .single();
+    if (error) {
+      console.error('Erreur lors de la récupération des bonnes actions utilisateur:', error);
+      throw error;
+    }
 
-  return !!data;
+    return (data || []).map(action => ({
+      ...action,
+      user_profiles: action.user_profiles || null
+    }));
+  } catch (error) {
+    console.error('Erreur dans getUserGoodActions:', error);
+    throw error;
+  }
 };
 
-export const getGoodActionComments = async (goodActionId: string) => {
-  const { data, error } = await supabase
-    .from('good_action_comments')
-    .select(`
-      *,
-      user_profiles!inner(display_name, email)
-    `)
-    .eq('good_action_id', goodActionId)
-    .eq('is_deleted', false)
-    .order('created_at', { ascending: true });
+// Créer une nouvelle bonne action
+export const createGoodAction = async (goodAction: {
+  title: string;
+  description: string;
+  category: string;
+  is_public: boolean;
+}): Promise<GoodAction> => {
+  try {
+    const { data, error } = await supabase
+      .from('good_actions')
+      .insert(goodAction)
+      .select(`
+        *,
+        user_profiles:user_id(display_name, email)
+      `)
+      .single();
 
-  if (error) {
-    console.warn('Error fetching comments with profiles, trying without:', error);
-    // Fallback without user_profiles
-    const { data: fallbackData, error: fallbackError } = await supabase
+    if (error) {
+      console.error('Erreur lors de la création de la bonne action:', error);
+      throw error;
+    }
+
+    return {
+      ...data,
+      user_profiles: data.user_profiles || null
+    };
+  } catch (error) {
+    console.error('Erreur dans createGoodAction:', error);
+    throw error;
+  }
+};
+
+// Supprimer une bonne action
+export const deleteGoodActionById = async (id: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('good_actions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erreur lors de la suppression de la bonne action:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erreur dans deleteGoodAction:', error);
+    throw error;
+  }
+};
+
+// Récupérer les commentaires d'une bonne action
+export const getGoodActionComments = async (goodActionId: string): Promise<GoodActionComment[]> => {
+  try {
+    const { data, error } = await supabase
       .from('good_action_comments')
-      .select('*')
+      .select(`
+        *,
+        user_profiles:user_id(display_name, email)
+      `)
       .eq('good_action_id', goodActionId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: true });
 
-    if (fallbackError) throw fallbackError;
-    return (fallbackData || []).map(comment => ({ ...comment, user_profiles: null }));
-  }
-  return data || [];
-};
-
-export const getComments = async (goodActionId: string) => {
-  return getGoodActionComments(goodActionId);
-};
-
-export const addComment = async (goodActionId: string, content: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('good_action_comments')
-    .insert({
-      good_action_id: goodActionId,
-      user_id: user.id,
-      content: content.trim(),
-    })
-    .select(`
-      *,
-      user_profiles!inner(display_name, email)
-    `)
-    .single();
-
-  if (error) {
-    console.warn('Error adding comment with profile, trying without:', error);
-    // Fallback without user_profiles
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('good_action_comments')
-      .insert({
-        good_action_id: goodActionId,
-        user_id: user.id,
-        content: content.trim(),
-      })
-      .select('*')
-      .single();
-
-    if (fallbackError) throw fallbackError;
-
-    // Manually increment comments counter
-    await incrementCommentsCount(goodActionId);
-
-    return { ...fallbackData, user_profiles: null };
-  }
-
-  // Manually increment comments counter
-  await incrementCommentsCount(goodActionId);
-
-  return data;
-};
-
-const incrementCommentsCount = async (goodActionId: string) => {
-  const { data: currentAction } = await supabase
-    .from('good_actions')
-    .select('comments_count')
-    .eq('id', goodActionId)
-    .single();
-
-  if (currentAction) {
-    await supabase
-      .from('good_actions')
-      .update({ comments_count: currentAction.comments_count + 1 })
-      .eq('id', goodActionId);
-  }
-};
-
-const decrementCommentsCount = async (goodActionId: string) => {
-  const { data: currentAction } = await supabase
-    .from('good_actions')
-    .select('comments_count')
-    .eq('id', goodActionId)
-    .single();
-
-  if (currentAction) {
-    await supabase
-      .from('good_actions')
-      .update({ comments_count: Math.max(0, currentAction.comments_count - 1) })
-      .eq('id', goodActionId);
-  }
-};
-
-export const deleteComment = async (commentId: string, goodActionId?: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  // Get action ID if not provided
-  let actionId = goodActionId;
-  if (!actionId) {
-    const { data: comment } = await supabase
-      .from('good_action_comments')
-      .select('good_action_id')
-      .eq('id', commentId)
-      .single();
-    
-    if (comment) {
-      actionId = comment.good_action_id;
+    if (error) {
+      console.error('Erreur lors de la récupération des commentaires:', error);
+      throw error;
     }
-  }
 
-  const { error } = await supabase
-    .from('good_action_comments')
-    .delete()
-    .eq('id', commentId)
-    .eq('user_id', user.id); // Ensure users can only delete their own comments
-
-  if (error) throw error;
-
-  // Manually decrement comments counter if we have action ID
-  if (actionId) {
-    await decrementCommentsCount(actionId);
+    return (data || []).map(comment => ({
+      ...comment,
+      user_profiles: comment.user_profiles || null
+    }));
+  } catch (error) {
+    console.error('Erreur dans getGoodActionComments:', error);
+    throw error;
   }
 };
 
-export const deleteGoodAction = async (id: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+// Ajouter un commentaire
+export const addGoodActionComment = async (comment: {
+  content: string;
+  good_action_id: string;
+}): Promise<GoodActionComment> => {
+  try {
+    const { data, error } = await supabase
+      .from('good_action_comments')
+      .insert(comment)
+      .select(`
+        *,
+        user_profiles:user_id(display_name, email)
+      `)
+      .single();
 
-  const { error } = await supabase
-    .from('good_actions')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id); // Ensure users can only delete their own actions
+    if (error) {
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
+      throw error;
+    }
 
-  if (error) throw error;
+    return {
+      ...data,
+      user_profiles: data.user_profiles || null
+    };
+  } catch (error) {
+    console.error('Erreur dans addGoodActionComment:', error);
+    throw error;
+  }
 };
 
-export const moderateComment = async (commentId: string) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+// Supprimer un commentaire
+export const deleteGoodActionComment = async (id: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('good_action_comments')
+      .update({ is_deleted: true })
+      .eq('id', id);
 
-  const { error } = await supabase
-    .from('good_action_comments')
-    .update({ is_deleted: true })
-    .eq('id', commentId);
+    if (error) {
+      console.error('Erreur lors de la suppression du commentaire:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erreur dans deleteGoodActionComment:', error);
+    throw error;
+  }
+};
 
-  if (error) throw error;
+// Ajouter un like
+export const addGoodActionLike = async (goodActionId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('good_action_likes')
+      .insert({ good_action_id: goodActionId });
+
+    if (error) {
+      console.error('Erreur lors de l\'ajout du like:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erreur dans addGoodActionLike:', error);
+    throw error;
+  }
+};
+
+// Supprimer un like
+export const removeGoodActionLike = async (goodActionId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('good_action_likes')
+      .delete()
+      .eq('good_action_id', goodActionId);
+
+    if (error) {
+      console.error('Erreur lors de la suppression du like:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erreur dans removeGoodActionLike:', error);
+    throw error;
+  }
+};
+
+// Vérifier si l'utilisateur a liké une bonne action
+export const hasUserLikedGoodAction = async (goodActionId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('good_action_likes')
+      .select('id')
+      .eq('good_action_id', goodActionId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Erreur lors de la vérification du like:', error);
+      throw error;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Erreur dans hasUserLikedGoodAction:', error);
+    return false;
+  }
 };
