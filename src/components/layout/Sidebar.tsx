@@ -36,9 +36,10 @@ const navigation = [
 
 interface SidebarProps {
   className?: string;
+  onItemClick?: () => void;
 }
 
-export default function Sidebar({ className }: SidebarProps) {
+export default function Sidebar({ className, onItemClick }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -48,8 +49,15 @@ export default function Sidebar({ className }: SidebarProps) {
     navigate("/login");
   };
 
+  const handleItemClick = (href: string) => {
+    navigate(href);
+    if (onItemClick) {
+      onItemClick();
+    }
+  };
+
   return (
-    <div className={cn("pb-12 w-64 bg-background border-r", className)}>
+    <div className={cn("pb-12 w-64 bg-background border-r fixed left-0 top-0 h-full z-40 md:sticky md:top-0", className)}>
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
@@ -66,12 +74,10 @@ export default function Sidebar({ className }: SidebarProps) {
                     "w-full justify-start",
                     isActive && "bg-secondary"
                   )}
-                  asChild
+                  onClick={() => handleItemClick(item.href)}
                 >
-                  <Link to={item.href}>
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.name}
-                  </Link>
+                  <item.icon className="mr-2 h-4 w-4" />
+                  {item.name}
                 </Button>
               );
             })}
@@ -85,12 +91,10 @@ export default function Sidebar({ className }: SidebarProps) {
             <Button
               variant="ghost"
               className="w-full justify-start"
-              asChild
+              onClick={() => handleItemClick("/settings")}
             >
-              <Link to="/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Paramètres
-              </Link>
+              <Settings className="mr-2 h-4 w-4" />
+              Paramètres
             </Button>
             <Button
               variant="ghost"

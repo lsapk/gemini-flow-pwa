@@ -1,454 +1,146 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
-import { enableAdminMode, disableAdminMode, isAdminModeEnabled } from "@/lib/api";
-import { Settings as SettingsIcon, User, Bell, Palette, Globe, Shield, Key } from "lucide-react";
-import { UserProfile, UserSettings } from "@/types";
+import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
+import { Settings, Palette, Bell, Globe, Award, TrendingUp } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-export default function Settings() {
+interface UserSettings {
+  notifications_enabled: boolean;
+  sound_enabled: boolean;
+  focus_mode: boolean;
+  language: string;
+  clock_format: string;
+  karma_points: number;
+  unlocked_features: string[];
+}
+
+export default function SettingsPage() {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [adminCode, setAdminCode] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  const [profile, setProfile] = useState<UserProfile>({
-    id: '',
-    display_name: '',
-    email: '',
-    photo_url: '',
-    bio: ''
-  });
-  
-  const [settings, setSettings] = useState<UserSettings>({
-    id: '',
-    notifications_enabled: true,
-    sound_enabled: true,
-    focus_mode: false,
-    karma_points: 0,
-    unlocked_features: [],
-    theme: 'system',
-    language: 'fr',
-    clock_format: '24h'
-  });
+  const queryClient = useQueryClient();
+  const productivityData = useRealtimeProductivityScore();
 
-  useEffect(() => {
-    if (user) {
-      setIsAdmin(isAdminModeEnabled());
-      loadUserData();
-    }
-  }, [user]);
-
-  const loadUserData = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      // Load user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
-      }
-
-      if (profileData) {
-        setProfile(profileData);
-      } else {
-        // Create profile if it doesn't exist
-        const newProfile = {
-          id: user.id,
-          display_name: user.user_metadata?.display_name || '',
-          email: user.email || '',
-          photo_url: null,
-          bio: null
-        };
-        
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .insert(newProfile)
-          .select()
-          .single();
-          
-        if (!error && data) {
-          setProfile(data);
-        }
-      }
-
-      // Load user settings
-      const { data: settingsData, error: settingsError } = await supabase
+  // Charger les paramètres utilisateur
+  const { data: userSettings, isLoading } = useQuery({
+    queryKey: ['userSettings', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
         .from('user_settings')
         .select('*')
         .eq('id', user.id)
         .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!user
+  });
 
-      if (settingsError && settingsError.code !== 'PGRST116') {
-        throw settingsError;
-      }
-
-      if (settingsData) {
-        // Convert Json type to any[] for unlocked_features
-        const processedSettings: UserSettings = {
-          ...settingsData,
-          unlocked_features: Array.isArray(settingsData.unlocked_features) 
-            ? settingsData.unlocked_features 
-            : []
-        };
-        setSettings(processedSettings);
-      } else {
-        // Create settings if they don't exist
-        const newSettings = {
-          id: user.id,
-          notifications_enabled: true,
-          sound_enabled: true,
-          focus_mode: false,
-          karma_points: 0,
-          unlocked_features: [],
-          theme: 'system',
-          language: 'fr',
-          clock_format: '24h'
-        };
-        
-        const { data, error } = await supabase
-          .from('user_settings')
-          .insert(newSettings)
-          .select()
-          .single();
-          
-        if (!error && data) {
-          const processedSettings: UserSettings = {
-            ...data,
-            unlocked_features: Array.isArray(data.unlocked_features) 
-              ? data.unlocked_features 
-              : []
-          };
-          setSettings(processedSettings);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données utilisateur.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminModeToggle = async () => {
-    if (isAdmin) {
-      disableAdminMode();
-      setIsAdmin(false);
-      toast({
-        title: "Mode admin désactivé",
-        description: "Vous n'êtes plus en mode administrateur.",
-      });
-    } else {
-      const success = await enableAdminMode(adminCode);
-      if (success) {
-        setIsAdmin(true);
-        setAdminCode("");
-        toast({
-          title: "Mode admin activé",
-          description: "Vous êtes maintenant en mode administrateur.",
-        });
-      } else {
-        toast({
-          title: "Code incorrect",
-          description: "Le code administrateur est incorrect.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const saveProfile = async () => {
-    if (!user) return;
-    
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          display_name: profile.display_name,
-          bio: profile.bio,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Profil sauvegardé",
-        description: "Vos informations de profil ont été mises à jour.",
-      });
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder le profil.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveSettings = async () => {
-    if (!user) return;
-    
-    setSaving(true);
-    try {
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (settings: Partial<UserSettings>) => {
+      if (!user) throw new Error('Not authenticated');
+      
       const { error } = await supabase
         .from('user_settings')
-        .update({
-          notifications_enabled: settings.notifications_enabled,
-          sound_enabled: settings.sound_enabled,
-          focus_mode: settings.focus_mode,
-          theme: settings.theme,
-          language: settings.language,
-          clock_format: settings.clock_format,
+        .upsert({
+          id: user.id,
+          ...settings,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
+        });
+      
       if (error) throw error;
-
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userSettings'] });
       toast({
         title: "Paramètres sauvegardés",
-        description: "Vos préférences ont été mises à jour.",
+        description: "Vos paramètres ont été mis à jour avec succès",
       });
-    } catch (error) {
-      console.error('Error saving settings:', error);
+    },
+    onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les paramètres.",
+        description: "Impossible de sauvegarder les paramètres",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
     }
+  });
+
+  const updateSetting = (key: keyof UserSettings, value: any) => {
+    updateSettingsMutation.mutate({ [key]: value });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-        <div className="text-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4">Chargement...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center gap-2 mb-6">
-        <SettingsIcon className="h-6 w-6" />
-        <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
+    <div className="container mx-auto p-6 space-y-6 max-w-4xl">
+      <div className="flex items-center gap-2">
+        <Settings className="h-6 w-6" />
+        <h1 className="text-3xl font-bold">Paramètres</h1>
       </div>
 
-      {/* Mode Admin */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            Mode Administrateur
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!isAdmin ? (
-            <div className="flex gap-2">
-              <Input
-                type="password"
-                placeholder="Code administrateur"
-                value={adminCode}
-                onChange={(e) => setAdminCode(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={handleAdminModeToggle}>
-                Activer
-              </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Apparence */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Apparence
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Thème</label>
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Clair</SelectItem>
+                  <SelectItem value="dark">Sombre</SelectItem>
+                  <SelectItem value="system">Système</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-green-600">
-                <Shield className="h-5 w-5" />
-                <span className="font-medium">Mode admin activé</span>
-              </div>
-              <Button variant="outline" onClick={handleAdminModeToggle}>
-                Désactiver
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Profil utilisateur */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profil utilisateur
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="display_name">Nom d'affichage</Label>
-              <Input
-                id="display_name"
-                value={profile.display_name || ''}
-                onChange={(e) => setProfile(prev => ({ ...prev, display_name: e.target.value }))}
-                placeholder="Votre nom d'affichage"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={profile.email || ''}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="bio">Biographie</Label>
-            <Textarea
-              id="bio"
-              value={profile.bio || ''}
-              onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-              placeholder="Parlez-nous un peu de vous..."
-              rows={3}
-            />
-          </div>
-          
-          <Button onClick={saveProfile} disabled={saving}>
-            {saving ? "Sauvegarde..." : "Sauvegarder le profil"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="notifications">Notifications activées</Label>
-              <p className="text-sm text-muted-foreground">
-                Recevoir des notifications pour les rappels et événements
-              </p>
-            </div>
-            <Switch
-              id="notifications"
-              checked={settings.notifications_enabled}
-              onCheckedChange={(checked) => 
-                setSettings(prev => ({ ...prev, notifications_enabled: checked }))
-              }
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="sound">Sons activés</Label>
-              <p className="text-sm text-muted-foreground">
-                Jouer des sons pour les notifications
-              </p>
-            </div>
-            <Switch
-              id="sound"
-              checked={settings.sound_enabled}
-              onCheckedChange={(checked) => 
-                setSettings(prev => ({ ...prev, sound_enabled: checked }))
-              }
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="focus_mode">Mode focus</Label>
-              <p className="text-sm text-muted-foreground">
-                Réduire les distractions pendant les sessions de travail
-              </p>
-            </div>
-            <Switch
-              id="focus_mode"
-              checked={settings.focus_mode}
-              onCheckedChange={(checked) => 
-                setSettings(prev => ({ ...prev, focus_mode: checked }))
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Apparence */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Apparence
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="theme">Thème</Label>
-            <Select
-              value={settings.theme}
-              onValueChange={(value) => setSettings(prev => ({ ...prev, theme: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">Clair</SelectItem>
-                <SelectItem value="dark">Sombre</SelectItem>
-                <SelectItem value="system">Système</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Langue et région */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Langue et région
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="language">Langue</Label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Format d'heure</label>
               <Select
-                value={settings.language}
-                onValueChange={(value) => setSettings(prev => ({ ...prev, language: value }))}
+                value={userSettings?.clock_format || '24h'}
+                onValueChange={(value) => updateSetting('clock_format', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">24 heures</SelectItem>
+                  <SelectItem value="12h">12 heures</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Langue</label>
+              <Select
+                value={userSettings?.language || 'fr'}
+                onValueChange={(value) => updateSetting('language', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -459,53 +151,140 @@ export default function Settings() {
                 </SelectContent>
               </Select>
             </div>
-            
-            <div>
-              <Label htmlFor="clock_format">Format d'heure</Label>
-              <Select
-                value={settings.clock_format}
-                onValueChange={(value) => setSettings(prev => ({ ...prev, clock_format: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="12h">12 heures</SelectItem>
-                  <SelectItem value="24h">24 heures</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Statistiques */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Vos statistiques
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-2xl font-bold text-primary">{settings.karma_points}</p>
-              <p className="text-sm text-muted-foreground">Points Karma</p>
+        {/* Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Notifications activées</p>
+                <p className="text-sm text-muted-foreground">
+                  Recevoir des notifications pour les rappels
+                </p>
+              </div>
+              <Switch
+                checked={userSettings?.notifications_enabled ?? true}
+                onCheckedChange={(checked) => updateSetting('notifications_enabled', checked)}
+              />
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <p className="text-2xl font-bold text-primary">{settings.unlocked_features?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Fonctionnalités débloquées</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Bouton de sauvegarde global */}
-      <div className="flex justify-end">
-        <Button onClick={saveSettings} disabled={saving} size="lg">
-          {saving ? "Sauvegarde..." : "Sauvegarder tous les paramètres"}
-        </Button>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Sons activés</p>
+                <p className="text-sm text-muted-foreground">
+                  Jouer des sons pour les notifications
+                </p>
+              </div>
+              <Switch
+                checked={userSettings?.sound_enabled ?? true}
+                onCheckedChange={(checked) => updateSetting('sound_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Mode focus</p>
+                <p className="text-sm text-muted-foreground">
+                  Réduire les distractions en mode focus
+                </p>
+              </div>
+              <Switch
+                checked={userSettings?.focus_mode ?? false}
+                onCheckedChange={(checked) => updateSetting('focus_mode', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistiques de productivité */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Statistiques de productivité
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary mb-2">
+                  {productivityData.score}
+                </div>
+                <p className="text-sm font-medium">Score de productivité</p>
+                <Badge variant="secondary" className="mt-1">
+                  {productivityData.level}
+                </Badge>
+              </div>
+
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  {Math.round(productivityData.completionRate)}%
+                </div>
+                <p className="text-sm font-medium">Taux de complétion</p>
+              </div>
+
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-2">
+                  {userSettings?.karma_points || 0}
+                </div>
+                <p className="text-sm font-medium">Points karma</p>
+              </div>
+            </div>
+
+            {productivityData.badges.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  Badges obtenus
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {productivityData.badges.slice(0, 6).map((badge, index) => (
+                    <Badge key={index} variant="outline">
+                      {badge}
+                    </Badge>
+                  ))}
+                  {productivityData.badges.length > 6 && (
+                    <Badge variant="secondary">
+                      +{productivityData.badges.length - 6} autres
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Fonctionnalités débloquées */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Fonctionnalités débloquées
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(userSettings?.unlocked_features || []).map((feature, index) => (
+                <Badge key={index} variant="default" className="justify-center">
+                  {feature}
+                </Badge>
+              ))}
+              {(!userSettings?.unlocked_features || userSettings.unlocked_features.length === 0) && (
+                <p className="col-span-full text-center text-muted-foreground py-4">
+                  Aucune fonctionnalité débloquée pour le moment
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

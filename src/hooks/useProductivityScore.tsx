@@ -1,6 +1,8 @@
 
 import { useMemo } from 'react';
 import { useAnalyticsData } from './useAnalyticsData';
+import { useAuth } from './useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ProductivityMetrics {
   score: number;
@@ -16,7 +18,23 @@ export interface ProductivityMetrics {
   goalScore: number;
 }
 
+// Fonction pour calculer et sauvegarder le score via l'IA
+const updateProductivityScoreWithAI = async (userId: string, metricsData: any) => {
+  try {
+    await supabase.functions.invoke('gemini-analysis', {
+      body: {
+        user_id: userId,
+        metrics: metricsData,
+        analysis_type: 'productivity_score'
+      }
+    });
+  } catch (error) {
+    console.error('Error updating productivity score with AI:', error);
+  }
+};
+
 export const useProductivityScore = (): ProductivityMetrics => {
+  const { user } = useAuth();
   const { 
     taskCompletionRate, 
     totalFocusTime, 
@@ -177,6 +195,26 @@ export const useProductivityScore = (): ProductivityMetrics => {
       else if (totalScore >= 60) badges.push('Productif');
       else if (totalScore >= 50) badges.push('En Développement');
     }
+
+    // Mettre à jour le score via l'IA si l'utilisateur est connecté
+    if (user && totalPossibleScore > 0) {
+      const metricsData = {
+        score: totalScore,
+        level,
+        badges,
+        completionRate: taskCompletionRate,
+        focusTimeScore,
+        consistencyScore,
+        qualityScore,
+        timeManagementScore,
+        journalScore,
+        goalScore,
+        streakBonus
+      };
+      
+      // Appel asynchrone sans bloquer le rendu
+      updateProductivityScoreWithAI(user.id, metricsData);
+    }
     
     return {
       score: totalScore,
@@ -191,5 +229,5 @@ export const useProductivityScore = (): ProductivityMetrics => {
       journalScore,
       goalScore
     };
-  }, [taskCompletionRate, totalFocusTime, streakCount, habitsData, focusData, activityData]);
+  }, [taskCompletionRate, totalFocusTime, streakCount, habitsData, focusData, activityData, user]);
 };

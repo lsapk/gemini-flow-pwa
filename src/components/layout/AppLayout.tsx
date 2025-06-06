@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -26,6 +26,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -34,7 +36,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Navigation Sheet */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64">
-          <Sidebar className="border-0" />
+          <Sidebar className="border-0 static" onItemClick={closeMobileMenu} />
         </SheetContent>
       </Sheet>
 
@@ -45,7 +47,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-14 md:pt-0">
+        <main className="flex-1 pt-14 md:pt-0 md:ml-64">
           {children}
         </main>
       </div>

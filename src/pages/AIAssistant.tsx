@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import AppLayout from "@/components/layout/AppLayout";
 import { 
   Bot, 
   Send, 
@@ -34,7 +35,7 @@ interface UserData {
   user_settings: any;
 }
 
-export default function AIAssistant() {
+function AIAssistantContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -330,5 +331,13 @@ export default function AIAssistant() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AIAssistant() {
+  return (
+    <AppLayout>
+      <AIAssistantContent />
+    </AppLayout>
   );
 }

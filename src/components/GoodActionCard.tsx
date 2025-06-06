@@ -1,271 +1,287 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Heart, 
-  MessageSquare, 
-  Send,
-  Trash2,
-  ChevronDown,
-  ChevronUp
-} from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import {
-  likeGoodAction,
-  getGoodActionLikes,
-  addComment,
-  getComments,
-  deleteComment
-} from "@/lib/goodActionsApi";
-import { GoodActionComment } from "@/types";
-
-const CATEGORIES = [
-  { value: 'environment', label: '🌱 Environnement', color: 'bg-green-100 text-green-800' },
-  { value: 'community', label: '🤝 Communauté', color: 'bg-blue-100 text-blue-800' },
-  { value: 'help', label: '❤️ Entraide', color: 'bg-red-100 text-red-800' },
-  { value: 'learning', label: '📚 Apprentissage', color: 'bg-purple-100 text-purple-800' },
-  { value: 'kindness', label: '✨ Bienveillance', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'health', label: '💪 Santé', color: 'bg-orange-100 text-orange-800' },
-  { value: 'other', label: '🌟 Autre', color: 'bg-gray-100 text-gray-800' }
-];
+import { useAuth } from "@/hooks/useAuth";
+import { Heart, MessageCircle, Trash2, Flag, Send } from "lucide-react";
+import { GoodAction, GoodActionComment, likeGoodAction, getGoodActionComments, addComment, deleteComment, moderateComment, deleteGoodAction } from "@/lib/goodActionsApi";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface GoodActionCardProps {
-  action: {
-    id: string;
-    title: string;
-    description?: string;
-    category: string;
-    created_at: string;
-    user_id: string;
-    likes_count: number;
-    comments_count: number;
-    user_profiles?: {
-      display_name: string | null;
-      email: string | null;
-    } | null;
-  };
-  isAdmin?: boolean;
+  action: GoodAction;
+  onRefresh?: () => void;
 }
 
-export default function GoodActionCard({ action, isAdmin = false }: GoodActionCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(action.likes_count);
-  const [comments, setComments] = useState<GoodActionComment[]>([]);
+export default function GoodActionCard({ action, onRefresh }: GoodActionCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const [isLiking, setIsLiking] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const categoryInfo = CATEGORIES.find(c => c.value === action.category);
+  // Vérifier si l'utilisateur est admin
+  const { data: userRoles } = useQuery({
+    queryKey: ['userRoles', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
+      return data || [];
+    },
+    enabled: !!user
+  });
 
-  useEffect(() => {
-    if (user) {
-      checkIfLiked();
-    }
-  }, [user, action.id]);
+  const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
 
-  const checkIfLiked = async () => {
-    try {
-      const likes = await getGoodActionLikes(action.id);
-      setIsLiked(likes.some(like => like.user_id === user?.id));
-    } catch (error) {
-      console.error('Error checking like status:', error);
-    }
-  };
+  const { data: comments = [], refetch: refetchComments } = useQuery({
+    queryKey: ['comments', action.id],
+    queryFn: () => getGoodActionComments(action.id),
+    enabled: showComments
+  });
 
-  const handleLike = async () => {
-    if (!user) return;
-    
-    try {
-      const liked = await likeGoodAction(action.id);
-      setIsLiked(liked);
-      setLikesCount(prev => liked ? prev + 1 : prev - 1);
-    } catch (error) {
-      console.error('Error toggling like:', error);
+  const likeMutation = useMutation({
+    mutationFn: () => likeGoodAction(action.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
+      onRefresh?.();
+    },
+    onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le like.",
+        description: "Impossible de modifier le like",
         variant: "destructive",
       });
     }
-  };
+  });
 
-  const loadComments = async () => {
-    try {
-      const commentsData = await getComments(action.id);
-      setComments(commentsData);
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
-  };
-
-  const handleShowComments = () => {
-    if (!showComments) {
-      loadComments();
-    }
-    setShowComments(!showComments);
-  };
-
-  const handleAddComment = async () => {
-    if (!user || !newComment.trim()) return;
-    
-    setIsLoading(true);
-    try {
-      await addComment(action.id, newComment.trim());
+  const commentMutation = useMutation({
+    mutationFn: (content: string) => addComment(action.id, content),
+    onSuccess: () => {
       setNewComment("");
-      loadComments();
+      refetchComments();
+      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
+      onRefresh?.();
       toast({
         title: "Commentaire ajouté",
-        description: "Votre commentaire a été publié.",
+        description: "Votre commentaire a été publié avec succès",
       });
-    } catch (error) {
-      console.error('Error adding comment:', error);
+    },
+    onError: (error) => {
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter le commentaire.",
+        description: "Impossible d'ajouter le commentaire",
         variant: "destructive",
       });
+    }
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => deleteComment(commentId, action.id),
+    onSuccess: () => {
+      refetchComments();
+      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
+      onRefresh?.();
+      toast({
+        title: "Commentaire supprimé",
+        description: "Le commentaire a été supprimé avec succès",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le commentaire",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const moderateMutation = useMutation({
+    mutationFn: (commentId: string) => moderateComment(commentId),
+    onSuccess: () => {
+      refetchComments();
+      toast({
+        title: "Commentaire modéré",
+        description: "Le commentaire a été masqué",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modérer le commentaire",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteActionMutation = useMutation({
+    mutationFn: () => deleteGoodAction(action.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
+      onRefresh?.();
+      toast({
+        title: "Bonne action supprimée",
+        description: "La bonne action a été supprimée avec succès",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la bonne action",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleLike = async () => {
+    if (isLiking) return;
+    setIsLiking(true);
+    try {
+      await likeMutation.mutateAsync();
     } finally {
-      setIsLoading(false);
+      setIsLiking(false);
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      await deleteComment(commentId);
-      loadComments();
-      toast({
-        title: "Commentaire supprimé",
-        description: "Le commentaire a été supprimé.",
-      });
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le commentaire.",
-        variant: "destructive",
-      });
-    }
+  const handleSubmitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    commentMutation.mutate(newComment.trim());
   };
+
+  const canDeleteAction = user && (user.id === action.user_id || isAdmin);
+  const canDeleteComment = (comment: GoodActionComment) => user && (user.id === comment.user_id || isAdmin);
+  const canModerate = isAdmin;
 
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h3 className="font-medium text-sm sm:text-base">{action.title}</h3>
-            {action.description && (
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                {action.description}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar>
+              <AvatarFallback>
+                {action.user_profiles?.display_name?.charAt(0) || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-lg">{action.title}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Par {action.user_profiles?.display_name || 'Utilisateur'} • {new Date(action.created_at).toLocaleDateString()}
               </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Par {action.user_profiles?.display_name || action.user_profiles?.email || 'Utilisateur anonyme'}
-            </p>
+            </div>
           </div>
-          <Badge className={`${categoryInfo?.color} text-xs ml-2`}>
-            {categoryInfo?.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{action.category}</Badge>
+            {canDeleteAction && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => deleteActionMutation.mutate()}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="pt-0">
-        <div className="flex justify-between items-center text-xs sm:text-sm text-muted-foreground">
-          <span>
-            {format(new Date(action.created_at), 'dd MMM yyyy', { locale: fr })}
-          </span>
-          
-          <div className="flex gap-3 sm:gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLike}
-              disabled={!user}
-              className={`flex items-center gap-1 text-xs p-1 sm:p-2 ${isLiked ? 'text-red-500' : ''}`}
-            >
-              <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${isLiked ? 'fill-current' : ''}`} />
-              <span>{likesCount}</span>
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleShowComments}
-              className="flex items-center gap-1 text-xs p-1 sm:p-2"
-            >
-              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>{action.comments_count}</span>
-              {showComments ? (
-                <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-              ) : (
-                <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-              )}
-            </Button>
-          </div>
+
+      <CardContent>
+        {action.description && (
+          <p className="text-muted-foreground mb-4">{action.description}</p>
+        )}
+
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLike}
+            disabled={isLiking}
+            className="flex items-center gap-2"
+          >
+            <Heart className="h-4 w-4" />
+            {action.likes_count}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowComments(!showComments)}
+            className="flex items-center gap-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            {action.comments_count}
+          </Button>
         </div>
 
         {showComments && (
-          <div className="mt-4 space-y-3">
-            {user && (
-              <div className="flex gap-2">
-                <Textarea
-                  placeholder="Ajouter un commentaire..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  rows={2}
-                  className="text-sm"
-                />
-                <Button
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim() || isLoading}
-                  size="sm"
-                  className="shrink-0"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="border-t pt-4 space-y-4">
+            {/* Formulaire de commentaire */}
+            <form onSubmit={handleSubmitComment} className="space-y-2">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Écrivez un commentaire..."
+                className="min-h-[80px]"
+              />
+              <Button 
+                type="submit" 
+                size="sm" 
+                disabled={!newComment.trim() || commentMutation.isPending}
+                className="flex items-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Publier
+              </Button>
+            </form>
+
+            {/* Liste des commentaires */}
+            <div className="space-y-3">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-gray-50 rounded p-2 text-sm">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="font-medium text-xs">
-                        {comment.user_profiles?.display_name || comment.user_profiles?.email || 'Utilisateur'}
-                      </p>
-                      <p className="text-sm mt-1">{comment.content}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(comment.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                      </p>
+                <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {comment.user_profiles?.display_name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">
+                        {comment.user_profiles?.display_name || 'Utilisateur'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                        {canDeleteComment(comment) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteCommentMutation.mutate(comment.id)}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {canModerate && !canDeleteComment(comment) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moderateMutation.mutate(comment.id)}
+                            className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700"
+                          >
+                            <Flag className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    
-                    {(isAdmin || comment.user_id === user?.id) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <p className="text-sm text-muted-foreground">{comment.content}</p>
                   </div>
                 </div>
               ))}
-              
-              {comments.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-4">
-                  Aucun commentaire pour le moment
-                </p>
-              )}
             </div>
           </div>
         )}
