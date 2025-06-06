@@ -32,13 +32,6 @@ export interface GoodActionComment {
   } | null;
 }
 
-export interface GoodActionLike {
-  id: string;
-  user_id: string;
-  good_action_id: string;
-  created_at: string;
-}
-
 // Récupérer toutes les bonnes actions publiques
 export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
   try {
@@ -46,7 +39,7 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
       .from('good_actions')
       .select(`
         *,
-        user_profiles:user_id(display_name, email)
+        user_profiles:user_profiles!good_actions_user_id_fkey(display_name, email)
       `)
       .eq('is_public', true)
       .order('created_at', { ascending: false });
@@ -56,20 +49,12 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
       throw error;
     }
 
-    return (data || []).map(action => ({
-      ...action,
-      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !Array.isArray(action.user_profiles)
-        ? action.user_profiles as { display_name: string; email: string; }
-        : null
-    }));
+    return data || [];
   } catch (error) {
     console.error('Erreur dans getPublicGoodActions:', error);
     throw error;
   }
 };
-
-// Alias pour la compatibilité
-export const getAllPublicGoodActions = getPublicGoodActions;
 
 // Récupérer les bonnes actions d'un utilisateur
 export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> => {
@@ -78,7 +63,7 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
       .from('good_actions')
       .select(`
         *,
-        user_profiles:user_id(display_name, email)
+        user_profiles:user_profiles!good_actions_user_id_fkey(display_name, email)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -88,12 +73,7 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
       throw error;
     }
 
-    return (data || []).map(action => ({
-      ...action,
-      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !Array.isArray(action.user_profiles)
-        ? action.user_profiles as { display_name: string; email: string; }
-        : null
-    }));
+    return data || [];
   } catch (error) {
     console.error('Erreur dans getUserGoodActions:', error);
     throw error;
@@ -119,7 +99,7 @@ export const createGoodAction = async (goodAction: {
       })
       .select(`
         *,
-        user_profiles:user_id(display_name, email)
+        user_profiles:user_profiles!good_actions_user_id_fkey(display_name, email)
       `)
       .single();
 
@@ -128,12 +108,7 @@ export const createGoodAction = async (goodAction: {
       throw error;
     }
 
-    return {
-      ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
-        ? data.user_profiles as { display_name: string; email: string; }
-        : null
-    };
+    return data;
   } catch (error) {
     console.error('Erreur dans createGoodAction:', error);
     throw error;
@@ -141,7 +116,7 @@ export const createGoodAction = async (goodAction: {
 };
 
 // Supprimer une bonne action
-export const deleteGoodActionById = async (id: string): Promise<void> => {
+export const deleteGoodAction = async (id: string): Promise<void> => {
   try {
     const { error } = await supabase
       .from('good_actions')
@@ -158,39 +133,6 @@ export const deleteGoodActionById = async (id: string): Promise<void> => {
   }
 };
 
-// Alias pour la compatibilité
-export const deleteGoodAction = deleteGoodActionById;
-
-// Mettre à jour une bonne action
-export const updateGoodAction = async (id: string, updates: Partial<GoodAction>): Promise<GoodAction> => {
-  try {
-    const { data, error } = await supabase
-      .from('good_actions')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        user_profiles:user_id(display_name, email)
-      `)
-      .single();
-
-    if (error) {
-      console.error('Erreur lors de la mise à jour de la bonne action:', error);
-      throw error;
-    }
-
-    return {
-      ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
-        ? data.user_profiles as { display_name: string; email: string; }
-        : null
-    };
-  } catch (error) {
-    console.error('Erreur dans updateGoodAction:', error);
-    throw error;
-  }
-};
-
 // Récupérer les commentaires d'une bonne action
 export const getGoodActionComments = async (goodActionId: string): Promise<GoodActionComment[]> => {
   try {
@@ -198,7 +140,7 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
       .from('good_action_comments')
       .select(`
         *,
-        user_profiles:user_id(display_name, email)
+        user_profiles:user_profiles!good_action_comments_user_id_fkey(display_name, email)
       `)
       .eq('good_action_id', goodActionId)
       .eq('is_deleted', false)
@@ -209,12 +151,7 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
       throw error;
     }
 
-    return (data || []).map(comment => ({
-      ...comment,
-      user_profiles: comment.user_profiles && typeof comment.user_profiles === 'object' && !Array.isArray(comment.user_profiles)
-        ? comment.user_profiles as { display_name: string; email: string; }
-        : null
-    }));
+    return data || [];
   } catch (error) {
     console.error('Erreur dans getGoodActionComments:', error);
     throw error;
@@ -238,7 +175,7 @@ export const addGoodActionComment = async (comment: {
       })
       .select(`
         *,
-        user_profiles:user_id(display_name, email)
+        user_profiles:user_profiles!good_action_comments_user_id_fkey(display_name, email)
       `)
       .single();
 
@@ -247,20 +184,12 @@ export const addGoodActionComment = async (comment: {
       throw error;
     }
 
-    return {
-      ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
-        ? data.user_profiles as { display_name: string; email: string; }
-        : null
-    };
+    return data;
   } catch (error) {
     console.error('Erreur dans addGoodActionComment:', error);
     throw error;
   }
 };
-
-// Alias pour la compatibilité
-export const addComment = addGoodActionComment;
 
 // Supprimer un commentaire
 export const deleteGoodActionComment = async (id: string): Promise<void> => {
@@ -279,10 +208,6 @@ export const deleteGoodActionComment = async (id: string): Promise<void> => {
     throw error;
   }
 };
-
-// Alias pour la compatibilité
-export const deleteComment = deleteGoodActionComment;
-export const moderateComment = deleteGoodActionComment;
 
 // Ajouter un like
 export const addGoodActionLike = async (goodActionId: string): Promise<void> => {
@@ -306,9 +231,6 @@ export const addGoodActionLike = async (goodActionId: string): Promise<void> => 
     throw error;
   }
 };
-
-// Alias pour la compatibilité
-export const likeGoodAction = addGoodActionLike;
 
 // Supprimer un like
 export const removeGoodActionLike = async (goodActionId: string): Promise<void> => {
@@ -356,6 +278,3 @@ export const hasUserLikedGoodAction = async (goodActionId: string): Promise<bool
     return false;
   }
 };
-
-// Alias pour la compatibilité
-export const checkUserLike = hasUserLikedGoodAction;

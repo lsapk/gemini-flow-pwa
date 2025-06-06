@@ -7,18 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Filter, Heart, Users, Globe, Lock } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   GoodAction,
-  getPublicGoodActions as getAllPublicGoodActions,
+  getPublicGoodActions,
   getUserGoodActions,
   createGoodAction,
-  deleteGoodActionById as deleteGoodAction,
-  addGoodActionLike as likeGoodAction,
+  deleteGoodAction,
+  addGoodActionLike,
   removeGoodActionLike,
-  hasUserLikedGoodAction as checkUserLike
+  hasUserLikedGoodAction
 } from "@/lib/goodActionsApi";
 import { GoodActionCard } from "@/components/GoodActionCard";
 
@@ -43,7 +43,7 @@ export default function GoodActions() {
   const loadGoodActions = async () => {
     setLoading(true);
     try {
-      const publicActions = await getAllPublicGoodActions();
+      const publicActions = await getPublicGoodActions();
       setGoodActions(publicActions);
 
       if (user) {
@@ -71,8 +71,8 @@ export default function GoodActions() {
     setNewAction({ ...newAction, category: value });
   };
 
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewAction({ ...newAction, is_public: e.target.checked });
+  const handleSwitchChange = (checked: boolean) => {
+    setNewAction({ ...newAction, is_public: checked });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,12 +116,12 @@ export default function GoodActions() {
     }
 
     try {
-      const hasLiked = await checkUserLike(action.id);
+      const hasLiked = await hasUserLikedGoodAction(action.id);
       if (hasLiked) {
         await removeGoodActionLike(action.id);
         toast.success("Vous n'aimez plus cette action.");
       } else {
-        await likeGoodAction(action.id);
+        await addGoodActionLike(action.id);
         toast.success("Vous aimez cette action!");
       }
       await loadGoodActions();
@@ -234,9 +234,7 @@ export default function GoodActions() {
               <Switch
                 id="is_public"
                 checked={newAction.is_public}
-                onCheckedChange={(checked) =>
-                  setNewAction({ ...newAction, is_public: checked })
-                }
+                onCheckedChange={handleSwitchChange}
               />
             </div>
             <Button type="submit">

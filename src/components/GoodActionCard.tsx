@@ -10,20 +10,19 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   GoodAction,
   GoodActionComment,
-  addGoodActionLike as likeGoodAction,
+  addGoodActionLike,
   removeGoodActionLike,
   hasUserLikedGoodAction,
   getGoodActionComments,
-  addGoodActionComment as addComment,
-  deleteGoodActionComment as deleteComment,
-  deleteGoodActionById as deleteGoodAction
+  addGoodActionComment,
+  deleteGoodActionComment,
+  deleteGoodAction
 } from "@/lib/goodActionsApi";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,7 +76,7 @@ export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDe
         setIsLiked(false);
         goodAction.likes_count--;
       } else {
-        await likeGoodAction(goodAction.id);
+        await addGoodActionLike(goodAction.id);
         setIsLiked(true);
         goodAction.likes_count++;
       }
@@ -101,7 +100,7 @@ export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDe
     }
 
     try {
-      const comment = await addComment({
+      const comment = await addGoodActionComment({
         content: newComment,
         good_action_id: goodAction.id,
       });
@@ -116,7 +115,7 @@ export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDe
 
   const removeComment = async (commentId: string) => {
     try {
-      await deleteComment(commentId);
+      await deleteGoodActionComment(commentId);
       setComments((prevComments) =>
         prevComments.filter((comment) => comment.id !== commentId)
       );

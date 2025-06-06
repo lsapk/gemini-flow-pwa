@@ -45,11 +45,11 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
         body: {
           message: inputMessage,
-          user_id: user.id,
-          conversation_history: messages.slice(-10) // Derniers 10 messages pour le contexte
+          userId: user.id,
+          chatHistory: messages.slice(-10)
         }
       });
 
