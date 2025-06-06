@@ -21,7 +21,7 @@ import Reflection from "./pages/Reflection";
 import GoodActions from "./pages/GoodActions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import { AppLayout } from "./components/layout/AppLayout";
+import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
