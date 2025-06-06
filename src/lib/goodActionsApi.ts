@@ -36,7 +36,7 @@ export const getGoodActions = async (publicOnly = false) => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles(display_name, email)
+      user_profiles!inner(display_name, email)
     `)
     .order('created_at', { ascending: false });
 
@@ -47,7 +47,24 @@ export const getGoodActions = async (publicOnly = false) => {
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.warn('Error fetching with user_profiles, trying without:', error);
+    // Fallback without user_profiles
+    let fallbackQuery = supabase
+      .from('good_actions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (publicOnly) {
+      fallbackQuery = fallbackQuery.eq('is_public', true);
+    } else if (user) {
+      fallbackQuery = fallbackQuery.or(`user_id.eq.${user.id},is_public.eq.true`);
+    }
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    if (fallbackError) throw fallbackError;
+    return (fallbackData || []).map(action => ({ ...action, user_profiles: null }));
+  }
   return data || [];
 };
 
@@ -63,12 +80,23 @@ export const getUserGoodActions = async () => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles(display_name, email)
+      user_profiles!inner(display_name, email)
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.warn('Error fetching user actions with profiles, trying without:', error);
+    // Fallback without user_profiles
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('good_actions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (fallbackError) throw fallbackError;
+    return (fallbackData || []).map(action => ({ ...action, user_profiles: null }));
+  }
   return data || [];
 };
 
@@ -214,13 +242,25 @@ export const getGoodActionComments = async (goodActionId: string) => {
     .from('good_action_comments')
     .select(`
       *,
-      user_profiles(display_name, email)
+      user_profiles!inner(display_name, email)
     `)
     .eq('good_action_id', goodActionId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.warn('Error fetching comments with profiles, trying without:', error);
+    // Fallback without user_profiles
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('good_action_comments')
+      .select('*')
+      .eq('good_action_id', goodActionId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: true });
+
+    if (fallbackError) throw fallbackError;
+    return (fallbackData || []).map(comment => ({ ...comment, user_profiles: null }));
+  }
   return data || [];
 };
 
@@ -241,11 +281,43 @@ export const addComment = async (goodActionId: string, content: string) => {
     })
     .select(`
       *,
-      user_profiles(display_name, email)
+      user_profiles!inner(display_name, email)
     `)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.warn('Error adding comment with profile, trying without:', error);
+    // Fallback without user_profiles
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('good_action_comments')
+      .insert({
+        good_action_id: goodActionId,
+        user_id: user.id,
+        content,
+      })
+      .select('*')
+      .single();
+
+    if (fallbackError) throw fallbackError;
+
+    // Manually increment comments counter
+    const { data: currentAction } = await supabase
+      .from('good_actions')
+      .select('comments_count')
+      .eq('id', goodActionId)
+      .single();
+
+    if (currentAction) {
+      const { error: updateError } = await supabase
+        .from('good_actions')
+        .update({ comments_count: currentAction.comments_count + 1 })
+        .eq('id', goodActionId);
+
+      if (updateError) throw updateError;
+    }
+
+    return { ...fallbackData, user_profiles: null };
+  }
 
   // Manually increment comments counter
   const { data: currentAction } = await supabase

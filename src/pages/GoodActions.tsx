@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,8 +92,9 @@ export default function GoodActions() {
         getUserGoodActions()
       ]);
       
-      setPublicActions(publicData);
-      setUserActions(userData);
+      // Type assertion to handle the potential SelectQueryError
+      setPublicActions(publicData as GoodAction[]);
+      setUserActions(userData as GoodAction[]);
       
       // Load user likes
       const likes: { [key: string]: boolean } = {};
@@ -128,7 +128,8 @@ export default function GoodActions() {
   const loadComments = async (actionId: string) => {
     try {
       const actionComments = await getComments(actionId);
-      setComments(prev => ({ ...prev, [actionId]: actionComments }));
+      // Type assertion to handle the potential SelectQueryError
+      setComments(prev => ({ ...prev, [actionId]: actionComments as GoodActionComment[] }));
     } catch (error) {
       console.error('Error loading comments:', error);
     }
