@@ -1,642 +1,260 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Plus, Search, Filter, Heart, Users, Globe, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { isAdminModeEnabled } from "@/lib/api";
-import { 
-  getAllPublicGoodActions, 
-  getUserGoodActions, 
-  createGoodAction, 
-  updateGoodAction, 
-  deleteGoodAction,
-  likeGoodAction,
-  checkUserLike,
-  addComment,
-  getComments,
-  deleteComment,
-  moderateComment
+import {
+  GoodAction,
+  getPublicGoodActions as getAllPublicGoodActions,
+  getUserGoodActions,
+  createGoodAction,
+  deleteGoodActionById as deleteGoodAction,
+  addGoodActionLike as likeGoodAction,
+  hasUserLikedGoodAction as checkUserLike
 } from "@/lib/goodActionsApi";
-import { 
-  Plus, 
-  Heart, 
-  MessageCircle, 
-  Edit,
-  Trash2,
-  Users,
-  User,
-  Filter,
-  Send,
-  Shield,
-  Eye,
-  EyeOff
-} from "lucide-react";
-import { GoodAction, GoodActionComment } from "@/lib/goodActionsApi";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { GoodActionCard } from "@/components/GoodActionCard";
 
 export default function GoodActions() {
-  const [publicActions, setPublicActions] = useState<GoodAction[]>([]);
-  const [userActions, setUserActions] = useState<GoodAction[]>([]);
-  const [filteredActions, setFilteredActions] = useState<GoodAction[]>([]);
-  const [comments, setComments] = useState<{ [key: string]: GoodActionComment[] }>({});
-  const [userLikes, setUserLikes] = useState<{ [key: string]: boolean }>({});
-  const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
-  const [filter, setFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('community');
-  const [loading, setLoading] = useState(true);
-  const [editingAction, setEditingAction] = useState<GoodAction | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  // Form for creation/editing
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: '',
-    is_public: true
+  const [goodActions, setGoodActions] = useState<GoodAction[]>([]);
+  const [userGoodActions, setUserGoodActions] = useState<GoodAction[]>([]);
+  const [newAction, setNewAction] = useState({
+    title: "",
+    description: "",
+    category: "environnement",
+    is_public: true,
   });
-
+  const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
-  const { toast } = useToast();
-
-  const categories = [
-    'Écologie', 'Entraide', 'Santé', 'Éducation', 'Sport', 
-    'Créativité', 'Travail', 'Famille', 'Communauté', 'Autre'
-  ];
 
   useEffect(() => {
-    if (user) {
-      setIsAdmin(isAdminModeEnabled());
-      loadData();
-    }
+    loadGoodActions();
   }, [user]);
 
-  useEffect(() => {
-    filterActions();
-  }, [publicActions, filter]);
-
-  const loadData = async () => {
+  const loadGoodActions = async () => {
     setLoading(true);
     try {
-      const [publicData, userData] = await Promise.all([
-        getAllPublicGoodActions(),
-        getUserGoodActions()
-      ]);
-      
-      // Type assertion to handle the potential SelectQueryError
-      setPublicActions(publicData as GoodAction[]);
-      setUserActions(userData as GoodAction[]);
-      
-      // Load user likes
-      const likes: { [key: string]: boolean } = {};
-      for (const action of publicData) {
-        likes[action.id] = await checkUserLike(action.id);
+      const publicActions = await getAllPublicGoodActions();
+      setGoodActions(publicActions);
+
+      if (user) {
+        const userActions = await getUserGoodActions(user.id);
+        setUserGoodActions(userActions);
       }
-      setUserLikes(likes);
-      
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les bonnes actions.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      toast.error(
+        "Erreur lors du chargement des bonnes actions: " + error.message
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const filterActions = () => {
-    let actions = publicActions;
-    
-    if (filter !== 'all') {
-      actions = actions.filter(action => action.category === filter);
-    }
-    
-    setFilteredActions(actions);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewAction({ ...newAction, [e.target.name]: e.target.value });
   };
 
-  const loadComments = async (actionId: string) => {
-    try {
-      const actionComments = await getComments(actionId);
-      // Type assertion to handle the potential SelectQueryError
-      setComments(prev => ({ ...prev, [actionId]: actionComments as GoodActionComment[] }));
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
+  const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewAction({ ...newAction, description: e.target.value });
   };
 
-  const handleLike = async (actionId: string) => {
+  const handleSelectChange = (value: string) => {
+    setNewAction({ ...newAction, category: value });
+  };
+
+  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewAction({ ...newAction, is_public: e.target.checked });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Vous devez être connecté pour créer une bonne action.");
+      return;
+    }
+
     try {
-      const liked = await likeGoodAction(actionId);
-      setUserLikes(prev => ({ ...prev, [actionId]: liked }));
-      
-      // Update counter locally
-      setPublicActions(prev => prev.map(action => 
-        action.id === actionId 
-          ? { ...action, likes_count: action.likes_count + (liked ? 1 : -1) }
-          : action
-      ));
-      
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le like.",
-        variant: "destructive",
+      await createGoodAction(newAction);
+      toast.success("Bonne action créée avec succès!");
+      setNewAction({
+        title: "",
+        description: "",
+        category: "environnement",
+        is_public: true,
       });
+      await loadGoodActions();
+    } catch (error: any) {
+      toast.error("Erreur lors de la création de la bonne action: " + error.message);
     }
   };
 
-  const handleComment = async (actionId: string) => {
-    const content = newComment[actionId]?.trim();
-    if (!content) return;
-
+  const handleDelete = async (id: string) => {
     try {
-      await addComment(actionId, content);
-      setNewComment(prev => ({ ...prev, [actionId]: '' }));
-      
-      // Reload comments
-      await loadComments(actionId);
-      
-      // Update counter
-      setPublicActions(prev => prev.map(action => 
-        action.id === actionId 
-          ? { ...action, comments_count: action.comments_count + 1 }
-          : action
-      ));
-      
-      toast({
-        title: "Commentaire ajouté",
-        description: "Votre commentaire a été publié avec succès.",
-      });
-    } catch (error) {
-      console.error('Error adding comment:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter le commentaire.",
-        variant: "destructive",
-      });
+      await deleteGoodAction(id);
+      toast.success("Bonne action supprimée avec succès!");
+      await loadGoodActions();
+    } catch (error: any) {
+      toast.error(
+        "Erreur lors de la suppression de la bonne action: " + error.message
+      );
     }
   };
 
-  const handleDeleteComment = async (commentId: string, actionId: string) => {
-    try {
-      await deleteComment(commentId);
-      await loadComments(actionId);
-      
-      toast({
-        title: "Commentaire supprimé",
-        description: "Le commentaire a été supprimé avec succès.",
-      });
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le commentaire.",
-        variant: "destructive",
-      });
+  const handleLike = async (action: GoodAction) => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour aimer cette action.");
+      return;
     }
-  };
-
-  const handleModerateComment = async (commentId: string, actionId: string) => {
-    try {
-      await moderateComment(commentId);
-      await loadComments(actionId);
-      
-      toast({
-        title: "Commentaire modéré",
-        description: "Le commentaire a été supprimé par modération.",
-      });
-    } catch (error) {
-      console.error('Error moderating comment:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de modérer le commentaire.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!formData.title.trim()) return;
 
     try {
-      if (editingAction) {
-        await updateGoodAction(editingAction.id, formData);
-        toast({
-          title: "Bonne action modifiée",
-          description: "Votre bonne action a été mise à jour avec succès.",
-        });
+      const hasLiked = await checkUserLike(action.id);
+      if (hasLiked) {
+        await removeGoodActionLike(action.id);
+        toast.success("Vous n'aimez plus cette action.");
       } else {
-        await createGoodAction(formData);
-        toast({
-          title: "Bonne action créée",
-          description: "Votre bonne action a été publiée avec succès.",
-        });
+        await likeGoodAction(action.id);
+        toast.success("Vous aimez cette action!");
       }
-      
-      setFormData({ title: '', description: '', category: '', is_public: true });
-      setEditingAction(null);
-      setIsCreateOpen(false);
-      await loadData();
-    } catch (error) {
-      console.error('Error saving action:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder la bonne action.",
-        variant: "destructive",
-      });
+      await loadGoodActions();
+    } catch (error: any) {
+      toast.error("Erreur lors de l'opération: " + error.message);
     }
   };
 
-  const handleEdit = (action: GoodAction) => {
-    setFormData({
-      title: action.title,
-      description: action.description || '',
-      category: action.category,
-      is_public: action.is_public
-    });
-    setEditingAction(action);
-    setIsCreateOpen(true);
-  };
-
-  const handleDelete = async (actionId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette bonne action ?')) return;
-
-    try {
-      await deleteGoodAction(actionId);
-      setUserActions(prev => prev.filter(a => a.id !== actionId));
-      setPublicActions(prev => prev.filter(a => a.id !== actionId));
-      
-      toast({
-        title: "Bonne action supprimée",
-        description: "La bonne action a été supprimée avec succès.",
-      });
-    } catch (error) {
-      console.error('Error deleting action:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer la bonne action.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Safely get display name
-  const getDisplayName = (userProfiles: any) => {
-    if (!userProfiles) return 'Utilisateur';
-    if (Array.isArray(userProfiles) && userProfiles.length > 0) {
-      return userProfiles[0].display_name || userProfiles[0].email || 'Utilisateur';
-    }
-    return userProfiles.display_name || userProfiles.email || 'Utilisateur';
-  };
-
-  const ActionCard = ({ action, showUserActions = false }: { action: GoodAction; showUserActions?: boolean }) => (
-    <Card key={action.id} className="mb-4">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-semibold">
-                  {getDisplayName(action.user_profiles)?.[0] || 'U'}
-                </div>
-                <span className="font-medium text-sm">
-                  {getDisplayName(action.user_profiles)}
-                </span>
-              </div>
-              <Badge variant="outline">{action.category}</Badge>
-              {!action.is_public && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <EyeOff className="h-3 w-3" />
-                  Privé
-                </Badge>
-              )}
-            </div>
-            <CardTitle className="text-lg">{action.title}</CardTitle>
-            {action.description && (
-              <p className="text-muted-foreground mt-2">{action.description}</p>
-            )}
-          </div>
-          
-          {showUserActions && user?.id === action.user_id && (
-            <div className="flex items-center gap-1 ml-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleEdit(action)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(action.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`flex items-center gap-2 ${userLikes[action.id] ? 'text-red-500' : ''}`}
-              onClick={() => handleLike(action.id)}
-            >
-              <Heart className={`h-4 w-4 ${userLikes[action.id] ? 'fill-current' : ''}`} />
-              <span>{action.likes_count}</span>
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={() => loadComments(action.id)}
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>{action.comments_count}</span>
-            </Button>
-          </div>
-          
-          <span className="text-xs text-muted-foreground">
-            {format(new Date(action.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-          </span>
-        </div>
-
-        {/* Comments */}
-        {comments[action.id] && (
-          <div className="border-t pt-4 space-y-3">
-            {comments[action.id].map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                  {getDisplayName(comment.user_profiles)?.[0] || 'U'}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium">
-                      {getDisplayName(comment.user_profiles)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(comment.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                    </span>
-                    
-                    {/* Comment actions */}
-                    <div className="flex items-center gap-1 ml-auto">
-                      {user?.id === comment.user_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleDeleteComment(comment.id, action.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                      
-                      {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-red-500"
-                          onClick={() => handleModerateComment(comment.id, action.id)}
-                        >
-                          <Shield className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm">{comment.content}</p>
-                </div>
-              </div>
-            ))}
-            
-            {/* Add comment form */}
-            <div className="flex gap-2 mt-4">
-              <Input
-                placeholder="Ajouter un commentaire..."
-                value={newComment[action.id] || ''}
-                onChange={(e) => setNewComment(prev => ({ ...prev, [action.id]: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleComment(action.id);
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                size="sm"
-                onClick={() => handleComment(action.id)}
-                disabled={!newComment[action.id]?.trim()}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+  const filteredActions = goodActions.filter((action) => {
+    const categoryMatch =
+      categoryFilter === "all" || action.category === categoryFilter;
+    const searchMatch =
+      searchQuery === "" ||
+      action.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      action.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return categoryMatch && searchMatch;
+  });
 
   if (loading) {
     return (
-      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
         <div className="text-center py-8">
           <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4">Chargement...</p>
+          <p className="mt-4">Chargement des bonnes actions...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Heart className="h-6 w-6" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Bonnes Actions</h1>
-        </div>
-        
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle bonne action
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingAction ? 'Modifier la bonne action' : 'Créer une nouvelle bonne action'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Titre *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Titre de votre bonne action"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Décrivez votre bonne action..."
-                  rows={3}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="category">Catégorie</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_public"
-                  checked={formData.is_public}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_public: checked }))}
-                />
-                <Label htmlFor="is_public" className="flex items-center gap-2">
-                  {formData.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  {formData.is_public ? 'Publique (visible par tous)' : 'Privée (visible par vous seulement)'}
-                </Label>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={handleSubmit} className="flex-1">
-                  {editingAction ? 'Modifier' : 'Créer'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsCreateOpen(false);
-                    setEditingAction(null);
-                    setFormData({ title: '', description: '', category: '', is_public: true });
-                  }}
-                >
-                  Annuler
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Partage de Bonnes Actions
+        </h1>
+        <Button onClick={() => {}}>
+          <Plus className="mr-2 h-4 w-4" /> Ajouter une Action
+        </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="community" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Communauté
-          </TabsTrigger>
-          <TabsTrigger value="my-actions" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Mes Actions
-          </TabsTrigger>
-        </TabsList>
+      {/* Section de recherche et de filtrage */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 flex items-center space-x-2">
+          <Input
+            type="search"
+            placeholder="Rechercher une action..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Search className="h-5 w-5 text-gray-500 dark:text-gray-400 ml-2" />
+        </div>
+        <Select onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Filtrer par catégorie" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les catégories</SelectItem>
+            <SelectItem value="environnement">Environnement</SelectItem>
+            <SelectItem value="social">Social</SelectItem>
+            <SelectItem value="sante">Santé</SelectItem>
+            <SelectItem value="education">Éducation</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <TabsContent value="community" className="space-y-4">
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Filter className="h-4 w-4" />
-                <span className="text-sm font-medium">Filtrer par catégorie :</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={filter === 'all' ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilter('all')}
-                >
-                  Toutes
-                </Button>
-                {categories.map(cat => (
-                  <Button
-                    key={cat}
-                    variant={filter === cat ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFilter(cat)}
-                  >
-                    {cat}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Section d'ajout d'une bonne action */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Proposer une nouvelle bonne action</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="title">Titre</Label>
+              <Input
+                type="text"
+                id="title"
+                name="title"
+                value={newAction.title}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={newAction.description}
+                onChange={handleTextAreaChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="category">Catégorie</Label>
+              <Select onValueChange={handleSelectChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="environnement">Environnement</SelectItem>
+                  <SelectItem value="social">Social</SelectItem>
+                  <SelectItem value="sante">Santé</SelectItem>
+                  <SelectItem value="education">Éducation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="is_public">Action publique ?</Label>
+              <Switch
+                id="is_public"
+                checked={newAction.is_public}
+                onCheckedChange={(checked) =>
+                  setNewAction({ ...newAction, is_public: checked })
+                }
+              />
+            </div>
+            <Button type="submit">
+              <Plus className="mr-2 h-4 w-4" /> Ajouter
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-          {/* Public actions */}
-          <div>
-            {filteredActions.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-2">Aucune bonne action trouvée</p>
-                  <p className="text-muted-foreground">
-                    Soyez le premier à partager une bonne action avec la communauté !
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredActions.map(action => (
-                <ActionCard key={action.id} action={action} />
-              ))
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="my-actions" className="space-y-4">
-          {userActions.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium mb-2">Aucune bonne action créée</p>
-                <p className="text-muted-foreground mb-4">
-                  Commencez par créer votre première bonne action !
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            userActions.map(action => (
-              <ActionCard key={action.id} action={action} showUserActions />
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Affichage des bonnes actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredActions.map((action) => (
+          <GoodActionCard
+            key={action.id}
+            action={action}
+            onLike={handleLike}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,301 +1,271 @@
-
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Heart, MessageCircle, Trash2, Send, MoreVertical } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { Heart, MessageCircle, Trash2, Flag, Send } from "lucide-react";
-import { GoodAction, GoodActionComment, likeGoodAction, getGoodActionComments, addComment, deleteComment, moderateComment, deleteGoodAction } from "@/lib/goodActionsApi";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  GoodAction,
+  GoodActionComment,
+  addGoodActionLike as likeGoodAction,
+  removeGoodActionLike,
+  hasUserLikedGoodAction,
+  getGoodActionComments,
+  addGoodActionComment as addComment,
+  deleteGoodActionComment as deleteComment,
+  deleteGoodActionComment as moderateComment,
+  deleteGoodActionById as deleteGoodAction
+} from "@/lib/goodActionsApi";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface GoodActionCardProps {
-  action: GoodAction;
-  onRefresh?: () => void;
+  goodAction: GoodAction;
+  onDelete?: (id: string) => void;
 }
 
-export default function GoodActionCard({ action, onRefresh }: GoodActionCardProps) {
-  const [showComments, setShowComments] = useState(false);
+export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDelete }) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [comments, setComments] = useState<GoodActionComment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [isLiking, setIsLiking] = useState(false);
-  const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  // Check if user is admin
-  const { data: userRoles } = useQuery({
-    queryKey: ['userRoles', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
-      return data || [];
-    },
-    enabled: !!user
-  });
+  useEffect(() => {
+    const fetchLikeStatus = async () => {
+      if (user) {
+        const liked = await hasUserLikedGoodAction(goodAction.id);
+        setIsLiked(liked);
+      }
+    };
 
-  const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
+    fetchLikeStatus();
+  }, [goodAction.id, user]);
 
-  const { data: comments = [], refetch: refetchComments } = useQuery({
-    queryKey: ['comments', action.id],
-    queryFn: () => getGoodActionComments(action.id),
-    enabled: showComments
-  });
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const fetchedComments = await getGoodActionComments(goodAction.id);
+        setComments(fetchedComments);
+      } catch (error) {
+        console.error("Failed to fetch comments:", error);
+        toast.error("Failed to fetch comments");
+      }
+    };
 
-  const likeMutation = useMutation({
-    mutationFn: () => likeGoodAction(action.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
-      onRefresh?.();
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier le like",
-        variant: "destructive",
-      });
+    fetchComments();
+  }, [goodAction.id]);
+
+  const toggleLike = async () => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour aimer cette action.");
+      return;
     }
-  });
 
-  const commentMutation = useMutation({
-    mutationFn: (content: string) => addComment(action.id, content),
-    onSuccess: () => {
-      setNewComment("");
-      refetchComments();
-      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
-      onRefresh?.();
-      toast({
-        title: "Commentaire ajouté",
-        description: "Votre commentaire a été publié avec succès",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter le commentaire",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) => deleteComment(commentId, action.id),
-    onSuccess: () => {
-      refetchComments();
-      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
-      onRefresh?.();
-      toast({
-        title: "Commentaire supprimé",
-        description: "Le commentaire a été supprimé avec succès",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le commentaire",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const moderateMutation = useMutation({
-    mutationFn: (commentId: string) => moderateComment(commentId),
-    onSuccess: () => {
-      refetchComments();
-      toast({
-        title: "Commentaire modéré",
-        description: "Le commentaire a été masqué",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modérer le commentaire",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const deleteActionMutation = useMutation({
-    mutationFn: () => deleteGoodAction(action.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goodActions'] });
-      onRefresh?.();
-      toast({
-        title: "Bonne action supprimée",
-        description: "La bonne action a été supprimée avec succès",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer la bonne action",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const handleLike = async () => {
-    if (isLiking) return;
-    setIsLiking(true);
     try {
-      await likeMutation.mutateAsync();
-    } finally {
-      setIsLiking(false);
+      if (isLiked) {
+        await removeGoodActionLike(goodAction.id);
+        setIsLiked(false);
+        goodAction.likes_count--;
+      } else {
+        await likeGoodAction(goodAction.id);
+        setIsLiked(true);
+        goodAction.likes_count++;
+      }
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+      toast.error("Failed to toggle like");
+      // Revert the local state in case of an error
+      setIsLiked(!isLiked);
     }
   };
 
-  const handleSubmitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-    commentMutation.mutate(newComment.trim());
-  };
-
-  const canDeleteAction = user && (user.id === action.user_id || isAdmin);
-  const canDeleteComment = (comment: GoodActionComment) => user && (user.id === comment.user_id || isAdmin);
-  const canModerate = isAdmin;
-
-  // Safely get display name
-  const getDisplayName = (userProfiles: any) => {
-    if (!userProfiles) return 'Utilisateur';
-    if (Array.isArray(userProfiles) && userProfiles.length > 0) {
-      return userProfiles[0].display_name || 'Utilisateur';
+  const submitComment = async () => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour commenter.");
+      return;
     }
-    return userProfiles.display_name || 'Utilisateur';
+
+    if (!newComment.trim()) {
+      toast.error("Le commentaire ne peut pas être vide.");
+      return;
+    }
+
+    try {
+      const comment = await addComment({
+        content: newComment,
+        good_action_id: goodAction.id,
+      });
+      setComments((prevComments) => [...prevComments, comment]);
+      setNewComment("");
+      goodAction.comments_count++;
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      toast.error("Failed to add comment");
+    }
   };
+
+  const removeComment = async (commentId: string) => {
+    try {
+      await deleteComment(commentId);
+      setComments((prevComments) =>
+        prevComments.filter((comment) => comment.id !== commentId)
+      );
+      goodAction.comments_count--;
+      toast.success("Commentaire supprimé avec succès.");
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      toast.error("Failed to delete comment");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteGoodAction(goodAction.id);
+      toast.success("Good action supprimée avec succès.");
+      onDelete?.(goodAction.id);
+    } catch (error) {
+      console.error("Failed to delete good action:", error);
+      toast.error("Failed to delete good action");
+    }
+  };
+
+  const isOwnGoodAction = user?.id === goodAction.user_id;
+  const canModerate = isOwnGoodAction;
+
+  const descriptionLines = goodAction.description.split('\n');
+  const shortDescription = isExpanded ? goodAction.description : descriptionLines.slice(0, 2).join('\n');
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarFallback>
-                {getDisplayName(action.user_profiles)?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-lg">{action.title}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Par {getDisplayName(action.user_profiles)} • {new Date(action.created_at).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{action.category}</Badge>
-            {canDeleteAction && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => deleteActionMutation.mutate()}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+    <Card className="bg-white dark:bg-neutral-950 shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">{goodAction.title}</CardTitle>
+          {isOwnGoodAction && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Ouvrir le menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleDelete} className="focus:bg-red-500 focus:text-white">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <Avatar className="mr-2 h-6 w-6">
+            <AvatarImage src={`https://avatar.vercel.sh/${goodAction.user_profiles?.email}.png`} alt={goodAction.user_profiles?.display_name} />
+            <AvatarFallback>{goodAction.user_profiles?.display_name?.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          {goodAction.user_profiles?.display_name}
+          <span className="ml-2">•</span>
+          <span className="ml-2">{new Date(goodAction.created_at).toLocaleDateString()}</span>
         </div>
       </CardHeader>
-
       <CardContent>
-        {action.description && (
-          <p className="text-muted-foreground mb-4">{action.description}</p>
-        )}
-
-        <div className="flex items-center gap-4 mb-4">
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          {shortDescription}
+          {descriptionLines.length > 2 && (
+            <Button variant="link" onClick={() => setIsExpanded(!isExpanded)}>
+              {isExpanded ? "Réduire" : "Lire la suite"}
+            </Button>
+          )}
+        </p>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 px-2"
+              onClick={toggleLike}
+            >
+              <Heart
+                className={`h-4 w-4 ${isLiked ? "text-red-500" : ""}`}
+              />
+              <span>{goodAction.likes_count}</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 px-2">
+              <MessageCircle className="h-4 w-4" />
+              <span>{goodAction.comments_count}</span>
+            </Button>
+          </div>
+          <Badge className="uppercase">{goodAction.category}</Badge>
+        </div>
+        <div className="mt-4">
+          <h4 className="mb-2 font-semibold">Commentaires</h4>
+          {comments.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Aucun commentaire pour le moment.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {comments.map((comment) => (
+                <li key={comment.id} className="flex items-start gap-2">
+                  <div className="flex-shrink-0">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={`https://avatar.vercel.sh/${comment.user_profiles?.email}.png`} alt={comment.user_profiles?.display_name} />
+                      <AvatarFallback>{comment.user_profiles?.display_name?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{comment.user_profiles?.display_name}</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(comment.created_at).toLocaleDateString()}</div>
+                  </div>
+                  {(comment.user_id === user?.id || canModerate) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-5 w-5 p-0">
+                          <span className="sr-only">Ouvrir le menu</span>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => removeComment(comment.id)} className="focus:bg-red-500 focus:text-white">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="mt-4">
+          <Textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Ajouter un commentaire..."
+            className="resize-none"
+          />
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLike}
-            disabled={isLiking}
-            className="flex items-center gap-2"
+            onClick={submitComment}
+            className="mt-2 w-full"
+            disabled={!newComment.trim()}
           >
-            <Heart className="h-4 w-4" />
-            {action.likes_count}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-2"
-          >
-            <MessageCircle className="h-4 w-4" />
-            {action.comments_count}
+            Envoyer <Send className="ml-2 h-4 w-4" />
           </Button>
         </div>
-
-        {showComments && (
-          <div className="border-t pt-4 space-y-4">
-            {/* Comment form */}
-            <form onSubmit={handleSubmitComment} className="space-y-2">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Écrivez un commentaire..."
-                className="min-h-[80px]"
-              />
-              <Button 
-                type="submit" 
-                size="sm" 
-                disabled={!newComment.trim() || commentMutation.isPending}
-                className="flex items-center gap-2"
-              >
-                <Send className="h-4 w-4" />
-                Publier
-              </Button>
-            </form>
-
-            {/* Comments list */}
-            <div className="space-y-3">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {getDisplayName(comment.user_profiles)?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">
-                        {getDisplayName(comment.user_profiles)}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
-                        {canDeleteComment(comment) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteCommentMutation.mutate(comment.id)}
-                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                        {canModerate && !canDeleteComment(comment) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => moderateMutation.mutate(comment.id)}
-                            className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700"
-                          >
-                            <Flag className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{comment.content}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
-}
+};

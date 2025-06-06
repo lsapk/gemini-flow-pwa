@@ -1,8 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
-import { useAnalyticsData, useProductivityScore } from "@/hooks/useAnalyticsData";
+import { useAnalyticsData } from "@/hooks/useAnalyticsData";
+import { useProductivityScore } from "@/hooks/useProductivityScore";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading } = useAnalyticsData();
