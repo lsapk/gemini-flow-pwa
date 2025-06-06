@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   getGoodActionComments,
   addGoodActionComment as addComment,
   deleteGoodActionComment as deleteComment,
-  deleteGoodActionComment as moderateComment,
   deleteGoodActionById as deleteGoodAction
 } from "@/lib/goodActionsApi";
 import {
@@ -170,10 +170,10 @@ export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDe
         </div>
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
           <Avatar className="mr-2 h-6 w-6">
-            <AvatarImage src={`https://avatar.vercel.sh/${goodAction.user_profiles?.email}.png`} alt={goodAction.user_profiles?.display_name} />
-            <AvatarFallback>{goodAction.user_profiles?.display_name?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={`https://avatar.vercel.sh/${goodAction.user_profiles?.email}.png`} alt={goodAction.user_profiles?.display_name || 'User'} />
+            <AvatarFallback>{goodAction.user_profiles?.display_name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
-          {goodAction.user_profiles?.display_name}
+          {goodAction.user_profiles?.display_name || 'Utilisateur anonyme'}
           <span className="ml-2">•</span>
           <span className="ml-2">{new Date(goodAction.created_at).toLocaleDateString()}</span>
         </div>
@@ -219,12 +219,12 @@ export const GoodActionCard: React.FC<GoodActionCardProps> = ({ goodAction, onDe
                 <li key={comment.id} className="flex items-start gap-2">
                   <div className="flex-shrink-0">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={`https://avatar.vercel.sh/${comment.user_profiles?.email}.png`} alt={comment.user_profiles?.display_name} />
-                      <AvatarFallback>{comment.user_profiles?.display_name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarImage src={`https://avatar.vercel.sh/${comment.user_profiles?.email}.png`} alt={comment.user_profiles?.display_name || 'User'} />
+                      <AvatarFallback>{comment.user_profiles?.display_name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                     </Avatar>
                   </div>
                   <div>
-                    <div className="text-sm font-medium">{comment.user_profiles?.display_name}</div>
+                    <div className="text-sm font-medium">{comment.user_profiles?.display_name || 'Utilisateur anonyme'}</div>
                     <div className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(comment.created_at).toLocaleDateString()}</div>
                   </div>

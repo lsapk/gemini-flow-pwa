@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
   createGoodAction,
   deleteGoodActionById as deleteGoodAction,
   addGoodActionLike as likeGoodAction,
+  removeGoodActionLike,
   hasUserLikedGoodAction as checkUserLike
 } from "@/lib/goodActionsApi";
 import { GoodActionCard } from "@/components/GoodActionCard";
@@ -249,8 +251,7 @@ export default function GoodActions() {
         {filteredActions.map((action) => (
           <GoodActionCard
             key={action.id}
-            action={action}
-            onLike={handleLike}
+            goodAction={action}
             onDelete={handleDelete}
           />
         ))}

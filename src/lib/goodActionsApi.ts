@@ -58,7 +58,7 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
 
     return (data || []).map(action => ({
       ...action,
-      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !('error' in action.user_profiles)
+      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !Array.isArray(action.user_profiles)
         ? action.user_profiles as { display_name: string; email: string; }
         : null
     }));
@@ -90,7 +90,7 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
 
     return (data || []).map(action => ({
       ...action,
-      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !('error' in action.user_profiles)
+      user_profiles: action.user_profiles && typeof action.user_profiles === 'object' && !Array.isArray(action.user_profiles)
         ? action.user_profiles as { display_name: string; email: string; }
         : null
     }));
@@ -130,7 +130,7 @@ export const createGoodAction = async (goodAction: {
 
     return {
       ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !('error' in data.user_profiles)
+      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
         ? data.user_profiles as { display_name: string; email: string; }
         : null
     };
@@ -181,7 +181,7 @@ export const updateGoodAction = async (id: string, updates: Partial<GoodAction>)
 
     return {
       ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !('error' in data.user_profiles)
+      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
         ? data.user_profiles as { display_name: string; email: string; }
         : null
     };
@@ -211,7 +211,7 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
 
     return (data || []).map(comment => ({
       ...comment,
-      user_profiles: comment.user_profiles && typeof comment.user_profiles === 'object' && !('error' in comment.user_profiles)
+      user_profiles: comment.user_profiles && typeof comment.user_profiles === 'object' && !Array.isArray(comment.user_profiles)
         ? comment.user_profiles as { display_name: string; email: string; }
         : null
     }));
@@ -249,7 +249,7 @@ export const addGoodActionComment = async (comment: {
 
     return {
       ...data,
-      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !('error' in data.user_profiles)
+      user_profiles: data.user_profiles && typeof data.user_profiles === 'object' && !Array.isArray(data.user_profiles)
         ? data.user_profiles as { display_name: string; email: string; }
         : null
     };

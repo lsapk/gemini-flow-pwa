@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
@@ -8,14 +9,13 @@ export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading } = useAnalyticsData();
   const { 
     score, 
-    isLoading: scoreLoading, 
     completionRate,
     focusTimeScore,
     consistencyScore,
     qualityScore
   } = useProductivityScore();
 
-  if (isLoading || scoreLoading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
         <div className="text-center py-8">
