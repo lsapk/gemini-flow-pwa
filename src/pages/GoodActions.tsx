@@ -40,7 +40,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
-import { GoodAction, GoodActionComment } from "@/types";
+import { GoodAction, GoodActionComment } from "@/lib/goodActionsApi";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -58,7 +58,7 @@ export default function GoodActions() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Formulaire de création/édition
+  // Form for creation/editing
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -96,7 +96,7 @@ export default function GoodActions() {
       setPublicActions(publicData);
       setUserActions(userData);
       
-      // Charger les likes de l'utilisateur
+      // Load user likes
       const likes: { [key: string]: boolean } = {};
       for (const action of publicData) {
         likes[action.id] = await checkUserLike(action.id);
@@ -139,7 +139,7 @@ export default function GoodActions() {
       const liked = await likeGoodAction(actionId);
       setUserLikes(prev => ({ ...prev, [actionId]: liked }));
       
-      // Mettre à jour le compteur localement
+      // Update counter locally
       setPublicActions(prev => prev.map(action => 
         action.id === actionId 
           ? { ...action, likes_count: action.likes_count + (liked ? 1 : -1) }
@@ -164,10 +164,10 @@ export default function GoodActions() {
       await addComment(actionId, content);
       setNewComment(prev => ({ ...prev, [actionId]: '' }));
       
-      // Recharger les commentaires
+      // Reload comments
       await loadComments(actionId);
       
-      // Mettre à jour le compteur
+      // Update counter
       setPublicActions(prev => prev.map(action => 
         action.id === actionId 
           ? { ...action, comments_count: action.comments_count + 1 }
@@ -291,6 +291,15 @@ export default function GoodActions() {
     }
   };
 
+  // Safely get display name
+  const getDisplayName = (userProfiles: any) => {
+    if (!userProfiles) return 'Utilisateur';
+    if (Array.isArray(userProfiles) && userProfiles.length > 0) {
+      return userProfiles[0].display_name || userProfiles[0].email || 'Utilisateur';
+    }
+    return userProfiles.display_name || userProfiles.email || 'Utilisateur';
+  };
+
   const ActionCard = ({ action, showUserActions = false }: { action: GoodAction; showUserActions?: boolean }) => (
     <Card key={action.id} className="mb-4">
       <CardHeader className="pb-3">
@@ -299,10 +308,10 @@ export default function GoodActions() {
             <div className="flex items-center gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-semibold">
-                  {action.user_profiles?.display_name?.[0] || action.user_profiles?.email?.[0] || 'U'}
+                  {getDisplayName(action.user_profiles)?.[0] || 'U'}
                 </div>
                 <span className="font-medium text-sm">
-                  {action.user_profiles?.display_name || action.user_profiles?.email || 'Utilisateur'}
+                  {getDisplayName(action.user_profiles)}
                 </span>
               </div>
               <Badge variant="outline">{action.category}</Badge>
@@ -369,24 +378,24 @@ export default function GoodActions() {
           </span>
         </div>
 
-        {/* Commentaires */}
+        {/* Comments */}
         {comments[action.id] && (
           <div className="border-t pt-4 space-y-3">
             {comments[action.id].map((comment) => (
               <div key={comment.id} className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                  {comment.user_profiles?.display_name?.[0] || comment.user_profiles?.email?.[0] || 'U'}
+                  {getDisplayName(comment.user_profiles)?.[0] || 'U'}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium">
-                      {comment.user_profiles?.display_name || comment.user_profiles?.email || 'Utilisateur'}
+                      {getDisplayName(comment.user_profiles)}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {format(new Date(comment.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
                     </span>
                     
-                    {/* Actions sur commentaires */}
+                    {/* Comment actions */}
                     <div className="flex items-center gap-1 ml-auto">
                       {user?.id === comment.user_id && (
                         <Button
@@ -416,7 +425,7 @@ export default function GoodActions() {
               </div>
             ))}
             
-            {/* Formulaire d'ajout de commentaire */}
+            {/* Add comment form */}
             <div className="flex gap-2 mt-4">
               <Input
                 placeholder="Ajouter un commentaire..."
@@ -560,7 +569,7 @@ export default function GoodActions() {
         </TabsList>
 
         <TabsContent value="community" className="space-y-4">
-          {/* Filtres */}
+          {/* Filters */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -589,7 +598,7 @@ export default function GoodActions() {
             </CardContent>
           </Card>
 
-          {/* Actions publiques */}
+          {/* Public actions */}
           <div>
             {filteredActions.length === 0 ? (
               <Card>

@@ -12,8 +12,9 @@ export interface GoodAction {
   created_at: string;
   user_id: string;
   user_profiles?: {
-    display_name: string;
-  };
+    display_name: string | null;
+    email: string | null;
+  } | null;
 }
 
 export interface GoodActionComment {
@@ -23,8 +24,9 @@ export interface GoodActionComment {
   user_id: string;
   is_deleted: boolean;
   user_profiles?: {
-    display_name: string;
-  };
+    display_name: string | null;
+    email: string | null;
+  } | null;
 }
 
 export const getGoodActions = async (publicOnly = false) => {
@@ -34,7 +36,7 @@ export const getGoodActions = async (publicOnly = false) => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles!inner(display_name)
+      user_profiles(display_name, email)
     `)
     .order('created_at', { ascending: false });
 
@@ -61,7 +63,7 @@ export const getUserGoodActions = async () => {
     .from('good_actions')
     .select(`
       *,
-      user_profiles!inner(display_name)
+      user_profiles(display_name, email)
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -129,7 +131,7 @@ export const likeGoodAction = async (goodActionId: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  // Vérifier si déjà liké
+  // Check if already liked
   const { data: existingLike } = await supabase
     .from('good_action_likes')
     .select('id')
@@ -138,7 +140,7 @@ export const likeGoodAction = async (goodActionId: string) => {
     .single();
 
   if (existingLike) {
-    // Supprimer le like
+    // Remove like
     const { error: deleteError } = await supabase
       .from('good_action_likes')
       .delete()
@@ -147,7 +149,7 @@ export const likeGoodAction = async (goodActionId: string) => {
 
     if (deleteError) throw deleteError;
 
-    // Décrémenter le compteur manuellement
+    // Manually decrement counter
     const { data: currentAction } = await supabase
       .from('good_actions')
       .select('likes_count')
@@ -164,7 +166,7 @@ export const likeGoodAction = async (goodActionId: string) => {
     }
     return false;
   } else {
-    // Ajouter le like
+    // Add like
     const { error: insertError } = await supabase
       .from('good_action_likes')
       .insert({
@@ -174,7 +176,7 @@ export const likeGoodAction = async (goodActionId: string) => {
 
     if (insertError) throw insertError;
 
-    // Incrémenter le compteur manuellement
+    // Manually increment counter
     const { data: currentAction } = await supabase
       .from('good_actions')
       .select('likes_count')
@@ -212,7 +214,7 @@ export const getGoodActionComments = async (goodActionId: string) => {
     .from('good_action_comments')
     .select(`
       *,
-      user_profiles!inner(display_name)
+      user_profiles(display_name, email)
     `)
     .eq('good_action_id', goodActionId)
     .eq('is_deleted', false)
@@ -239,13 +241,13 @@ export const addComment = async (goodActionId: string, content: string) => {
     })
     .select(`
       *,
-      user_profiles!inner(display_name)
+      user_profiles(display_name, email)
     `)
     .single();
 
   if (error) throw error;
 
-  // Incrémenter le compteur de commentaires manuellement
+  // Manually increment comments counter
   const { data: currentAction } = await supabase
     .from('good_actions')
     .select('comments_count')
@@ -268,7 +270,7 @@ export const deleteComment = async (commentId: string, goodActionId?: string) =>
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  // Récupérer l'ID de l'action si pas fourni
+  // Get action ID if not provided
   let actionId = goodActionId;
   if (!actionId) {
     const { data: comment } = await supabase
@@ -289,7 +291,7 @@ export const deleteComment = async (commentId: string, goodActionId?: string) =>
 
   if (error) throw error;
 
-  // Décrémenter le compteur de commentaires si on a l'ID de l'action
+  // Manually decrement comments counter if we have action ID
   if (actionId) {
     const { data: currentAction } = await supabase
       .from('good_actions')

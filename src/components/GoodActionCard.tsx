@@ -25,7 +25,7 @@ export default function GoodActionCard({ action, onRefresh }: GoodActionCardProp
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Vérifier si l'utilisateur est admin
+  // Check if user is admin
   const { data: userRoles } = useQuery({
     queryKey: ['userRoles', user?.id],
     queryFn: async () => {
@@ -157,6 +157,15 @@ export default function GoodActionCard({ action, onRefresh }: GoodActionCardProp
   const canDeleteComment = (comment: GoodActionComment) => user && (user.id === comment.user_id || isAdmin);
   const canModerate = isAdmin;
 
+  // Safely get display name
+  const getDisplayName = (userProfiles: any) => {
+    if (!userProfiles) return 'Utilisateur';
+    if (Array.isArray(userProfiles) && userProfiles.length > 0) {
+      return userProfiles[0].display_name || 'Utilisateur';
+    }
+    return userProfiles.display_name || 'Utilisateur';
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -164,13 +173,13 @@ export default function GoodActionCard({ action, onRefresh }: GoodActionCardProp
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarFallback>
-                {action.user_profiles?.display_name?.charAt(0) || 'U'}
+                {getDisplayName(action.user_profiles)?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-lg">{action.title}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Par {action.user_profiles?.display_name || 'Utilisateur'} • {new Date(action.created_at).toLocaleDateString()}
+                Par {getDisplayName(action.user_profiles)} • {new Date(action.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -220,7 +229,7 @@ export default function GoodActionCard({ action, onRefresh }: GoodActionCardProp
 
         {showComments && (
           <div className="border-t pt-4 space-y-4">
-            {/* Formulaire de commentaire */}
+            {/* Comment form */}
             <form onSubmit={handleSubmitComment} className="space-y-2">
               <Textarea
                 value={newComment}
@@ -239,19 +248,19 @@ export default function GoodActionCard({ action, onRefresh }: GoodActionCardProp
               </Button>
             </form>
 
-            {/* Liste des commentaires */}
+            {/* Comments list */}
             <div className="space-y-3">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs">
-                      {comment.user_profiles?.display_name?.charAt(0) || 'U'}
+                      {getDisplayName(comment.user_profiles)?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium">
-                        {comment.user_profiles?.display_name || 'Utilisateur'}
+                        {getDisplayName(comment.user_profiles)}
                       </span>
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">
