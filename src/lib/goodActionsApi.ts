@@ -37,10 +37,7 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
   try {
     const { data, error } = await supabase
       .from('good_actions')
-      .select(`
-        *,
-        user_profiles(display_name, email)
-      `)
+      .select('*')
       .eq('is_public', true)
       .order('created_at', { ascending: false });
 
@@ -49,7 +46,20 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
       throw error;
     }
 
-    return data || [];
+    // Récupérer les profils utilisateur séparément
+    const userIds = data?.map(action => action.user_id) || [];
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, email')
+      .in('id', userIds);
+
+    // Combiner les données
+    const actionsWithProfiles = data?.map(action => ({
+      ...action,
+      user_profiles: profiles?.find(profile => profile.id === action.user_id) || null
+    })) || [];
+
+    return actionsWithProfiles;
   } catch (error) {
     console.error('Erreur dans getPublicGoodActions:', error);
     throw error;
@@ -61,10 +71,7 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
   try {
     const { data, error } = await supabase
       .from('good_actions')
-      .select(`
-        *,
-        user_profiles(display_name, email)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -73,7 +80,20 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
       throw error;
     }
 
-    return data || [];
+    // Récupérer le profil utilisateur
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, email')
+      .eq('id', userId)
+      .single();
+
+    // Combiner les données
+    const actionsWithProfile = data?.map(action => ({
+      ...action,
+      user_profiles: profile || null
+    })) || [];
+
+    return actionsWithProfile;
   } catch (error) {
     console.error('Erreur dans getUserGoodActions:', error);
     throw error;
@@ -97,10 +117,7 @@ export const createGoodAction = async (goodAction: {
         ...goodAction,
         user_id: user.id
       })
-      .select(`
-        *,
-        user_profiles(display_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -108,7 +125,17 @@ export const createGoodAction = async (goodAction: {
       throw error;
     }
 
-    return data;
+    // Récupérer le profil utilisateur
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, email')
+      .eq('id', user.id)
+      .single();
+
+    return {
+      ...data,
+      user_profiles: profile || null
+    };
   } catch (error) {
     console.error('Erreur dans createGoodAction:', error);
     throw error;
@@ -138,10 +165,7 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
   try {
     const { data, error } = await supabase
       .from('good_action_comments')
-      .select(`
-        *,
-        user_profiles(display_name, email)
-      `)
+      .select('*')
       .eq('good_action_id', goodActionId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: true });
@@ -151,7 +175,20 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
       throw error;
     }
 
-    return data || [];
+    // Récupérer les profils utilisateur séparément
+    const userIds = data?.map(comment => comment.user_id) || [];
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, email')
+      .in('id', userIds);
+
+    // Combiner les données
+    const commentsWithProfiles = data?.map(comment => ({
+      ...comment,
+      user_profiles: profiles?.find(profile => profile.id === comment.user_id) || null
+    })) || [];
+
+    return commentsWithProfiles;
   } catch (error) {
     console.error('Erreur dans getGoodActionComments:', error);
     throw error;
@@ -173,10 +210,7 @@ export const addGoodActionComment = async (comment: {
         ...comment,
         user_id: user.id
       })
-      .select(`
-        *,
-        user_profiles(display_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -184,7 +218,17 @@ export const addGoodActionComment = async (comment: {
       throw error;
     }
 
-    return data;
+    // Récupérer le profil utilisateur
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('id, display_name, email')
+      .eq('id', user.id)
+      .single();
+
+    return {
+      ...data,
+      user_profiles: profile || null
+    };
   } catch (error) {
     console.error('Erreur dans addGoodActionComment:', error);
     throw error;
