@@ -39,7 +39,7 @@ export const getPublicGoodActions = async (): Promise<GoodAction[]> => {
       .from('good_actions')
       .select(`
         *,
-        user_profiles!good_actions_user_id_fkey(display_name, email)
+        user_profiles(display_name, email)
       `)
       .eq('is_public', true)
       .order('created_at', { ascending: false });
@@ -63,7 +63,7 @@ export const getUserGoodActions = async (userId: string): Promise<GoodAction[]> 
       .from('good_actions')
       .select(`
         *,
-        user_profiles!good_actions_user_id_fkey(display_name, email)
+        user_profiles(display_name, email)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -99,7 +99,7 @@ export const createGoodAction = async (goodAction: {
       })
       .select(`
         *,
-        user_profiles!good_actions_user_id_fkey(display_name, email)
+        user_profiles(display_name, email)
       `)
       .single();
 
@@ -140,7 +140,7 @@ export const getGoodActionComments = async (goodActionId: string): Promise<GoodA
       .from('good_action_comments')
       .select(`
         *,
-        user_profiles!good_action_comments_user_id_fkey(display_name, email)
+        user_profiles(display_name, email)
       `)
       .eq('good_action_id', goodActionId)
       .eq('is_deleted', false)
@@ -175,7 +175,7 @@ export const addGoodActionComment = async (comment: {
       })
       .select(`
         *,
-        user_profiles!good_action_comments_user_id_fkey(display_name, email)
+        user_profiles(display_name, email)
       `)
       .single();
 
