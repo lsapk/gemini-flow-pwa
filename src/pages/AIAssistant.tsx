@@ -149,7 +149,7 @@ export default function AIAssistant() {
     <div className="min-h-screen bg-background">
       {isMobile ? (
         <>
-          <MobileHeader />
+          <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
           <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <DrawerContent>
               {sidebarContent}
