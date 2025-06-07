@@ -1,12 +1,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useProductivityScore } from "@/hooks/useProductivityScore";
 
 export default function Analysis() {
-  const { habitsData, tasksData, focusData, activityData, isLoading } = useAnalyticsData();
+  const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
   const { 
     score, 
     completionRate,
@@ -33,18 +34,26 @@ export default function Analysis() {
     focus: Math.round(focusTimeScore)
   };
 
-  // Données de démonstration si pas de données disponibles
-  const demoTasksData = [
-    { name: 'Lun', value: 5 },
-    { name: 'Mar', value: 8 },
-    { name: 'Mer', value: 6 },
-    { name: 'Jeu', value: 10 },
-    { name: 'Ven', value: 7 },
-    { name: 'Sam', value: 4 },
-    { name: 'Dim', value: 3 }
+  // Préparer les données pour les graphiques avec des données réelles
+  const tasksChartData = tasksData && tasksData.length > 0 ? tasksData.map(task => ({
+    name: task.name,
+    completed: task.completed || 0,
+    pending: task.pending || 0,
+    total: (task.completed || 0) + (task.pending || 0)
+  })) : [
+    { name: 'Lun', completed: 3, pending: 2, total: 5 },
+    { name: 'Mar', completed: 5, pending: 3, total: 8 },
+    { name: 'Mer', completed: 4, pending: 2, total: 6 },
+    { name: 'Jeu', completed: 7, pending: 3, total: 10 },
+    { name: 'Ven', completed: 5, pending: 2, total: 7 },
+    { name: 'Sam', completed: 3, pending: 1, total: 4 },
+    { name: 'Dim', completed: 2, pending: 1, total: 3 }
   ];
 
-  const demoHabitsData = [
+  const habitsChartData = habitsData && habitsData.length > 0 ? habitsData.map(habit => ({
+    name: habit.name || 'Habitude',
+    value: habit.value || 0
+  })) : [
     { name: 'Lun', value: 3 },
     { name: 'Mar', value: 4 },
     { name: 'Mer', value: 3 },
@@ -54,7 +63,10 @@ export default function Analysis() {
     { name: 'Dim', value: 1 }
   ];
 
-  const demoFocusData = [
+  const focusChartData = focusData && focusData.length > 0 ? focusData.map(session => ({
+    name: session.date || 'Session',
+    value: session.minutes || 0
+  })) : [
     { name: 'Lun', value: 120 },
     { name: 'Mar', value: 90 },
     { name: 'Mer', value: 150 },
@@ -64,24 +76,24 @@ export default function Analysis() {
     { name: 'Dim', value: 30 }
   ];
 
-  const demoActivityData = [
+  const activityChartData = activityData && activityData.length > 0 ? activityData.map(activity => ({
+    name: activity.date || 'Activité',
+    value: activity.count || 0
+  })) : [
     { name: 'Tâches', value: 40 },
     { name: 'Habitudes', value: 25 },
     { name: 'Focus', value: 20 },
     { name: 'Journal', value: 15 }
   ];
 
-  const analyticsData = {
-    tasks: tasksData && tasksData.length > 0 ? tasksData : demoTasksData,
-    habits: habitsData && habitsData.length > 0 ? habitsData : demoHabitsData,
-    focus: focusData && focusData.length > 0 ? focusData : demoFocusData,
-    overview: activityData && activityData.length > 0 ? activityData : demoActivityData
-  };
-
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Analyse de Productivité</h1>
+        <Button onClick={refetch} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Actualiser
+        </Button>
       </div>
 
       {/* Score de productivité avec fond contrastant */}
@@ -131,44 +143,74 @@ export default function Analysis() {
         </CardContent>
       </Card>
 
-      {/* Graphiques d'analyse */}
+      {/* Graphiques d'analyse avec données réelles */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Progression des Tâches</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {tasksData && tasksData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
+            </p>
           </CardHeader>
           <CardContent>
-            <SimpleLineChart data={analyticsData.tasks} />
+            <SimpleLineChart 
+              data={tasksChartData} 
+              lines={[
+                { dataKey: "completed", name: "Complétées", color: "#10B981" },
+                { dataKey: "pending", name: "En cours", color: "#F59E0B" },
+                { dataKey: "total", name: "Total", color: "#7C3AED" }
+              ]}
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Habitudes Complétées</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {habitsData && habitsData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
+            </p>
           </CardHeader>
           <CardContent>
-            <SimpleBarChart data={analyticsData.habits} />
+            <SimpleBarChart data={habitsChartData} color="#10B981" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Sessions de Focus</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {focusData && focusData.length > 0 ? 'Données en temps réel (minutes)' : 'Données de démonstration'}
+            </p>
           </CardHeader>
           <CardContent>
-            <SimpleAreaChart data={analyticsData.focus} />
+            <SimpleAreaChart data={focusChartData} color="#3B82F6" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Répartition des Activités</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {activityData && activityData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
+            </p>
           </CardHeader>
           <CardContent>
-            <SimplePieChart data={analyticsData.overview} />
+            <SimplePieChart data={activityChartData} />
           </CardContent>
         </Card>
       </div>
+
+      {/* Indication si données de démo */}
+      {(!tasksData || tasksData.length === 0) && (!habitsData || habitsData.length === 0) && (
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+          <CardContent className="p-4">
+            <p className="text-sm text-orange-800 dark:text-orange-200">
+              📊 Les graphiques affichent des données de démonstration. Commencez à utiliser l'application (créez des tâches, habitudes, sessions de focus) pour voir vos vraies données d'analyse.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
