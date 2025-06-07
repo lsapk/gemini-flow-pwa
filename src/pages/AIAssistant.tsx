@@ -155,6 +155,106 @@ export default function AIAssistant() {
               {sidebarContent}
             </DrawerContent>
           </Drawer>
+          <div className="pt-14">
+            <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-8rem)] flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-3xl font-bold tracking-tight">Assistant IA</h1>
+                <Bot className="h-8 w-8 text-primary" />
+              </div>
+
+              <Card className="flex-1 flex flex-col">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Accès en temps réel à {userData.tasks?.length || 0} tâches, {userData.habits?.length || 0} habitudes, {userData.goals?.length || 0} objectifs
+                  </p>
+                </CardHeader>
+                
+                <CardContent className="flex-1 flex flex-col p-0">
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-4">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex items-start gap-3 ${
+                            message.role === 'user' ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          {message.role === 'assistant' && (
+                            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                              <Bot className="h-4 w-4 text-primary" />
+                            </div>
+                          )}
+                          
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              message.role === 'user'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            {message.role === 'assistant' ? (
+                              <Markdown content={message.content} />
+                            ) : (
+                              <p className="text-sm">{message.content}</p>
+                            )}
+                            <div className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </div>
+                          </div>
+
+                          {message.role === 'user' && (
+                            <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {isLoading && (
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Bot className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="bg-muted rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm">L'assistant analyse vos données...</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+
+                  <div className="border-t p-4">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Appuyez sur Entrée pour envoyer)"
+                        className="min-h-[60px] resize-none"
+                        disabled={isLoading}
+                      />
+                      <Button
+                        onClick={sendMessage}
+                        disabled={!inputMessage.trim() || isLoading}
+                        size="icon"
+                        className="self-end"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </>
       ) : (
         <div className="flex min-h-screen w-full">
@@ -259,107 +359,6 @@ export default function AIAssistant() {
               </Card>
             </div>
           </div>
-        </div>
-      )}
-
-      {isMobile && (
-        <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-8rem)] flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Assistant IA</h1>
-            <Bot className="h-8 w-8 text-primary" />
-          </div>
-
-          <Card className="flex-1 flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Accès en temps réel à {userData.tasks?.length || 0} tâches, {userData.habits?.length || 0} habitudes, {userData.goals?.length || 0} objectifs
-              </p>
-            </CardHeader>
-            
-            <CardContent className="flex-1 flex flex-col p-0">
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex items-start gap-3 ${
-                        message.role === 'user' ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-primary" />
-                        </div>
-                      )}
-                      
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        {message.role === 'assistant' ? (
-                          <Markdown content={message.content} />
-                        ) : (
-                          <p className="text-sm">{message.content}</p>
-                        )}
-                        <div className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString()}
-                        </div>
-                      </div>
-
-                      {message.role === 'user' && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <User className="h-4 w-4 text-primary-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {isLoading && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="bg-muted rounded-lg p-3">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-sm">L'assistant analyse vos données...</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-
-              <div className="border-t p-4">
-                <div className="flex gap-2">
-                  <Textarea
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Appuyez sur Entrée pour envoyer)"
-                    className="min-h-[60px] resize-none"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!inputMessage.trim() || isLoading}
-                    size="icon"
-                    className="self-end"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>
