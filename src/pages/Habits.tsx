@@ -261,7 +261,7 @@ export default function Habits() {
   }
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Target className="h-6 w-6" />
@@ -293,51 +293,51 @@ export default function Habits() {
       </div>
 
       {/* Statistiques améliorées */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total</p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{habits.length}</p>
+                <p className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400">Total</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300">{habits.length}</p>
               </div>
-              <Target className="h-8 w-8 text-blue-500" />
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600 dark:text-green-400">Complétées</p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">{getTodayCompletions()}</p>
+                <p className="text-xs sm:text-sm font-medium text-green-600 dark:text-green-400">Complétées</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">{getTodayCompletions()}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Aujourd'hui</p>
-                <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{getTodayCompletions()}</p>
+                <p className="text-xs sm:text-sm font-medium text-orange-600 dark:text-orange-400">Aujourd'hui</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-700 dark:text-orange-300">{getTodayCompletions()}</p>
               </div>
-              <Calendar className="h-8 w-8 text-orange-500" />
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Cette semaine</p>
-                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{getWeeklyCompletions()}</p>
+                <p className="text-xs sm:text-sm font-medium text-purple-600 dark:text-purple-400">Cette semaine</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-300">{getWeeklyCompletions()}</p>
               </div>
-              <Flame className="h-8 w-8 text-purple-500" />
+              <Flame className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
@@ -349,11 +349,12 @@ export default function Habits() {
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Fréquence:</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               <Button
                 variant={frequencyFilter === 'all' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFrequencyFilter('all')}
+                className="text-xs"
               >
                 Toutes
               </Button>
@@ -361,6 +362,7 @@ export default function Habits() {
                 variant={frequencyFilter === 'daily' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFrequencyFilter('daily')}
+                className="text-xs"
               >
                 Quotidiennes
               </Button>
@@ -368,6 +370,7 @@ export default function Habits() {
                 variant={frequencyFilter === 'weekly' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFrequencyFilter('weekly')}
+                className="text-xs"
               >
                 Hebdo
               </Button>
@@ -375,6 +378,7 @@ export default function Habits() {
                 variant={frequencyFilter === 'monthly' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFrequencyFilter('monthly')}
+                className="text-xs"
               >
                 Mensuelles
               </Button>
@@ -405,25 +409,25 @@ export default function Habits() {
             <Card key={habit.id} className={`transition-all ${habit.is_completed_today ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' : ''}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-lg">{habit.title}</CardTitle>
-                      <Badge variant="outline" className="text-xs">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <CardTitle className="text-base sm:text-lg truncate">{habit.title}</CardTitle>
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
                         {habit.frequency === 'daily' ? 'Quotidienne' : 
                          habit.frequency === 'weekly' ? 'Hebdomadaire' : 'Mensuelle'}
                       </Badge>
                       {habit.category && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-xs whitespace-nowrap">
                           {habit.category}
                         </Badge>
                       )}
                     </div>
                     {habit.description && (
-                      <p className="text-muted-foreground text-sm">{habit.description}</p>
+                      <p className="text-muted-foreground text-sm break-words">{habit.description}</p>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -451,8 +455,8 @@ export default function Habits() {
               </CardHeader>
               
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-2">
                       <Flame className="h-4 w-4 text-orange-500" />
                       <span>Série: {getStreakCount(habit.id)} jours</span>
@@ -463,7 +467,7 @@ export default function Habits() {
                     </div>
                   </div>
                   
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     Créée le {format(new Date(habit.created_at), 'dd MMM yyyy', { locale: fr })}
                   </span>
                 </div>

@@ -33,11 +33,49 @@ export default function Analysis() {
     focus: Math.round(focusTimeScore)
   };
 
+  // Données de démonstration si pas de données disponibles
+  const demoTasksData = [
+    { name: 'Lun', value: 5 },
+    { name: 'Mar', value: 8 },
+    { name: 'Mer', value: 6 },
+    { name: 'Jeu', value: 10 },
+    { name: 'Ven', value: 7 },
+    { name: 'Sam', value: 4 },
+    { name: 'Dim', value: 3 }
+  ];
+
+  const demoHabitsData = [
+    { name: 'Lun', value: 3 },
+    { name: 'Mar', value: 4 },
+    { name: 'Mer', value: 3 },
+    { name: 'Jeu', value: 5 },
+    { name: 'Ven', value: 4 },
+    { name: 'Sam', value: 2 },
+    { name: 'Dim', value: 1 }
+  ];
+
+  const demoFocusData = [
+    { name: 'Lun', value: 120 },
+    { name: 'Mar', value: 90 },
+    { name: 'Mer', value: 150 },
+    { name: 'Jeu', value: 180 },
+    { name: 'Ven', value: 100 },
+    { name: 'Sam', value: 60 },
+    { name: 'Dim', value: 30 }
+  ];
+
+  const demoActivityData = [
+    { name: 'Tâches', value: 40 },
+    { name: 'Habitudes', value: 25 },
+    { name: 'Focus', value: 20 },
+    { name: 'Journal', value: 15 }
+  ];
+
   const analyticsData = {
-    tasks: tasksData,
-    habits: habitsData,
-    focus: focusData,
-    overview: activityData
+    tasks: tasksData && tasksData.length > 0 ? tasksData : demoTasksData,
+    habits: habitsData && habitsData.length > 0 ? habitsData : demoHabitsData,
+    focus: focusData && focusData.length > 0 ? focusData : demoFocusData,
+    overview: activityData && activityData.length > 0 ? activityData : demoActivityData
   };
 
   return (
@@ -94,45 +132,43 @@ export default function Analysis() {
       </Card>
 
       {/* Graphiques d'analyse */}
-      {analyticsData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Progression des Tâches</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SimpleLineChart data={analyticsData.tasks} />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Progression des Tâches</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimpleLineChart data={analyticsData.tasks} />
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Habitudes Complétées</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SimpleBarChart data={analyticsData.habits} />
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Habitudes Complétées</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimpleBarChart data={analyticsData.habits} />
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Sessions de Focus</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SimpleAreaChart data={analyticsData.focus} />
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sessions de Focus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimpleAreaChart data={analyticsData.focus} />
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Répartition des Activités</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SimplePieChart data={analyticsData.overview} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Répartition des Activités</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SimplePieChart data={analyticsData.overview} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

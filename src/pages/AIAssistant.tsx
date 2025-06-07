@@ -45,11 +45,26 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
+      // Récupérer les données utilisateur en temps réel
+      const [tasksData, habitsData, goalsData] = await Promise.all([
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id)
+      ]);
+
+      const contextData = {
+        tasks: tasksData.data || [],
+        habits: habitsData.data || [],
+        goals: goalsData.data || [],
+        userProfile: user
+      };
+
       const { data, error } = await supabase.functions.invoke('gemini-chat', {
         body: {
           message: inputMessage,
           userId: user.id,
-          chatHistory: messages.slice(-10)
+          chatHistory: messages.slice(-10),
+          contextData: contextData
         }
       });
 

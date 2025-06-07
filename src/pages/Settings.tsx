@@ -2,296 +2,258 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
+import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
-import { Settings, Palette, Bell, Globe, Award, TrendingUp } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Settings as SettingsIcon, User, Bell, Moon, Sun, Shield } from "lucide-react";
 
-interface UserSettings {
-  notifications_enabled: boolean;
-  sound_enabled: boolean;
-  focus_mode: boolean;
-  language: string;
-  clock_format: string;
-  karma_points: number;
-  unlocked_features: string[];
-}
-
-export default function SettingsPage() {
-  const { user } = useAuth();
+export default function Settings() {
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [notifications, setNotifications] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const productivityData = useRealtimeProductivityScore();
+  const { user } = useAuth();
 
-  // Charger les paramètres utilisateur
-  const { data: userSettings, isLoading } = useQuery({
-    queryKey: ['userSettings', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
+  useEffect(() => {
+    if (user) {
+      loadUserSettings();
+      checkAdminStatus();
+    }
+  }, [user]);
+
+  const loadUserSettings = async () => {
+    if (!user) return;
+
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('display_name, email')
         .eq('id', user.id)
         .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!user
-  });
 
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (settings: Partial<UserSettings>) => {
-      if (!user) throw new Error('Not authenticated');
-      
-      const { error } = await supabase
+      const { data: settings } = await supabase
         .from('user_settings')
-        .upsert({
-          id: user.id,
-          ...settings,
-          updated_at: new Date().toISOString()
-        });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userSettings'] });
-      toast({
-        title: "Paramètres sauvegardés",
-        description: "Vos paramètres ont été mis à jour avec succès",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder les paramètres",
-        variant: "destructive",
-      });
-    }
-  });
+        .select('notifications_enabled')
+        .eq('id', user.id)
+        .single();
 
-  const updateSetting = (key: keyof UserSettings, value: any) => {
-    updateSettingsMutation.mutate({ [key]: value });
+      if (profile) {
+        setDisplayName(profile.display_name || '');
+        setEmail(profile.email || user.email || '');
+      }
+
+      if (settings) {
+        setNotifications(settings.notifications_enabled);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des paramètres:', error);
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const checkAdminStatus = async () => {
+    if (!user) return;
 
-  // Gestion sécurisée des badges
-  const badges = Array.isArray(productivityData.badges) ? productivityData.badges : [];
-  const unlockedFeatures = Array.isArray(userSettings?.unlocked_features) 
-    ? userSettings.unlocked_features as string[]
-    : [];
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      setIsAdmin(!!data);
+    } catch (error) {
+      // Pas d'erreur si l'utilisateur n'est pas admin
+      setIsAdmin(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          display_name: displayName,
+          email: email
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Profil mis à jour avec succès!');
+    } catch (error: any) {
+      toast.error('Erreur lors de la mise à jour du profil: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveNotificationSettings = async (enabled: boolean) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({ notifications_enabled: enabled })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setNotifications(enabled);
+      toast.success('Paramètres de notification mis à jour!');
+    } catch (error: any) {
+      toast.error('Erreur lors de la mise à jour: ' + error.message);
+    }
+  };
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center gap-2">
-        <Settings className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Paramètres</h1>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+      <div className="flex items-center gap-2 mb-6">
+        <SettingsIcon className="h-6 w-6" />
+        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
+        {isAdmin && (
+          <Badge variant="secondary" className="ml-2">
+            <Shield className="h-3 w-3 mr-1" />
+            Admin
+          </Badge>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Apparence */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Apparence
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Thème</label>
-              <Select value={theme} onValueChange={setTheme}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Clair</SelectItem>
-                  <SelectItem value="dark">Sombre</SelectItem>
-                  <SelectItem value="system">Système</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Profil utilisateur */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profil utilisateur
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="displayName">Nom d'affichage</Label>
+            <Input
+              id="displayName"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Votre nom d'affichage"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="votre@email.com"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Format d'heure</label>
-              <Select
-                value={userSettings?.clock_format || '24h'}
-                onValueChange={(value) => updateSetting('clock_format', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">24 heures</SelectItem>
-                  <SelectItem value="12h">12 heures</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <Button onClick={saveProfile} disabled={loading}>
+            {loading ? 'Mise à jour...' : 'Sauvegarder le profil'}
+          </Button>
+        </CardContent>
+      </Card>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Langue</label>
-              <Select
-                value={userSettings?.language || 'fr'}
-                onValueChange={(value) => updateSetting('language', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Notifications activées</p>
-                <p className="text-sm text-muted-foreground">
-                  Recevoir des notifications pour les rappels
-                </p>
+      {/* Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Notifications push</Label>
+              <div className="text-sm text-muted-foreground">
+                Recevoir des notifications pour les rappels et les mises à jour
               </div>
-              <Switch
-                checked={userSettings?.notifications_enabled ?? true}
-                onCheckedChange={(checked) => updateSetting('notifications_enabled', checked)}
-              />
             </div>
+            <Switch
+              checked={notifications}
+              onCheckedChange={saveNotificationSettings}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Sons activés</p>
-                <p className="text-sm text-muted-foreground">
-                  Jouer des sons pour les notifications
-                </p>
+      {/* Apparence */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            Apparence
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Mode sombre</Label>
+              <div className="text-sm text-muted-foreground">
+                Activer le thème sombre pour une meilleure expérience dans l'obscurité
               </div>
-              <Switch
-                checked={userSettings?.sound_enabled ?? true}
-                onCheckedChange={(checked) => updateSetting('sound_enabled', checked)}
-              />
             </div>
+            <Switch
+              checked={theme === 'dark'}
+              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Mode focus</p>
-                <p className="text-sm text-muted-foreground">
-                  Réduire les distractions en mode focus
-                </p>
-              </div>
-              <Switch
-                checked={userSettings?.focus_mode ?? false}
-                onCheckedChange={(checked) => updateSetting('focus_mode', checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Statistiques de productivité */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Statistiques de productivité
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {productivityData.score}
+      {/* Paramètres admin (seulement si admin) */}
+      {isAdmin && (
+        <>
+          <Separator />
+          <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                <Shield className="h-5 w-5" />
+                Paramètres Administrateur
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-orange-700 dark:text-orange-300">
+                  Vous avez accès aux fonctionnalités administrateur de l'application.
                 </div>
-                <p className="text-sm font-medium">Score de productivité</p>
-                <Badge variant="secondary" className="mt-1">
-                  {productivityData.level}
-                </Badge>
+                <Button variant="outline" className="border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900/20">
+                  Gérer les utilisateurs
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  {Math.round(productivityData.completionRate)}%
-                </div>
-                <p className="text-sm font-medium">Taux de complétion</p>
-              </div>
-
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">
-                  {userSettings?.karma_points || 0}
-                </div>
-                <p className="text-sm font-medium">Points karma</p>
-              </div>
-            </div>
-
-            {badges.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  Badges obtenus
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {badges.slice(0, 6).map((badge, index) => (
-                    <Badge key={index} variant="outline">
-                      {badge}
-                    </Badge>
-                  ))}
-                  {badges.length > 6 && (
-                    <Badge variant="secondary">
-                      +{badges.length - 6} autres
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Fonctionnalités débloquées */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Fonctionnalités débloquées
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {unlockedFeatures.map((feature, index) => (
-                <Badge key={index} variant="default" className="justify-center">
-                  {feature}
-                </Badge>
-              ))}
-              {unlockedFeatures.length === 0 && (
-                <p className="col-span-full text-center text-muted-foreground py-4">
-                  Aucune fonctionnalité débloquée pour le moment
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Informations de compte */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Informations de compte</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>ID utilisateur: {user?.id}</p>
+            <p>Compte créé: {user?.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : 'Non disponible'}</p>
+            <p>Statut: {isAdmin ? 'Administrateur' : 'Utilisateur'}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

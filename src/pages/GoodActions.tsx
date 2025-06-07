@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +35,7 @@ export default function GoodActions() {
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -91,6 +93,7 @@ export default function GoodActions() {
         category: "environnement",
         is_public: true,
       });
+      setIsCreateOpen(false);
       await loadGoodActions();
     } catch (error: any) {
       toast.error("Erreur lors de la création de la bonne action: " + error.message);
@@ -157,9 +160,66 @@ export default function GoodActions() {
         <h1 className="text-3xl font-bold tracking-tight">
           Partage de Bonnes Actions
         </h1>
-        <Button onClick={() => {}}>
-          <Plus className="mr-2 h-4 w-4" /> Ajouter une Action
-        </Button>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Ajouter une Action
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Proposer une nouvelle bonne action</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="title">Titre</Label>
+                <Input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={newAction.title}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={newAction.description}
+                  onChange={handleTextAreaChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="category">Catégorie</Label>
+                <Select onValueChange={handleSelectChange} defaultValue="environnement">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionner une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="environnement">Environnement</SelectItem>
+                    <SelectItem value="social">Social</SelectItem>
+                    <SelectItem value="sante">Santé</SelectItem>
+                    <SelectItem value="education">Éducation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="is_public">Action publique ?</Label>
+                <Switch
+                  id="is_public"
+                  checked={newAction.is_public}
+                  onCheckedChange={handleSwitchChange}
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Ajouter
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Section de recherche et de filtrage */}
@@ -186,63 +246,6 @@ export default function GoodActions() {
           </SelectContent>
         </Select>
       </div>
-
-      {/* Section d'ajout d'une bonne action */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Proposer une nouvelle bonne action</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="title">Titre</Label>
-              <Input
-                type="text"
-                id="title"
-                name="title"
-                value={newAction.title}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={newAction.description}
-                onChange={handleTextAreaChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="category">Catégorie</Label>
-              <Select onValueChange={handleSelectChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="environnement">Environnement</SelectItem>
-                  <SelectItem value="social">Social</SelectItem>
-                  <SelectItem value="sante">Santé</SelectItem>
-                  <SelectItem value="education">Éducation</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="is_public">Action publique ?</Label>
-              <Switch
-                id="is_public"
-                checked={newAction.is_public}
-                onCheckedChange={handleSwitchChange}
-              />
-            </div>
-            <Button type="submit">
-              <Plus className="mr-2 h-4 w-4" /> Ajouter
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
 
       {/* Affichage des bonnes actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
