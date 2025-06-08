@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,17 +30,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import MobileHeader from "@/components/layout/MobileHeader";
-
-interface GoodAction {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  impact_level: 'low' | 'medium' | 'high';
-  date_performed: string;
-  created_at: string;
-  user_id: string;
-}
+import { GoodAction } from "@/types/index";
 
 const categories = [
   'Environnement',
@@ -98,7 +89,7 @@ export default function GoodActions() {
     if (searchTerm) {
       filtered = filtered.filter(action => 
         action.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        action.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (action.description && action.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -107,9 +98,13 @@ export default function GoodActions() {
       filtered = filtered.filter(action => action.category === categoryFilter);
     }
 
-    // Impact filter
+    // Impact filter (only apply if the action has an impact_level property)
     if (impactFilter !== 'all') {
-      filtered = filtered.filter(action => action.impact_level === impactFilter);
+      filtered = filtered.filter(action => {
+        // For backward compatibility with existing data that might not have impact_level
+        const actionImpact = (action as any).impact_level;
+        return actionImpact === impactFilter;
+      });
     }
 
     setFilteredActions(filtered);
@@ -124,10 +119,19 @@ export default function GoodActions() {
         .from('good_actions')
         .select('*')
         .eq('user_id', user.id)
-        .order('date_performed', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGoodActions(data || []);
+      
+      // Transform data to match our expected structure
+      const transformedData = (data || []).map(action => ({
+        ...action,
+        // Add missing fields for backward compatibility
+        impact_level: (action as any).impact_level || 'medium',
+        date_performed: (action as any).date_performed || action.created_at.split('T')[0]
+      }));
+      
+      setGoodActions(transformedData);
     } catch (error) {
       console.error('Error loading good actions:', error);
       toast({
@@ -149,6 +153,7 @@ export default function GoodActions() {
         title: title.trim(),
         description: description.trim(),
         category,
+        is_public: false,
         impact_level: impactLevel,
         date_performed: datePerformed,
         user_id: user.id
@@ -203,10 +208,10 @@ export default function GoodActions() {
   const handleEdit = (action: GoodAction) => {
     setEditingAction(action);
     setTitle(action.title);
-    setDescription(action.description);
+    setDescription(action.description || '');
     setCategory(action.category);
-    setImpactLevel(action.impact_level);
-    setDatePerformed(action.date_performed);
+    setImpactLevel((action as any).impact_level || 'medium');
+    setDatePerformed((action as any).date_performed || action.created_at.split('T')[0]);
     setIsCreateOpen(true);
   };
 
@@ -244,9 +249,11 @@ export default function GoodActions() {
   const getStats = () => {
     const totalActions = goodActions.length;
     const thisMonth = goodActions.filter(action => 
-      new Date(action.date_performed).getMonth() === new Date().getMonth()
+      new Date(action.created_at).getMonth() === new Date().getMonth()
     ).length;
-    const highImpact = goodActions.filter(action => action.impact_level === 'high').length;
+    const highImpact = goodActions.filter(action => 
+      (action as any).impact_level === 'high'
+    ).length;
     const uniqueCategories = new Set(goodActions.map(action => action.category)).size;
 
     return { totalActions, thisMonth, highImpact, uniqueCategories };
@@ -520,7 +527,9 @@ export default function GoodActions() {
                   </Card>
                 ) : (
                   filteredActions.map((action) => {
-                    const impactConfig = getImpactLevelConfig(action.impact_level);
+                    const impactConfig = getImpactLevelConfig((action as any).impact_level || 'medium');
+                    const actionDate = (action as any).date_performed || action.created_at.split('T')[0];
+                    
                     return (
                       <Card key={action.id} className="hover:shadow-md transition-shadow">
                         <CardHeader className="pb-3">
@@ -565,7 +574,7 @@ export default function GoodActions() {
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {format(new Date(action.date_performed), 'dd MMMM yyyy', { locale: fr })}
+                              {format(new Date(actionDate), 'dd MMMM yyyy', { locale: fr })}
                             </span>
                             <span className="text-muted-foreground text-xs">
                               Ajoutée le {format(new Date(action.created_at), 'dd/MM/yyyy', { locale: fr })}
