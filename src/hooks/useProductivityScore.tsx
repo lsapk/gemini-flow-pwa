@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useAnalyticsData } from './useAnalyticsData';
 import { useAuth } from './useAuth';
@@ -21,13 +20,21 @@ export interface ProductivityMetrics {
 // Fonction pour calculer et sauvegarder le score via l'IA
 const updateProductivityScoreWithAI = async (userId: string, metricsData: any) => {
   try {
-    await supabase.functions.invoke('gemini-analysis', {
+    console.log("Updating productivity score with AI for user:", userId);
+    const response = await supabase.functions.invoke('gemini-analysis', {
       body: {
         user_id: userId,
         metrics: metricsData,
-        analysis_type: 'productivity_score'
+        analysis_type: 'productivity_score',
+        prompt: `Analyser et calculer le score de productivité basé sur ces métriques: ${JSON.stringify(metricsData)}`
       }
     });
+    
+    if (response.error) {
+      console.error('Error calling AI function:', response.error);
+    } else {
+      console.log('Productivity score updated successfully via AI');
+    }
   } catch (error) {
     console.error('Error updating productivity score with AI:', error);
   }
@@ -45,6 +52,15 @@ export const useProductivityScore = (): ProductivityMetrics => {
   } = useAnalyticsData();
 
   return useMemo(() => {
+    console.log("Calculating productivity score with data:", {
+      taskCompletionRate,
+      totalFocusTime,
+      streakCount,
+      habitsCount: habitsData.length,
+      focusSessionsCount: focusData.length,
+      activityCount: activityData.length
+    });
+
     let totalPossibleScore = 0;
     let earnedScore = 0;
     
@@ -196,27 +212,7 @@ export const useProductivityScore = (): ProductivityMetrics => {
       else if (totalScore >= 50) badges.push('En Développement');
     }
 
-    // Mettre à jour le score via l'IA si l'utilisateur est connecté
-    if (user && totalPossibleScore > 0) {
-      const metricsData = {
-        score: totalScore,
-        level,
-        badges,
-        completionRate: taskCompletionRate,
-        focusTimeScore,
-        consistencyScore,
-        qualityScore,
-        timeManagementScore,
-        journalScore,
-        goalScore,
-        streakBonus
-      };
-      
-      // Appel asynchrone sans bloquer le rendu
-      updateProductivityScoreWithAI(user.id, metricsData);
-    }
-    
-    return {
+    const finalMetrics = {
       score: totalScore,
       level,
       badges: [...new Set(badges)],
@@ -229,5 +225,16 @@ export const useProductivityScore = (): ProductivityMetrics => {
       journalScore,
       goalScore
     };
+
+    // Mettre à jour le score via l'IA si l'utilisateur est connecté et qu'il y a des données
+    if (user && totalPossibleScore > 0) {
+      // Appel asynchrone sans bloquer le rendu
+      setTimeout(() => {
+        updateProductivityScoreWithAI(user.id, finalMetrics);
+      }, 1000);
+    }
+    
+    console.log("Final productivity metrics:", finalMetrics);
+    return finalMetrics;
   }, [taskCompletionRate, totalFocusTime, streakCount, habitsData, focusData, activityData, user]);
 };

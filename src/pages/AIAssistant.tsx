@@ -1,17 +1,16 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/layout/Sidebar";
 import { useMediaQuery } from "@/hooks/use-mobile";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import MobileHeader from "@/components/layout/MobileHeader";
 
 interface Message {
@@ -33,20 +32,16 @@ export default function AIAssistant() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userData, setUserData] = useState<any>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // Récupérer toutes les données utilisateur en temps réel
-  const [userData, setUserData] = useState<any>({});
-
-  useEffect(() => {
-    if (user) {
-      fetchAllUserData();
-    }
-  }, [user]);
-
-  const fetchAllUserData = async () => {
+  const fetchAllUserData = useCallback(async () => {
     if (!user) return;
+
+    console.log("Fetching user data for AI Assistant...");
+    setIsRefreshing(true);
 
     try {
       const [tasksData, habitsData, goalsData, journalData, focusData, goodActionsData] = await Promise.all([
@@ -58,7 +53,7 @@ export default function AIAssistant() {
         supabase.from('good_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
       ]);
 
-      setUserData({
+      const newUserData = {
         tasks: tasksData.data || [],
         habits: habitsData.data || [],
         goals: goalsData.data || [],
@@ -66,11 +61,31 @@ export default function AIAssistant() {
         focus_sessions: focusData.data || [],
         good_actions: goodActionsData.data || [],
         user_profile: user
+      };
+
+      setUserData(newUserData);
+      console.log("User data fetched successfully:", {
+        tasks: newUserData.tasks.length,
+        habits: newUserData.habits.length,
+        goals: newUserData.goals.length,
+        journal: newUserData.journal_entries.length,
+        focus: newUserData.focus_sessions.length,
+        good_actions: newUserData.good_actions.length
       });
+
     } catch (error) {
       console.error('Erreur lors de la récupération des données utilisateur:', error);
+      toast.error('Erreur lors de la récupération des données');
+    } finally {
+      setIsRefreshing(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchAllUserData();
+    }
+  }, [user, fetchAllUserData]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !user) return;
@@ -83,6 +98,7 @@ export default function AIAssistant() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsLoading(true);
 
@@ -90,20 +106,32 @@ export default function AIAssistant() {
       // Rafraîchir les données avant l'envoi
       await fetchAllUserData();
 
+      console.log("Sending message to AI with context:", {
+        message: currentInput,
+        userData: userData,
+        recentMessages: messages.slice(-5)
+      });
+
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: inputMessage,
+          message: currentInput,
           user_id: user.id,
           context: {
             user_data: userData,
-            recent_messages: messages.slice(-5)
+            recent_messages: messages.slice(-5).map(m => ({
+              role: m.role,
+              content: m.content
+            }))
           }
         }
       });
 
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
       }
+
+      console.log("AI response received:", data);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -115,8 +143,13 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, assistantMessage]);
 
       // Vérifier si l'IA a créé quelque chose et rafraîchir les données
-      if (data.response.includes('créé') || data.response.includes('ajouté') || data.response.includes('nouvelle')) {
-        setTimeout(fetchAllUserData, 1000);
+      if (data.response && (data.response.includes('créé') || data.response.includes('ajouté') || data.response.includes('nouvelle') || data.response.includes('créée'))) {
+        console.log("AI created something, refreshing data...");
+        setTimeout(() => {
+          fetchAllUserData();
+          // Mettre à jour le score de productivité
+          updateProductivityScore();
+        }, 2000);
       }
 
     } catch (error) {
@@ -133,6 +166,23 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const updateProductivityScore = async () => {
+    if (!user) return;
+    
+    try {
+      console.log("Updating productivity score via AI...");
+      await supabase.functions.invoke('gemini-analysis', {
+        body: {
+          user_id: user.id,
+          analysis_type: 'productivity_score',
+          prompt: 'Calculer et mettre à jour le score de productivité basé sur les données utilisateur récentes'
+        }
+      });
+    } catch (error) {
+      console.error('Error updating productivity score:', error);
     }
   };
 
@@ -155,11 +205,21 @@ export default function AIAssistant() {
               {sidebarContent}
             </DrawerContent>
           </Drawer>
-          <div className="pt-14">
-            <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-8rem)] flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">Assistant IA</h1>
-                <Bot className="h-8 w-8 text-primary" />
+          <div className="pt-14 px-3 sm:px-6 pb-6">
+            <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-6 w-6 text-primary" />
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchAllUserData}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
 
               <Card className="flex-1 flex flex-col">
@@ -259,11 +319,21 @@ export default function AIAssistant() {
       ) : (
         <div className="flex min-h-screen w-full">
           {sidebarContent}
-          <div className="flex-1 flex flex-col">
-            <div className="container mx-auto p-3 sm:p-6 max-w-4xl h-[calc(100vh-2rem)] flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">Assistant IA</h1>
-                <Bot className="h-8 w-8 text-primary" />
+          <div className="flex-1 px-3 sm:px-6 py-6">
+            <div className="max-w-4xl mx-auto h-[calc(100vh-3rem)] flex flex-col space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-6 w-6 text-primary" />
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchAllUserData}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
 
               <Card className="flex-1 flex flex-col">

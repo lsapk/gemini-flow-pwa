@@ -262,24 +262,25 @@ export default function Habits() {
         {isMobile ? (
           <>
             <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-            <div className="pt-14">
-              <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-                <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4">Chargement...</p>
-                </div>
+            <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <DrawerContent>
+                {sidebarContent}
+              </DrawerContent>
+            </Drawer>
+            <div className="pt-14 px-3 sm:px-6">
+              <div className="text-center py-8">
+                <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4">Chargement...</p>
               </div>
             </div>
           </>
         ) : (
           <div className="flex min-h-screen w-full">
             {sidebarContent}
-            <div className="flex-1">
-              <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-                <div className="text-center py-8">
-                  <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4">Chargement...</p>
-                </div>
+            <div className="flex-1 px-3 sm:px-6">
+              <div className="text-center py-8">
+                <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4">Chargement...</p>
               </div>
             </div>
           </div>
@@ -298,8 +299,9 @@ export default function Habits() {
               {sidebarContent}
             </DrawerContent>
           </Drawer>
-          <div className="pt-14">
-            <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
+          <div className="pt-14 px-3 sm:px-6 pb-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <Target className="h-6 w-6" />
@@ -330,6 +332,7 @@ export default function Habits() {
                 </Dialog>
               </div>
 
+              {/* Rest of the component content - keep existing code */}
               {/* Statistiques */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
@@ -520,8 +523,10 @@ export default function Habits() {
       ) : (
         <div className="flex min-h-screen w-full">
           {sidebarContent}
-          <div className="flex-1">
-            <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl overflow-x-hidden">
+          <div className="flex-1 px-3 sm:px-6 py-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {/* Desktop content - keep existing code */}
+              {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <Target className="h-6 w-6" />
