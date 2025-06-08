@@ -15,32 +15,43 @@ serve(async (req) => {
   try {
     const { message, context, user_id } = await req.json();
     
-    // Construire le prompt avec le contexte utilisateur
-    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et à l'historique de vos conversations récentes.
+    console.log("Received request:", { message, user_id, contextKeys: Object.keys(context || {}) });
+    
+    // Construire le prompt avec le contexte utilisateur amélioré
+    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs, et bonnes actions.
 
 DONNÉES UTILISATEUR ACTUELLES:
-- Habitudes: ${context.user_data?.habits?.length || 0} habitudes
-- Objectifs: ${context.user_data?.goals?.length || 0} objectifs  
-- Tâches: ${context.user_data?.tasks?.length || 0} tâches
-- Entrées de journal: ${context.user_data?.journal_entries?.length || 0} entrées récentes
-- Bonnes actions: ${context.user_data?.good_actions?.length || 0} actions récentes
-
-DÉTAILS DES DONNÉES:
-${JSON.stringify(context.user_data, null, 2)}
+${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
 
 HISTORIQUE RÉCENT:
-${context.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
+${context?.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
+
+CAPACITÉS:
+- Analyser les données de productivité de l'utilisateur
+- Créer des tâches, habitudes, objectifs et bonnes actions via les APIs
+- Donner des conseils personnalisés basés sur les vraies données
+- Fournir des statistiques précises
+- Proposer des améliorations concrètes
 
 INSTRUCTIONS:
-- Réponds en français
-- Utilise les données en temps réel pour donner des conseils personnalisés
-- Fais référence à l'historique de conversation quand c'est pertinent
+- Réponds TOUJOURS en français
+- Utilise les données réelles pour donner des conseils personnalisés
 - Sois encourageant et constructif
-- Propose des actions concrètes basées sur les données actuelles
-- Si l'utilisateur demande des statistiques, utilise les vraies données
-- Limite tes réponses à 300 mots maximum`;
+- Propose des actions concrètes
+- Utilise un ton amical et professionnel
+- Si l'utilisateur demande de créer quelque chose, explique comment tu peux l'aider
+- Limite tes réponses à 400 mots maximum`;
 
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + Deno.env.get('GEMINI_API_KEY'), {
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    
+    if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not found');
+      throw new Error('Configuration manquante');
+    }
+
+    console.log("Calling Gemini API...");
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -56,13 +67,26 @@ INSTRUCTIONS:
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 500,
+          maxOutputTokens: 800,
+          topP: 0.8,
+          topK: 40
         }
       }),
     });
 
+    if (!response.ok) {
+      console.error('Gemini API error:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error details:', errorText);
+      throw new Error(`Erreur API Gemini: ${response.status}`);
+    }
+
     const data = await response.json();
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande.";
+    console.log("Gemini response received:", data);
+
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
+
+    console.log("Final AI response:", aiResponse);
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -70,11 +94,18 @@ INSTRUCTIONS:
 
   } catch (error) {
     console.error('Error in gemini-chat-enhanced function:', error);
+    
+    // Réponse d'erreur plus détaillée
+    const errorMessage = error.message?.includes('API') 
+      ? 'Erreur de connexion avec le service IA. Veuillez réessayer.'
+      : 'Erreur du serveur. Veuillez réessayer dans quelques instants.';
+    
     return new Response(JSON.stringify({ 
-      error: 'Erreur du serveur',
+      response: errorMessage,
+      error: true,
       details: error.message 
     }), {
-      status: 500,
+      status: 200, // On retourne 200 pour éviter les erreurs côté client
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

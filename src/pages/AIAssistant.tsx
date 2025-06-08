@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,23 +45,34 @@ export default function AIAssistant() {
     setIsRefreshing(true);
 
     try {
-      const [tasksData, habitsData, goalsData, journalData, focusData, goodActionsData] = await Promise.all([
+      const [
+        tasksResult,
+        habitsResult,
+        goalsResult,
+        journalResult,
+        focusResult,
+        goodActionsResult,
+        profileResult
+      ] = await Promise.allSettled([
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('habits').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('good_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+        supabase.from('good_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('user_profiles').select('*').eq('id', user.id).single()
       ]);
 
       const newUserData = {
-        tasks: tasksData.data || [],
-        habits: habitsData.data || [],
-        goals: goalsData.data || [],
-        journal_entries: journalData.data || [],
-        focus_sessions: focusData.data || [],
-        good_actions: goodActionsData.data || [],
-        user_profile: user
+        tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []) : [],
+        habits: habitsResult.status === 'fulfilled' ? (habitsResult.value.data || []) : [],
+        goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []) : [],
+        journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []) : [],
+        focus_sessions: focusResult.status === 'fulfilled' ? (focusResult.value.data || []) : [],
+        good_actions: goodActionsResult.status === 'fulfilled' ? (goodActionsResult.value.data || []) : [],
+        user_profile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
+        user_id: user.id,
+        user_email: user.email
       };
 
       setUserData(newUserData);
@@ -108,6 +120,7 @@ export default function AIAssistant() {
 
       console.log("Sending message to AI with context:", {
         message: currentInput,
+        user_id: user.id,
         userData: userData,
         recentMessages: messages.slice(-5)
       });
@@ -133,22 +146,35 @@ export default function AIAssistant() {
 
       console.log("AI response received:", data);
 
+      let responseContent = data.response || 'Désolé, je n\'ai pas pu traiter votre demande.';
+      
+      // Gérer les erreurs de l'IA
+      if (data.error) {
+        responseContent = data.response || 'Une erreur s\'est produite. Veuillez réessayer.';
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response || 'Désolé, je n\'ai pas pu traiter votre demande.',
+        content: responseContent,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // Vérifier si l'IA a créé quelque chose et rafraîchir les données
-      if (data.response && (data.response.includes('créé') || data.response.includes('ajouté') || data.response.includes('nouvelle') || data.response.includes('créée'))) {
+      if (responseContent && (
+        responseContent.includes('créé') || 
+        responseContent.includes('ajouté') || 
+        responseContent.includes('nouvelle') || 
+        responseContent.includes('créée') ||
+        responseContent.includes('tâche') ||
+        responseContent.includes('habitude') ||
+        responseContent.includes('objectif')
+      )) {
         console.log("AI created something, refreshing data...");
         setTimeout(() => {
           fetchAllUserData();
-          // Mettre à jour le score de productivité
-          updateProductivityScore();
         }, 2000);
       }
 
@@ -169,23 +195,6 @@ export default function AIAssistant() {
     }
   };
 
-  const updateProductivityScore = async () => {
-    if (!user) return;
-    
-    try {
-      console.log("Updating productivity score via AI...");
-      await supabase.functions.invoke('gemini-analysis', {
-        body: {
-          user_id: user.id,
-          analysis_type: 'productivity_score',
-          prompt: 'Calculer et mettre à jour le score de productivité basé sur les données utilisateur récentes'
-        }
-      });
-    } catch (error) {
-      console.error('Error updating productivity score:', error);
-    }
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -195,242 +204,139 @@ export default function AIAssistant() {
 
   const sidebarContent = <Sidebar onItemClick={() => setSidebarOpen(false)} />;
 
-  return (
-    <div className="min-h-screen bg-background">
-      {isMobile ? (
-        <>
-          <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-          <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <DrawerContent>
-              {sidebarContent}
-            </DrawerContent>
-          </Drawer>
-          <div className="pt-14 px-3 sm:px-6 pb-6">
-            <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-6 w-6 text-primary" />
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchAllUserData}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-
-              <Card className="flex-1 flex flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Accès en temps réel à {userData.tasks?.length || 0} tâches, {userData.habits?.length || 0} habitudes, {userData.goals?.length || 0} objectifs
-                  </p>
-                </CardHeader>
-                
-                <CardContent className="flex-1 flex flex-col p-0">
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex items-start gap-3 ${
-                            message.role === 'user' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          {message.role === 'assistant' && (
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <Bot className="h-4 w-4 text-primary" />
-                            </div>
-                          )}
-                          
-                          <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
-                              message.role === 'user'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            {message.role === 'assistant' ? (
-                              <Markdown content={message.content} />
-                            ) : (
-                              <p className="text-sm">{message.content}</p>
-                            )}
-                            <div className="text-xs opacity-70 mt-1">
-                              {message.timestamp.toLocaleTimeString()}
-                            </div>
-                          </div>
-
-                          {message.role === 'user' && (
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      
-                      {isLoading && (
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Bot className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="bg-muted rounded-lg p-3">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="text-sm">L'assistant analyse vos données...</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-
-                  <div className="border-t p-4">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Appuyez sur Entrée pour envoyer)"
-                        className="min-h-[60px] resize-none"
-                        disabled={isLoading}
-                      />
-                      <Button
-                        onClick={sendMessage}
-                        disabled={!inputMessage.trim() || isLoading}
-                        size="icon"
-                        className="self-end"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="flex min-h-screen w-full">
-          {sidebarContent}
-          <div className="flex-1 px-3 sm:px-6 py-6">
-            <div className="max-w-4xl mx-auto h-[calc(100vh-3rem)] flex flex-col space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-6 w-6 text-primary" />
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchAllUserData}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-
-              <Card className="flex-1 flex flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Accès en temps réel à {userData.tasks?.length || 0} tâches, {userData.habits?.length || 0} habitudes, {userData.goals?.length || 0} objectifs
-                  </p>
-                </CardHeader>
-                
-                <CardContent className="flex-1 flex flex-col p-0">
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex items-start gap-3 ${
-                            message.role === 'user' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          {message.role === 'assistant' && (
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <Bot className="h-4 w-4 text-primary" />
-                            </div>
-                          )}
-                          
-                          <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
-                              message.role === 'user'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            {message.role === 'assistant' ? (
-                              <Markdown content={message.content} />
-                            ) : (
-                              <p className="text-sm">{message.content}</p>
-                            )}
-                            <div className="text-xs opacity-70 mt-1">
-                              {message.timestamp.toLocaleTimeString()}
-                            </div>
-                          </div>
-
-                          {message.role === 'user' && (
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      
-                      {isLoading && (
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Bot className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="bg-muted rounded-lg p-3">
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span className="text-sm">L'assistant analyse vos données...</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-
-                  <div className="border-t p-4">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Appuyez sur Entrée pour envoyer)"
-                        className="min-h-[60px] resize-none"
-                        disabled={isLoading}
-                      />
-                      <Button
-                        onClick={sendMessage}
-                        disabled={!inputMessage.trim() || isLoading}
-                        size="icon"
-                        className="self-end"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+  const renderContent = () => (
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bot className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
         </div>
-      )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchAllUserData}
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
+
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Accès en temps réel à {userData.tasks?.length || 0} tâches, {userData.habits?.length || 0} habitudes, {userData.goals?.length || 0} objectifs
+          </p>
+        </CardHeader>
+        
+        <CardContent className="flex-1 flex flex-col p-0">
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start gap-3 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                  
+                  <div
+                    className={`max-w-[80%] rounded-lg p-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    {message.role === 'assistant' ? (
+                      <Markdown content={message.content} />
+                    ) : (
+                      <p className="text-sm">{message.content}</p>
+                    )}
+                    <div className="text-xs opacity-70 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
+                    </div>
+                  </div>
+
+                  {message.role === 'user' && (
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">L'assistant analyse vos données...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="border-t p-4">
+            <div className="flex gap-2">
+              <Textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Appuyez sur Entrée pour envoyer)"
+                className="min-h-[60px] resize-none"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!inputMessage.trim() || isLoading}
+                size="icon"
+                className="self-end"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
+        <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <DrawerContent>
+            {sidebarContent}
+          </DrawerContent>
+        </Drawer>
+        <div className="pt-14 px-3 sm:px-6 pb-6">
+          {renderContent()}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen w-full">
+      {sidebarContent}
+      <div className="flex-1 px-3 sm:px-6 py-6">
+        {renderContent()}
+      </div>
     </div>
   );
 }
