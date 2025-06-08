@@ -60,6 +60,8 @@ export interface GoodAction {
   likes_count: number;
   comments_count: number;
   is_public: boolean;
+  impact_level?: 'low' | 'medium' | 'high';
+  date_performed?: string;
   user_profiles?: {
     display_name: string | null;
     email: string | null;
