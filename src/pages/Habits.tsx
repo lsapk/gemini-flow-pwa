@@ -13,21 +13,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import MobileHeader from "@/components/layout/MobileHeader";
-
-interface Habit {
-  id: string;
-  title: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  category?: string;
-  target: number;
-  streak?: number;
-  last_completed_at?: string;
-  created_at: string;
-  updated_at?: string;
-  user_id: string;
-  is_completed_today?: boolean;
-}
+import { Habit } from "@/types";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -61,8 +47,9 @@ export default function Habits() {
 
           return {
             ...habit,
+            frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
             is_completed_today: !!completion
-          };
+          } as Habit;
         })
       );
 
@@ -95,11 +82,20 @@ export default function Habits() {
 
       if (error) throw error;
 
+      // Get current streak to increment it
+      const { data: currentHabit } = await supabase
+        .from('habits')
+        .select('streak')
+        .eq('id', habitId)
+        .single();
+
+      const newStreak = (currentHabit?.streak || 0) + 1;
+
       await supabase
         .from('habits')
         .update({
           last_completed_at: new Date().toISOString(),
-          streak: supabase.rpc('increment_streak', { habit_id: habitId })
+          streak: newStreak
         })
         .eq('id', habitId);
 
@@ -130,6 +126,127 @@ export default function Habits() {
 
   const sidebarContent = <Sidebar onItemClick={() => setSidebarOpen(false)} />;
 
+  const renderContent = () => (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
+        <Button onClick={() => setIsModalOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle habitude
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-6 bg-muted rounded mb-4"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : habits.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Target className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Aucune habitude</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              Commencez à créer de bonnes habitudes pour améliorer votre productivité.
+            </p>
+            <Button onClick={() => setIsModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer votre première habitude
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:gap-6">
+          {habits.map((habit) => (
+            <Card key={habit.id} className="group hover:shadow-md transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{habit.title}</CardTitle>
+                    {habit.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {habit.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      {getFrequencyIcon(habit.frequency)}
+                      {habit.frequency}
+                    </Badge>
+                    {habit.category && (
+                      <Badge variant="secondary">{habit.category}</Badge>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${getStreakColor(habit.streak)}`}></div>
+                      <span className="text-sm font-medium">
+                        Série: {habit.streak || 0} jour{(habit.streak || 0) > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Objectif: {habit.target} fois
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progression</span>
+                      <span>{Math.min(habit.streak || 0, habit.target)}/{habit.target}</span>
+                    </div>
+                    <Progress 
+                      value={Math.min(((habit.streak || 0) / habit.target) * 100, 100)} 
+                      className="h-2"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-sm text-muted-foreground">
+                      {habit.last_completed_at && (
+                        <>Dernière fois: {new Date(habit.last_completed_at).toLocaleDateString()}</>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => completeHabit(habit.id)}
+                      disabled={habit.is_completed_today}
+                      className={habit.is_completed_today ? "bg-green-500 hover:bg-green-500" : ""}
+                    >
+                      {habit.is_completed_today ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Complété
+                        </>
+                      ) : (
+                        "Marquer comme fait"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <CreateModal 
+        type="habit"
+        onSuccess={fetchHabits}
+      />
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
@@ -140,127 +257,8 @@ export default function Habits() {
           </DrawerContent>
         </Drawer>
         <div className="pt-14 px-3 sm:px-6 pb-6">
-          <div className="max-w-6xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-              <Button onClick={() => setIsModalOpen(true)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nouvelle habitude
-              </Button>
-            </div>
-
-            {isLoading ? (
-              <div className="grid gap-4 md:gap-6">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="h-6 bg-muted rounded mb-4"></div>
-                      <div className="h-4 bg-muted rounded w-2/3"></div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : habits.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Aucune habitude</h3>
-                  <p className="text-muted-foreground text-center mb-4">
-                    Commencez à créer de bonnes habitudes pour améliorer votre productivité.
-                  </p>
-                  <Button onClick={() => setIsModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Créer votre première habitude
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:gap-6">
-                {habits.map((habit) => (
-                  <Card key={habit.id} className="group hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">{habit.title}</CardTitle>
-                          {habit.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {habit.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            {getFrequencyIcon(habit.frequency)}
-                            {habit.frequency}
-                          </Badge>
-                          {habit.category && (
-                            <Badge variant="secondary">{habit.category}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${getStreakColor(habit.streak)}`}></div>
-                            <span className="text-sm font-medium">
-                              Série: {habit.streak || 0} jour{(habit.streak || 0) > 1 ? 's' : ''}
-                            </span>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Objectif: {habit.target} fois
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Progression</span>
-                            <span>{Math.min(habit.streak || 0, habit.target)}/{habit.target}</span>
-                          </div>
-                          <Progress 
-                            value={Math.min(((habit.streak || 0) / habit.target) * 100, 100)} 
-                            className="h-2"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="text-sm text-muted-foreground">
-                            {habit.last_completed_at && (
-                              <>Dernière fois: {new Date(habit.last_completed_at).toLocaleDateString()}</>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => completeHabit(habit.id)}
-                            disabled={habit.is_completed_today}
-                            className={habit.is_completed_today ? "bg-green-500 hover:bg-green-500" : ""}
-                          >
-                            {habit.is_completed_today ? (
-                              <>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Complété
-                              </>
-                            ) : (
-                              "Marquer comme fait"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+          {renderContent()}
         </div>
-
-        <CreateModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)}
-          defaultType="habit"
-          onSuccess={fetchHabits}
-        />
       </div>
     );
   }
@@ -269,127 +267,8 @@ export default function Habits() {
     <div className="flex min-h-screen w-full">
       {sidebarContent}
       <div className="flex-1 px-3 sm:px-6 py-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-            <Button onClick={() => setIsModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle habitude
-            </Button>
-          </div>
-
-          {isLoading ? (
-            <div className="grid gap-4 md:gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-6">
-                    <div className="h-6 bg-muted rounded mb-4"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : habits.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Aucune habitude</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Commencez à créer de bonnes habitudes pour améliorer votre productivité.
-                </p>
-                <Button onClick={() => setIsModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer votre première habitude
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:gap-6">
-              {habits.map((habit) => (
-                <Card key={habit.id} className="group hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">{habit.title}</CardTitle>
-                        {habit.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {habit.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          {getFrequencyIcon(habit.frequency)}
-                          {habit.frequency}
-                        </Badge>
-                        {habit.category && (
-                          <Badge variant="secondary">{habit.category}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${getStreakColor(habit.streak)}`}></div>
-                          <span className="text-sm font-medium">
-                            Série: {habit.streak || 0} jour{(habit.streak || 0) > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Objectif: {habit.target} fois
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progression</span>
-                          <span>{Math.min(habit.streak || 0, habit.target)}/{habit.target}</span>
-                        </div>
-                        <Progress 
-                          value={Math.min(((habit.streak || 0) / habit.target) * 100, 100)} 
-                          className="h-2"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="text-sm text-muted-foreground">
-                          {habit.last_completed_at && (
-                            <>Dernière fois: {new Date(habit.last_completed_at).toLocaleDateString()}</>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => completeHabit(habit.id)}
-                          disabled={habit.is_completed_today}
-                          className={habit.is_completed_today ? "bg-green-500 hover:bg-green-500" : ""}
-                        >
-                          {habit.is_completed_today ? (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Complété
-                            </>
-                          ) : (
-                            "Marquer comme fait"
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        {renderContent()}
       </div>
-
-      <CreateModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        defaultType="habit"
-        onSuccess={fetchHabits}
-      />
     </div>
   );
 }
