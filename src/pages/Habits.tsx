@@ -9,19 +9,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
-import Sidebar from "@/components/layout/Sidebar";
-import { useMediaQuery } from "@/hooks/use-mobile";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import MobileHeader from "@/components/layout/MobileHeader";
 import { Habit } from "@/types";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const fetchHabits = async () => {
     if (!user) return;
@@ -124,10 +118,8 @@ export default function Habits() {
     }
   };
 
-  const sidebarContent = <Sidebar onItemClick={() => setSidebarOpen(false)} />;
-
-  const renderContent = () => (
-    <div className="max-w-6xl mx-auto space-y-6">
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
         <Button onClick={() => setIsModalOpen(true)} size="sm">
@@ -243,32 +235,9 @@ export default function Habits() {
       <CreateModal 
         type="habit"
         onSuccess={fetchHabits}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
       />
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-background">
-        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-        <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <DrawerContent>
-            {sidebarContent}
-          </DrawerContent>
-        </Drawer>
-        <div className="pt-14 px-3 sm:px-6 pb-6">
-          {renderContent()}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen w-full">
-      {sidebarContent}
-      <div className="flex-1 px-3 sm:px-6 py-6">
-        {renderContent()}
-      </div>
     </div>
   );
 }

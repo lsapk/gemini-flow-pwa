@@ -17,6 +17,14 @@ serve(async (req) => {
     
     console.log("Received request:", { message, user_id, contextKeys: Object.keys(context || {}) });
     
+    if (!message) {
+      throw new Error('Message is required');
+    }
+    
+    if (!user_id) {
+      throw new Error('User ID is required');
+    }
+    
     // Construire le prompt avec le contexte utilisateur amélioré
     const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs, et bonnes actions.
 
@@ -46,7 +54,12 @@ INSTRUCTIONS:
     
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY not found');
-      throw new Error('Configuration manquante');
+      return new Response(JSON.stringify({ 
+        response: "Configuration manquante. L'API Gemini n'est pas configurée.",
+        error: true 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log("Calling Gemini API...");
@@ -78,7 +91,14 @@ INSTRUCTIONS:
       console.error('Gemini API error:', response.status, response.statusText);
       const errorText = await response.text();
       console.error('Error details:', errorText);
-      throw new Error(`Erreur API Gemini: ${response.status}`);
+      
+      return new Response(JSON.stringify({ 
+        response: "Erreur de connexion avec le service IA. Veuillez vérifier votre configuration API ou réessayer plus tard.",
+        error: true,
+        details: `API Error: ${response.status}`
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();
@@ -97,7 +117,7 @@ INSTRUCTIONS:
     
     // Réponse d'erreur plus détaillée
     const errorMessage = error.message?.includes('API') 
-      ? 'Erreur de connexion avec le service IA. Veuillez réessayer.'
+      ? 'Erreur de connexion avec le service IA. Veuillez vérifier la configuration.'
       : 'Erreur du serveur. Veuillez réessayer dans quelques instants.';
     
     return new Response(JSON.stringify({ 
