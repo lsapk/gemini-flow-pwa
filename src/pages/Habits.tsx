@@ -232,12 +232,12 @@ export default function Habits() {
         </div>
       )}
 
-      <CreateModal 
-        type="habit"
-        onSuccess={fetchHabits}
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-      />
+      {isModalOpen && (
+        <CreateModal 
+          type="habit"
+          onSuccess={fetchHabits}
+        />
+      )}
     </div>
   );
 }

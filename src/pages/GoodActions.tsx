@@ -47,10 +47,7 @@ export default function GoodActions() {
       setIsLoading(true);
       let query = supabase
         .from('good_actions')
-        .select(`
-          *,
-          user_profiles!inner(display_name, photo_url)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (activeTab === "my-actions") {
@@ -59,14 +56,32 @@ export default function GoodActions() {
         query = query.eq('is_public', true);
       }
 
-      const { data, error } = await query;
+      const { data: actionsData, error } = await query;
 
       if (error) throw error;
 
-      setGoodActions(data || []);
+      // Fetch user profiles separately
+      if (actionsData && actionsData.length > 0) {
+        const userIds = [...new Set(actionsData.map(action => action.user_id))];
+        const { data: profilesData } = await supabase
+          .from('user_profiles')
+          .select('id, display_name, email, photo_url')
+          .in('id', userIds);
+
+        // Combine the data
+        const actionsWithProfiles = actionsData.map(action => ({
+          ...action,
+          user_profiles: profilesData?.find(profile => profile.id === action.user_id) || null
+        }));
+
+        setGoodActions(actionsWithProfiles);
+      } else {
+        setGoodActions([]);
+      }
     } catch (error) {
       console.error('Error fetching good actions:', error);
       toast.error('Erreur lors du chargement des bonnes actions');
+      setGoodActions([]);
     } finally {
       setIsLoading(false);
     }
@@ -265,7 +280,7 @@ export default function GoodActions() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={action.user_profiles?.photo_url} />
+                          <AvatarImage src={action.user_profiles?.photo_url || ''} />
                           <AvatarFallback>
                             {action.user_profiles?.display_name?.charAt(0) || '?'}
                           </AvatarFallback>
@@ -346,7 +361,7 @@ export default function GoodActions() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={action.user_profiles?.photo_url} />
+                          <AvatarImage src={action.user_profiles?.photo_url || ''} />
                           <AvatarFallback>
                             {action.user_profiles?.display_name?.charAt(0) || '?'}
                           </AvatarFallback>

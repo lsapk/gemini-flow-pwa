@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CreateModal as BaseCreateModal } from "@/components/ui/CreateModal";
@@ -15,7 +15,7 @@ interface CreateModalProps {
 }
 
 export default function CreateModal({ type, onSuccess, variant = "default", children }: CreateModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   const getTitle = () => {
     switch (type) {
@@ -50,24 +50,18 @@ export default function CreateModal({ type, onSuccess, variant = "default", chil
     onSuccess();
   };
 
-  return (
-    <>
-      <Button 
-        onClick={() => setIsOpen(true)}
-        variant={variant}
-        className="flex items-center gap-2"
-      >
-        <PlusCircle className="h-4 w-4" />
-        {children || `Créer ${type === "goal" ? "un objectif" : type === "habit" ? "une habitude" : "une tâche"}`}
-      </Button>
+  const handleClose = () => {
+    setIsOpen(false);
+    onSuccess();
+  };
 
-      <BaseCreateModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={getTitle()}
-      >
-        {getFormComponent()}
-      </BaseCreateModal>
-    </>
+  return (
+    <BaseCreateModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={getTitle()}
+    >
+      {getFormComponent()}
+    </BaseCreateModal>
   );
 }

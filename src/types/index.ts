@@ -1,4 +1,3 @@
-
 export interface Habit {
   id: string;
   title: string;
@@ -65,6 +64,7 @@ export interface GoodAction {
   user_profiles?: {
     display_name: string | null;
     email: string | null;
+    photo_url?: string | null;
   } | null;
 }
 
