@@ -1,7 +1,8 @@
+
 import { Habit } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle, Circle } from "lucide-react";
+import { Trash2, CheckCircle, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -9,10 +10,12 @@ interface HabitListProps {
   habits: Habit[];
   loading: boolean;
   onDelete: (id: string) => void;
+  onEdit?: (habit: Habit) => void;
+  onComplete?: (id: string) => void;
   onRefresh: () => void;
 }
 
-export default function HabitList({ habits, loading, onDelete }: HabitListProps) {
+export default function HabitList({ habits, loading, onDelete, onEdit, onComplete }: HabitListProps) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -78,7 +81,6 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
     other: { name: "Autre", color: getCategoryColor("other") },
   };
 
-  // Ajout de la section 4 blocs blancs "cartes"
   return (
     <div className="space-y-6">
       {/* Cartes catégorie */}
@@ -93,8 +95,9 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
               className="bg-white rounded-xl shadow p-5 flex flex-col items-center"
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${label.color.bg}`}>
-                {/* Placeholder icon */}
-                <span className={`text-2xl ${label.color.icon}`}>🔥</span>
+                <span className={`text-2xl ${label.color.icon}`}>
+                  {key === 'health' ? '🏃' : key === 'productivity' ? '⚡' : key === 'personal' ? '🎯' : '📝'}
+                </span>
               </div>
               <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
               <div className="text-xs text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
@@ -105,6 +108,7 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
           );
         })}
       </div>
+
       {/* Liste détaillée des habitudes */}
       <div className="space-y-3">
         {habits.map((habit) => (
@@ -139,13 +143,31 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
                 </div>
                 
                 <div className="flex items-center gap-2 ml-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
+                  {onComplete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onComplete(habit.id)}
+                      disabled={habit.is_completed_today}
+                      className={`h-8 w-8 p-0 ${
+                        habit.is_completed_today 
+                          ? "text-green-600 bg-green-50" 
+                          : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                      }`}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {onEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(habit)}
+                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

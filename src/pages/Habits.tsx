@@ -1,20 +1,23 @@
 
 import { useState, useEffect } from "react";
-import { Plus, Target, Clock, CheckCircle } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
+import CreateHabitForm from "@/components/modals/CreateHabitForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -60,6 +63,31 @@ export default function Habits() {
     fetchHabits();
   }, [user]);
 
+  const handleEdit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async (habitId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Habitude supprimée !');
+      fetchHabits();
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      toast.error('Erreur lors de la suppression de l\'habitude');
+    }
+  };
+
   const completeHabit = async (habitId: string) => {
     if (!user) return;
 
@@ -101,28 +129,22 @@ export default function Habits() {
     }
   };
 
-  const getStreakColor = (streak: number = 0) => {
-    if (streak >= 30) return "bg-purple-500";
-    if (streak >= 14) return "bg-green-500";
-    if (streak >= 7) return "bg-blue-500";
-    if (streak >= 3) return "bg-yellow-500";
-    return "bg-gray-400";
+  const handleCreateSuccess = () => {
+    setIsCreateModalOpen(false);
+    fetchHabits();
   };
 
-  const getFrequencyIcon = (frequency: string) => {
-    switch (frequency) {
-      case 'daily': return <Clock className="h-4 w-4" />;
-      case 'weekly': return <Target className="h-4 w-4" />;
-      case 'monthly': return <Target className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
+    setEditingHabit(null);
+    fetchHabits();
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-        <Button onClick={() => setIsModalOpen(true)} size="sm">
+        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Nouvelle habitude
         </Button>
@@ -147,97 +169,41 @@ export default function Habits() {
             <p className="text-muted-foreground text-center mb-4">
               Commencez à créer de bonnes habitudes pour améliorer votre productivité.
             </p>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Créer votre première habitude
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:gap-6">
-          {habits.map((habit) => (
-            <Card key={habit.id} className="group hover:shadow-md transition-shadow">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{habit.title}</CardTitle>
-                    {habit.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {habit.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      {getFrequencyIcon(habit.frequency)}
-                      {habit.frequency}
-                    </Badge>
-                    {habit.category && (
-                      <Badge variant="secondary">{habit.category}</Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getStreakColor(habit.streak)}`}></div>
-                      <span className="text-sm font-medium">
-                        Série: {habit.streak || 0} jour{(habit.streak || 0) > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Objectif: {habit.target} fois
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progression</span>
-                      <span>{Math.min(habit.streak || 0, habit.target)}/{habit.target}</span>
-                    </div>
-                    <Progress 
-                      value={Math.min(((habit.streak || 0) / habit.target) * 100, 100)} 
-                      className="h-2"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="text-sm text-muted-foreground">
-                      {habit.last_completed_at && (
-                        <>Dernière fois: {new Date(habit.last_completed_at).toLocaleDateString()}</>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => completeHabit(habit.id)}
-                      disabled={habit.is_completed_today}
-                      className={habit.is_completed_today ? "bg-green-500 hover:bg-green-500" : ""}
-                    >
-                      {habit.is_completed_today ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Complété
-                        </>
-                      ) : (
-                        "Marquer comme fait"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {isModalOpen && (
-        <CreateModal 
-          type="habit"
-          onSuccess={fetchHabits}
+        <HabitList 
+          habits={habits}
+          loading={isLoading}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          onComplete={completeHabit}
+          onRefresh={fetchHabits}
         />
       )}
+
+      {isCreateModalOpen && (
+        <CreateModal 
+          type="habit"
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier l'habitude</DialogTitle>
+          </DialogHeader>
+          <CreateHabitForm 
+            onSuccess={handleEditSuccess}
+            habit={editingHabit}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

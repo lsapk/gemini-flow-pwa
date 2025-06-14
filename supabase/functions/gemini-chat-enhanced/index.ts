@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -50,7 +51,6 @@ serve(async (req) => {
         
         switch (action.type) {
           case 'create_task':
-            // Validation des données requises
             if (!action.data.title || action.data.title.trim() === '') {
               throw new Error('Le titre de la tâche est requis');
             }
@@ -73,7 +73,6 @@ serve(async (req) => {
             break;
             
           case 'create_habit':
-            // Validation des données requises
             if (!action.data.title || action.data.title.trim() === '') {
               throw new Error('Le titre de l\'habitude est requis');
             }
@@ -97,7 +96,6 @@ serve(async (req) => {
             break;
             
           case 'create_goal':
-            // Validation des données requises
             if (!action.data.title || action.data.title.trim() === '') {
               throw new Error('Le titre de l\'objectif est requis');
             }
@@ -121,7 +119,6 @@ serve(async (req) => {
             break;
             
           case 'create_journal':
-            // Validation des données requises
             if (!action.data.title || action.data.title.trim() === '') {
               throw new Error('Le titre de l\'entrée de journal est requis');
             }
@@ -151,7 +148,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ 
             response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
                       actionResult.type === 'habit_created' ? 'Habitude' : 
-                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès !`,
+                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
             action_result: actionResult
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -168,15 +165,21 @@ serve(async (req) => {
       }
     }
 
-    // Construire le prompt avec consignes d’emoji et sans mentionner JSON/en dev.
+    // Construire le prompt avec consignes d'emoji et sans mentionner JSON/en dev.
     const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
-Tu parles TOUJOURS en français. 
-Tu dois TOUJOURS utiliser des emojis adaptés (conseils, encouragement, félicitations, explication…) dans tes réponses à l’utilisateur (1 à 3 par réponse).
+Tu parles TOUJOURS en français et tu utilises TOUJOURS des emojis appropriés dans tes réponses (1 à 3 par réponse) 😊.
 Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
-Ne dis JAMAIS le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
-Si tu crées un élément (tâche, habitude, objectif, journal), dis uniquement "Tâche créée ! 🎉" ou "Habitude créée ! 🎉" (ou l’équivalent adapté), MOTIVE l'utilisateur, et n’affiche jamais le format de requête pour la création. 
-Jamais d’explication sur le format ou comment tu fais, dis le résultat et basta.
-Utilise le contexte/mémoire des échanges et apporte encouragement ou synthèse personnalisée avec emoji.
+
+IMPORTANT : Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
+
+Si l'utilisateur demande de créer quelque chose (tâche, habitude, objectif, journal), tu dois répondre directement par :
+{"action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
+ou
+{"action":{"type":"create_habit","data":{"title":"titre","description":"description","frequency":"daily","category":"health","target":1}}}
+ou  
+{"action":{"type":"create_goal","data":{"title":"titre","description":"description","category":"personal","target_date":"YYYY-MM-DD"}}}
+ou
+{"action":{"type":"create_journal","data":{"title":"titre","content":"contenu","mood":"good","tags":["tag1","tag2"]}}}
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
@@ -184,25 +187,19 @@ ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donn
 HISTORIQUE RÉCENT DE CONVERSATION:
 ${context?.recent_messages?.map((msg) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
 
-CONTEXTE MÉMOIRE:
-- Rappelle-toi des préférences et objectifs de l'utilisateur mentionnés précédemment
-- Adapte tes conseils en fonction de l'historique des interactions
-- Sois cohérent avec les recommandations passées
-
 CAPACITÉS:
-- Analyser les données de productivité de l'utilisateur en détail
-- Créer des tâches, habitudes, objectifs, entrées de journal
-- Donner des conseils personnalisés basés sur les vraies données
-- Fournir des statistiques précises et des analyses approfondies
-- Proposer des améliorations concrètes et réalisables
+- Analyser les données de productivité de l'utilisateur en détail 📊
+- Créer des tâches, habitudes, objectifs, entrées de journal ✨
+- Donner des conseils personnalisés basés sur les vraies données 💡
+- Fournir des statistiques précises et des analyses approfondies 📈
+- Proposer des améliorations concrètes et réalisables 🚀
 
 INSTRUCTIONS:
-- Réponds TOUJOURS en français et avec des emojis adaptés
-- Sois encourageant, constructif et empathique
-- Propose des actions concrètes et réalisables
-- Utilise un ton amical et professionnel
-- Si l'utilisateur demande de créer quelque chose, réponds uniquement par une phrase positive signalant la création ("Habitude créée ! 🎉" etc.) sans aucun code ni format.
-
+- Réponds TOUJOURS en français et avec des emojis adaptés 😊
+- Sois encourageant, constructif et empathique 💪
+- Propose des actions concrètes et réalisables ✅
+- Utilise un ton amical et professionnel 🤝
+- Si demande de création, utilise le format spécifié ci-dessus
 `;
 
     console.log("Calling Gemini API...");
@@ -235,7 +232,7 @@ INSTRUCTIONS:
       console.error('Error details:', errorText);
       
       return new Response(JSON.stringify({ 
-        response: "Je rencontre actuellement des difficultés techniques. Veuillez réessayer dans quelques instants.",
+        response: "Je rencontre actuellement des difficultés techniques. Veuillez réessayer dans quelques instants. 😅",
         error: true,
         details: `API Error: ${response.status}`
       }), {
@@ -243,25 +240,15 @@ INSTRUCTIONS:
       });
     }
 
-    // Après réception :
     const data = await response.json();
-    let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
-
-    // Nettoie toutes mentions de code/JSON
-    aiResponse = aiResponse
-      .replace(/```json[\s\S]*?```/g, "")
-      .replace(/```[\s\S]*?```/g, "")
-      .replace(/JSON/gi, "")
-      .replace(/\{[\s\S]*?"action"[\s\S]*?\}/g, "");
-
     console.log("Gemini response received:", data);
 
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
-    console.log("Final AI response:", aiResponse);
+    let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer. 😅";
+    console.log("Final AI response:", responseText);
 
     // Vérifier si la réponse contient une action JSON
     try {
-      const jsonMatch = aiResponse.match(/\{[^}]*"action"[^}]*\}/);
+      const jsonMatch = responseText.match(/\{[^}]*"action"[^}]*\}/);
       if (jsonMatch) {
         const actionJson = JSON.parse(jsonMatch[0]);
         console.log("Action detected in response:", actionJson);
@@ -282,9 +269,12 @@ INSTRUCTIONS:
         
         const actionResponse = await actionRequest.json();
         
-        // Retourner la réponse de l'action avec le message original de l'IA
+        // Nettoyer la réponse pour enlever le JSON et garder seulement le texte utilisateur
+        const cleanedResponse = responseText.replace(jsonMatch[0], '').trim();
+        
+        // Retourner la réponse nettoyée avec le résultat de l'action
         return new Response(JSON.stringify({ 
-          response: aiResponse.replace(jsonMatch[0], '') + '\n\n' + actionResponse.response,
+          response: cleanedResponse || actionResponse.response,
           action_result: actionResponse.action_result
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -294,19 +284,19 @@ INSTRUCTIONS:
       console.log("No valid action JSON found, continuing with normal response");
     }
 
-    return new Response(JSON.stringify({ response: aiResponse }), {
+    return new Response(JSON.stringify({ response: responseText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Error in gemini-chat-enhanced function:', error);
     
-    let errorMessage = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+    let errorMessage = 'Une erreur inattendue s\'est produite. Veuillez réessayer. 😅';
     
     if (error.message?.includes('API')) {
-      errorMessage = 'Problème de connexion avec le service IA. Veuillez réessayer dans quelques instants.';
+      errorMessage = 'Problème de connexion avec le service IA. Veuillez réessayer dans quelques instants. 🔄';
     } else if (error.message?.includes('required')) {
-      errorMessage = 'Données manquantes dans la requête. Veuillez rafraîchir la page.';
+      errorMessage = 'Données manquantes dans la requête. Veuillez rafraîchir la page. 🔄';
     }
     
     return new Response(JSON.stringify({ 
