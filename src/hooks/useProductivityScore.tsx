@@ -59,24 +59,58 @@ export const useProductivityScore = (): ProductivityMetrics => {
     try {
       console.log("Calculating productivity score with AI...");
       
-      const metricsData = {
-        taskCompletionRate,
-        totalFocusTime,
-        streakCount,
-        habitsCount: habitsData.length,
-        focusSessionsCount: focusData.length,
-        activityCount: activityData.length,
-        habitsData: habitsData.slice(0, 10),
-        focusData: focusData.slice(0, 10),
-        activityData: activityData.slice(0, 10)
+      // Récupérer toutes les données utilisateur pour l'analyse
+      const [
+        tasksResult,
+        habitsResult,
+        goalsResult,
+        journalResult,
+        focusResult
+      ] = await Promise.allSettled([
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+      ]);
+
+      const completeUserData = {
+        tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []) : [],
+        habits: habitsResult.status === 'fulfilled' ? (habitsResult.value.data || []) : [],
+        goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []) : [],
+        journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []) : [],
+        focus_sessions: focusResult.status === 'fulfilled' ? (focusResult.value.data || []) : [],
+        analytics: {
+          taskCompletionRate,
+          totalFocusTime,
+          streakCount,
+          habitsCount: habitsData.length,
+          focusSessionsCount: focusData.length,
+          activityCount: activityData.length
+        }
       };
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: `Calcule un score de productivité détaillé basé sur ces métriques utilisateur. Retourne UNIQUEMENT un objet JSON valide avec les propriétés exactes: score (0-100), level (string français), badges (array de strings français), streakBonus (0-5), completionRate, focusTimeScore, consistencyScore, qualityScore, timeManagementScore, journalScore, goalScore. Métriques: ${JSON.stringify(metricsData)}`,
+          message: `Calcule un score de productivité détaillé et personnalisé basé sur toutes ces données utilisateur. Analyse en profondeur les habitudes, tâches, objectifs, sessions de focus et entrées de journal pour fournir un score précis et des insights. Retourne UNIQUEMENT un objet JSON valide avec les propriétés exactes: 
+          {
+            "score": nombre_0_à_100,
+            "level": "string_français_niveau", 
+            "badges": ["array", "de", "badges", "français"],
+            "streakBonus": nombre_0_à_20,
+            "completionRate": nombre_pourcentage,
+            "focusTimeScore": nombre_0_à_25,
+            "consistencyScore": nombre_0_à_25,
+            "qualityScore": nombre_0_à_25,
+            "timeManagementScore": nombre_0_à_25,
+            "journalScore": nombre_0_à_15,
+            "goalScore": nombre_0_à_15
+          }
+          
+          Données complètes: ${JSON.stringify(completeUserData)}`,
           user_id: user.id,
           context: {
-            user_data: metricsData,
+            user_data: completeUserData,
             recent_messages: []
           }
         }
@@ -109,14 +143,14 @@ export const useProductivityScore = (): ProductivityMetrics => {
           score: Math.max(0, Math.min(100, parsedMetrics.score)),
           level: parsedMetrics.level || 'Novice',
           badges: Array.isArray(parsedMetrics.badges) ? parsedMetrics.badges : [],
-          streakBonus: parsedMetrics.streakBonus || 0,
-          completionRate: parsedMetrics.completionRate || taskCompletionRate,
-          focusTimeScore: parsedMetrics.focusTimeScore || 0,
-          consistencyScore: parsedMetrics.consistencyScore || 0,
-          qualityScore: parsedMetrics.qualityScore || 0,
-          timeManagementScore: parsedMetrics.timeManagementScore || 0,
-          journalScore: parsedMetrics.journalScore || 0,
-          goalScore: parsedMetrics.goalScore || 0
+          streakBonus: Math.max(0, Math.min(20, parsedMetrics.streakBonus || 0)),
+          completionRate: Math.max(0, Math.min(100, parsedMetrics.completionRate || taskCompletionRate)),
+          focusTimeScore: Math.max(0, Math.min(25, parsedMetrics.focusTimeScore || 0)),
+          consistencyScore: Math.max(0, Math.min(25, parsedMetrics.consistencyScore || 0)),
+          qualityScore: Math.max(0, Math.min(25, parsedMetrics.qualityScore || 0)),
+          timeManagementScore: Math.max(0, Math.min(25, parsedMetrics.timeManagementScore || 0)),
+          journalScore: Math.max(0, Math.min(15, parsedMetrics.journalScore || 0)),
+          goalScore: Math.max(0, Math.min(15, parsedMetrics.goalScore || 0))
         });
       } else {
         console.log("AI response not valid, using fallback calculation");

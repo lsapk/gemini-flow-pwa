@@ -18,8 +18,8 @@ serve(async (req) => {
     
     console.log("Received request:", { message, user_id, action, contextKeys: Object.keys(context || {}) });
     
-    if (!message) {
-      throw new Error('Message is required');
+    if (!message && !action) {
+      throw new Error('Message or action is required');
     }
     
     if (!user_id) {
@@ -33,14 +33,13 @@ serve(async (req) => {
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY not found');
       return new Response(JSON.stringify({ 
-        response: "Configuration manquante. L'API Gemini n'est pas configurée. Veuillez contacter l'administrateur.",
+        response: "Configuration manquante. L'API Gemini n'est pas configurée.",
         error: true 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Create Supabase client for database operations
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     // Si l'action est de créer quelque chose, on le fait d'abord
@@ -95,7 +94,7 @@ serve(async (req) => {
                 user_id: user_id,
                 title: action.data.title,
                 description: action.data.description || null,
-                category: action.data.category || 'personnel',
+                category: action.data.category || 'personal',
                 target_date: action.data.target_date || null,
                 progress: 0,
                 completed: false
@@ -139,7 +138,7 @@ serve(async (req) => {
       } catch (error) {
         console.error('Error executing action:', error);
         return new Response(JSON.stringify({ 
-          response: `Erreur lors de la création : ${error.message}`,
+          response: `❌ Erreur lors de la création : ${error.message}`,
           error: true 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -147,49 +146,54 @@ serve(async (req) => {
       }
     }
 
-    // Construire le prompt avec le contexte utilisateur amélioré
-    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
+    // Construire le prompt avec le contexte utilisateur amélioré et la mémoire
+    const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
 
-HISTORIQUE RÉCENT:
+HISTORIQUE RÉCENT DE CONVERSATION:
 ${context?.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
 
+CONTEXTE MÉMOIRE:
+- Rappelle-toi des préférences et objectifs de l'utilisateur mentionnés précédemment
+- Adapte tes conseils en fonction de l'historique des interactions
+- Sois cohérent avec les recommandations passées
+
 CAPACITÉS:
-- Analyser les données de productivité de l'utilisateur
+- Analyser les données de productivité de l'utilisateur en détail
 - Créer des tâches, habitudes, objectifs, entrées de journal
 - Donner des conseils personnalisés basés sur les vraies données
-- Fournir des statistiques précises
-- Proposer des améliorations concrètes
+- Fournir des statistiques précises et des analyses approfondies
+- Proposer des améliorations concrètes et réalisables
 
 CRÉATION D'ÉLÉMENTS:
-Quand l'utilisateur demande de créer quelque chose, tu dois répondre avec un format JSON spécial qui sera intercepté par le système:
+Quand l'utilisateur demande de créer quelque chose, identifie clairement l'intention et propose la création. Utilise ce format JSON précis:
 
 Pour créer une TÂCHE:
-{"action": {"type": "create_task", "data": {"title": "titre", "description": "description", "priority": "high|medium|low", "due_date": "YYYY-MM-DD ou null"}}}
+{"action": {"type": "create_task", "data": {"title": "titre exact", "description": "description détaillée", "priority": "high|medium|low", "due_date": "YYYY-MM-DD ou null"}}}
 
 Pour créer une HABITUDE:
-{"action": {"type": "create_habit", "data": {"title": "titre", "description": "description", "frequency": "daily|weekly|monthly", "category": "catégorie", "target": nombre}}}
+{"action": {"type": "create_habit", "data": {"title": "titre exact", "description": "description détaillée", "frequency": "daily|weekly|monthly", "category": "health|productivity|personal", "target": nombre_entier}}}
 
 Pour créer un OBJECTIF:
-{"action": {"type": "create_goal", "data": {"title": "titre", "description": "description", "category": "catégorie", "target_date": "YYYY-MM-DD ou null"}}}
+{"action": {"type": "create_goal", "data": {"title": "titre exact", "description": "description détaillée", "category": "personal|professional|health|finance", "target_date": "YYYY-MM-DD ou null"}}}
 
 Pour créer une ENTRÉE DE JOURNAL:
-{"action": {"type": "create_journal", "data": {"title": "titre", "content": "contenu", "mood": "humeur", "tags": ["tag1", "tag2"]}}}
+{"action": {"type": "create_journal", "data": {"title": "titre exact", "content": "contenu détaillé", "mood": "excellent|good|neutral|bad|terrible", "tags": ["tag1", "tag2"]}}}
 
 INSTRUCTIONS:
 - Réponds TOUJOURS en français
-- Utilise les données réelles pour donner des conseils personnalisés
-- Sois encourageant et constructif
-- Propose des actions concrètes
+- Utilise les données réelles pour donner des conseils personnalisés et précis
+- Sois encourageant, constructif et empathique
+- Propose des actions concrètes et réalisables
 - Utilise un ton amical et professionnel
-- Si l'utilisateur demande de créer quelque chose, génère le JSON approprié
-- Limite tes réponses à 400 mots maximum sauf pour les JSON d'actions`;
+- Si l'utilisateur demande de créer quelque chose, génère le JSON approprié après ton explication
+- Garde une mémoire des interactions passées pour améliorer la continuité
+- Limite tes réponses à 500 mots maximum sauf pour les analyses détaillées`;
 
     console.log("Calling Gemini API...");
     
-    // Use the correct Gemini API endpoint
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
@@ -205,7 +209,7 @@ INSTRUCTIONS:
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 800,
+          maxOutputTokens: 1000,
           topP: 0.8,
           topK: 40
         }
@@ -230,7 +234,6 @@ INSTRUCTIONS:
     console.log("Gemini response received:", data);
 
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
-
     console.log("Final AI response:", aiResponse);
 
     // Vérifier si la réponse contient une action JSON
@@ -241,20 +244,28 @@ INSTRUCTIONS:
         console.log("Action detected in response:", actionJson);
         
         // Re-call this function with the action
-        const actionResponse = await fetch(req.url, {
+        const actionRequest = await fetch(req.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message,
-            context,
-            user_id,
+            message: message,
+            context: context,
+            user_id: user_id,
             action: actionJson.action
           })
         });
         
-        return actionResponse;
+        const actionResponse = await actionRequest.json();
+        
+        // Retourner la réponse de l'action avec le message original de l'IA
+        return new Response(JSON.stringify({ 
+          response: aiResponse.replace(jsonMatch[0], '') + '\n\n' + actionResponse.response,
+          action_result: actionResponse.action_result
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     } catch (e) {
       console.log("No valid action JSON found, continuing with normal response");
