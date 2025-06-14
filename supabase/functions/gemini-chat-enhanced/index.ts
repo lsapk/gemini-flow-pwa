@@ -51,13 +51,18 @@ serve(async (req) => {
         
         switch (action.type) {
           case 'create_task':
+            // Validation des données requises
+            if (!action.data.title || action.data.title.trim() === '') {
+              throw new Error('Le titre de la tâche est requis');
+            }
+            
             const { data: taskData, error: taskError } = await supabase
               .from('tasks')
               .insert({
                 user_id: user_id,
-                title: action.data.title,
+                title: action.data.title.trim(),
                 description: action.data.description || null,
-                priority: action.data.priority || 'medium',
+                priority: ['high', 'medium', 'low'].includes(action.data.priority) ? action.data.priority : 'medium',
                 due_date: action.data.due_date || null,
                 completed: false
               })
@@ -69,15 +74,20 @@ serve(async (req) => {
             break;
             
           case 'create_habit':
+            // Validation des données requises
+            if (!action.data.title || action.data.title.trim() === '') {
+              throw new Error('Le titre de l\'habitude est requis');
+            }
+            
             const { data: habitData, error: habitError } = await supabase
               .from('habits')
               .insert({
                 user_id: user_id,
-                title: action.data.title,
+                title: action.data.title.trim(),
                 description: action.data.description || null,
-                frequency: action.data.frequency || 'daily',
-                category: action.data.category || null,
-                target: action.data.target || 1,
+                frequency: ['daily', 'weekly', 'monthly'].includes(action.data.frequency) ? action.data.frequency : 'daily',
+                category: ['health', 'productivity', 'personal'].includes(action.data.category) ? action.data.category : null,
+                target: Math.max(1, parseInt(action.data.target) || 1),
                 streak: 0
               })
               .select()
@@ -88,13 +98,18 @@ serve(async (req) => {
             break;
             
           case 'create_goal':
+            // Validation des données requises
+            if (!action.data.title || action.data.title.trim() === '') {
+              throw new Error('Le titre de l\'objectif est requis');
+            }
+            
             const { data: goalData, error: goalError } = await supabase
               .from('goals')
               .insert({
                 user_id: user_id,
-                title: action.data.title,
+                title: action.data.title.trim(),
                 description: action.data.description || null,
-                category: action.data.category || 'personal',
+                category: ['personal', 'professional', 'health', 'finance'].includes(action.data.category) ? action.data.category : 'personal',
                 target_date: action.data.target_date || null,
                 progress: 0,
                 completed: false
@@ -107,14 +122,22 @@ serve(async (req) => {
             break;
             
           case 'create_journal':
+            // Validation des données requises
+            if (!action.data.title || action.data.title.trim() === '') {
+              throw new Error('Le titre de l\'entrée de journal est requis');
+            }
+            if (!action.data.content || action.data.content.trim() === '') {
+              throw new Error('Le contenu de l\'entrée de journal est requis');
+            }
+            
             const { data: journalData, error: journalError } = await supabase
               .from('journal_entries')
               .insert({
                 user_id: user_id,
-                title: action.data.title,
-                content: action.data.content,
-                mood: action.data.mood || null,
-                tags: action.data.tags || null
+                title: action.data.title.trim(),
+                content: action.data.content.trim(),
+                mood: ['excellent', 'good', 'neutral', 'bad', 'terrible'].includes(action.data.mood) ? action.data.mood : null,
+                tags: Array.isArray(action.data.tags) ? action.data.tags : null
               })
               .select()
               .single();
