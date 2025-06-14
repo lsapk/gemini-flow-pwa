@@ -23,9 +23,12 @@ export default function Focus() {
   const { toast } = useToast();
 
   useEffect(() => {
+    setTimeLeft(duration * 60);
+  }, [duration]);
+
+  useEffect(() => {
     if (user) {
       loadSessionsToday();
-      // Check for existing active session
       checkActiveSession();
     }
   }, [user]);
@@ -36,35 +39,44 @@ export default function Focus() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data, error } = await supabase
-      .from('focus_sessions')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('started_at', today.toISOString())
-      .not('completed_at', 'is', null);
+    try {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('started_at', today.toISOString())
+        .not('completed_at', 'is', null);
 
-    if (error) {
+      if (error) {
+        console.error('Error loading sessions:', error);
+      } else {
+        setSessionsToday(data?.length || 0);
+      }
+    } catch (error) {
       console.error('Error loading sessions:', error);
-    } else {
-      setSessionsToday(data.length);
     }
   };
 
   const checkActiveSession = () => {
     const savedSession = localStorage.getItem('active_focus_session');
     if (savedSession) {
-      const session = JSON.parse(savedSession);
-      const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
-      const remaining = session.duration * 60 - elapsed;
-      
-      if (remaining > 0) {
-        setCurrentSessionId(session.id);
-        setSessionTitle(session.title);
-        setDuration(session.duration);
-        setTimeLeft(remaining);
-        setIsActive(true);
-        setCurrentSessionStartTime(new Date(session.startTime));
-      } else {
+      try {
+        const session = JSON.parse(savedSession);
+        const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
+        const remaining = session.duration * 60 - elapsed;
+        
+        if (remaining > 0) {
+          setCurrentSessionId(session.id);
+          setSessionTitle(session.title);
+          setDuration(session.duration);
+          setTimeLeft(remaining);
+          setIsActive(true);
+          setCurrentSessionStartTime(new Date(session.startTime));
+        } else {
+          localStorage.removeItem('active_focus_session');
+        }
+      } catch (error) {
+        console.error('Error parsing saved session:', error);
         localStorage.removeItem('active_focus_session');
       }
     }
@@ -155,7 +167,7 @@ export default function Focus() {
         description: `Session de ${duration} minutes commencée.`,
       });
 
-      // Request notification permission for mobile
+      // Request notification permission
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
@@ -205,11 +217,7 @@ export default function Focus() {
       // Clear localStorage
       localStorage.removeItem('active_focus_session');
       
-      setIsActive(false);
-      setCurrentSessionId(null);
-      setCurrentSessionStartTime(null);
-      setTimeLeft(duration * 60);
-      setSessionTitle("");
+      resetSession();
 
       toast({
         title: "Session arrêtée",
@@ -238,11 +246,7 @@ export default function Focus() {
       localStorage.removeItem('active_focus_session');
 
       setSessionsToday(prev => prev + 1);
-      setIsActive(false);
-      setCurrentSessionId(null);
-      setCurrentSessionStartTime(null);
-      setTimeLeft(duration * 60);
-      setSessionTitle("");
+      resetSession();
 
       toast({
         title: "🎉 Session terminée !",
@@ -261,6 +265,14 @@ export default function Focus() {
     } catch (error) {
       console.error('Error completing session:', error);
     }
+  };
+
+  const resetSession = () => {
+    setIsActive(false);
+    setCurrentSessionId(null);
+    setCurrentSessionStartTime(null);
+    setTimeLeft(duration * 60);
+    setSessionTitle("");
   };
 
   return (
@@ -310,7 +322,7 @@ export default function Focus() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {!isActive && (
+          {!isActive && !currentSessionId && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="session-title">Titre de la session</Label>

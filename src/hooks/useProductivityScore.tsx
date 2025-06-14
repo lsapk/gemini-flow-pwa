@@ -66,7 +66,7 @@ export const useProductivityScore = (): ProductivityMetrics => {
         habitsCount: habitsData.length,
         focusSessionsCount: focusData.length,
         activityCount: activityData.length,
-        habitsData: habitsData.slice(0, 10), // Limit data size
+        habitsData: habitsData.slice(0, 10),
         focusData: focusData.slice(0, 10),
         activityData: activityData.slice(0, 10)
       };
@@ -91,7 +91,7 @@ export const useProductivityScore = (): ProductivityMetrics => {
 
       // Try to extract JSON from AI response
       let parsedMetrics = null;
-      if (data?.response) {
+      if (data?.response && !data.error) {
         try {
           // Look for JSON in the response
           const jsonMatch = data.response.match(/\{[\s\S]*\}/);

@@ -64,7 +64,8 @@ INSTRUCTIONS:
 
     console.log("Calling Gemini API...");
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
+    // Use the correct Gemini API endpoint
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,8 +74,7 @@ INSTRUCTIONS:
         contents: [
           {
             parts: [
-              { text: systemPrompt },
-              { text: `Utilisateur: ${message}` }
+              { text: `${systemPrompt}\n\nUtilisateur: ${message}` }
             ]
           }
         ],
