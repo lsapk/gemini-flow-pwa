@@ -1,3 +1,4 @@
+
 export interface Habit {
   id: string;
   title: string;
@@ -47,45 +48,6 @@ export interface JournalEntry {
   created_at: string;
   updated_at?: string;
   user_id: string;
-}
-
-export interface GoodAction {
-  id: string;
-  title: string;
-  description?: string;
-  category: string;
-  created_at: string;
-  user_id: string;
-  likes_count: number;
-  comments_count: number;
-  is_public: boolean;
-  impact_level?: 'low' | 'medium' | 'high';
-  date_performed?: string;
-  user_profiles?: {
-    display_name: string | null;
-    email: string | null;
-    photo_url?: string | null;
-  } | null;
-}
-
-export interface GoodActionComment {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  good_action_id: string;
-  is_deleted: boolean;
-  user_profiles?: {
-    display_name: string | null;
-    email: string | null;
-  } | null;
-}
-
-export interface GoodActionLike {
-  id: string;
-  user_id: string;
-  good_action_id: string;
-  created_at: string;
 }
 
 export interface HabitCompletion {

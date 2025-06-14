@@ -25,8 +25,20 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
     
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    
+    if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not found');
+      return new Response(JSON.stringify({ 
+        response: "Configuration manquante. L'API Gemini n'est pas configurée. Veuillez contacter l'administrateur.",
+        error: true 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Construire le prompt avec le contexte utilisateur amélioré
-    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs, et bonnes actions.
+    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
@@ -36,7 +48,7 @@ ${context?.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).joi
 
 CAPACITÉS:
 - Analyser les données de productivité de l'utilisateur
-- Créer des tâches, habitudes, objectifs et bonnes actions via les APIs
+- Créer des tâches, habitudes, objectifs via les APIs
 - Donner des conseils personnalisés basés sur les vraies données
 - Fournir des statistiques précises
 - Proposer des améliorations concrètes
@@ -49,18 +61,6 @@ INSTRUCTIONS:
 - Utilise un ton amical et professionnel
 - Si l'utilisateur demande de créer quelque chose, explique comment tu peux l'aider
 - Limite tes réponses à 400 mots maximum`;
-
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    
-    if (!geminiApiKey) {
-      console.error('GEMINI_API_KEY not found');
-      return new Response(JSON.stringify({ 
-        response: "Configuration manquante. L'API Gemini n'est pas configurée.",
-        error: true 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     console.log("Calling Gemini API...");
     
@@ -93,7 +93,7 @@ INSTRUCTIONS:
       console.error('Error details:', errorText);
       
       return new Response(JSON.stringify({ 
-        response: "Erreur de connexion avec le service IA. Veuillez vérifier votre configuration API ou réessayer plus tard.",
+        response: "Je rencontre actuellement des difficultés techniques. Veuillez réessayer dans quelques instants.",
         error: true,
         details: `API Error: ${response.status}`
       }), {
@@ -115,17 +115,20 @@ INSTRUCTIONS:
   } catch (error) {
     console.error('Error in gemini-chat-enhanced function:', error);
     
-    // Réponse d'erreur plus détaillée
-    const errorMessage = error.message?.includes('API') 
-      ? 'Erreur de connexion avec le service IA. Veuillez vérifier la configuration.'
-      : 'Erreur du serveur. Veuillez réessayer dans quelques instants.';
+    let errorMessage = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+    
+    if (error.message?.includes('API')) {
+      errorMessage = 'Problème de connexion avec le service IA. Veuillez réessayer dans quelques instants.';
+    } else if (error.message?.includes('required')) {
+      errorMessage = 'Données manquantes dans la requête. Veuillez rafraîchir la page.';
+    }
     
     return new Response(JSON.stringify({ 
       response: errorMessage,
       error: true,
       details: error.message 
     }), {
-      status: 200, // On retourne 200 pour éviter les erreurs côté client
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

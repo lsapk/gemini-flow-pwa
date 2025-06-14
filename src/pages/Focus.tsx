@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { Play, Pause, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import BackgroundFocusService from "@/services/backgroundFocus";
 
 export default function Focus() {
   const [duration, setDuration] = useState(25);
@@ -17,36 +17,18 @@ export default function Focus() {
   const [sessionTitle, setSessionTitle] = useState("");
   const [sessionsToday, setSessionsToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentSessionStartTime, setCurrentSessionStartTime] = useState<Date | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
-  const focusService = BackgroundFocusService.getInstance();
 
   useEffect(() => {
     if (user) {
       loadSessionsToday();
+      // Check for existing active session
+      checkActiveSession();
     }
   }, [user]);
-
-  useEffect(() => {
-    // Check for active session on mount
-    const activeSessions = focusService.getAllActiveSessions();
-    if (activeSessions.length > 0) {
-      const activeSession = activeSessions[0];
-      setCurrentSessionId(activeSession.id);
-      setSessionTitle(activeSession.title);
-      setDuration(Math.ceil(activeSession.timeLeft / 60));
-      setTimeLeft(activeSession.timeLeft);
-      setIsActive(true);
-
-      focusService.onSessionUpdate(activeSession.id, (timeLeft, isComplete) => {
-        setTimeLeft(timeLeft);
-        if (isComplete) {
-          handleTimerComplete();
-        }
-      });
-    }
-  }, []);
 
   const loadSessionsToday = async () => {
     if (!user) return;
@@ -68,6 +50,46 @@ export default function Focus() {
     }
   };
 
+  const checkActiveSession = () => {
+    const savedSession = localStorage.getItem('active_focus_session');
+    if (savedSession) {
+      const session = JSON.parse(savedSession);
+      const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
+      const remaining = session.duration * 60 - elapsed;
+      
+      if (remaining > 0) {
+        setCurrentSessionId(session.id);
+        setSessionTitle(session.title);
+        setDuration(session.duration);
+        setTimeLeft(remaining);
+        setIsActive(true);
+        setCurrentSessionStartTime(new Date(session.startTime));
+      } else {
+        localStorage.removeItem('active_focus_session');
+      }
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleTimerComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, timeLeft]);
+
   const formatTime = (timeInSeconds: number): string => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = timeInSeconds % 60;
@@ -84,36 +106,60 @@ export default function Focus() {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez être connecté pour utiliser le focus.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const sessionId = `focus_${Date.now()}`;
-    setCurrentSessionId(sessionId);
+    const startTime = new Date();
     
     try {
       // Save session to database
       const { error } = await supabase
         .from('focus_sessions')
         .insert({
-          user_id: user?.id,
+          id: sessionId,
+          user_id: user.id,
           title: sessionTitle,
           duration: duration,
-          started_at: new Date().toISOString(),
+          started_at: startTime.toISOString(),
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving session:', error);
+        throw error;
+      }
 
-      // Start background session
-      focusService.startSession(sessionId, sessionTitle, duration);
-      focusService.onSessionUpdate(sessionId, (timeLeft, isComplete) => {
-        setTimeLeft(timeLeft);
-        if (isComplete) {
-          handleTimerComplete();
-        }
-      });
-
+      setCurrentSessionId(sessionId);
+      setCurrentSessionStartTime(startTime);
       setIsActive(true);
+      setTimeLeft(duration * 60);
+
+      // Save to localStorage for persistence
+      const sessionData = {
+        id: sessionId,
+        title: sessionTitle,
+        duration: duration,
+        startTime: startTime.getTime(),
+        userId: user.id
+      };
+      localStorage.setItem('active_focus_session', JSON.stringify(sessionData));
+
       toast({
         title: "Session démarrée",
-        description: `Session de ${duration} minutes commencée. Elle continuera en arrière-plan.`,
+        description: `Session de ${duration} minutes commencée.`,
       });
+
+      // Request notification permission for mobile
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      
     } catch (error) {
       console.error('Error starting session:', error);
       toast({
@@ -125,31 +171,62 @@ export default function Focus() {
   };
 
   const pauseTimer = () => {
-    if (currentSessionId) {
-      if (isActive) {
-        focusService.pauseSession(currentSessionId);
-        setIsActive(false);
-      } else {
-        focusService.resumeSession(currentSessionId);
-        setIsActive(true);
-      }
+    setIsActive(!isActive);
+    
+    if (isActive) {
+      toast({
+        title: "Session en pause",
+        description: "Votre session de focus a été mise en pause.",
+      });
+    } else {
+      toast({
+        title: "Session reprise",
+        description: "Votre session de focus a été reprise.",
+      });
     }
   };
 
-  const stopTimer = () => {
-    if (currentSessionId) {
-      focusService.stopSession(currentSessionId);
+  const stopTimer = async () => {
+    if (!currentSessionId || !user) return;
+
+    try {
+      // Calculate completed duration
+      const completedDuration = duration * 60 - timeLeft;
+      
+      // Update session in database
+      await supabase
+        .from('focus_sessions')
+        .update({
+          completed_at: new Date().toISOString(),
+          duration: Math.floor(completedDuration / 60)
+        })
+        .eq('id', currentSessionId);
+
+      // Clear localStorage
+      localStorage.removeItem('active_focus_session');
+      
+      setIsActive(false);
       setCurrentSessionId(null);
+      setCurrentSessionStartTime(null);
+      setTimeLeft(duration * 60);
+      setSessionTitle("");
+
+      toast({
+        title: "Session arrêtée",
+        description: `Session arrêtée après ${Math.floor(completedDuration / 60)} minutes.`,
+      });
+
+      loadSessionsToday();
+    } catch (error) {
+      console.error('Error stopping session:', error);
     }
-    setIsActive(false);
-    setTimeLeft(duration * 60);
   };
 
   const handleTimerComplete = async () => {
-    if (!currentSessionId) return;
+    if (!currentSessionId || !user) return;
 
     try {
-      // Update session in database
+      // Update session in database as completed
       await supabase
         .from('focus_sessions')
         .update({
@@ -157,9 +234,13 @@ export default function Focus() {
         })
         .eq('id', currentSessionId);
 
+      // Clear localStorage
+      localStorage.removeItem('active_focus_session');
+
       setSessionsToday(prev => prev + 1);
       setIsActive(false);
       setCurrentSessionId(null);
+      setCurrentSessionStartTime(null);
       setTimeLeft(duration * 60);
       setSessionTitle("");
 
@@ -167,6 +248,16 @@ export default function Focus() {
         title: "🎉 Session terminée !",
         description: `Félicitations ! Vous avez complété une session de ${duration} minutes.`,
       });
+
+      // Show notification if permission granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Session de focus terminée !', {
+          body: `Vous avez terminé votre session "${sessionTitle}".`,
+          icon: '/icons/icon-192x192.png'
+        });
+      }
+
+      loadSessionsToday();
     } catch (error) {
       console.error('Error completing session:', error);
     }
@@ -192,23 +283,21 @@ export default function Focus() {
 
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🔥</div>
+            <div className="text-3xl mb-2">⏱️</div>
             <p className="text-xl font-bold text-blue-900">
-              {/* Placeholder for streak */}
-              7
+              {isActive ? "EN COURS" : "ARRÊTÉ"}
             </p>
-            <p className="text-sm text-blue-700">Jours de suite</p>
+            <p className="text-sm text-blue-700">Statut</p>
           </CardContent>
         </Card>
 
         <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🏆</div>
+            <div className="text-3xl mb-2">🔥</div>
             <p className="text-xl font-bold text-purple-900">
-              {/* Placeholder for total */}
-              42
+              {sessionsToday * 25}
             </p>
-            <p className="text-sm text-purple-700">Sessions totales</p>
+            <p className="text-sm text-purple-700">Minutes aujourd'hui</p>
           </CardContent>
         </Card>
       </div>
@@ -262,7 +351,7 @@ export default function Focus() {
           </div>
 
           <div className="flex gap-2 justify-center">
-            {!isActive ? (
+            {!isActive && !currentSessionId ? (
               <Button onClick={startTimer} size="lg" className="px-8">
                 <Play className="mr-2 h-5 w-5" />
                 Démarrer
@@ -270,7 +359,7 @@ export default function Focus() {
             ) : (
               <>
                 <Button onClick={pauseTimer} variant="outline" size="lg">
-                  {focusService.isSessionActive(currentSessionId || '') ? (
+                  {isActive ? (
                     <>
                       <Pause className="mr-2 h-4 w-4" />
                       Pause
@@ -290,25 +379,14 @@ export default function Focus() {
             )}
           </div>
 
-          {isActive && (
+          {currentSessionId && (
             <div className="text-center">
               <p className="text-lg font-medium">{sessionTitle}</p>
               <p className="text-sm text-muted-foreground">
-                Cette session continue en arrière-plan
+                Session démarrée à {currentSessionStartTime?.toLocaleTimeString()}
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sessions récentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Historique des sessions de focus.
-          </p>
         </CardContent>
       </Card>
     </div>
