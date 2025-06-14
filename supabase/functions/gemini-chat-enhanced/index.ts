@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,9 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context, user_id } = await req.json();
+    const { message, context, user_id, action } = await req.json();
     
-    console.log("Received request:", { message, user_id, contextKeys: Object.keys(context || {}) });
+    console.log("Received request:", { message, user_id, action, contextKeys: Object.keys(context || {}) });
     
     if (!message) {
       throw new Error('Message is required');
@@ -26,6 +27,8 @@ serve(async (req) => {
     }
     
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY not found');
@@ -37,8 +40,115 @@ serve(async (req) => {
       });
     }
 
+    // Create Supabase client for database operations
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+
+    // Si l'action est de créer quelque chose, on le fait d'abord
+    if (action && action.type) {
+      console.log("Executing action:", action);
+      
+      try {
+        let actionResult = null;
+        
+        switch (action.type) {
+          case 'create_task':
+            const { data: taskData, error: taskError } = await supabase
+              .from('tasks')
+              .insert({
+                user_id: user_id,
+                title: action.data.title,
+                description: action.data.description || null,
+                priority: action.data.priority || 'medium',
+                due_date: action.data.due_date || null,
+                completed: false
+              })
+              .select()
+              .single();
+            
+            if (taskError) throw taskError;
+            actionResult = { type: 'task_created', data: taskData };
+            break;
+            
+          case 'create_habit':
+            const { data: habitData, error: habitError } = await supabase
+              .from('habits')
+              .insert({
+                user_id: user_id,
+                title: action.data.title,
+                description: action.data.description || null,
+                frequency: action.data.frequency || 'daily',
+                category: action.data.category || null,
+                target: action.data.target || 1,
+                streak: 0
+              })
+              .select()
+              .single();
+            
+            if (habitError) throw habitError;
+            actionResult = { type: 'habit_created', data: habitData };
+            break;
+            
+          case 'create_goal':
+            const { data: goalData, error: goalError } = await supabase
+              .from('goals')
+              .insert({
+                user_id: user_id,
+                title: action.data.title,
+                description: action.data.description || null,
+                category: action.data.category || 'personnel',
+                target_date: action.data.target_date || null,
+                progress: 0,
+                completed: false
+              })
+              .select()
+              .single();
+            
+            if (goalError) throw goalError;
+            actionResult = { type: 'goal_created', data: goalData };
+            break;
+            
+          case 'create_journal':
+            const { data: journalData, error: journalError } = await supabase
+              .from('journal_entries')
+              .insert({
+                user_id: user_id,
+                title: action.data.title,
+                content: action.data.content,
+                mood: action.data.mood || null,
+                tags: action.data.tags || null
+              })
+              .select()
+              .single();
+            
+            if (journalError) throw journalError;
+            actionResult = { type: 'journal_created', data: journalData };
+            break;
+        }
+        
+        if (actionResult) {
+          console.log("Action executed successfully:", actionResult);
+          return new Response(JSON.stringify({ 
+            response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
+                      actionResult.type === 'habit_created' ? 'Habitude' : 
+                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès !`,
+            action_result: actionResult
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (error) {
+        console.error('Error executing action:', error);
+        return new Response(JSON.stringify({ 
+          response: `Erreur lors de la création : ${error.message}`,
+          error: true 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Construire le prompt avec le contexte utilisateur amélioré
-    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs.
+    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
@@ -48,10 +158,25 @@ ${context?.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).joi
 
 CAPACITÉS:
 - Analyser les données de productivité de l'utilisateur
-- Créer des tâches, habitudes, objectifs via les APIs
+- Créer des tâches, habitudes, objectifs, entrées de journal
 - Donner des conseils personnalisés basés sur les vraies données
 - Fournir des statistiques précises
 - Proposer des améliorations concrètes
+
+CRÉATION D'ÉLÉMENTS:
+Quand l'utilisateur demande de créer quelque chose, tu dois répondre avec un format JSON spécial qui sera intercepté par le système:
+
+Pour créer une TÂCHE:
+{"action": {"type": "create_task", "data": {"title": "titre", "description": "description", "priority": "high|medium|low", "due_date": "YYYY-MM-DD ou null"}}}
+
+Pour créer une HABITUDE:
+{"action": {"type": "create_habit", "data": {"title": "titre", "description": "description", "frequency": "daily|weekly|monthly", "category": "catégorie", "target": nombre}}}
+
+Pour créer un OBJECTIF:
+{"action": {"type": "create_goal", "data": {"title": "titre", "description": "description", "category": "catégorie", "target_date": "YYYY-MM-DD ou null"}}}
+
+Pour créer une ENTRÉE DE JOURNAL:
+{"action": {"type": "create_journal", "data": {"title": "titre", "content": "contenu", "mood": "humeur", "tags": ["tag1", "tag2"]}}}
 
 INSTRUCTIONS:
 - Réponds TOUJOURS en français
@@ -59,8 +184,8 @@ INSTRUCTIONS:
 - Sois encourageant et constructif
 - Propose des actions concrètes
 - Utilise un ton amical et professionnel
-- Si l'utilisateur demande de créer quelque chose, explique comment tu peux l'aider
-- Limite tes réponses à 400 mots maximum`;
+- Si l'utilisateur demande de créer quelque chose, génère le JSON approprié
+- Limite tes réponses à 400 mots maximum sauf pour les JSON d'actions`;
 
     console.log("Calling Gemini API...");
     
@@ -107,6 +232,33 @@ INSTRUCTIONS:
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
 
     console.log("Final AI response:", aiResponse);
+
+    // Vérifier si la réponse contient une action JSON
+    try {
+      const jsonMatch = aiResponse.match(/\{[^}]*"action"[^}]*\}/);
+      if (jsonMatch) {
+        const actionJson = JSON.parse(jsonMatch[0]);
+        console.log("Action detected in response:", actionJson);
+        
+        // Re-call this function with the action
+        const actionResponse = await fetch(req.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            context,
+            user_id,
+            action: actionJson.action
+          })
+        });
+        
+        return actionResponse;
+      }
+    } catch (e) {
+      console.log("No valid action JSON found, continuing with normal response");
+    }
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

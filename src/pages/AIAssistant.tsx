@@ -26,7 +26,7 @@ export default function AIAssistant() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Bonjour ! Je suis votre assistant IA personnel pour DeepFlow. Je peux vous aider avec vos objectifs de productivité, analyser vos habitudes, créer des tâches et habitudes, et vous donner des conseils personnalisés. Comment puis-je vous aider aujourd\'hui ?',
+      content: 'Bonjour ! Je suis votre assistant IA personnel pour DeepFlow. Je peux vous aider avec vos objectifs de productivité, analyser vos habitudes, **créer des tâches, habitudes et objectifs**, et vous donner des conseils personnalisés. Comment puis-je vous aider aujourd\'hui ?',
       timestamp: new Date()
     }
   ]);
@@ -51,16 +51,16 @@ export default function AIAssistant() {
         goalsResult,
         journalResult,
         focusResult,
-        goodActionsResult,
-        profileResult
+        profileResult,
+        settingsResult
       ] = await Promise.allSettled([
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('habits').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('good_actions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('user_profiles').select('*').eq('id', user.id).single()
+        supabase.from('user_profiles').select('*').eq('id', user.id).single(),
+        supabase.from('user_settings').select('*').eq('id', user.id).single()
       ]);
 
       const newUserData = {
@@ -69,10 +69,11 @@ export default function AIAssistant() {
         goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []) : [],
         journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []) : [],
         focus_sessions: focusResult.status === 'fulfilled' ? (focusResult.value.data || []) : [],
-        good_actions: goodActionsResult.status === 'fulfilled' ? (goodActionsResult.value.data || []) : [],
         user_profile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
+        user_settings: settingsResult.status === 'fulfilled' ? settingsResult.value.data : null,
         user_id: user.id,
-        user_email: user.email
+        user_email: user.email,
+        timestamp: new Date().toISOString()
       };
 
       setUserData(newUserData);
@@ -81,8 +82,7 @@ export default function AIAssistant() {
         habits: newUserData.habits.length,
         goals: newUserData.goals.length,
         journal: newUserData.journal_entries.length,
-        focus: newUserData.focus_sessions.length,
-        good_actions: newUserData.good_actions.length
+        focus: newUserData.focus_sessions.length
       });
 
     } catch (error) {
@@ -121,8 +121,7 @@ export default function AIAssistant() {
       console.log("Sending message to AI with context:", {
         message: currentInput,
         user_id: user.id,
-        userData: userData,
-        recentMessages: messages.slice(-5)
+        userData: userData
       });
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
@@ -153,6 +152,15 @@ export default function AIAssistant() {
         responseContent = data.response || 'Une erreur s\'est produite. Veuillez réessayer.';
       }
 
+      // Si une action a été exécutée avec succès
+      if (data.action_result) {
+        toast.success('Élément créé avec succès !');
+        // Rafraîchir les données après création
+        setTimeout(() => {
+          fetchAllUserData();
+        }, 1000);
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -161,22 +169,6 @@ export default function AIAssistant() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      // Vérifier si l'IA a créé quelque chose et rafraîchir les données
-      if (responseContent && (
-        responseContent.includes('créé') || 
-        responseContent.includes('ajouté') || 
-        responseContent.includes('nouvelle') || 
-        responseContent.includes('créée') ||
-        responseContent.includes('tâche') ||
-        responseContent.includes('habitude') ||
-        responseContent.includes('objectif')
-      )) {
-        console.log("AI created something, refreshing data...");
-        setTimeout(() => {
-          fetchAllUserData();
-        }, 2000);
-      }
 
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);

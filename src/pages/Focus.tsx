@@ -337,11 +337,14 @@ export default function Focus() {
               
               <div>
                 <Label htmlFor="duration">Durée (minutes)</Label>
-                <Select value={duration.toString()} onValueChange={(value) => {
-                  const newDuration = parseInt(value);
-                  setDuration(newDuration);
-                  setTimeLeft(newDuration * 60);
-                }}>
+                <Select 
+                  value={duration.toString()} 
+                  onValueChange={(value) => {
+                    const newDuration = parseInt(value);
+                    setDuration(newDuration);
+                    setTimeLeft(newDuration * 60);
+                  }}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
