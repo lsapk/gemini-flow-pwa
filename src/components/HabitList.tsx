@@ -86,8 +86,8 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
           return (
             <Card key={category} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6 text-center">
-                <div className={`w-8 h-8 ${label.color.bg} rounded-full mx-auto mb-3 flex items-center justify-center`}>
-                  <Circle className={`h-4 w-4 ${label.color.icon}`} />
+                <div className={`w-12 h-12 ${label.color.bg} rounded-full mx-auto mb-3 flex items-center justify-center`}>
+                  <Circle className={`h-6 w-6 ${label.color.icon}`} />
                 </div>
                 <h3 className={`font-medium mb-1 ${label.color.text}`}>{label.name}</h3>
                 <p className="text-sm text-muted-foreground mb-2">
