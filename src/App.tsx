@@ -18,7 +18,6 @@ import Badges from "./pages/Badges";
 import Analysis from "./pages/Analysis";
 import AIAssistant from "./pages/AIAssistant";
 import Reflection from "./pages/Reflection";
-import GoodActions from "./pages/GoodActions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
@@ -126,13 +125,6 @@ function App() {
                   <ProtectedRoute>
                     <AppLayout>
                       <Reflection />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/good-actions" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <GoodActions />
                     </AppLayout>
                   </ProtectedRoute>
                 } />

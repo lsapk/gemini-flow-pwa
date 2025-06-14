@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,7 +14,6 @@ import {
   LogOut,
   Bot,
   Award,
-  Heart,
   Lightbulb
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -30,7 +28,6 @@ const navigation = [
   { name: "Analyse", href: "/analysis", icon: BarChart3 },
   { name: "Assistant IA", href: "/ai-assistant", icon: Bot },
   { name: "Réflexion", href: "/reflection", icon: Lightbulb },
-  { name: "Bonnes Actions", href: "/good-actions", icon: Heart },
   { name: "Badges", href: "/badges", icon: Award },
 ];
 
