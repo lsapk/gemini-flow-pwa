@@ -1,4 +1,3 @@
-
 import { Habit } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,50 +59,52 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
     }
   };
 
-  // Grouper les habitudes par catégorie pour l'affichage en cartes
+  // Grouping by category
   const habitsByCategory = {
-    health: habits.filter(h => h.category === 'health'),
-    productivity: habits.filter(h => h.category === 'productivity'),
-    personal: habits.filter(h => h.category === 'personal'),
-    other: habits.filter(h => !h.category || !['health', 'productivity', 'personal'].includes(h.category))
+    health: habits.filter((h) => h.category === "health"),
+    productivity: habits.filter((h) => h.category === "productivity"),
+    personal: habits.filter((h) => h.category === "personal"),
+    other: habits.filter(
+      (h) =>
+        !h.category ||
+        !["health", "productivity", "personal"].includes(h.category)
+    ),
   };
 
   const categoryLabels = {
-    health: { name: 'Santé', color: getCategoryColor('health') },
-    productivity: { name: 'Productivité', color: getCategoryColor('productivity') },
-    personal: { name: 'Personnel', color: getCategoryColor('personal') },
-    other: { name: 'Autre', color: getCategoryColor('other') }
+    health: { name: "Santé", color: getCategoryColor("health") },
+    productivity: { name: "Productivité", color: getCategoryColor("productivity") },
+    personal: { name: "Personnel", color: getCategoryColor("personal") },
+    other: { name: "Autre", color: getCategoryColor("other") },
   };
 
+  // Ajout de la section 4 blocs blancs "cartes"
   return (
     <div className="space-y-6">
-      {/* Vue en cartes par catégorie */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(habitsByCategory).map(([category, categoryHabits]) => {
-          const label = categoryLabels[category as keyof typeof categoryLabels];
-          const totalStreak = categoryHabits.reduce((sum, habit) => sum + (habit.streak || 0), 0);
-          
+      {/* Cartes catégorie */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {Object.entries(categoryLabels).map(([key, label]) => {
+          const count = habitsByCategory[key as keyof typeof habitsByCategory]?.length || 0;
+          const streak = habitsByCategory[key as keyof typeof habitsByCategory]?.reduce((sum, h) => sum + (h.streak || 0), 0);
+
           return (
-            <Card key={category} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6 text-center">
-                <div className={`w-12 h-12 ${label.color.bg} rounded-full mx-auto mb-3 flex items-center justify-center`}>
-                  <Circle className={`h-6 w-6 ${label.color.icon}`} />
-                </div>
-                <h3 className={`font-medium mb-1 ${label.color.text}`}>{label.name}</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {categoryHabits.length} habitude{categoryHabits.length > 1 ? 's' : ''}
-                </p>
-                {categoryHabits.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    🔥 Série totale: {totalStreak}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div
+              key={key}
+              className="bg-white rounded-xl shadow p-5 flex flex-col items-center"
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${label.color.bg}`}>
+                {/* Placeholder icon */}
+                <span className={`text-2xl ${label.color.icon}`}>🔥</span>
+              </div>
+              <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
+              <div className="text-xs text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
+              {count > 0 && (
+                <div className="text-xs text-muted-foreground mt-1">Série totale : {streak}</div>
+              )}
+            </div>
           );
         })}
       </div>
-
       {/* Liste détaillée des habitudes */}
       <div className="space-y-3">
         {habits.map((habit) => (

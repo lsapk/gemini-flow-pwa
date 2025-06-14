@@ -21,25 +21,32 @@ class BackgroundFocusService {
   }
 
   startSession(id: string, title: string, duration: number): void {
+    let alreadyRunning = this.sessions.has(id);
+    if (alreadyRunning) {
+      this.stopSession(id);
+    }
     const session: FocusSession = {
       id,
       title,
-      duration: duration * 60, // Convert minutes to seconds
+      duration: duration * 60, // mins to seconds
       startTime: Date.now(),
-      isRunning: true
+      isRunning: true,
     };
 
     this.sessions.set(id, session);
-    
-    // Create interval for this session
+
+    // Clear any previous interval
+    this.clearInterval(id);
+
+    // Crée un nouvel intervalle toutes les secondes
     const interval = setInterval(() => {
       this.updateSession(id);
     }, 1000);
-    
+
     this.intervals.set(id, interval);
-    
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
+
+    // Demander la permission de notification si besoin
+    if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
   }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,8 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
+import Sidebar from "@/components/layout/Sidebar"; // Affichage sidebar
+import { useLocation } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -51,7 +52,7 @@ export default function AIAssistant() {
             timestamp: new Date(msg.timestamp)
           })));
         } catch (error) {
-          console.error('Erreur lors du chargement de la conversation:', error);
+          console.error("Erreur lors du chargement de la conversation:", error);
         }
       }
     }
@@ -75,7 +76,6 @@ export default function AIAssistant() {
     }
   }, [messages]);
 
-  // Fonction pour effacer la conversation
   const clearConversation = () => {
     setMessages([]);
     if (user) {
@@ -146,9 +146,8 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Récupérer les données utilisateur complètes
       const userData = await getUserData();
-      
+
       // Préparer les messages récents pour la mémoire (derniers 10)
       const recentMessages = messages.slice(-10).map(msg => ({
         role: msg.role,
@@ -166,25 +165,36 @@ export default function AIAssistant() {
         }
       });
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      // Nettoyer la réponse : évite l'affichage d’objet technique/residu JSON
+      let assistantContent = data.response || "Désolé, je n'ai pas pu traiter votre demande.";
+      // Enlève tout bloc de code ou contenu JSON de la réponse, focus sur les phrases utiles pour utilisateur
+      assistantContent = assistantContent
+        .replace(/```json[\s\S]*?```/g, "")
+        .replace(/\{[\s\S]*?"action"[\s\S]*?\}/g, "")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/json[\s\S]*?\}/gi, "");
+
+      // Ajoute un 🎉 si action_result existe (création d'élément, etc.)
+      if (data.action_result) {
+        if (!assistantContent.includes("créé")) {
+          assistantContent += "\n\nÉlément créé avec succès ! 🎉";
+        } else if (!assistantContent.includes("🎉")) {
+          assistantContent += " 🎉";
+        }
+        refetch();
+        toast.success("Action exécutée avec succès !");
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || "Désolé, je n'ai pas pu traiter votre demande.",
+        content: assistantContent.trim(),
         role: 'assistant',
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      // Si une action a été exécutée, on rafraîchit les données
-      if (data.action_result) {
-        refetch();
-        toast.success("Action exécutée avec succès !");
-      }
-
     } catch (error) {
       console.error('Erreur:', error);
       const errorMessage: Message = {
@@ -207,122 +217,124 @@ export default function AIAssistant() {
     }
   };
 
+  // Layout avec sidebar, comme le reste de l’app
   return (
-    <div className="container mx-auto p-4 h-screen flex flex-col">
-      <Card className="flex-1 flex flex-col">
-        <CardHeader className="flex-shrink-0">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              Assistant IA DeepFlow
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={clearConversation}
-              disabled={messages.length === 0}
-            >
-              Effacer
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="flex-1 flex flex-col p-0">
-          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-            <div className="space-y-4">
-              {messages.length === 0 && (
-                <div className="text-center text-muted-foreground py-8">
-                  <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
-                  <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel.</p>
-                  <p className="text-sm">
-                    Je peux vous aider à créer des tâches, habitudes, objectifs, analyser votre productivité et bien plus encore !
-                  </p>
-                </div>
-              )}
-              
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex-1 container mx-auto p-4 flex flex-col h-screen">
+        <Card className="flex-1 flex flex-col">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className="h-6 w-6 text-primary" />
+                Assistant IA DeepFlow
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearConversation}
+                disabled={messages.length === 0}
+              >
+                Effacer
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col p-0">
+            <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+              <div className="space-y-4">
+                {messages.length === 0 && (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
+                    <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
+                    <p className="text-sm">
+                      Je peux vous aider à créer des tâches, habitudes, objectifs, analyser votre productivité et bien plus encore ! 🚀
+                    </p>
+                  </div>
+                )}
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.role === 'assistant' && (
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarFallback>
+                          <Bot className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+
+                    <div
+                      className={`max-w-[70%] rounded-lg p-3 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.role === 'assistant' ? (
+                        <Markdown content={message.content} />
+                      ) : (
+                        <p className="text-sm">{message.content}</p>
+                      )}
+                      <p className="text-xs opacity-70 mt-2">
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+
+                    {message.role === 'user' && (
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex gap-3 justify-start">
                     <Avatar className="w-8 h-8 flex-shrink-0">
                       <AvatarFallback>
                         <Bot className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                  )}
-                  
-                  <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {message.role === 'assistant' ? (
-                      <Markdown content={message.content} />
-                    ) : (
-                      <p className="text-sm">{message.content}</p>
-                    )}
-                    <p className="text-xs opacity-70 mt-2">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                  
-                  {message.role === 'user' && (
-                    <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarFallback>
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback>
-                      <Bot className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="bg-muted rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">En train de réfléchir...</span>
+                    <div className="bg-muted rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">
+                          En train de réfléchir... 🤔
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          
-          <div className="border-t p-4 flex-shrink-0">
-            <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Tapez votre message..."
-                disabled={isLoading}
-                className="flex-1"
-              />
-              <Button 
-                onClick={sendMessage} 
-                disabled={isLoading || !input.trim()}
-                size="icon"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
                 )}
-              </Button>
+              </div>
+            </ScrollArea>
+            <div className="border-t p-4 flex-shrink-0">
+              <div className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Tapez votre message..."
+                  disabled={isLoading}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={isLoading || !input.trim()}
+                  size="icon"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

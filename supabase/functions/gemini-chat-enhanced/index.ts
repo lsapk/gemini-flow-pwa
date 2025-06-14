@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -169,14 +168,21 @@ serve(async (req) => {
       }
     }
 
-    // Construire le prompt avec le contexte utilisateur amélioré et la mémoire
-    const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
+    // Construire le prompt avec consignes d’emoji et sans mentionner JSON/en dev.
+    const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
+Tu parles TOUJOURS en français. 
+Tu dois TOUJOURS utiliser des emojis adaptés (conseils, encouragement, félicitations, explication…) dans tes réponses à l’utilisateur (1 à 3 par réponse).
+Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
+Ne dis JAMAIS le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
+Si tu crées un élément (tâche, habitude, objectif, journal), dis uniquement "Tâche créée ! 🎉" ou "Habitude créée ! 🎉" (ou l’équivalent adapté), MOTIVE l'utilisateur, et n’affiche jamais le format de requête pour la création. 
+Jamais d’explication sur le format ou comment tu fais, dis le résultat et basta.
+Utilise le contexte/mémoire des échanges et apporte encouragement ou synthèse personnalisée avec emoji.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
 
 HISTORIQUE RÉCENT DE CONVERSATION:
-${context?.recent_messages?.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
+${context?.recent_messages?.map((msg) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
 
 CONTEXTE MÉMOIRE:
 - Rappelle-toi des préférences et objectifs de l'utilisateur mentionnés précédemment
@@ -190,30 +196,14 @@ CAPACITÉS:
 - Fournir des statistiques précises et des analyses approfondies
 - Proposer des améliorations concrètes et réalisables
 
-CRÉATION D'ÉLÉMENTS:
-Quand l'utilisateur demande de créer quelque chose, identifie clairement l'intention et propose la création. Utilise ce format JSON précis:
-
-Pour créer une TÂCHE:
-{"action": {"type": "create_task", "data": {"title": "titre exact", "description": "description détaillée", "priority": "high|medium|low", "due_date": "YYYY-MM-DD ou null"}}}
-
-Pour créer une HABITUDE:
-{"action": {"type": "create_habit", "data": {"title": "titre exact", "description": "description détaillée", "frequency": "daily|weekly|monthly", "category": "health|productivity|personal", "target": nombre_entier}}}
-
-Pour créer un OBJECTIF:
-{"action": {"type": "create_goal", "data": {"title": "titre exact", "description": "description détaillée", "category": "personal|professional|health|finance", "target_date": "YYYY-MM-DD ou null"}}}
-
-Pour créer une ENTRÉE DE JOURNAL:
-{"action": {"type": "create_journal", "data": {"title": "titre exact", "content": "contenu détaillé", "mood": "excellent|good|neutral|bad|terrible", "tags": ["tag1", "tag2"]}}}
-
 INSTRUCTIONS:
-- Réponds TOUJOURS en français
-- Utilise les données réelles pour donner des conseils personnalisés et précis
+- Réponds TOUJOURS en français et avec des emojis adaptés
 - Sois encourageant, constructif et empathique
 - Propose des actions concrètes et réalisables
 - Utilise un ton amical et professionnel
-- Si l'utilisateur demande de créer quelque chose, génère le JSON approprié après ton explication
-- Garde une mémoire des interactions passées pour améliorer la continuité
-- Limite tes réponses à 500 mots maximum sauf pour les analyses détaillées`;
+- Si l'utilisateur demande de créer quelque chose, réponds uniquement par une phrase positive signalant la création ("Habitude créée ! 🎉" etc.) sans aucun code ni format.
+
+`;
 
     console.log("Calling Gemini API...");
     
@@ -253,7 +243,17 @@ INSTRUCTIONS:
       });
     }
 
+    // Après réception :
     const data = await response.json();
+    let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
+
+    // Nettoie toutes mentions de code/JSON
+    aiResponse = aiResponse
+      .replace(/```json[\s\S]*?```/g, "")
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/JSON/gi, "")
+      .replace(/\{[\s\S]*?"action"[\s\S]*?\}/g, "");
+
     console.log("Gemini response received:", data);
 
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
