@@ -34,53 +34,6 @@ export default function HabitList({ habits, loading, onDelete }: HabitListProps)
     );
   }
 
-  if (habits.length === 0) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Cartes d'état vides */}
-        <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
-          <CardContent className="p-6 text-center">
-            <div className="w-8 h-8 bg-green-100 rounded-full mx-auto mb-3 flex items-center justify-center">
-              <Circle className="h-4 w-4 text-green-600" />
-            </div>
-            <h3 className="font-medium text-green-700 mb-1">Santé</h3>
-            <p className="text-sm text-muted-foreground">0 habitude</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
-          <CardContent className="p-6 text-center">
-            <div className="w-8 h-8 bg-blue-100 rounded-full mx-auto mb-3 flex items-center justify-center">
-              <Circle className="h-4 w-4 text-blue-600" />
-            </div>
-            <h3 className="font-medium text-blue-700 mb-1">Productivité</h3>
-            <p className="text-sm text-muted-foreground">0 habitude</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
-          <CardContent className="p-6 text-center">
-            <div className="w-8 h-8 bg-purple-100 rounded-full mx-auto mb-3 flex items-center justify-center">
-              <Circle className="h-4 w-4 text-purple-600" />
-            </div>
-            <h3 className="font-medium text-purple-700 mb-1">Personnel</h3>
-            <p className="text-sm text-muted-foreground">0 habitude</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
-          <CardContent className="p-6 text-center">
-            <div className="w-8 h-8 bg-orange-100 rounded-full mx-auto mb-3 flex items-center justify-center">
-              <Circle className="h-4 w-4 text-orange-600" />
-            </div>
-            <h3 className="font-medium text-orange-700 mb-1">Autre</h3>
-            <p className="text-sm text-muted-foreground">0 habitude</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const getCategoryColor = (category?: string) => {
     switch (category) {
       case "health":

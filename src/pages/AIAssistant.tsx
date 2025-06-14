@@ -1,72 +1,95 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Loader2, RefreshCw, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { Markdown } from "@/components/Markdown";
-import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/Sidebar";
-import { useMediaQuery } from "@/hooks/use-mobile";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import MobileHeader from "@/components/layout/MobileHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { useAnalyticsData } from "@/hooks/useAnalyticsData";
+import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Markdown } from "@/components/Markdown";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
   content: string;
+  role: 'user' | 'assistant';
   timestamp: Date;
 }
 
+const STORAGE_KEY = 'deepflow_ai_conversation';
+
 export default function AIAssistant() {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // Charger les messages depuis localStorage
-    const savedMessages = localStorage.getItem('ai-assistant-messages');
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        return parsed.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-      } catch (e) {
-        console.error('Error loading saved messages:', e);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { 
+    habitsData, 
+    tasksData, 
+    focusData, 
+    activityData, 
+    taskCompletionRate, 
+    totalFocusTime, 
+    streakCount,
+    refetch 
+  } = useAnalyticsData();
+
+  // Charger la conversation depuis localStorage au démarrage
+  useEffect(() => {
+    if (user) {
+      const storageKey = `${STORAGE_KEY}_${user.id}`;
+      const savedConversation = localStorage.getItem(storageKey);
+      if (savedConversation) {
+        try {
+          const parsedMessages = JSON.parse(savedConversation);
+          setMessages(parsedMessages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          })));
+        } catch (error) {
+          console.error('Erreur lors du chargement de la conversation:', error);
+        }
       }
     }
-    
-    return [
-      {
-        id: '1',
-        role: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant IA personnel pour DeepFlow. J\'ai maintenant accès à toutes vos données et je peux vous aider avec vos objectifs de productivité, analyser vos habitudes, **créer des tâches, habitudes et objectifs**, et vous donner des conseils personnalisés basés sur vos vraies données. Comment puis-je vous aider aujourd\'hui ?',
-        timestamp: new Date()
-      }
-    ];
-  });
-  
-  const [inputMessage, setInputMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userData, setUserData] = useState<any>({});
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { user } = useAuth();
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  }, [user]);
 
-  // Sauvegarder les messages dans localStorage
+  // Sauvegarder la conversation dans localStorage à chaque changement
   useEffect(() => {
-    localStorage.setItem('ai-assistant-messages', JSON.stringify(messages));
+    if (user && messages.length > 0) {
+      const storageKey = `${STORAGE_KEY}_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    }
+  }, [messages, user]);
+
+  // Auto-scroll vers le bas
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
   }, [messages]);
 
-  const fetchAllUserData = useCallback(async () => {
-    if (!user) return;
+  // Fonction pour effacer la conversation
+  const clearConversation = () => {
+    setMessages([]);
+    if (user) {
+      const storageKey = `${STORAGE_KEY}_${user.id}`;
+      localStorage.removeItem(storageKey);
+    }
+    toast.success("Conversation effacée");
+  };
 
-    console.log("Fetching user data for AI Assistant...");
-    setIsRefreshing(true);
+  const getUserData = async () => {
+    if (!user) return {};
 
     try {
+      // Récupérer toutes les données utilisateur
       const [
         tasksResult,
         habitsResult,
@@ -74,155 +97,104 @@ export default function AIAssistant() {
         journalResult,
         focusResult,
         profileResult,
-        settingsResult,
-        reflectionsResult
+        settingsResult
       ] = await Promise.allSettled([
-        supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('tasks').select('*').eq('user_id', user.id),
+        supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('user_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('user_settings').select('*').eq('id', user.id).single(),
-        supabase.from('daily_reflections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+        supabase.from('user_settings').select('*').eq('id', user.id).single()
       ]);
 
-      const newUserData = {
+      return {
         tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []) : [],
         habits: habitsResult.status === 'fulfilled' ? (habitsResult.value.data || []) : [],
         goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []) : [],
         journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []) : [],
         focus_sessions: focusResult.status === 'fulfilled' ? (focusResult.value.data || []) : [],
-        daily_reflections: reflectionsResult.status === 'fulfilled' ? (reflectionsResult.value.data || []) : [],
-        user_profile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
-        user_settings: settingsResult.status === 'fulfilled' ? settingsResult.value.data : null,
-        user_id: user.id,
-        user_email: user.email,
-        timestamp: new Date().toISOString(),
-        summary: {
-          total_tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []).length : 0,
-          completed_tasks: tasksResult.status === 'fulfilled' ? (tasksResult.value.data || []).filter((t: any) => t.completed).length : 0,
-          total_habits: habitsResult.status === 'fulfilled' ? (habitsResult.value.data || []).length : 0,
-          total_goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []).length : 0,
-          completed_goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []).filter((g: any) => g.completed).length : 0,
-          total_focus_time: focusResult.status === 'fulfilled' ? (focusResult.value.data || []).reduce((sum: number, session: any) => sum + (session.duration || 0), 0) : 0,
-          total_journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []).length : 0
+        profile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
+        settings: settingsResult.status === 'fulfilled' ? settingsResult.value.data : null,
+        analytics: {
+          taskCompletionRate,
+          totalFocusTime,
+          streakCount,
+          habitsCount: habitsData.length,
+          focusSessionsCount: focusData.length,
+          activityCount: activityData.reduce((sum, day) => sum + day.count, 0)
         }
       };
-
-      setUserData(newUserData);
-      console.log("User data fetched successfully:", newUserData.summary);
-
     } catch (error) {
       console.error('Erreur lors de la récupération des données utilisateur:', error);
-      toast.error('Erreur lors de la récupération des données');
-    } finally {
-      setIsRefreshing(false);
+      return {};
     }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      fetchAllUserData();
-    }
-  }, [user, fetchAllUserData]);
-
-  const clearConversation = () => {
-    const initialMessage = {
-      id: '1',
-      role: 'assistant' as const,
-      content: 'Bonjour ! Je suis votre assistant IA personnel pour DeepFlow. J\'ai maintenant accès à toutes vos données et je peux vous aider avec vos objectifs de productivité, analyser vos habitudes, **créer des tâches, habitudes et objectifs**, et vous donner des conseils personnalisés basés sur vos vraies données. Comment puis-je vous aider aujourd\'hui ?',
-      timestamp: new Date()
-    };
-    setMessages([initialMessage]);
-    toast.success('Conversation effacée');
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !user) return;
+    if (!input.trim() || !user) return;
 
-    const userMessage: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
+      content: input,
       role: 'user',
-      content: inputMessage,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputMessage;
-    setInputMessage('');
+    setMessages(prev => [...prev, newMessage]);
+    setInput("");
     setIsLoading(true);
 
     try {
-      // Rafraîchir les données avant l'envoi
-      await fetchAllUserData();
-
-      console.log("Sending message to AI with context:", {
-        message: currentInput,
-        user_id: user.id,
-        userDataSummary: userData.summary
-      });
+      // Récupérer les données utilisateur complètes
+      const userData = await getUserData();
+      
+      // Préparer les messages récents pour la mémoire (derniers 10)
+      const recentMessages = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: currentInput,
+          message: input,
           user_id: user.id,
           context: {
             user_data: userData,
-            recent_messages: messages.slice(-10).map(m => ({
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp
-            }))
+            recent_messages: recentMessages
           }
         }
       });
 
       if (error) {
-        console.error('Supabase function error:', error);
         throw error;
-      }
-
-      console.log("AI response received:", data);
-
-      let responseContent = data.response || 'Désolé, je n\'ai pas pu traiter votre demande.';
-      
-      // Gérer les erreurs de l'IA
-      if (data.error) {
-        responseContent = data.response || 'Une erreur s\'est produite. Veuillez réessayer.';
-        toast.error('Erreur de l\'assistant IA');
-      }
-
-      // Si une action a été exécutée avec succès
-      if (data.action_result) {
-        toast.success('Élément créé avec succès !');
-        // Rafraîchir les données après création
-        setTimeout(() => {
-          fetchAllUserData();
-        }, 1000);
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
+        content: data.response || "Désolé, je n'ai pas pu traiter votre demande.",
         role: 'assistant',
-        content: responseContent,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
+      // Si une action a été exécutée, on rafraîchit les données
+      if (data.action_result) {
+        refetch();
+        toast.success("Action exécutée avec succès !");
+      }
+
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      toast.error('Erreur lors de la communication avec l\'assistant IA');
-      
+      console.error('Erreur:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
+        content: "Désolé, une erreur s'est produite. Veuillez réessayer.",
         role: 'assistant',
-        content: 'Désolé, je rencontre des difficultés techniques. Veuillez réessayer dans quelques instants.',
         timestamp: new Date()
       };
-      
       setMessages(prev => [...prev, errorMessage]);
+      toast.error("Erreur lors de l'envoi du message");
     } finally {
       setIsLoading(false);
     }
@@ -235,60 +207,54 @@ export default function AIAssistant() {
     }
   };
 
-  const sidebarContent = <Sidebar onItemClick={() => setSidebarOpen(false)} />;
-
-  const renderContent = () => (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Bot className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Assistant IA</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchAllUserData}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearConversation}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
+  return (
+    <div className="container mx-auto p-4 h-screen flex flex-col">
       <Card className="flex-1 flex flex-col">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Conversation avec votre assistant IA</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Accès complet à vos données : {userData.summary?.total_tasks || 0} tâches, {userData.summary?.total_habits || 0} habitudes, {userData.summary?.total_goals || 0} objectifs, {userData.summary?.total_journal_entries || 0} entrées journal
-          </p>
+        <CardHeader className="flex-shrink-0">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-6 w-6 text-primary" />
+              Assistant IA DeepFlow
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearConversation}
+              disabled={messages.length === 0}
+            >
+              Effacer
+            </Button>
+          </CardTitle>
         </CardHeader>
         
         <CardContent className="flex-1 flex flex-col p-0">
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
             <div className="space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
+                  <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel.</p>
+                  <p className="text-sm">
+                    Je peux vous aider à créer des tâches, habitudes, objectifs, analyser votre productivité et bien plus encore !
+                  </p>
+                </div>
+              )}
+              
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex items-start gap-3 ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
+                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {message.role === 'assistant' && (
-                    <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Bot className="h-4 w-4 text-primary" />
-                    </div>
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarFallback>
+                        <Bot className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
                   )}
                   
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                    className={`max-w-[70%] rounded-lg p-3 ${
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
@@ -299,50 +265,53 @@ export default function AIAssistant() {
                     ) : (
                       <p className="text-sm">{message.content}</p>
                     )}
-                    <div className="text-xs opacity-70 mt-1">
+                    <p className="text-xs opacity-70 mt-2">
                       {message.timestamp.toLocaleTimeString()}
-                    </div>
+                    </p>
                   </div>
-
+                  
                   {message.role === 'user' && (
-                    <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary-foreground" />
-                    </div>
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
                   )}
                 </div>
               ))}
               
               {isLoading && (
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-primary" />
-                  </div>
+                <div className="flex gap-3 justify-start">
+                  <Avatar className="w-8 h-8 flex-shrink-0">
+                    <AvatarFallback>
+                      <Bot className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="bg-muted rounded-lg p-3">
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">L'assistant analyse vos données...</span>
+                      <span className="text-sm">En train de réfléchir...</span>
                     </div>
                   </div>
                 </div>
               )}
             </div>
           </ScrollArea>
-
-          <div className="border-t p-4">
+          
+          <div className="border-t p-4 flex-shrink-0">
             <div className="flex gap-2">
-              <Textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Demandez-moi de créer une tâche, analyser vos habitudes, ou autre... (Entrée pour envoyer)"
-                className="min-h-[60px] resize-none"
+                placeholder="Tapez votre message..."
                 disabled={isLoading}
+                className="flex-1"
               />
-              <Button
-                onClick={sendMessage}
-                disabled={!inputMessage.trim() || isLoading}
+              <Button 
+                onClick={sendMessage} 
+                disabled={isLoading || !input.trim()}
                 size="icon"
-                className="self-end"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -354,31 +323,6 @@ export default function AIAssistant() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-background">
-        <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
-        <Drawer open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <DrawerContent>
-            {sidebarContent}
-          </DrawerContent>
-        </Drawer>
-        <div className="pt-14 px-3 sm:px-6 pb-6">
-          {renderContent()}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen w-full">
-      {sidebarContent}
-      <div className="flex-1 px-3 sm:px-6 py-6">
-        {renderContent()}
-      </div>
     </div>
   );
 }
