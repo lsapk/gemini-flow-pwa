@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Award, Badge as BadgeIcon, Flame, Star, Users, Trophy, Zap } from "lucide-react";
+import { Award, Badge as BadgeIcon, Flame, Star, Users, Trophy, Zap, Check } from "lucide-react";
 import { BadgeProgressBar } from "@/components/ui/BadgeProgressBar";
+import { BadgeCheck } from "lucide-react";
 
 interface UserBadge {
   id: string;
@@ -325,22 +326,22 @@ export default function Badges() {
   const percentEarned = totalBadges > 0 ? Math.round((earnedCount / totalBadges) * 100) : 0;
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
+    <div className="container mx-auto px-1 sm:px-6 py-2 sm:py-6 space-y-6 max-w-6xl">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight flex justify-center items-center gap-2">
-          <BadgeIcon className="h-7 w-7 text-primary animate-bounce" />
+        <h1 className="text-3xl sm:text-4xl font-heading font-bold tracking-tight flex justify-center items-center gap-2">
+          <BadgeIcon className="h-8 w-8 text-primary animate-bounce drop-shadow-md" />
           Badges & Récompenses
         </h1>
-        <p className="text-muted-foreground mt-2">
-          Vos accomplissements et récompenses
+        <p className="text-muted-foreground mt-2 text-base sm:text-lg">
+          <span className="hidden sm:inline">💎</span> Vos accomplissements et récompenses <span className="hidden sm:inline">🌱</span>
         </p>
       </div>
-
+      
       {/* Global Progress */}
-      <Card className="border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-white/90 animate-fade-in">
+      <Card className="border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-white/90 animate-fade-in shadow-xl">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-center gap-y-3 gap-x-8">
-            <div className="flex-1">
+            <div className="flex-1 w-full">
               <BadgeProgressBar
                 label="Progression Globale"
                 value={earnedCount}
@@ -349,8 +350,8 @@ export default function Badges() {
               />
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-3xl font-bold text-primary animate-pulse">{percentEarned}%</span>
-              <span className="text-sm text-muted-foreground">Complété</span>
+              <span className="text-4xl sm:text-5xl font-black text-primary animate-pulse drop-shadow-lg">{percentEarned}%</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">Complété</span>
             </div>
           </div>
         </CardContent>
@@ -359,9 +360,12 @@ export default function Badges() {
       {/* Category Progression */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Object.entries(categoryMeta).map(([cat, meta]) => (
-          <Card key={cat} className={`border-2 border-${meta.color}-200`}>
+          <Card
+            key={cat}
+            className={`border-2 border-${meta.color}-200 shadow-sm hover:shadow-lg hover:scale-105 transition-all`}
+          >
             <CardContent className="p-3 flex flex-col items-center">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 mb-1">
                 {meta.icon}
                 <span className="font-semibold">{meta.label}</span>
               </div>
@@ -378,17 +382,22 @@ export default function Badges() {
 
       {/* Dernier badge gagné ! */}
       {latestEarnedBadge && (
-        <Card className="bg-gradient-to-r from-green-50 via-white to-blue-50 border-green-200 shadow animate-scale-in">
+        <Card className="relative overflow-hidden border-green-200 shadow animate-scale-in bg-gradient-to-r from-green-50 via-white to-blue-50">
+          <div className="absolute -top-5 right-2 opacity-20 pointer-events-none text-green-200 text-[5rem]">
+            <Award className="w-24 h-24 sm:w-32 sm:h-32" />
+          </div>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-green-700">
               <Award className="text-green-400" />
               Nouveau badge obtenu&nbsp;!
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="text-4xl animate-bounce">{latestEarnedBadge.icon}</div>
+            <div className="text-4xl sm:text-6xl animate-bounce rounded-full bg-green-100 p-2 shadow-lg border-2 border-green-200">
+              {latestEarnedBadge.icon}
+            </div>
             <div>
-              <div className="font-semibold mb-1">{latestEarnedBadge.name}</div>
+              <div className="font-bold text-base sm:text-xl mb-1 text-green-900">{latestEarnedBadge.name}</div>
               <div className="text-sm text-muted-foreground">{latestEarnedBadge.description}</div>
             </div>
             <div className="flex-1" />
@@ -399,65 +408,65 @@ export default function Badges() {
 
       {/* Earned Badges par catégorie */}
       {Object.entries(categoryMeta).map(([cat, meta]) => (
-        <Card key={cat + "-earned"} className="mt-4 animate-fade-in">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              {meta.icon}
-              {meta.label} ({categoryCounts[cat as UserBadge['category']].earned}/{categoryCounts[cat as UserBadge['category']].total})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {badgesByCategory[cat as UserBadge['category']]
-                ?.filter(b => b.earned)
-                .map((badge) => (
-                  <div
-                    key={badge.id}
-                    className={`p-4 rounded-lg border-2 border-${meta.color}-200 bg-white flex flex-col items-center gap-2 transition-transform animate-scale-in hover:scale-105`}
-                  >
-                    <span className="text-3xl">{badge.icon}</span>
-                    <div className="font-semibold">{badge.name}</div>
-                    <div className="text-sm text-muted-foreground">{badge.description}</div>
-                    <Badge variant="secondary" className="text-xs">{meta.label}</Badge>
+        <div key={cat + "-earned"} className="mt-4">
+          <div className="flex items-center mb-1 gap-2 px-2 sm:px-0">
+            {meta.icon}
+            <h2 className={`font-heading font-semibold text-lg sm:text-xl text-${meta.color}-600`}>
+              {meta.label}&nbsp;<span className="font-normal text-gray-400">({categoryCounts[cat as UserBadge['category']].earned}/{categoryCounts[cat as UserBadge['category']].total})</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+            {badgesByCategory[cat as UserBadge['category']]
+              ?.filter(b => b.earned)
+              .map((badge) => (
+                <div
+                  key={badge.id}
+                  className={`relative group p-4 rounded-xl border-2 border-${meta.color}-200 bg-gradient-to-br from-white via-${meta.color}-50 to-white flex flex-col items-center gap-3 transition-all animate-scale-in hover:scale-105 hover:shadow-xl min-h-[140px]`}
+                >
+                  <span className={`text-3xl sm:text-4xl drop-shadow-lg`}>{badge.icon}</span>
+                  <div className="font-semibold text-sm sm:text-base text-gray-900 text-center">{badge.name}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground text-center">{badge.description}</div>
+                  <Badge variant="secondary" className="absolute bottom-2 left-1 right-1 mx-2 text-xs py-0.5">{meta.label}</Badge>
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-green-400">
+                    <BadgeCheck className="w-5 h-5" />
                   </div>
-              ))}
-              {/* Cas pas de badge débloqué */}
-              {(!badgesByCategory[cat as UserBadge['category']] ||
-                badgesByCategory[cat as UserBadge['category']].filter(b => b.earned).length === 0) && (
-                <div className="text-center py-8 col-span-full opacity-60">
-                  <BadgeIcon className="mx-auto h-8 w-8" />
-                  <div className="text-sm">Aucun badge {meta.label} débloqué</div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+            {(!badgesByCategory[cat as UserBadge['category']] ||
+              badgesByCategory[cat as UserBadge['category']].filter(b => b.earned).length === 0) && (
+              <div className="text-center py-8 col-span-full opacity-60">
+                <BadgeIcon className="mx-auto h-8 w-8" />
+                <div className="text-sm">Aucun badge {meta.label} débloqué</div>
+              </div>
+            )}
+          </div>
+        </div>
       ))}
 
       {/* Badges non encore obtenus */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Star className="text-gray-400" />
             Badges à débloquer ({unlockedBadges.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {unlockedBadges.map((badge) => (
               <div
                 key={badge.id}
-                className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50 opacity-75 relative flex flex-col items-center"
+                className="p-4 rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 opacity-80 relative flex flex-col items-center min-h-[120px] hover:scale-100 shadow-none"
               >
                 <div className="absolute top-2 right-2">
                   <Badge variant="outline" className="text-xs">
                     {categoryMeta[badge.category].label}
                   </Badge>
                 </div>
-                <div className="text-3xl mb-2 grayscale">{badge.icon}</div>
-                <h3 className="font-semibold mb-1 text-gray-600">{badge.name}</h3>
-                <p className="text-sm text-gray-500 mb-2">{badge.description}</p>
-                <div className="text-xs text-gray-400 italic">
+                <div className="text-3xl mb-2 grayscale opacity-60">{badge.icon}</div>
+                <h3 className="font-semibold mb-1 text-gray-600 text-sm text-center">{badge.name}</h3>
+                <p className="text-xs text-gray-500 mb-1 text-center">{badge.description}</p>
+                <div className="text-xs text-gray-400 italic text-center">
                   {badge.criteria}
                 </div>
               </div>
