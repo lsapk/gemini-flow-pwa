@@ -44,6 +44,19 @@ const DAILY_QUESTIONS = [
   "Qu'est-ce qui vous rend fier de votre journée ?",
   "Quel défi avez-vous surmonté ?",
   "Comment vous êtes-vous amélioré depuis hier ?",
+  // Nouvelles questions ajoutées :
+  "Quel a été le moment le plus paisible de votre journée ?",
+  "Qui ou quoi vous a inspiré aujourd'hui ?",
+  "Quel est le plus beau geste que vous avez reçu ou offert ?",
+  "Quelle idée aimeriez-vous explorer davantage demain ?",
+  "Sur quels objectifs avez-vous avancé aujourd'hui ?",
+  "Quelle émotion avez-vous le plus ressentie aujourd'hui et pourquoi ?",
+  "Quel compliment pourriez-vous vous faire ce soir ?",
+  "Quelle action simple a eu un impact positif sur votre journée ?",
+  "Comment avez-vous aidé quelqu’un ou reçu de l’aide ?",
+  "Quelle découverte vous a surpris aujourd'hui ?",
+  "Un moment où vous avez ressenti de la gratitude envers quelqu'un ?",
+  "Un défi qui vous semble aujourd’hui plus accessible qu’hier ?"
 ];
 
 export default function Reflection() {
