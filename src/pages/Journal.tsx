@@ -307,44 +307,62 @@ export default function Journal() {
       <div className={`${isMobile ? "flex flex-col gap-2 mb-3" : "flex flex-col md:flex-row gap-4 mb-4"}`}>
         {/* Statistiques */}
         <div className={isMobile ? "mb-0" : "flex-1"}>
-          <div className={`grid ${isMobile ? "grid-cols-1 gap-2" : "grid-cols-1 sm:grid-cols-3 gap-4"}`}>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total des entrées</p>
-                    <p className="text-2xl font-bold">{entries.length}</p>
-                  </div>
-                  <BookOpen className="h-8 w-8 text-blue-500" />
+          {/* Compact grid for mobile */}
+          <div className={`grid ${isMobile ? "grid-cols-3 gap-1" : "grid-cols-1 sm:grid-cols-3 gap-4"}`}>
+            <Card className={isMobile ? "p-0 shadow-none" : ""}>
+              <CardContent className={isMobile ? "p-2" : "p-4"}>
+                <div className="flex flex-col items-center justify-center">
+                  <BookOpen className={`${isMobile ? "h-5 w-5 mb-1 text-blue-500" : "h-8 w-8 text-blue-500"} mx-auto`} />
+                  <p className={`text-xs text-muted-foreground ${isMobile ? "mb-0.5" : ""}`}>Entrées</p>
+                  <p className="text-lg font-bold">{entries.length}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ce mois-ci</p>
-                    <p className="text-2xl font-bold">
-                      {entries.filter(entry => {
-                        const entryDate = new Date(entry.created_at);
-                        const now = new Date();
-                        return entryDate.getMonth() === now.getMonth() && 
-                               entryDate.getFullYear() === now.getFullYear();
-                      }).length}
-                    </p>
-                  </div>
-                  <Calendar className="h-8 w-8 text-green-500" />
+            <Card className={isMobile ? "p-0 shadow-none" : ""}>
+              <CardContent className={isMobile ? "p-2" : "p-4"}>
+                <div className="flex flex-col items-center justify-center">
+                  <Calendar className={`${isMobile ? "h-5 w-5 mb-1 text-green-500" : "h-8 w-8 text-green-500"} mx-auto`} />
+                  <p className={`text-xs text-muted-foreground ${isMobile ? "mb-0.5" : ""}`}>Mois</p>
+                  <p className="text-lg font-bold">
+                    {entries.filter(entry => {
+                      const entryDate = new Date(entry.created_at);
+                      const now = new Date();
+                      return entryDate.getMonth() === now.getMonth() && 
+                             entryDate.getFullYear() === now.getFullYear();
+                    }).length}
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Humeur dominante</p>
-                    <p className="text-sm font-bold">
+            <Card className={isMobile ? "p-0 shadow-none" : ""}>
+              <CardContent className={isMobile ? "p-2" : "p-4"}>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg">
+                      {(() => {
+                        const moodCounts = entries.reduce((acc, entry) => {
+                          if (entry.mood) {
+                            acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                          }
+                          return acc;
+                        }, {} as Record<string, number>);
+                        
+                        const topMood = Object.entries(moodCounts).sort(([,a], [,b]) => b - a)[0];
+                        // Emoji si label comprend emoji, sinon default
+                        if (topMood) {
+                          const moodInfo = getMoodInfo(topMood[0]);
+                          if (moodInfo && moodInfo.label) {
+                            const emoji = moodInfo.label.match(/([\u{1F600}-\u{1F64F}])/u);
+                            return emoji ? emoji[0] : "📝";
+                          }
+                        }
+                        return "📝";
+                      })()}
+                    </span>
+                    <p className={`text-xs text-muted-foreground ${isMobile ? "mb-0.5 mt-0" : ""}`}>Humeur</p>
+                    <p className="text-xs font-bold">
                       {(() => {
                         const moodCounts = entries.reduce((acc, entry) => {
                           if (entry.mood) {
@@ -356,22 +374,9 @@ export default function Journal() {
                         const topMood = Object.entries(moodCounts).sort(([,a], [,b]) => b - a)[0];
                         const moodInfo = topMood ? getMoodInfo(topMood[0]) : null;
                         
-                        return moodInfo ? moodInfo.label : 'Aucune';
+                        return moodInfo ? moodInfo.label.replace(/^[^a-zA-Z0-9]+/, "") : "Aucune";
                       })()}
                     </p>
-                  </div>
-                  <div className="text-2xl">
-                    {(() => {
-                      const moodCounts = entries.reduce((acc, entry) => {
-                        if (entry.mood) {
-                          acc[entry.mood] = (acc[entry.mood] || 0) + 1;
-                        }
-                        return acc;
-                      }, {} as Record<string, number>);
-                      
-                      const topMood = Object.entries(moodCounts).sort(([,a], [,b]) => b - a)[0];
-                      return topMood ? topMood[0].split(' ')[0] : '📝';
-                    })()}
                   </div>
                 </div>
               </CardContent>
