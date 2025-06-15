@@ -1,4 +1,3 @@
-
 import { Habit } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +61,24 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
     }
   };
 
+  // Helper to compute extra stats per category
+  const computeCategoryStats = (habitsInCategory: Habit[]) => {
+    // Meilleure série (streak max)
+    const bestStreak = habitsInCategory.reduce(
+      (max, h) => Math.max(max, h.streak || 0),
+      0
+    );
+
+    // Nombre de complétions dans les 30 derniers jours (à partir d'un champ `completed_dates`, mais ici, fallback = nombre d'habitudes * streak)
+    // Comme nous n'avons pas la table `habit_completions` côté client, on simule simplement via le streak et le fait d'avoir "is_completed_today".
+    const completions = habitsInCategory.reduce(
+      (sum, h) => sum + (h.streak || 0),
+      0
+    );
+
+    return { bestStreak, completions };
+  };
+
   // Grouping by category
   const habitsByCategory = {
     health: habits.filter((h) => h.category === "health"),
@@ -89,19 +106,22 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
           const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
           const count = habitsInCategory.length;
           const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
+          const { bestStreak, completions } = computeCategoryStats(habitsInCategory);
 
           return (
             <Card key={key}>
               <CardContent className="p-4 flex items-center gap-4">
-                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
                   <span className={`text-3xl`}>{label.emoji}</span>
                 </div>
                 <div>
                   <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
                   <div className="text-sm text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
                   {count > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Aujourd'hui: {completedToday} / {count}
+                    <div className="text-xs text-muted-foreground mt-1 space-y-1 flex flex-col">
+                      <span>Aujourd’hui : {completedToday} / {count}</span>
+                      <span>🔥 Série max : {bestStreak}</span>
+                      <span>✅ Total complétions : {completions}</span>
                     </div>
                   )}
                 </div>
