@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
@@ -18,6 +32,8 @@ export default function Habits() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -40,7 +56,7 @@ export default function Habits() {
             .select('*')
             .eq('habit_id', habit.id)
             .eq('completed_date', today)
-            .single();
+            .maybeSingle();
 
           return {
             ...habit,
@@ -68,14 +84,19 @@ export default function Habits() {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async (habitId: string) => {
-    if (!user) return;
+  const requestDelete = (habitId: string) => {
+    setHabitToDelete(habitId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!user || !habitToDelete) return;
 
     try {
       const { error } = await supabase
         .from('habits')
         .delete()
-        .eq('id', habitId)
+        .eq('id', habitToDelete)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -85,47 +106,65 @@ export default function Habits() {
     } catch (error) {
       console.error('Error deleting habit:', error);
       toast.error('Erreur lors de la suppression de l\'habitude');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setHabitToDelete(null);
     }
   };
 
-  const completeHabit = async (habitId: string) => {
+  const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { error } = await supabase
-        .from('habit_completions')
-        .insert({
-          habit_id: habitId,
-          user_id: user.id,
-          completed_date: today
-        });
+      if (isCompleted) {
+        // Un-complete the habit
+        const today = new Date().toISOString().split('T')[0];
+        const { error: deleteError } = await supabase
+          .from('habit_completions')
+          .delete()
+          .eq('habit_id', habitId)
+          .eq('user_id', user.id)
+          .eq('completed_date', today);
 
-      if (error) throw error;
+        if (deleteError) throw deleteError;
+        
+        const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
+        const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
+        
+        await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        
+        toast.info("L'habitude n'est plus marquée comme faite.");
+      } else {
+        // Complete the habit
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { error } = await supabase
+          .from('habit_completions')
+          .insert({
+            habit_id: habitId,
+            user_id: user.id,
+            completed_date: today
+          });
 
-      // Get current streak to increment it
-      const { data: currentHabit } = await supabase
-        .from('habits')
-        .select('streak')
-        .eq('id', habitId)
-        .single();
+        if (error) throw error;
 
-      const newStreak = (currentHabit?.streak || 0) + 1;
+        const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
+        const newStreak = (currentHabit?.streak || 0) + 1;
 
-      await supabase
-        .from('habits')
-        .update({
-          last_completed_at: new Date().toISOString(),
-          streak: newStreak
-        })
-        .eq('id', habitId);
+        await supabase
+          .from('habits')
+          .update({
+            last_completed_at: new Date().toISOString(),
+            streak: newStreak
+          })
+          .eq('id', habitId);
 
-      toast.success('Habitude complétée !');
+        toast.success('Habitude complétée !');
+      }
       fetchHabits();
     } catch (error) {
-      console.error('Error completing habit:', error);
-      toast.error('Erreur lors de la completion de l\'habitude');
+      console.error('Error toggling habit completion:', error);
+      toast.error("Erreur lors de la mise à jour de l'habitude");
     }
   };
 
@@ -179,9 +218,9 @@ export default function Habits() {
         <HabitList 
           habits={habits}
           loading={isLoading}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           onEdit={handleEdit}
-          onComplete={completeHabit}
+          onComplete={toggleHabitCompletion}
           onRefresh={fetchHabits}
         />
       )}
@@ -204,6 +243,21 @@ export default function Habits() {
           />
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. L'habitude sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

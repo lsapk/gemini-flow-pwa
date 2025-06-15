@@ -4,187 +4,85 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Play, Pause, Square, Timer } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface FocusSession {
-  id?: string;
+interface ActiveFocusSession {
+  id: string;
   title: string;
-  duration: number;
-  startTime: number;
-  isActive: boolean;
+  duration: number; // in minutes
+  startTime: number; // timestamp
+  userId: string;
+  isActive: boolean; // Add isActive to sync pause state
 }
 
 export const FocusTimer = () => {
-  const [session, setSession] = useState<FocusSession | null>(null);
+  const [session, setSession] = useState<ActiveFocusSession | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
+
+  const loadSession = () => {
+    const savedSession = localStorage.getItem('active_focus_session');
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession) as ActiveFocusSession;
+        if (parsed.startTime && parsed.duration) {
+          const elapsed = (Date.now() - parsed.startTime) / 1000;
+          const remaining = parsed.duration * 60 - elapsed;
+          
+          if (remaining > 0) {
+            setSession(parsed);
+            if (parsed.isActive) {
+              setTimeLeft(Math.ceil(remaining));
+            } else {
+              // If paused, we need to load the timeLeft saved by the main Focus page.
+              // This part is tricky without a single source of truth. We'll approximate.
+              // The main Focus page needs to save timeLeft on pause. Let's assume it does.
+              setTimeLeft(parsed.timeLeft || Math.ceil(remaining));
+            }
+          } else {
+            localStorage.removeItem('active_focus_session');
+            setSession(null);
+          }
+        } else {
+           localStorage.removeItem('active_focus_session');
+           setSession(null);
+        }
+      } catch (e) {
+        console.error("Failed to parse focus session", e);
+        localStorage.removeItem('active_focus_session');
+        setSession(null);
+      }
+    } else {
+      setSession(null);
+    }
+  };
 
   useEffect(() => {
-    // Restaurer une session depuis localStorage au démarrage
-    const savedSession = localStorage.getItem('focus_session');
-    if (savedSession) {
-      const parsed = JSON.parse(savedSession);
-      const elapsed = Date.now() - parsed.startTime;
-      const remaining = parsed.duration * 60 * 1000 - elapsed;
-      
-      if (remaining > 0 && parsed.isActive) {
-        setSession(parsed);
-        setTimeLeft(Math.ceil(remaining / 1000));
-        setIsVisible(true);
-      } else {
-        localStorage.removeItem('focus_session');
+    loadSession();
+    
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'active_focus_session') {
+        loadSession();
       }
-    }
-
-    // Écouter les messages pour démarrer une nouvelle session
-    const handleFocusStart = (event: CustomEvent) => {
-      const { title, duration } = event.detail;
-      startSession(title, duration);
     };
 
-    window.addEventListener('focus-start' as any, handleFocusStart);
-    return () => window.removeEventListener('focus-start' as any, handleFocusStart);
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(loadSession, 2000); // Check for session periodically
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
-    if (!session || !session.isActive) return;
-
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          completeSession();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
+    let timerInterval: number | undefined;
+    if (session && session.isActive) {
+      timerInterval = setInterval(() => {
+        setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timerInterval);
   }, [session]);
-
-  useEffect(() => {
-    // Sauvegarder la session dans localStorage
-    if (session) {
-      localStorage.setItem('focus_session', JSON.stringify(session));
-    } else {
-      localStorage.removeItem('focus_session');
-    }
-  }, [session]);
-
-  const startSession = (title: string, duration: number) => {
-    const newSession: FocusSession = {
-      title,
-      duration,
-      startTime: Date.now(),
-      isActive: true
-    };
-    
-    setSession(newSession);
-    setTimeLeft(duration * 60);
-    setIsVisible(true);
-    
-    toast({
-      title: "Session de focus démarrée",
-      description: `${title} - ${duration} minutes`,
-    });
-  };
-
-  const pauseSession = () => {
-    if (!session) return;
-    
-    setSession(prev => prev ? { ...prev, isActive: false } : null);
-    
-    toast({
-      title: "Session en pause",
-      description: "Votre session de focus a été mise en pause.",
-    });
-  };
-
-  const resumeSession = () => {
-    if (!session) return;
-    
-    const newSession = {
-      ...session,
-      isActive: true,
-      startTime: Date.now() - (session.duration * 60 * 1000 - timeLeft * 1000)
-    };
-    
-    setSession(newSession);
-    
-    toast({
-      title: "Session reprise",
-      description: "Votre session de focus a été reprise.",
-    });
-  };
-
-  const stopSession = async () => {
-    if (!session || !user) return;
-
-    try {
-      // Sauvegarder en base de données
-      const completedDuration = Math.max(0, session.duration * 60 - timeLeft);
-      
-      await supabase.from('focus_sessions').insert({
-        user_id: user.id,
-        title: session.title,
-        duration: completedDuration,
-        started_at: new Date(session.startTime).toISOString(),
-        completed_at: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Error saving focus session:', error);
-    }
-
-    setSession(null);
-    setTimeLeft(0);
-    setIsVisible(false);
-    
-    toast({
-      title: "Session arrêtée",
-      description: "Votre session de focus a été arrêtée.",
-    });
-  };
-
-  const completeSession = async () => {
-    if (!session || !user) return;
-
-    try {
-      // Sauvegarder en base de données
-      await supabase.from('focus_sessions').insert({
-        user_id: user.id,
-        title: session.title,
-        duration: session.duration * 60,
-        started_at: new Date(session.startTime).toISOString(),
-        completed_at: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Error saving focus session:', error);
-    }
-
-    setSession(null);
-    setTimeLeft(0);
-    setIsVisible(false);
-    
-    // Notification de fin
-    toast({
-      title: "🎉 Session terminée !",
-      description: `Félicitations ! Vous avez terminé votre session "${session.title}".`,
-    });
-
-    // Notification browser si permission accordée
-    if (Notification.permission === 'granted') {
-      new Notification('Session de focus terminée !', {
-        body: `Vous avez terminé votre session "${session.title}".`,
-        icon: '/icons/icon-192x192.png'
-      });
-    }
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -192,7 +90,7 @@ export const FocusTimer = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!isVisible || !session) return null;
+  if (!session) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -206,10 +104,10 @@ export const FocusTimer = () => {
                 {session.isActive ? "Active" : "Pause"}
               </Badge>
             </div>
-            <Button
+             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsVisible(false)}
+              onClick={() => setSession(null)} // Hide locally
               className="h-6 w-6 p-0"
             >
               ×
@@ -224,22 +122,25 @@ export const FocusTimer = () => {
           </div>
           
           <div className="flex justify-center gap-2">
-            {session.isActive ? (
-              <Button size="sm" variant="outline" onClick={pauseSession}>
-                <Pause className="h-4 w-4 mr-1" />
-                Pause
-              </Button>
-            ) : (
-              <Button size="sm" onClick={resumeSession}>
-                <Play className="h-4 w-4 mr-1" />
-                Reprendre
-              </Button>
-            )}
-            
-            <Button size="sm" variant="destructive" onClick={stopSession}>
-              <Square className="h-4 w-4 mr-1" />
-              Arrêter
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled>
+                      <Pause className="h-4 w-4 mr-1" />
+                      Pause
+                    </Button>
+                    <Button size="sm" variant="destructive" disabled>
+                      <Square className="h-4 w-4 mr-1" />
+                      Arrêter
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Contrôlez la session depuis la page Focus.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>

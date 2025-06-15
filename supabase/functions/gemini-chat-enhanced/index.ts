@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -171,7 +170,7 @@ Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à 
 
 IMPORTANT : Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
 
-Si l'utilisateur demande de créer quelque chose (tâche, habitude, objectif, journal), tu dois inclure dans ta réponse un bloc de code JSON avec l'action à exécuter. Voici le format exact à utiliser, enveloppé dans des backticks json :
+Pour créer un élément (tâche, habitude, etc.), ta réponse DOIT contenir un bloc de code. N'ajoute aucun commentaire ou texte explicatif à l'intérieur de ce bloc. Le bloc doit commencer par \`\`\`json et se terminer par \`\`\`. Voici le format à l'intérieur du bloc :
 \`\`\`json
 {"action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
 \`\`\`
@@ -255,23 +254,21 @@ INSTRUCTIONS:
     console.log("Final AI response:", responseText);
 
     // Vérifier si la réponse contient une action JSON
-    try {
-      const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*?"action"[\s\S]*?\})/;
-      const match = responseText.match(jsonRegex);
+    const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*?"action"[\s\S]*?\})/;
+    const match = responseText.match(jsonRegex);
 
-      if (match) {
+    if (match) {
+      try {
         const jsonString = match[1] || match[2];
         const actionJson = JSON.parse(jsonString);
 
         if (actionJson.action) {
-          console.log("Action detected in response:", actionJson);
+          console.log("Action detected in response, re-calling function:", actionJson.action);
           
           // Re-call this function with the action
           const actionRequest = await fetch(req.url, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: message,
               context: context,
@@ -279,13 +276,16 @@ INSTRUCTIONS:
               action: actionJson.action
             })
           });
+
+          if (!actionRequest.ok) {
+            const errorText = await actionRequest.text();
+            console.error('Error during recursive action call:', actionRequest.status, errorText);
+            throw new Error(`Action execution failed with status ${actionRequest.status}`);
+          }
           
           const actionResponse = await actionRequest.json();
-          
-          // Nettoyer la réponse pour enlever le JSON et garder seulement le texte utilisateur
           const cleanedResponse = responseText.replace(match[0], '').trim();
           
-          // Retourner la réponse nettoyée avec le résultat de l'action
           return new Response(JSON.stringify({ 
             response: cleanedResponse || actionResponse.response,
             action_result: actionResponse.action_result
@@ -293,9 +293,15 @@ INSTRUCTIONS:
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+      } catch (e) {
+        console.error("Error processing action from AI response:", e.message);
+        const cleanedResponse = responseText.replace(match[0] || '', '').trim();
+        return new Response(JSON.stringify({
+          response: cleanedResponse + "\n\n" + "PS : J'ai bien compris votre demande de création, mais une erreur technique est survenue lors de l'enregistrement. Veuillez réessayer. 🛠️"
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-    } catch (e) {
-      console.log("No valid action JSON found or error parsing, continuing with normal response:", e.message);
     }
 
     return new Response(JSON.stringify({ response: responseText }), {

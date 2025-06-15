@@ -1,6 +1,5 @@
-
 import { Habit } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, CheckCircle, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,7 @@ interface HabitListProps {
   loading: boolean;
   onDelete: (id: string) => void;
   onEdit?: (habit: Habit) => void;
-  onComplete?: (id: string) => void;
+  onComplete?: (id: string, isCompleted: boolean) => void;
   onRefresh: () => void;
 }
 
@@ -75,33 +74,33 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
   };
 
   const categoryLabels = {
-    health: { name: "Santé", color: getCategoryColor("health") },
-    productivity: { name: "Productivité", color: getCategoryColor("productivity") },
-    personal: { name: "Personnel", color: getCategoryColor("personal") },
-    other: { name: "Autre", color: getCategoryColor("other") },
+    health: { name: "Santé", color: getCategoryColor("health"), emoji: "🏃" },
+    productivity: { name: "Productivité", color: getCategoryColor("productivity"), emoji: "⚡" },
+    personal: { name: "Personnel", color: getCategoryColor("personal"), emoji: "🎯" },
+    other: { name: "Autre", color: getCategoryColor("other"), emoji: "📝" },
   };
 
   return (
     <div className="space-y-6">
       {/* Cartes catégorie */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {Object.entries(categoryLabels).map(([key, label]) => {
           const count = habitsByCategory[key as keyof typeof habitsByCategory]?.length || 0;
           const streak = habitsByCategory[key as keyof typeof habitsByCategory]?.reduce((sum, h) => sum + (h.streak || 0), 0);
 
           return (
             <Card key={key}>
-              <CardContent className="p-5 flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${label.color.bg}`}>
-                  <span className={`text-2xl ${label.color.icon}`}>
-                    {key === 'health' ? '🏃' : key === 'productivity' ? '⚡' : key === 'personal' ? '🎯' : '📝'}
-                  </span>
+              <CardContent className="p-4 flex items-center gap-4">
+                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
+                  <span className={`text-3xl`}>{label.emoji}</span>
                 </div>
-                <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
-                <div className="text-xs text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
-                {count > 0 && (
-                  <div className="text-xs text-muted-foreground mt-1">Série totale : {streak}</div>
-                )}
+                <div>
+                  <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
+                  <div className="text-sm text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
+                  {count > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">Série: {streak}</div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
@@ -135,7 +134,7 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     <span>📅 {getFrequencyLabel(habit.frequency)}</span>
                     <span>🎯 Objectif: {habit.target}</span>
-                    {habit.streak && habit.streak > 0 && (
+                    {habit.streak != null && habit.streak > 0 && (
                       <span>🔥 Série: {habit.streak}</span>
                     )}
                   </div>
@@ -145,16 +144,15 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                   {onComplete && (
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => onComplete(habit.id)}
-                      disabled={habit.is_completed_today}
-                      className={`h-8 w-8 p-0 ${
+                      size="lg"
+                      onClick={() => onComplete(habit.id, habit.is_completed_today)}
+                      className={`h-10 w-10 p-0 rounded-full transition-colors ${
                         habit.is_completed_today 
-                          ? "text-green-600 bg-green-50" 
+                          ? "text-white bg-green-600 hover:bg-green-700" 
                           : "text-green-600 hover:text-green-700 hover:bg-green-50"
                       }`}
                     >
-                      <CheckCircle className="h-4 w-4" />
+                      <CheckCircle className="h-5 w-5" />
                     </Button>
                   )}
                   {onEdit && (
@@ -184,4 +182,3 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
     </div>
   );
 }
-

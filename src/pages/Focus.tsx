@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ActiveFocusSession {
+  id: string;
+  title: string;
+  duration: number;
+  startTime: number;
+  isActive: boolean;
+  timeLeft: number;
+  userId: string;
+}
+
 export default function Focus() {
   const [duration, setDuration] = useState(25);
   const [timeLeft, setTimeLeft] = useState(duration * 60);
@@ -17,14 +26,15 @@ export default function Focus() {
   const [sessionTitle, setSessionTitle] = useState("");
   const [sessionsToday, setSessionsToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [currentSessionStartTime, setCurrentSessionStartTime] = useState<Date | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    setTimeLeft(duration * 60);
-  }, [duration]);
+    if (!currentSessionId) {
+      setTimeLeft(duration * 60);
+    }
+  }, [duration, currentSessionId]);
 
   useEffect(() => {
     if (user) {
@@ -61,17 +71,16 @@ export default function Focus() {
     const savedSession = localStorage.getItem('active_focus_session');
     if (savedSession) {
       try {
-        const session = JSON.parse(savedSession);
+        const session: ActiveFocusSession = JSON.parse(savedSession);
         const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
-        const remaining = session.duration * 60 - elapsed;
+        const remaining = session.isActive ? (session.duration * 60 - elapsed) : session.timeLeft;
         
         if (remaining > 0) {
           setCurrentSessionId(session.id);
           setSessionTitle(session.title);
           setDuration(session.duration);
-          setTimeLeft(remaining);
-          setIsActive(true);
-          setCurrentSessionStartTime(new Date(session.startTime));
+          setTimeLeft(Math.ceil(remaining));
+          setIsActive(session.isActive);
         } else {
           localStorage.removeItem('active_focus_session');
         }
@@ -92,7 +101,9 @@ export default function Focus() {
             handleTimerComplete();
             return 0;
           }
-          return prev - 1;
+          const newTime = prev - 1;
+          saveSessionState({ timeLeft: newTime });
+          return newTime;
         });
       }, 1000);
     }
@@ -101,6 +112,15 @@ export default function Focus() {
       if (interval) clearInterval(interval);
     };
   }, [isActive, timeLeft]);
+
+  const saveSessionState = (updates: Partial<ActiveFocusSession>) => {
+    const saved = localStorage.getItem('active_focus_session');
+    if (saved) {
+      const current = JSON.parse(saved);
+      const newState = { ...current, ...updates };
+      localStorage.setItem('active_focus_session', JSON.stringify(newState));
+    }
+  }
 
   const formatTime = (timeInSeconds: number): string => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -117,143 +137,101 @@ export default function Focus() {
       });
       return;
     }
-
-    if (!user) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour utiliser le focus.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!user) return;
 
     const sessionId = `focus_${Date.now()}`;
     const startTime = new Date();
     
-    try {
-      // Save session to database
-      const { error } = await supabase
-        .from('focus_sessions')
-        .insert({
-          id: sessionId,
-          user_id: user.id,
-          title: sessionTitle,
-          duration: duration,
-          started_at: startTime.toISOString(),
-        });
+    setIsActive(true);
+    setCurrentSessionId(sessionId);
+    setTimeLeft(duration * 60);
+    
+    const sessionData: ActiveFocusSession = {
+      id: sessionId,
+      title: sessionTitle,
+      duration: duration,
+      startTime: startTime.getTime(),
+      isActive: true,
+      timeLeft: duration * 60,
+      userId: user.id
+    };
+    localStorage.setItem('active_focus_session', JSON.stringify(sessionData));
 
-      if (error) {
-        console.error('Error saving session:', error);
-        throw error;
-      }
-
-      setCurrentSessionId(sessionId);
-      setCurrentSessionStartTime(startTime);
-      setIsActive(true);
-      setTimeLeft(duration * 60);
-
-      // Save to localStorage for persistence
-      const sessionData = {
-        id: sessionId,
-        title: sessionTitle,
-        duration: duration,
-        startTime: startTime.getTime(),
-        userId: user.id
-      };
-      localStorage.setItem('active_focus_session', JSON.stringify(sessionData));
-
-      toast({
-        title: "Session démarrée",
-        description: `Session de ${duration} minutes commencée.`,
-      });
-
-      // Request notification permission
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-      
-    } catch (error) {
-      console.error('Error starting session:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de démarrer la session.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Session démarrée",
+      description: `Session de ${duration} minutes commencée.`,
+    });
   };
 
   const pauseTimer = () => {
-    setIsActive(!isActive);
-    
-    if (isActive) {
-      toast({
-        title: "Session en pause",
-        description: "Votre session de focus a été mise en pause.",
-      });
-    } else {
-      toast({
-        title: "Session reprise",
-        description: "Votre session de focus a été reprise.",
-      });
-    }
+    const newIsActive = !isActive;
+    setIsActive(newIsActive);
+    saveSessionState({ isActive: newIsActive, timeLeft });
+
+    toast({
+      title: newIsActive ? "Session reprise" : "Session en pause",
+    });
   };
 
   const stopTimer = async () => {
     if (!currentSessionId || !user) return;
 
+    const sessionDataRaw = localStorage.getItem('active_focus_session');
+    if (!sessionDataRaw) return;
+    const sessionData: ActiveFocusSession = JSON.parse(sessionDataRaw);
+
+    const completedDuration = sessionData.duration * 60 - timeLeft;
+
     try {
-      // Calculate completed duration
-      const completedDuration = duration * 60 - timeLeft;
-      
-      // Update session in database
-      await supabase
+      const { error } = await supabase
         .from('focus_sessions')
-        .update({
-          completed_at: new Date().toISOString(),
-          duration: Math.floor(completedDuration / 60)
-        })
-        .eq('id', currentSessionId);
+        .insert({
+          user_id: user.id,
+          title: sessionData.title,
+          duration: Math.floor(completedDuration / 60), // in minutes
+          started_at: new Date(sessionData.startTime).toISOString(),
+          completed_at: new Date().toISOString()
+        });
 
-      // Clear localStorage
-      localStorage.removeItem('active_focus_session');
+      if (error) throw error;
       
-      resetSession();
-
       toast({
         title: "Session arrêtée",
-        description: `Session arrêtée après ${Math.floor(completedDuration / 60)} minutes.`,
+        description: `Session enregistrée de ${Math.floor(completedDuration / 60)} minutes.`,
       });
-
       loadSessionsToday();
     } catch (error) {
       console.error('Error stopping session:', error);
+      toast.error("Erreur lors de l'arrêt de la session.");
+    } finally {
+      localStorage.removeItem('active_focus_session');
+      resetSession();
     }
   };
-
+  
   const handleTimerComplete = async () => {
     if (!currentSessionId || !user) return;
+    const sessionDataRaw = localStorage.getItem('active_focus_session');
+    if (!sessionDataRaw) return;
+    const sessionData: ActiveFocusSession = JSON.parse(sessionDataRaw);
 
     try {
-      // Update session in database as completed
       await supabase
         .from('focus_sessions')
-        .update({
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', currentSessionId);
-
-      // Clear localStorage
-      localStorage.removeItem('active_focus_session');
-
+        .insert({
+          user_id: user.id,
+          title: sessionData.title,
+          duration: sessionData.duration, // in minutes
+          started_at: new Date(sessionData.startTime).toISOString(),
+          completed_at: new Date().toISOString()
+        });
+      
       setSessionsToday(prev => prev + 1);
-      resetSession();
-
       toast({
         title: "🎉 Session terminée !",
         description: `Félicitations ! Vous avez complété une session de ${duration} minutes.`,
       });
 
-      // Show notification if permission granted
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Session de focus terminée !', {
           body: `Vous avez terminé votre session "${sessionTitle}".`,
@@ -261,16 +239,18 @@ export default function Focus() {
         });
       }
 
-      loadSessionsToday();
     } catch (error) {
       console.error('Error completing session:', error);
+    } finally {
+      localStorage.removeItem('active_focus_session');
+      resetSession();
+      loadSessionsToday();
     }
   };
 
   const resetSession = () => {
     setIsActive(false);
     setCurrentSessionId(null);
-    setCurrentSessionStartTime(null);
     setTimeLeft(duration * 60);
     setSessionTitle("");
   };
@@ -297,7 +277,7 @@ export default function Focus() {
           <CardContent className="p-4 text-center">
             <div className="text-3xl mb-2">⏱️</div>
             <p className="text-xl font-bold text-blue-900">
-              {isActive ? "EN COURS" : "ARRÊTÉ"}
+              {currentSessionId ? (isActive ? "EN COURS" : "EN PAUSE") : "ARRÊTÉ"}
             </p>
             <p className="text-sm text-blue-700">Statut</p>
           </CardContent>
@@ -307,7 +287,7 @@ export default function Focus() {
           <CardContent className="p-4 text-center">
             <div className="text-3xl mb-2">🔥</div>
             <p className="text-xl font-bold text-purple-900">
-              {sessionsToday * 25}
+              {sessionsToday * duration}
             </p>
             <p className="text-sm text-purple-700">Minutes aujourd'hui</p>
           </CardContent>
@@ -318,11 +298,11 @@ export default function Focus() {
       <Card className="text-center">
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isActive ? "Session en cours" : "Nouvelle session"}
+            {currentSessionId ? sessionTitle : "Nouvelle session"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {!isActive && !currentSessionId && (
+          {!currentSessionId && (
             <div className="space-y-4">
               <div>
                 <Label htmlFor="session-title">Titre de la session</Label>
@@ -342,7 +322,6 @@ export default function Focus() {
                   onValueChange={(value) => {
                     const newDuration = parseInt(value);
                     setDuration(newDuration);
-                    setTimeLeft(newDuration * 60);
                   }}
                 >
                   <SelectTrigger className="mt-1">
@@ -366,7 +345,7 @@ export default function Focus() {
           </div>
 
           <div className="flex gap-2 justify-center">
-            {!isActive && !currentSessionId ? (
+            {!currentSessionId ? (
               <Button onClick={startTimer} size="lg" className="px-8">
                 <Play className="mr-2 h-5 w-5" />
                 Démarrer
@@ -395,10 +374,9 @@ export default function Focus() {
           </div>
 
           {currentSessionId && (
-            <div className="text-center">
-              <p className="text-lg font-medium">{sessionTitle}</p>
+            <div className="text-center mt-4">
               <p className="text-sm text-muted-foreground">
-                Session démarrée à {currentSessionStartTime?.toLocaleTimeString()}
+                Session en cours...
               </p>
             </div>
           )}
