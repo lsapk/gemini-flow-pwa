@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { PlusCircle, CheckSquare, AlertCircle, Clock, Edit, Trash2 } from "lucide-react";
+import { Plus, PlusCircle, CheckSquare, AlertCircle, Clock, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -260,22 +260,17 @@ export default function Tasks() {
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tâches</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Organisez et suivez vos tâches quotidiennes
-          </p>
-        </div>
-        {/* Nouveau bouton aligné à droite en haut, identique à "habitudes" */}
+      {/* Barre d’en-tête harmonisée avec Habitudes */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tâches</h1>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button
               onClick={() => setIsFormOpen(true)}
               size="sm"
-              className="gap-2"
+              className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
             >
-              <PlusCircle className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Nouvelle tâche
             </Button>
           </DialogTrigger>
@@ -296,7 +291,6 @@ export default function Tasks() {
                   required
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -306,7 +300,6 @@ export default function Tasks() {
                   placeholder="Description de votre tâche (optionnel)"
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="priority">Priorité</Label>
                 <Select value={priority} onValueChange={(value: 'high' | 'medium' | 'low') => setPriority(value)}>
@@ -320,7 +313,6 @@ export default function Tasks() {
                   </SelectContent>
                 </Select>
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="dueDate">Date d'échéance</Label>
                 <Input
@@ -330,7 +322,6 @@ export default function Tasks() {
                   onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
-              
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1">
                   {editingTask ? "Modifier" : "Créer"}
