@@ -61,24 +61,6 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
     }
   };
 
-  // Helper to compute extra stats per category
-  const computeCategoryStats = (habitsInCategory: Habit[]) => {
-    // Meilleure série (streak max)
-    const bestStreak = habitsInCategory.reduce(
-      (max, h) => Math.max(max, h.streak || 0),
-      0
-    );
-
-    // Nombre de complétions dans les 30 derniers jours (à partir d'un champ `completed_dates`, mais ici, fallback = nombre d'habitudes * streak)
-    // Comme nous n'avons pas la table `habit_completions` côté client, on simule simplement via le streak et le fait d'avoir "is_completed_today".
-    const completions = habitsInCategory.reduce(
-      (sum, h) => sum + (h.streak || 0),
-      0
-    );
-
-    return { bestStreak, completions };
-  };
-
   // Grouping by category
   const habitsByCategory = {
     health: habits.filter((h) => h.category === "health"),
@@ -100,26 +82,50 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
 
   return (
     <div className="space-y-6">
-      {/* Cartes catégorie simplifiées */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      {/* Cartes catégorie simplifiées, maintenant plus compactes sur mobile */}
+      <div
+        className="
+          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
+        "
+      >
         {Object.entries(categoryLabels).map(([key, label]) => {
           const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
           const count = habitsInCategory.length;
           const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
 
           return (
-            <Card key={key}>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
-                  <span className="text-3xl">{label.emoji}</span>
+            <Card
+              key={key}
+              className="
+                flex
+                h-auto
+                sm:h-[110px]
+                px-2 py-2 sm:p-4
+                items-center
+                transition-shadow
+                "
+            >
+              <CardContent
+                className="
+                  p-0 flex items-center gap-2 sm:gap-4 w-full
+                "
+              >
+                <div
+                  className={`
+                    w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}
+                  `}
+                >
+                  <span className="text-xl sm:text-3xl">{label.emoji}</span>
                 </div>
-                <div>
-                  <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
-                  <div className="text-sm text-muted-foreground">
+                <div className="flex flex-col gap-0.5 sm:gap-1">
+                  <div className={`font-semibold text-xs sm:text-base ${label.color.text}`}>
+                    {label.name}
+                  </div>
+                  <div className="text-[10px] sm:text-sm text-muted-foreground">
                     {count} habitude{count > 1 ? "s" : ""}
                   </div>
                   {count > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                       Aujourd’hui : {completedToday} / {count}
                     </div>
                   )}
