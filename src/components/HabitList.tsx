@@ -100,28 +100,27 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
 
   return (
     <div className="space-y-6">
-      {/* Cartes catégorie */}
+      {/* Cartes catégorie simplifiées */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {Object.entries(categoryLabels).map(([key, label]) => {
           const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
           const count = habitsInCategory.length;
           const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
-          const { bestStreak, completions } = computeCategoryStats(habitsInCategory);
 
           return (
             <Card key={key}>
               <CardContent className="p-4 flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
-                  <span className={`text-3xl`}>{label.emoji}</span>
+                  <span className="text-3xl">{label.emoji}</span>
                 </div>
                 <div>
                   <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
-                  <div className="text-sm text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {count} habitude{count > 1 ? "s" : ""}
+                  </div>
                   {count > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1 space-y-1 flex flex-col">
-                      <span>Aujourd’hui : {completedToday} / {count}</span>
-                      <span>🔥 Série max : {bestStreak}</span>
-                      <span>✅ Total complétions : {completions}</span>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {completedToday} / {count} aujourd’hui
                     </div>
                   )}
                 </div>
