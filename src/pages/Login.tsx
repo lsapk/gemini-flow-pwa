@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +29,15 @@ export default function Login() {
     }
   }, []);
 
-  // Rediriger si déjà connecté - AFTER all hooks
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // Rediriger si déjà connecté ET remember me est actif
+  // Ça évite d'afficher le login si rememberMe = true ET user déjà connecté
+  // (mobile-friendly)
+  useEffect(() => {
+    const shouldRemember = localStorage.getItem('deepflow_remember_me') === 'true';
+    if (shouldRemember && user) {
+      window.location.replace("/dashboard");
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
