@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import GoalList from "@/components/GoalList";
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -173,6 +174,7 @@ export default function Goals() {
   const completedGoals = goals.filter(g => g.completed).length;
   const avgProgress = goals.length > 0 ? goals.reduce((sum, g) => sum + g.progress, 0) / goals.length : 0;
 
+  // On retire les cartes résumé de l'ancienne version et la grid pour utiliser GoalList
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
@@ -255,171 +257,14 @@ export default function Goals() {
         </Dialog>
       </div>
 
-      {/* Stats Cards - NOUVEAU STYLE IDENTIQUE à Habitudes */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
-        {/* Total */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
-              <Target className="text-blue-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-blue-800">
-                Total
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {goals.length} objectif{goals.length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {/* Terminés */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
-              <CheckCircle2 className="text-green-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-green-800">
-                Terminés
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {completedGoals} objectif{completedGoals > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {/* Progrès moyen */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-yellow-100">
-              <Calendar className="text-yellow-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-yellow-800">
-                Progrès moyen
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {Math.round(avgProgress)}%
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        {/* En cours */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-purple-100">
-              <span className="text-xl sm:text-2xl">🎯</span>
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-purple-800">
-                En cours
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {goals.length - completedGoals} objectif{goals.length - completedGoals > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Goals List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Vos objectifs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8">Chargement...</div>
-          ) : goals.length === 0 ? (
-            <div className="text-center py-8">
-              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucun objectif défini</h3>
-              <p className="text-muted-foreground mb-4">
-                Commencez par créer votre premier objectif
-              </p>
-              <Button onClick={() => setIsFormOpen(true)}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Créer un objectif
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {goals.map((goal) => (
-                <div key={goal.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{goal.title}</h3>
-                        {goal.completed && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                      </div>
-                      {goal.description && (
-                        <p className="text-sm text-muted-foreground mb-2">{goal.description}</p>
-                      )}
-                      <div className="flex gap-2 mb-2">
-                        <Badge variant="outline">{goal.category}</Badge>
-                        {goal.target_date && (
-                          <Badge variant="secondary">
-                            {format(new Date(goal.target_date), 'dd MMM yyyy', { locale: fr })}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editGoal(goal)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(goal.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progrès</span>
-                      <span>{goal.progress}%</span>
-                    </div>
-                    <Progress value={goal.progress} className="h-2" />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleProgressUpdate(goal.id, Math.max(0, goal.progress - 10))}
-                      >
-                        -10%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleProgressUpdate(goal.id, Math.min(100, goal.progress + 10))}
-                      >
-                        +10%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleProgressUpdate(goal.id, 100)}
-                        disabled={goal.completed}
-                      >
-                        Terminer
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* GoalList avec cards résumé et liste */}
+      <GoalList
+        goals={goals}
+        loading={loading}
+        onEdit={editGoal}
+        onDelete={handleDelete}
+        onProgressUpdate={handleProgressUpdate}
+      />
     </div>
   );
 }
