@@ -120,7 +120,7 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                   </div>
                   {count > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      {completedToday} / {count} aujourd’hui
+                      Aujourd’hui : {completedToday} / {count}
                     </div>
                   )}
                 </div>
