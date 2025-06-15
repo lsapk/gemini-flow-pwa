@@ -22,6 +22,8 @@ import { JournalEntry } from "@/types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import * as journalApi from "@/lib/journalApi";
+import JournalEntryCard from "@/components/JournalEntryCard";
+import { useMobile } from "@/hooks/use-mobile";
 
 export default function Journal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -41,6 +43,7 @@ export default function Journal() {
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useMobile();
 
   const moods = [
     { value: 'happy', label: '😊 Heureux', color: 'bg-yellow-100 text-yellow-800' },
@@ -202,13 +205,17 @@ export default function Journal() {
   }
 
   return (
-    <div className="relative container mx-auto p-3 sm:p-6 max-w-4xl">
+    <div className={`${isMobile ? "pb-20 pt-3 px-1" : "container p-3 sm:p-6"} relative container mx-auto max-w-4xl`}>
       {/* BOUTON FLOTANT D’AJOUT */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogTrigger asChild>
           <button 
             aria-label="Nouvelle entrée"
-            className="fixed bottom-7 right-7 z-30 bg-primary text-white rounded-full shadow-lg p-4 sm:p-5 hover:scale-105 hover:bg-primary/80 active:scale-95 transition-all duration-200 focus:outline-none"
+            className={`fixed z-30 bottom-4 right-4 bg-primary text-white rounded-full shadow-lg p-4 sm:p-5 hover:scale-105 hover:bg-primary/80 active:scale-95 transition-all duration-200 focus:outline-none ${isMobile ? "bottom-4 right-4 p-4" : "bottom-7 right-7 p-5"}`}
+            style={{
+              minWidth: isMobile ? 50 : 56,
+              minHeight: isMobile ? 50 : 56,
+            }}
           >
             <Plus className="h-6 w-6" />
           </button>
@@ -281,19 +288,16 @@ export default function Journal() {
       </Dialog>
 
       {/* EN-TÊTE ET STATISTIQUES */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+      <div className={`flex ${isMobile ? "flex-col gap-2 mb-2" : "flex-row sm:items-center sm:justify-between gap-4 mb-4"}`}>
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Mon Journal</h1>
+          <h1 className="text-xl sm:text-3xl font-bold">Mon Journal</h1>
         </div>
-        {/* (Statistiques déjà présentes plus bas, pas modifiées ici) */}
       </div>
-
-      {/* Statistiques + Filtres (meilleure séparation) */}
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+      <div className={`${isMobile ? "flex flex-col gap-2 mb-3" : "flex flex-col md:flex-row gap-4 mb-4"}`}>
         {/* Statistiques */}
-        <div className="flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className={isMobile ? "mb-0" : "flex-1"}>
+          <div className={`grid ${isMobile ? "grid-cols-1 gap-2" : "grid-cols-1 sm:grid-cols-3 gap-4"}`}>
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -364,9 +368,9 @@ export default function Journal() {
             </Card>
           </div>
         </div>
-        {/* Filtres (dans une carte à part en desktop) */}
-        <Card className="md:w-60 order-first md:order-none">
-          <CardContent className="p-4 space-y-2">
+        {/* Filtres (en dessous des statistiques sur mobile) */}
+        <Card className={isMobile ? "w-full order-first" : "md:w-60 order-first md:order-none"}>
+          <CardContent className={`p-3 space-y-2 ${isMobile ? "pb-2" : ""}`}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -397,7 +401,7 @@ export default function Journal() {
       </div>
 
       {/* Liste des entrées */}
-      <div className="space-y-5 mt-2">
+      <div className={`space-y-3 mt-2 ${isMobile ? "" : "space-y-5"}`}>
         {filteredEntries.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
@@ -415,63 +419,14 @@ export default function Journal() {
           </Card>
         ) : (
           filteredEntries.map((entry) => (
-            <Card key={entry.id} className="shadow border-2 border-muted/50 hover:shadow-lg transition-all duration-200">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  {/* En-tête : titre, date, humeur, actions */}
-                  <div className="flex-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className="text-lg">{entry.title}</CardTitle>
-                      {entry.mood && (
-                        <Badge className={`rounded-full ${getMoodInfo(entry.mood)?.color || ""} text-base`} >
-                          {getMoodInfo(entry.mood)?.label}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {format(new Date(entry.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0 flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(entry)}
-                      aria-label="Modifier"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(entry.id)}
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                    {entry.content}
-                  </p>
-                </div>
-                {entry.tags && Array.isArray(entry.tags) && entry.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-4">
-                    {entry.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <JournalEntryCard
+              key={entry.id}
+              entry={entry}
+              moods={moods}
+              getMoodInfo={getMoodInfo}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ))
         )}
       </div>
