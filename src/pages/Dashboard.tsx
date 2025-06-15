@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,31 +16,30 @@ import {
   Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
--import { useMemo } from "react";
-+import { useMemo, useState, useEffect } from "react";
-+import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const productivityData = useRealtimeProductivityScore();
-+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
-+  // Aller chercher le nom d'affichage depuis Supabase au montage si user existe
-+  useEffect(() => {
-+    async function fetchDisplayName() {
-+      if (user?.id) {
-+        const { data, error } = await supabase
-+          .from("user_profiles")
-+          .select("display_name")
-+          .eq("id", user.id)
-+          .single();
-+        if (data?.display_name) {
-+          setDisplayName(data.display_name);
-+        }
-+      }
-+    }
-+    fetchDisplayName();
-+  }, [user]);
+  // Aller chercher le nom d'affichage depuis Supabase au montage si user existe
+  useEffect(() => {
+    async function fetchDisplayName() {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .single();
+        if (data?.display_name) {
+          setDisplayName(data.display_name);
+        }
+      }
+    }
+    fetchDisplayName();
+  }, [user]);
 
   // Message selon le moment de la journée
   const salutation = useMemo(() => {
@@ -91,18 +89,16 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
--          {salutation} {user?.email ? <span className="font-semibold">{user.email}</span> : ""} !
--          {" "}Voici votre aperçu de productivité aujourd'hui.
-+          {salutation}{" "}
-+          {user
-+            ? (
-+              <span className="font-semibold">
-+                {/* Affiche le nom d'affichage, sinon fallback email */}
-+                {displayName ?? user.email}
-+              </span>
-+            )
-+            : ""}
-+          {" ! Voici votre aperçu de productivité aujourd'hui."}
+          {salutation}{" "}
+          {user
+            ? (
+              <span className="font-semibold">
+                {/* Affiche le nom d'affichage, sinon fallback email */}
+                {displayName ?? user.email}
+              </span>
+            )
+            : ""}
+          {" ! Voici votre aperçu de productivité aujourd'hui."}
         </motion.p>
       </div>
 
