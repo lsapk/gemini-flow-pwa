@@ -165,21 +165,29 @@ serve(async (req) => {
       }
     }
 
-    // Construire le prompt avec consignes d'emoji et sans mentionner JSON/en dev.
     const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
 Tu parles TOUJOURS en français et tu utilises TOUJOURS des emojis appropriés dans tes réponses (1 à 3 par réponse) 😊.
 Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
 
 IMPORTANT : Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
 
-Si l'utilisateur demande de créer quelque chose (tâche, habitude, objectif, journal), tu dois répondre directement par :
+Si l'utilisateur demande de créer quelque chose (tâche, habitude, objectif, journal), tu dois inclure dans ta réponse un bloc de code JSON avec l'action à exécuter. Voici le format exact à utiliser, enveloppé dans des backticks json :
+\`\`\`json
 {"action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
+\`\`\`
 ou
+\`\`\`json
 {"action":{"type":"create_habit","data":{"title":"titre","description":"description","frequency":"daily","category":"health","target":1}}}
-ou  
-{"action":{"type":"create_goal","data":{"title":"titre","description":"description","category":"personal","target_date":"YYYY-MM-DD"}}}
+\`\`\`
 ou
+\`\`\`json
+{"action":{"type":"create_goal","data":{"title":"titre","description":"description","category":"personal","target_date":"YYYY-MM-DD"}}}
+\`\`\`
+ou
+\`\`\`json
 {"action":{"type":"create_journal","data":{"title":"titre","content":"contenu","mood":"good","tags":["tag1","tag2"]}}}
+\`\`\`
+Tu peux ajouter un petit texte d'accompagnement avant ou après le bloc JSON.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
@@ -199,7 +207,7 @@ INSTRUCTIONS:
 - Sois encourageant, constructif et empathique 💪
 - Propose des actions concrètes et réalisables ✅
 - Utilise un ton amical et professionnel 🤝
-- Si demande de création, utilise le format spécifié ci-dessus
+- Si une demande de création est faite, utilise le format JSON spécifié ci-dessus.
 `;
 
     console.log("Calling Gemini API...");
@@ -241,47 +249,53 @@ INSTRUCTIONS:
     }
 
     const data = await response.json();
-    console.log("Gemini response received:", data);
+    console.log("Gemini response received:", JSON.stringify(data, null, 2));
 
     let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer. 😅";
     console.log("Final AI response:", responseText);
 
     // Vérifier si la réponse contient une action JSON
     try {
-      const jsonMatch = responseText.match(/\{[^}]*"action"[^}]*\}/);
-      if (jsonMatch) {
-        const actionJson = JSON.parse(jsonMatch[0]);
-        console.log("Action detected in response:", actionJson);
-        
-        // Re-call this function with the action
-        const actionRequest = await fetch(req.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: message,
-            context: context,
-            user_id: user_id,
-            action: actionJson.action
-          })
-        });
-        
-        const actionResponse = await actionRequest.json();
-        
-        // Nettoyer la réponse pour enlever le JSON et garder seulement le texte utilisateur
-        const cleanedResponse = responseText.replace(jsonMatch[0], '').trim();
-        
-        // Retourner la réponse nettoyée avec le résultat de l'action
-        return new Response(JSON.stringify({ 
-          response: cleanedResponse || actionResponse.response,
-          action_result: actionResponse.action_result
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*?"action"[\s\S]*?\})/;
+      const match = responseText.match(jsonRegex);
+
+      if (match) {
+        const jsonString = match[1] || match[2];
+        const actionJson = JSON.parse(jsonString);
+
+        if (actionJson.action) {
+          console.log("Action detected in response:", actionJson);
+          
+          // Re-call this function with the action
+          const actionRequest = await fetch(req.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: message,
+              context: context,
+              user_id: user_id,
+              action: actionJson.action
+            })
+          });
+          
+          const actionResponse = await actionRequest.json();
+          
+          // Nettoyer la réponse pour enlever le JSON et garder seulement le texte utilisateur
+          const cleanedResponse = responseText.replace(match[0], '').trim();
+          
+          // Retourner la réponse nettoyée avec le résultat de l'action
+          return new Response(JSON.stringify({ 
+            response: cleanedResponse || actionResponse.response,
+            action_result: actionResponse.action_result
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     } catch (e) {
-      console.log("No valid action JSON found, continuing with normal response");
+      console.log("No valid action JSON found or error parsing, continuing with normal response:", e.message);
     }
 
     return new Response(JSON.stringify({ response: responseText }), {

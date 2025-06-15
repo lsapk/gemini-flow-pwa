@@ -90,21 +90,20 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
           const streak = habitsByCategory[key as keyof typeof habitsByCategory]?.reduce((sum, h) => sum + (h.streak || 0), 0);
 
           return (
-            <div
-              key={key}
-              className="bg-white rounded-xl shadow p-5 flex flex-col items-center"
-            >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${label.color.bg}`}>
-                <span className={`text-2xl ${label.color.icon}`}>
-                  {key === 'health' ? '🏃' : key === 'productivity' ? '⚡' : key === 'personal' ? '🎯' : '📝'}
-                </span>
-              </div>
-              <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
-              <div className="text-xs text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
-              {count > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">Série totale : {streak}</div>
-              )}
-            </div>
+            <Card key={key}>
+              <CardContent className="p-5 flex flex-col items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${label.color.bg}`}>
+                  <span className={`text-2xl ${label.color.icon}`}>
+                    {key === 'health' ? '🏃' : key === 'productivity' ? '⚡' : key === 'personal' ? '🎯' : '📝'}
+                  </span>
+                </div>
+                <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
+                <div className="text-xs text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
+                {count > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">Série totale : {streak}</div>
+                )}
+              </CardContent>
+            </Card>
           );
         })}
       </div>
@@ -185,3 +184,4 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
     </div>
   );
 }
+

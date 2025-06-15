@@ -1,4 +1,3 @@
-
 interface FocusSession {
   id: string;
   title: string;
@@ -21,8 +20,7 @@ class BackgroundFocusService {
   }
 
   startSession(id: string, title: string, duration: number): void {
-    let alreadyRunning = this.sessions.has(id);
-    if (alreadyRunning) {
+    if (this.sessions.has(id)) {
       this.stopSession(id);
     }
     const session: FocusSession = {
@@ -34,18 +32,14 @@ class BackgroundFocusService {
     };
 
     this.sessions.set(id, session);
-
-    // Clear any previous interval
     this.clearInterval(id);
 
-    // Crée un nouvel intervalle toutes les secondes
     const interval = setInterval(() => {
       this.updateSession(id);
     }, 1000);
 
     this.intervals.set(id, interval);
 
-    // Demander la permission de notification si besoin
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
@@ -53,17 +47,19 @@ class BackgroundFocusService {
 
   pauseSession(id: string): void {
     const session = this.sessions.get(id);
-    if (session) {
-      session.isRunning = false;
+    if (session && session.isRunning) {
       this.clearInterval(id);
+      const elapsed = (Date.now() - session.startTime) / 1000;
+      session.duration = session.duration - elapsed; // Update duration to remaining time
+      session.isRunning = false;
     }
   }
 
   resumeSession(id: string): void {
     const session = this.sessions.get(id);
-    if (session) {
+    if (session && !session.isRunning) {
       session.isRunning = true;
-      session.startTime = Date.now() - (session.duration * 1000 - this.getTimeLeft(id) * 1000);
+      session.startTime = Date.now(); // Reset start time
       
       const interval = setInterval(() => {
         this.updateSession(id);
@@ -84,7 +80,7 @@ class BackgroundFocusService {
     if (!session) return 0;
 
     if (!session.isRunning) {
-      return session.duration;
+      return Math.max(0, session.duration);
     }
 
     const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
