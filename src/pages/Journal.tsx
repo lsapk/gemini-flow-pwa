@@ -49,7 +49,7 @@ export default function Journal() {
   const moods = [
     { value: 'happy', label: '😊 Heureux', color: 'bg-yellow-100 text-yellow-800' },
     { value: 'sad', label: '😢 Triste', color: 'bg-blue-100 text-blue-800' },
-    { value: 'excited', label: '🤩 Excité', color: 'bg-orange-100 text-orange-800' },
+    { value: 'excited', label: '🤩 Exité', color: 'bg-orange-100 text-orange-800' },
     { value: 'calm', label: '😌 Calme', color: 'bg-green-100 text-green-800' },
     { value: 'stressed', label: '😰 Stressé', color: 'bg-red-100 text-red-800' },
     { value: 'grateful', label: '🙏 Reconnaissant', color: 'bg-purple-100 text-purple-800' },
@@ -210,19 +210,28 @@ export default function Journal() {
       {/* Résumé visuel par humeur */}
       <JournalMoodSummary entries={entries} moods={moods} />
 
-      {/* BOUTON FLOTANT D’AJOUT */}
+      {/* Haute barre d'en-tête (Nouveau bouton ici) */}
+      <div className="flex items-center justify-between mt-2 mb-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-6 w-6" />
+          <h1 className="text-xl sm:text-3xl font-bold">Mon Journal</h1>
+        </div>
+        {/* Nouveau bouton à droite */}
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          size="sm"
+          className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Nouvelle entrée
+        </Button>
+      </div>
+
+      {/* Dialog création/édition d'entrée */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogTrigger asChild>
-          <button 
-            aria-label="Nouvelle entrée"
-            className={`fixed z-30 bottom-4 right-4 bg-primary text-white rounded-full shadow-lg p-4 sm:p-5 hover:scale-105 hover:bg-primary/80 active:scale-95 transition-all duration-200 focus:outline-none ${isMobile ? "bottom-4 right-4 p-4" : "bottom-7 right-7 p-5"}`}
-            style={{
-              minWidth: isMobile ? 50 : 56,
-              minHeight: isMobile ? 50 : 56,
-            }}
-          >
-            <Plus className="h-6 w-6" />
-          </button>
+          {/* plus de bouton flottant ici */}
+          <span />
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -293,10 +302,7 @@ export default function Journal() {
 
       {/* EN-TÊTE ET STATISTIQUES */}
       <div className={`flex ${isMobile ? "flex-col gap-2 mb-2" : "flex-row sm:items-center sm:justify-between gap-4 mb-4"}`}>
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-6 w-6" />
-          <h1 className="text-xl sm:text-3xl font-bold">Mon Journal</h1>
-        </div>
+        
       </div>
       <div className={`${isMobile ? "flex flex-col gap-2 mb-3" : "flex flex-col md:flex-row gap-4 mb-4"}`}>
         {/* Statistiques */}
