@@ -25,7 +25,8 @@ export default function Focus() {
   const [timeLeft, setTimeLeft] = useState(duration * 60);
   const [isActive, setIsActive] = useState(false);
   const [sessionTitle, setSessionTitle] = useState("");
-  const [sessionsToday, setSessionsToday] = useState(0);
+  const [completedSessionsToday, setCompletedSessionsToday] = useState(0);
+  const [minutesToday, setMinutesToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function Focus() {
     try {
       const { data, error } = await supabase
         .from('focus_sessions')
-        .select('*')
+        .select('duration')
         .eq('user_id', user.id)
         .gte('started_at', today.toISOString())
         .not('completed_at', 'is', null);
@@ -61,7 +62,9 @@ export default function Focus() {
       if (error) {
         console.error('Error loading sessions:', error);
       } else {
-        setSessionsToday(data?.length || 0);
+        setCompletedSessionsToday(data?.length || 0);
+        const totalMinutes = data.reduce((sum, session) => sum + (session.duration || 0), 0);
+        setMinutesToday(totalMinutes);
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -231,7 +234,6 @@ export default function Focus() {
           completed_at: new Date().toISOString()
         });
       
-      setSessionsToday(prev => prev + 1);
       toast({
         title: "🎉 Session terminée !",
         description: `Félicitations ! Vous avez complété une session de ${duration} minutes.`,
@@ -273,7 +275,7 @@ export default function Focus() {
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4 text-center">
             <div className="text-3xl mb-2">🎯</div>
-            <p className="text-xl font-bold text-green-900">{sessionsToday}</p>
+            <p className="text-xl font-bold text-green-900">{completedSessionsToday}</p>
             <p className="text-sm text-green-700">Sessions aujourd'hui</p>
           </CardContent>
         </Card>
@@ -292,7 +294,7 @@ export default function Focus() {
           <CardContent className="p-4 text-center">
             <div className="text-3xl mb-2">🔥</div>
             <p className="text-xl font-bold text-purple-900">
-              {sessionsToday * duration}
+              {minutesToday}
             </p>
             <p className="text-sm text-purple-700">Minutes aujourd'hui</p>
           </CardContent>

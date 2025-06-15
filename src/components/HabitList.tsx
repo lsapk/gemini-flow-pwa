@@ -1,3 +1,4 @@
+
 import { Habit } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,8 +86,9 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
       {/* Cartes catégorie */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {Object.entries(categoryLabels).map(([key, label]) => {
-          const count = habitsByCategory[key as keyof typeof habitsByCategory]?.length || 0;
-          const streak = habitsByCategory[key as keyof typeof habitsByCategory]?.reduce((sum, h) => sum + (h.streak || 0), 0);
+          const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
+          const count = habitsInCategory.length;
+          const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
 
           return (
             <Card key={key}>
@@ -98,7 +100,9 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                   <div className={`font-semibold ${label.color.text}`}>{label.name}</div>
                   <div className="text-sm text-muted-foreground">{count} habitude{count > 1 ? "s" : ""}</div>
                   {count > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">Série: {streak}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Aujourd'hui: {completedToday} / {count}
+                    </div>
                   )}
                 </div>
               </CardContent>
