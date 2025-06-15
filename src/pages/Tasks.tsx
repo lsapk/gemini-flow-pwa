@@ -259,8 +259,7 @@ export default function Tasks() {
   const filteredTasks = getFilteredTasks();
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl">
-      {/* Barre d’en-tête harmonisée avec Habitudes */}
+    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tâches</h1>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

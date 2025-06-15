@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Goal } from "@/types";
 import { getGoals, createGoal, updateGoal, deleteGoal } from "@/lib/api";
-import { PlusCircle, Target, Calendar, CheckCircle2, Edit, Trash2 } from "lucide-react";
+import { Plus, PlusCircle, Target, Calendar, CheckCircle2, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -174,19 +174,17 @@ export default function Goals() {
   const avgProgress = goals.length > 0 ? goals.reduce((sum, g) => sum + g.progress, 0) / goals.length : 0;
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Objectifs</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Définissez et suivez vos objectifs pour atteindre vos ambitions
-          </p>
-        </div>
-        
+    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Objectifs</h1>
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-              <PlusCircle className="h-4 w-4" />
+            <Button
+              onClick={() => setIsFormOpen(true)}
+              size="sm"
+              className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
+            >
+              <Plus className="h-4 w-4" />
               Nouvel objectif
             </Button>
           </DialogTrigger>
