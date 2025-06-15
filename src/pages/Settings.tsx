@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings as SettingsIcon, User, Bell, Moon, Sun, Shield, Palette, Clock, Globe, Volume2, Key } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Moon, Sun, Shield, Palette, Clock, Globe, Volume2, Key, Lock } from "lucide-react";
 
 export default function Settings() {
   const [displayName, setDisplayName] = useState("");
@@ -26,6 +26,10 @@ export default function Settings() {
   const [adminCode, setAdminCode] = useState("");
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
   
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
@@ -156,6 +160,41 @@ export default function Settings() {
     }
   };
 
+  // Fonction pour changer le mot de passe
+  const changePassword = async () => {
+    if (!user) return;
+    if (!currentPassword || !newPassword) {
+      toast.error("Veuillez remplir les deux champs.");
+      return;
+    }
+    setPasswordLoading(true);
+
+    // Vérifier le mot de passe actuel en tentant une reconnexion
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email!,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      toast.error("Mot de passe actuel incorrect.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    // Mettre à jour le mot de passe avec le Supabase SDK
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      toast.error("Erreur lors du changement de mot de passe : " + error.message);
+    } else {
+      toast.success("Mot de passe changé avec succès !");
+      setShowPasswordDialog(false);
+      setCurrentPassword("");
+      setNewPassword("");
+    }
+    setPasswordLoading(false);
+  };
+
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
       <div className="flex items-center gap-2 mb-6">
@@ -200,9 +239,50 @@ export default function Settings() {
             />
           </div>
 
-          <Button onClick={saveProfile} disabled={loading}>
-            {loading ? 'Mise à jour...' : 'Sauvegarder le profil'}
-          </Button>
+          <div className="flex gap-3 flex-col sm:flex-row">
+            <Button onClick={saveProfile} disabled={loading}>
+              {loading ? 'Mise à jour...' : 'Sauvegarder le profil'}
+            </Button>
+            {/* Bouton pour changer le mot de passe */}
+            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 mr-1" />
+                  Changer le mot de passe
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Changer le mot de passe</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="old-pwd">Mot de passe actuel</Label>
+                    <Input
+                      id="old-pwd"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Entrer le mot de passe actuel"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-pwd">Nouveau mot de passe</Label>
+                    <Input
+                      id="new-pwd"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Entrer le nouveau mot de passe"
+                    />
+                  </div>
+                  <Button onClick={changePassword} className="w-full" disabled={passwordLoading}>
+                    {passwordLoading ? "Changement en cours..." : "Valider"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardContent>
       </Card>
 
