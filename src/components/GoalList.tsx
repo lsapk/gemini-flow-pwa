@@ -66,16 +66,19 @@ export default function GoalList({
     );
   }
 
-  // Catégories uniques présentes dans les objectifs
-  const categories = [
-    ...new Set(goals.map((g) => g.category || "other")),
-  ] as string[];
+  // Catégories uniques présentes dans les objectifs (corrigé : pas de doublon "other")
+  const rawCategories = goals.map((g) => g.category || "other");
+  const categories: string[] = Array.from(new Set(rawCategories));
 
   // Comptage par catégorie
   const goalsByCat: Record<string, Goal[]> = {};
   categories.forEach((cat) => {
     goalsByCat[cat] = goals.filter((g) => (g.category || "other") === cat);
   });
+
+  // Filtre unique "other"
+  // Supprime les doublons de "other", s'il y a plusieurs objectifs sans catégorie
+  // (Set et filter le garde déjà unique grâce à Set)
 
   // Résumé - cards catégorie
   const summaryCards = (

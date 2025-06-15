@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import { fr } from "date-fns/locale";
 import * as journalApi from "@/lib/journalApi";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import { useMobile } from "@/hooks/use-mobile";
+import JournalMoodSummary from "@/components/JournalMoodSummary";
 
 export default function Journal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -206,6 +207,9 @@ export default function Journal() {
 
   return (
     <div className={`${isMobile ? "pb-20 pt-3 px-1" : "container p-3 sm:p-6"} relative container mx-auto max-w-4xl`}>
+      {/* Résumé visuel par humeur */}
+      <JournalMoodSummary entries={entries} moods={moods} />
+
       {/* BOUTON FLOTANT D’AJOUT */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogTrigger asChild>
