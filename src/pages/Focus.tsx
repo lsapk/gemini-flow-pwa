@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -271,34 +270,53 @@ export default function Focus() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🎯</div>
-            <p className="text-xl font-bold text-green-900">{completedSessionsToday}</p>
-            <p className="text-sm text-green-700">Sessions aujourd'hui</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-green-50 border-green-200">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
+              <span className="text-2xl">🎯</span>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-green-800">
+                Sessions aujourd'hui
+              </div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {completedSessionsToday}
+              </div>
+            </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">⏱️</div>
-            <p className="text-xl font-bold text-blue-900">
-              {currentSessionId ? (isActive ? "EN COURS" : "EN PAUSE") : "ARRÊTÉ"}
-            </p>
-            <p className="text-sm text-blue-700">Statut</p>
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-blue-50 border-blue-200">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
+              <span className="text-2xl">⏱️</span>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-blue-800">
+                Statut
+              </div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {currentSessionId ? (isActive ? "EN COURS" : "EN PAUSE") : "ARRÊTÉ"}
+              </div>
+            </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🔥</div>
-            <p className="text-xl font-bold text-purple-900">
-              {minutesToday}
-            </p>
-            <p className="text-sm text-purple-700">Minutes aujourd'hui</p>
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-purple-50 border-purple-200">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-purple-100">
+              <span className="text-2xl">🔥</span>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-purple-800">
+                Minutes aujourd'hui
+              </div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {minutesToday}
+              </div>
+            </div>
           </CardContent>
         </Card>
+        <div></div>{/* Aligner pour 4 colonnes */}
       </div>
 
       {/* Timer Card */}
