@@ -5,7 +5,7 @@ import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useProductivityScore } from "@/hooks/useProductivityScore";
 import { InsightCard } from "@/components/ui/InsightCard";
-import { useProductivityInsights } from "@/hooks/useProductivityInsights";
+import { useAIProductivityInsights } from "@/hooks/useAIProductivityInsights";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
@@ -17,7 +17,7 @@ export default function Analysis() {
     qualityScore
   } = useProductivityScore();
 
-  const insights = useProductivityInsights();
+  const { insights, isLoading: insightsLoading } = useAIProductivityInsights();
 
   if (isLoading) {
     return (
@@ -91,29 +91,6 @@ export default function Analysis() {
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-      {/* Nouveau bloc : Insights personnalisés */}
-      {insights && insights.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
-            <span role="img" aria-label="idées">💡</span>
-            Conseils personnalisés
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {insights.map(insight => (
-              <InsightCard
-                key={insight.id}
-                title={insight.title}
-                insight={insight.insight}
-                recommendation={insight.recommendation}
-                priority={insight.priority}
-                icon={insight.icon}
-                metric={insight.metric}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Score de productivité avec fond contrastant */}
       <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
         <CardHeader>
@@ -160,6 +137,34 @@ export default function Analysis() {
           )}
         </CardContent>
       </Card>
+
+      {/* CONSEILS IA : Section générée par l’IA et placée ici */}
+      {(insightsLoading || (insights && insights.length > 0)) && (
+        <div>
+          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+            <span role="img" aria-label="idées">💡</span>
+            Conseils personnalisés générés par l’IA
+          </h2>
+          {insightsLoading ? (
+            <div className="p-4 text-muted-foreground">Chargement des conseils IA...</div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {insights.map(insight => (
+                <InsightCard
+                  key={insight.id}
+                  title={insight.title}
+                  insight={insight.insight}
+                  recommendation={insight.recommendation}
+                  priority={insight.priority}
+                  // L’ICÔNE : On peut garder une icône générique, ou bien l’adapter si besoin
+                  icon={() => <span className="inline-block w-4 h-4 bg-primary rounded-full" />}
+                  metric={insight.metric}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Graphiques d'analyse avec données réelles */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
