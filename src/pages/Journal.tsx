@@ -207,8 +207,8 @@ export default function Journal() {
 
   return (
     <div className={`${isMobile ? "pb-20 pt-3 px-1" : "container p-3 sm:p-6"} relative container mx-auto max-w-4xl`}>
-      {/* Résumé visuel par humeur */}
-      <JournalMoodSummary entries={entries} moods={moods} />
+      {/* Suppression du résumé visuel par humeur */}
+      {/* <JournalMoodSummary entries={entries} moods={moods} /> */}
 
       {/* Haute barre d'en-tête (Nouveau bouton ici) */}
       <div className="flex items-center justify-between mt-2 mb-4">
