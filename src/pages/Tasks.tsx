@@ -267,18 +267,16 @@ export default function Tasks() {
             Organisez et suivez vos tâches quotidiennes
           </p>
         </div>
-      </div>
-
-      {/* Nouveau bouton: Nouvelle tâche (identique à celui des habitudes) */}
-      <div className="flex justify-center mb-2">
+        {/* Nouveau bouton aligné à droite en haut, identique à "habitudes" */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
             <Button
               onClick={() => setIsFormOpen(true)}
-              className="h-20 w-20 sm:h-24 sm:w-24 p-0 rounded-full bg-primary text-white hover:bg-primary/90 flex items-center justify-center shadow-md transition-colors"
-              aria-label="Nouvelle tâche"
+              size="sm"
+              className="gap-2"
             >
-              <PlusCircle className="h-10 w-10 sm:h-12 sm:w-12" />
+              <PlusCircle className="h-4 w-4" />
+              Nouvelle tâche
             </Button>
           </DialogTrigger>
           <DialogContent className="mx-2 sm:mx-0 max-w-md">
@@ -346,7 +344,7 @@ export default function Tasks() {
         </Dialog>
       </div>
 
-      {/* Suppression de l'ancien bouton d'en-tête - plus loin dans le code */}
+      {/* Suppression du gros bouton rond centré */}
 
       {/* Stats Cards — MÊMES STYLES QUE HABITUDES */}
       <div
