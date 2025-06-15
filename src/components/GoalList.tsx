@@ -65,13 +65,16 @@ export default function GoalList({
     );
   }
 
-  // Corrigé : collecter les catégories présentes dans les objectifs
-  // On utilise un Set pour garantir qu'on ait UNE SEULE fois "other" peu importe combien d'objectifs sans catégorie existent
-  const categoriesSet = new Set<string>();
-  goals.forEach((g) => categoriesSet.add(g.category || "other"));
-  const categories: string[] = Array.from(categoriesSet);
+  // Correction ici :
+  // On collecte toutes les catégories uniques correctement, en évitant de dupliquer "other"
+  const categoriesMap = new Map<string, boolean>();
+  goals.forEach((g) => {
+    const cat = g.category || "other";
+    if (!categoriesMap.has(cat)) categoriesMap.set(cat, true);
+  });
+  const categories: string[] = Array.from(categoriesMap.keys());
 
-  // Comptage par catégorie
+  // Comptage par catégorie (aucun changement sur cette partie)
   const goalsByCat: Record<string, Goal[]> = {};
   categories.forEach((cat) => {
     goalsByCat[cat] = goals.filter((g) => (g.category || "other") === cat);
