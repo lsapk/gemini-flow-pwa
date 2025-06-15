@@ -12,6 +12,9 @@ import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import Sidebar from "@/components/layout/Sidebar"; // Affichage sidebar
 import { useLocation } from "react-router-dom";
+import MobileHeader from "@/components/layout/MobileHeader";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useState as useReactState } from "react";
 
 interface Message {
   id: string;
@@ -28,6 +31,10 @@ export default function AIAssistant() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Gérer ouverture du menu mobile localement
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
+
   const { 
     habitsData, 
     tasksData, 
@@ -217,14 +224,26 @@ export default function AIAssistant() {
     }
   };
 
-  // --- CHANGEMENTS CI-DESSOUS : layout mobile optimisé ---
+  // --- CHANGEMENTS CI-DESSOUS : layout mobile header ajouté ---
+
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar: cachée sur mobile */}
+      {/* Mobile Header : visible que sur mobile */}
+      <div className="md:hidden">
+        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
+        {/* Sidebar mobile en <Sheet> */}
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetContent side="left" className="p-0 w-64">
+            {/* On passe props onItemClick pour fermer le menu après click */}
+            <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
+          </SheetContent>
+        </Sheet>
+      </div>
+      {/* Sidebar desktop : cachée sur mobile */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      {/* Contenu principal : désormais largeur totale sur mobile */}
+      {/* Main content */}
       <div className="flex-1 w-full h-screen flex flex-col">
         <Card
           className={`
@@ -240,7 +259,8 @@ export default function AIAssistant() {
           `}
         >
           <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
-            <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl">
+            {/* On cache ce header interne sur mobile, car MobileHeader s’affiche au-dessus */}
+            <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">
               <div className="flex items-center gap-2">
                 <Bot className="h-6 w-6 text-primary" />
                 <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
@@ -256,8 +276,8 @@ export default function AIAssistant() {
               </Button>
             </CardTitle>
           </CardHeader>
-          {/* ScrollArea : paddings adaptés pour mobile */}
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          {/* ScrollArea : on ajoute pt-14 pour éviter que le header mobile ne cache le début du chat */}
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pt-14 md:pt-0">
             <ScrollArea
               className="
                 flex-1 px-1 sm:px-8 pt-2 pb-2
@@ -344,7 +364,7 @@ export default function AIAssistant() {
                 )}
               </div>
             </ScrollArea>
-            {/* Input area : full width et padding spécial mobile */}
+            {/* Input area : sticky pour ne pas passer sous le header mobile */}
             <div
               className="
                 border-t bg-background
