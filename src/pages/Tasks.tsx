@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -341,60 +340,76 @@ export default function Tasks() {
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-blue-600">Total</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-900">{tasks.length}</p>
-              </div>
-              <CheckSquare className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
+      {/* Stats Cards — MÊMES STYLES QUE HABITUDES */}
+      <div
+        className="
+          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
+        "
+      >
+        {/* Total */}
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
+              <CheckSquare className="text-blue-600 w-5 h-5 sm:w-7 sm:h-7" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-green-600">Terminées</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-900">
-                  {tasks.filter(t => t.completed).length}
-                </p>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-blue-800">
+                Total
               </div>
-              <div className="h-6 w-6 sm:h-8 sm:w-8 bg-green-200 rounded-full flex items-center justify-center">
-                <span className="text-lg sm:text-xl">✅</span>
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-orange-600">En cours</p>
-                <p className="text-xl sm:text-2xl font-bold text-orange-900">
-                  {tasks.filter(t => !t.completed).length}
-                </p>
+        {/* Terminées */}
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
+              <span className="text-lg sm:text-2xl">✅</span>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-green-800">
+                Terminées
               </div>
-              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {tasks.filter(t => t.completed).length} tâche{tasks.filter(t => t.completed).length > 1 ? "s" : ""}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-red-600">Priorité haute</p>
-                <p className="text-xl sm:text-2xl font-bold text-red-900">
-                  {tasks.filter(t => t.priority === 'high' && !t.completed).length}
-                </p>
+        {/* En cours */}
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-orange-100">
+              <Clock className="text-orange-600 w-5 h-5 sm:w-7 sm:h-7" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-orange-800">
+                En cours
               </div>
-              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {tasks.filter(t => !t.completed).length} tâche{tasks.filter(t => !t.completed).length > 1 ? "s" : ""}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Priorité haute */}
+        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
+          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-red-100">
+              <AlertCircle className="text-red-600 w-5 h-5 sm:w-7 sm:h-7" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <div className="font-semibold text-xs sm:text-base text-red-800">
+                Urgentes
+              </div>
+              <div className="text-[10px] sm:text-sm text-muted-foreground">
+                {tasks.filter(t => t.priority === 'high' && !t.completed).length} tâche{tasks.filter(t => t.priority === 'high' && !t.completed).length > 1 ? "s" : ""}
+              </div>
             </div>
           </CardContent>
         </Card>
