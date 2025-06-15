@@ -217,15 +217,15 @@ export default function AIAssistant() {
     }
   };
 
-  // Layout avec sidebar, comme le reste de l’app
-  // --> Corrections mobile: sidebar dissimulée, chat en full width, padding augmenté
+  // --- CHANGEMENTS CI-DESSOUS : layout mobile optimisé ---
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar hidden on mobile */}
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar: cachée sur mobile */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      <div className="flex-1 container mx-auto p-0 flex flex-col h-screen">
+      {/* Contenu principal : désormais largeur totale sur mobile */}
+      <div className="flex-1 w-full h-screen flex flex-col">
         <Card
           className={`
             flex-1 flex flex-col
@@ -239,8 +239,8 @@ export default function AIAssistant() {
             transition-all
           `}
         >
-          <CardHeader className="flex-shrink-0 px-4 pt-6 pb-1 sm:px-6 sm:pt-8">
-            <CardTitle className="flex items-center justify-between gap-2 text-lg sm:text-2xl">
+          <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
+            <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl">
               <div className="flex items-center gap-2">
                 <Bot className="h-6 w-6 text-primary" />
                 <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
@@ -256,10 +256,11 @@ export default function AIAssistant() {
               </Button>
             </CardTitle>
           </CardHeader>
+          {/* ScrollArea : paddings adaptés pour mobile */}
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             <ScrollArea
               className="
-                flex-1 px-2 sm:px-8 pt-4 pb-2
+                flex-1 px-1 sm:px-8 pt-2 pb-2
                 w-full
                 h-[50vh] sm:h-auto
                 max-h-[60vh] sm:max-h-none
@@ -284,7 +285,7 @@ export default function AIAssistant() {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-2 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {message.role === 'assistant' && (
                       <Avatar className="w-8 h-8 flex-shrink-0">
@@ -296,13 +297,12 @@ export default function AIAssistant() {
 
                     <div
                       className={`
-                        max-w-[80%] rounded-lg p-3 min-w-0
+                        max-w-[90vw] sm:max-w-[60%] rounded-lg p-2 sm:p-3 min-w-0
                         ${message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
                         }
                         text-sm
-                        md:max-w-[60%]
                         break-words
                       `}
                     >
@@ -326,13 +326,13 @@ export default function AIAssistant() {
                   </div>
                 ))}
                 {isLoading && (
-                  <div className="flex gap-3 justify-start">
+                  <div className="flex gap-2 sm:gap-3 justify-start">
                     <Avatar className="w-8 h-8 flex-shrink-0">
                       <AvatarFallback>
                         <Bot className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <div className="bg-muted rounded-lg p-3">
+                    <div className="bg-muted rounded-lg p-2 sm:p-3">
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">
@@ -344,13 +344,14 @@ export default function AIAssistant() {
                 )}
               </div>
             </ScrollArea>
-            {/* Input area stays pinned at bottom, with full width & mobile friendly spacing */}
+            {/* Input area : full width et padding spécial mobile */}
             <div
               className="
                 border-t bg-background
-                px-2 py-3 sm:px-6 flex-shrink-0
+                px-1 py-2 sm:px-6 flex-shrink-0
                 flex gap-2
                 sticky bottom-0 left-0 w-full
+                z-10
               "
             >
               <Input
@@ -359,14 +360,14 @@ export default function AIAssistant() {
                 onKeyPress={handleKeyPress}
                 placeholder="Tapez votre message..."
                 disabled={isLoading}
-                className="flex-1 text-base h-12 px-3 rounded-lg focus:ring-2 focus:ring-primary"
+                className="flex-1 text-base h-11 px-2 rounded-lg focus:ring-2 focus:ring-primary"
                 autoFocus
               />
               <Button 
                 onClick={sendMessage} 
                 disabled={isLoading || !input.trim()}
                 size="icon"
-                className="h-12 w-12 rounded-lg"
+                className="h-11 w-11 rounded-lg"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
