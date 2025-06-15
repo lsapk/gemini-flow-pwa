@@ -65,19 +65,29 @@ export default function GoalList({
     );
   }
 
-  // Correction ici :
-  // On collecte toutes les catégories uniques correctement, en évitant de dupliquer "other"
+  // Correction FINALE : collecte des catégories uniques, gestion stricte de "other"
   const categoriesMap = new Map<string, boolean>();
   goals.forEach((g) => {
-    const cat = g.category || "other";
+    // On normalise systématiquement la valeur en catégorie connue ou "other"
+    let cat = typeof g.category === "string" && g.category.trim() ? g.category.trim() : "other";
+    // Si la catégorie n’existe pas dans la méta, on stocke "other"
+    if (!categoryMeta.hasOwnProperty(cat)) {
+      cat = "other";
+    }
     if (!categoriesMap.has(cat)) categoriesMap.set(cat, true);
   });
   const categories: string[] = Array.from(categoriesMap.keys());
 
-  // Comptage par catégorie (aucun changement sur cette partie)
+  // Comptage par catégorie (toujours avec la même normalisation)
   const goalsByCat: Record<string, Goal[]> = {};
   categories.forEach((cat) => {
-    goalsByCat[cat] = goals.filter((g) => (g.category || "other") === cat);
+    goalsByCat[cat] = goals.filter((g) => {
+      let gc = typeof g.category === "string" && g.category.trim() ? g.category.trim() : "other";
+      if (!categoryMeta.hasOwnProperty(gc)) {
+        gc = "other";
+      }
+      return gc === cat;
+    });
   });
 
   // Résumé - cards catégorie
