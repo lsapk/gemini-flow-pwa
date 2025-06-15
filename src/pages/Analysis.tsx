@@ -1,10 +1,11 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useProductivityScore } from "@/hooks/useProductivityScore";
+import { InsightCard } from "@/components/ui/InsightCard";
+import { useProductivityInsights } from "@/hooks/useProductivityInsights";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
@@ -15,6 +16,8 @@ export default function Analysis() {
     consistencyScore,
     qualityScore
   } = useProductivityScore();
+
+  const insights = useProductivityInsights();
 
   if (isLoading) {
     return (
@@ -88,13 +91,28 @@ export default function Analysis() {
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Analyse de Productivité</h1>
-        <Button onClick={refetch} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualiser
-        </Button>
-      </div>
+      {/* Nouveau bloc : Insights personnalisés */}
+      {insights && insights.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+            <span role="img" aria-label="idées">💡</span>
+            Conseils personnalisés
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {insights.map(insight => (
+              <InsightCard
+                key={insight.id}
+                title={insight.title}
+                insight={insight.insight}
+                recommendation={insight.recommendation}
+                priority={insight.priority}
+                icon={insight.icon}
+                metric={insight.metric}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Score de productivité avec fond contrastant */}
       <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
