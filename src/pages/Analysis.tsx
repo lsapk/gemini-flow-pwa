@@ -156,8 +156,7 @@ export default function Analysis() {
                   insight={insight.insight}
                   recommendation={insight.recommendation}
                   priority={insight.priority}
-                  // L’ICÔNE : On peut garder une icône générique, ou bien l’adapter si besoin
-                  icon={() => <span className="inline-block w-4 h-4 bg-primary rounded-full" />}
+                  icon={BarChart3} // Use BarChart3 Lucide icon here
                   metric={insight.metric}
                 />
               ))}
