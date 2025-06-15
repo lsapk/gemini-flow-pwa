@@ -7,6 +7,111 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function executeAction(action: any, user_id: string, supabase: any) {
+  console.log("Executing action:", action);
+  let actionResult = null;
+  
+  switch (action.type) {
+    case 'create_task':
+      if (!action.data.title || action.data.title.trim() === '') {
+        throw new Error('Le titre de la tâche est requis');
+      }
+      
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .insert({
+          user_id: user_id,
+          title: action.data.title.trim(),
+          description: action.data.description || null,
+          priority: ['high', 'medium', 'low'].includes(action.data.priority) ? action.data.priority : 'medium',
+          due_date: action.data.due_date || null,
+          completed: false
+        })
+        .select()
+        .single();
+      
+      if (taskError) throw taskError;
+      actionResult = { type: 'task_created', data: taskData };
+      break;
+      
+    case 'create_habit':
+      if (!action.data.title || action.data.title.trim() === '') {
+        throw new Error('Le titre de l\'habitude est requis');
+      }
+      
+      const { data: habitData, error: habitError } = await supabase
+        .from('habits')
+        .insert({
+          user_id: user_id,
+          title: action.data.title.trim(),
+          description: action.data.description || null,
+          frequency: ['daily', 'weekly', 'monthly'].includes(action.data.frequency) ? action.data.frequency : 'daily',
+          category: ['health', 'productivity', 'personal'].includes(action.data.category) ? action.data.category : null,
+          target: Math.max(1, parseInt(action.data.target) || 1),
+          streak: 0
+        })
+        .select()
+        .single();
+      
+      if (habitError) throw habitError;
+      actionResult = { type: 'habit_created', data: habitData };
+      break;
+      
+    case 'create_goal':
+      if (!action.data.title || action.data.title.trim() === '') {
+        throw new Error('Le titre de l\'objectif est requis');
+      }
+      
+      const { data: goalData, error: goalError } = await supabase
+        .from('goals')
+        .insert({
+          user_id: user_id,
+          title: action.data.title.trim(),
+          description: action.data.description || null,
+          category: ['personal', 'professional', 'health', 'finance'].includes(action.data.category) ? action.data.category : 'personal',
+          target_date: action.data.target_date || null,
+          progress: 0,
+          completed: false
+        })
+        .select()
+        .single();
+      
+      if (goalError) throw goalError;
+      actionResult = { type: 'goal_created', data: goalData };
+      break;
+      
+    case 'create_journal':
+      if (!action.data.title || action.data.title.trim() === '') {
+        throw new Error('Le titre de l\'entrée de journal est requis');
+      }
+      if (!action.data.content || action.data.content.trim() === '') {
+        throw new Error('Le contenu de l\'entrée de journal est requis');
+      }
+      
+      const { data: journalData, error: journalError } = await supabase
+        .from('journal_entries')
+        .insert({
+          user_id: user_id,
+          title: action.data.title.trim(),
+          content: action.data.content.trim(),
+          mood: ['excellent', 'good', 'neutral', 'bad', 'terrible'].includes(action.data.mood) ? action.data.mood : null,
+          tags: Array.isArray(action.data.tags) ? action.data.tags : null
+        })
+        .select()
+        .single();
+      
+      if (journalError) throw journalError;
+      actionResult = { type: 'journal_created', data: journalData };
+      break;
+  }
+  
+  if (!actionResult) {
+    throw new Error(`Action non reconnue: ${action.type}`);
+  }
+
+  return actionResult;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -41,118 +146,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Si l'action est de créer quelque chose, on le fait d'abord
+    // Si une action est passée directement, on l'exécute
     if (action && action.type) {
-      console.log("Executing action:", action);
-      
       try {
-        let actionResult = null;
-        
-        switch (action.type) {
-          case 'create_task':
-            if (!action.data.title || action.data.title.trim() === '') {
-              throw new Error('Le titre de la tâche est requis');
-            }
-            
-            const { data: taskData, error: taskError } = await supabase
-              .from('tasks')
-              .insert({
-                user_id: user_id,
-                title: action.data.title.trim(),
-                description: action.data.description || null,
-                priority: ['high', 'medium', 'low'].includes(action.data.priority) ? action.data.priority : 'medium',
-                due_date: action.data.due_date || null,
-                completed: false
-              })
-              .select()
-              .single();
-            
-            if (taskError) throw taskError;
-            actionResult = { type: 'task_created', data: taskData };
-            break;
-            
-          case 'create_habit':
-            if (!action.data.title || action.data.title.trim() === '') {
-              throw new Error('Le titre de l\'habitude est requis');
-            }
-            
-            const { data: habitData, error: habitError } = await supabase
-              .from('habits')
-              .insert({
-                user_id: user_id,
-                title: action.data.title.trim(),
-                description: action.data.description || null,
-                frequency: ['daily', 'weekly', 'monthly'].includes(action.data.frequency) ? action.data.frequency : 'daily',
-                category: ['health', 'productivity', 'personal'].includes(action.data.category) ? action.data.category : null,
-                target: Math.max(1, parseInt(action.data.target) || 1),
-                streak: 0
-              })
-              .select()
-              .single();
-            
-            if (habitError) throw habitError;
-            actionResult = { type: 'habit_created', data: habitData };
-            break;
-            
-          case 'create_goal':
-            if (!action.data.title || action.data.title.trim() === '') {
-              throw new Error('Le titre de l\'objectif est requis');
-            }
-            
-            const { data: goalData, error: goalError } = await supabase
-              .from('goals')
-              .insert({
-                user_id: user_id,
-                title: action.data.title.trim(),
-                description: action.data.description || null,
-                category: ['personal', 'professional', 'health', 'finance'].includes(action.data.category) ? action.data.category : 'personal',
-                target_date: action.data.target_date || null,
-                progress: 0,
-                completed: false
-              })
-              .select()
-              .single();
-            
-            if (goalError) throw goalError;
-            actionResult = { type: 'goal_created', data: goalData };
-            break;
-            
-          case 'create_journal':
-            if (!action.data.title || action.data.title.trim() === '') {
-              throw new Error('Le titre de l\'entrée de journal est requis');
-            }
-            if (!action.data.content || action.data.content.trim() === '') {
-              throw new Error('Le contenu de l\'entrée de journal est requis');
-            }
-            
-            const { data: journalData, error: journalError } = await supabase
-              .from('journal_entries')
-              .insert({
-                user_id: user_id,
-                title: action.data.title.trim(),
-                content: action.data.content.trim(),
-                mood: ['excellent', 'good', 'neutral', 'bad', 'terrible'].includes(action.data.mood) ? action.data.mood : null,
-                tags: Array.isArray(action.data.tags) ? action.data.tags : null
-              })
-              .select()
-              .single();
-            
-            if (journalError) throw journalError;
-            actionResult = { type: 'journal_created', data: journalData };
-            break;
-        }
-        
-        if (actionResult) {
-          console.log("Action executed successfully:", actionResult);
-          return new Response(JSON.stringify({ 
-            response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
-                      actionResult.type === 'habit_created' ? 'Habitude' : 
-                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
-            action_result: actionResult
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+        const actionResult = await executeAction(action, user_id, supabase);
+        console.log("Action executed successfully:", actionResult);
+        return new Response(JSON.stringify({ 
+          response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
+                    actionResult.type === 'habit_created' ? 'Habitude' : 
+                    actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
+          action_result: actionResult
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       } catch (error) {
         console.error('Error executing action:', error);
         return new Response(JSON.stringify({ 
@@ -263,32 +269,18 @@ INSTRUCTIONS:
         const actionJson = JSON.parse(jsonString);
 
         if (actionJson.action) {
-          console.log("Action detected in response, re-calling function:", actionJson.action);
+          console.log("Action detected in response, executing directly:", actionJson.action);
           
-          // Re-call this function with the action
-          const actionRequest = await fetch(req.url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: message,
-              context: context,
-              user_id: user_id,
-              action: actionJson.action
-            })
-          });
-
-          if (!actionRequest.ok) {
-            const errorText = await actionRequest.text();
-            console.error('Error during recursive action call:', actionRequest.status, errorText);
-            throw new Error(`Action execution failed with status ${actionRequest.status}`);
-          }
-          
-          const actionResponse = await actionRequest.json();
+          const actionResult = await executeAction(actionJson.action, user_id, supabase);
           const cleanedResponse = responseText.replace(match[0], '').trim();
           
+          const successMessage = `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
+                                  actionResult.type === 'habit_created' ? 'Habitude' : 
+                                  actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`;
+
           return new Response(JSON.stringify({ 
-            response: cleanedResponse || actionResponse.response,
-            action_result: actionResponse.action_result
+            response: cleanedResponse || successMessage,
+            action_result: actionResult
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
