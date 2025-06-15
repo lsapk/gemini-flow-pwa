@@ -1,10 +1,11 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Award, Badge as BadgeIcon, Flame, Star, Users, Trophy, Zap } from "lucide-react";
+import { BadgeProgressBar } from "@/components/ui/BadgeProgressBar";
 
 interface UserBadge {
   id: string;
@@ -16,6 +17,19 @@ interface UserBadge {
   earnedAt?: string;
   category: 'productivity' | 'social' | 'consistency' | 'achievement';
 }
+
+type CategoryMeta = {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+};
+
+const categoryMeta: Record<UserBadge['category'], CategoryMeta> = {
+  productivity: { label: "Productivité", icon: <Zap className="text-blue-400" />, color: 'blue' },
+  social: { label: "Social", icon: <Users className="text-purple-400" />, color: 'purple' },
+  consistency: { label: "Régularité", icon: <Flame className="text-green-400"/>, color: 'green' },
+  achievement: { label: "Succès", icon: <Trophy className="text-yellow-400"/>, color: 'yellow' },
+};
 
 export default function Badges() {
   const [badges, setBadges] = useState<UserBadge[]>([]);
@@ -273,110 +287,159 @@ export default function Badges() {
     setBadges(earnedBadges);
   };
 
-  const categoryColors = {
-    productivity: 'bg-blue-50 border-blue-200 text-blue-900',
-    consistency: 'bg-green-50 border-green-200 text-green-900',
-    social: 'bg-purple-50 border-purple-200 text-purple-900',
-    achievement: 'bg-yellow-50 border-yellow-200 text-yellow-900'
-  };
+  // Util pour grouper par catégorie
+  const badgesByCategory = useMemo(() => {
+    return badges.reduce((acc, badge) => {
+      if (!acc[badge.category]) acc[badge.category] = [];
+      acc[badge.category].push(badge);
+      return acc;
+    }, {} as Record<UserBadge['category'], UserBadge[]>);
+  }, [badges]);
+
+  // Trouver le badge obtenu le plus récent
+  const latestEarnedBadge = badges
+    .filter(b => b.earned && b.earnedAt)
+    .sort((a, b) => (b.earnedAt && a.earnedAt) ? b.earnedAt.localeCompare(a.earnedAt) : 0)[0];
+
+  // Compter les badges obtenus par catégorie
+  const categoryCounts = useMemo(() => {
+    const counts: Record<UserBadge['category'], {earned: number, total: number}> = {
+      productivity: {earned: 0, total: 0},
+      social: {earned: 0, total: 0},
+      consistency: {earned: 0, total: 0},
+      achievement: {earned: 0, total: 0},
+    };
+    badges.forEach(b => {
+      counts[b.category].total++;
+      if (b.earned) counts[b.category].earned++;
+    });
+    return counts;
+  }, [badges]);
 
   const earnedBadges = badges.filter(b => b.earned);
   const unlockedBadges = badges.filter(b => !b.earned);
 
+  // Gamification : barre de progression globale
+  const totalBadges = badges.length;
+  const earnedCount = earnedBadges.length;
+  const percentEarned = totalBadges > 0 ? Math.round((earnedCount / totalBadges) * 100) : 0;
+
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Badges & Récompenses</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex justify-center items-center gap-2">
+          <BadgeIcon className="h-7 w-7 text-primary animate-bounce" />
+          Badges & Récompenses
+        </h1>
         <p className="text-muted-foreground mt-2">
           Vos accomplissements et récompenses
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🏆</div>
-            <p className="text-xl font-bold text-yellow-900">{earnedBadges.length}</p>
-            <p className="text-sm text-yellow-700">Badges obtenus</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">⭐</div>
-            <p className="text-xl font-bold text-purple-900">{karmaPoints}</p>
-            <p className="text-sm text-purple-700">Points Karma</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🎯</div>
-            <p className="text-xl font-bold text-blue-900">
-              {Math.round((earnedBadges.length / allBadges.length) * 100)}%
-            </p>
-            <p className="text-sm text-blue-700">Progression</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl mb-2">🔥</div>
-            <p className="text-xl font-bold text-green-900">{userStats.loginStreak}</p>
-            <p className="text-sm text-green-700">Jours de suite</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Earned Badges */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            🏆 Badges obtenus ({earnedBadges.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {earnedBadges.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {earnedBadges.map((badge) => (
-                <div
-                  key={badge.id}
-                  className={`p-4 rounded-lg border-2 ${categoryColors[badge.category]} relative overflow-hidden`}
-                >
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {badge.category}
-                    </Badge>
-                  </div>
-                  <div className="text-3xl mb-2">{badge.icon}</div>
-                  <h3 className="font-semibold mb-1">{badge.name}</h3>
-                  <p className="text-sm opacity-80 mb-2">{badge.description}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-200 text-green-800">
-                      ✓ Obtenu
-                    </span>
-                  </div>
-                </div>
-              ))}
+      {/* Global Progress */}
+      <Card className="border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-white/90 animate-fade-in">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-center gap-y-3 gap-x-8">
+            <div className="flex-1">
+              <BadgeProgressBar
+                label="Progression Globale"
+                value={earnedCount}
+                total={totalBadges}
+                color="primary"
+              />
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎯</div>
-              <h3 className="text-xl font-medium mb-2">Aucun badge encore</h3>
-              <p className="text-muted-foreground">
-                Continuez à utiliser DeepFlow pour débloquer vos premiers badges !
-              </p>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-3xl font-bold text-primary animate-pulse">{percentEarned}%</span>
+              <span className="text-sm text-muted-foreground">Complété</span>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Available Badges */}
-      <Card>
+      {/* Category Progression */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Object.entries(categoryMeta).map(([cat, meta]) => (
+          <Card key={cat} className={`border-2 border-${meta.color}-200`}>
+            <CardContent className="p-3 flex flex-col items-center">
+              <div className="flex items-center gap-1">
+                {meta.icon}
+                <span className="font-semibold">{meta.label}</span>
+              </div>
+              <BadgeProgressBar
+                label="Progression"
+                value={categoryCounts[cat as UserBadge['category']].earned}
+                total={categoryCounts[cat as UserBadge['category']].total}
+                color={meta.color}
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Dernier badge gagné ! */}
+      {latestEarnedBadge && (
+        <Card className="bg-gradient-to-r from-green-50 via-white to-blue-50 border-green-200 shadow animate-scale-in">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Award className="text-green-400" />
+              Nouveau badge obtenu&nbsp;!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="text-4xl animate-bounce">{latestEarnedBadge.icon}</div>
+            <div>
+              <div className="font-semibold mb-1">{latestEarnedBadge.name}</div>
+              <div className="text-sm text-muted-foreground">{latestEarnedBadge.description}</div>
+            </div>
+            <div className="flex-1" />
+            <Badge variant="secondary" className="text-xs">{categoryMeta[latestEarnedBadge.category].label}</Badge>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Earned Badges par catégorie */}
+      {Object.entries(categoryMeta).map(([cat, meta]) => (
+        <Card key={cat + "-earned"} className="mt-4 animate-fade-in">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              {meta.icon}
+              {meta.label} ({categoryCounts[cat as UserBadge['category']].earned}/{categoryCounts[cat as UserBadge['category']].total})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {badgesByCategory[cat as UserBadge['category']]
+                ?.filter(b => b.earned)
+                .map((badge) => (
+                  <div
+                    key={badge.id}
+                    className={`p-4 rounded-lg border-2 border-${meta.color}-200 bg-white flex flex-col items-center gap-2 transition-transform animate-scale-in hover:scale-105`}
+                  >
+                    <span className="text-3xl">{badge.icon}</span>
+                    <div className="font-semibold">{badge.name}</div>
+                    <div className="text-sm text-muted-foreground">{badge.description}</div>
+                    <Badge variant="secondary" className="text-xs">{meta.label}</Badge>
+                  </div>
+              ))}
+              {/* Cas pas de badge débloqué */}
+              {(!badgesByCategory[cat as UserBadge['category']] ||
+                badgesByCategory[cat as UserBadge['category']].filter(b => b.earned).length === 0) && (
+                <div className="text-center py-8 col-span-full opacity-60">
+                  <BadgeIcon className="mx-auto h-8 w-8" />
+                  <div className="text-sm">Aucun badge {meta.label} débloqué</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Badges non encore obtenus */}
+      <Card className="mt-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            🎖️ Badges à débloquer ({unlockedBadges.length})
+            <Star className="text-gray-400" />
+            Badges à débloquer ({unlockedBadges.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -384,11 +447,11 @@ export default function Badges() {
             {unlockedBadges.map((badge) => (
               <div
                 key={badge.id}
-                className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50 opacity-75 relative"
+                className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50 opacity-75 relative flex flex-col items-center"
               >
                 <div className="absolute top-2 right-2">
                   <Badge variant="outline" className="text-xs">
-                    {badge.category}
+                    {categoryMeta[badge.category].label}
                   </Badge>
                 </div>
                 <div className="text-3xl mb-2 grayscale">{badge.icon}</div>
