@@ -155,8 +155,8 @@ export default function AIAssistant() {
     try {
       const userData = await getUserData();
 
-      // Préparer les messages récents pour la mémoire (derniers 5)
-      const recentMessages = messages.slice(-5).map(msg => ({
+      // Préparer les messages récents pour la mémoire (derniers 10)
+      const recentMessages = messages.slice(-10).map(msg => ({
         role: msg.role,
         content: msg.content
       }));
