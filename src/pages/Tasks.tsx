@@ -39,6 +39,8 @@ interface Task {
   updated_at?: string;
 }
 
+import TaskList from "@/components/TaskList";
+
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,9 +336,7 @@ export default function Tasks() {
         </Dialog>
       </div>
 
-      {/* Suppression du gros bouton rond centré */}
-
-      {/* Stats Cards — MÊMES STYLES QUE HABITUDES */}
+      {/* Stats Cards */}
       <div
         className="
           grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
@@ -426,77 +426,13 @@ export default function Tasks() {
               <CardTitle>Vos tâches</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Chargement...</div>
-              ) : filteredTasks.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Commencez par créer votre première tâche
-                  </p>
-                  <Button onClick={() => setIsFormOpen(true)}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Créer une tâche
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredTasks.map((task) => (
-                    <div key={task.id} className={`border rounded-lg p-4 space-y-3 ${task.completed ? 'bg-gray-50 opacity-75' : ''}`}>
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={task.completed}
-                          onCheckedChange={() => toggleComplete(task.id, task.completed)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className={`font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                              {task.title}
-                            </h3>
-                          </div>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
-                          )}
-                          <div className="flex gap-2 mb-2">
-                            <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
-                              {getPriorityIcon(task.priority)}
-                              {task.priority}
-                            </Badge>
-                            {task.due_date && (
-                              <Badge variant="outline">
-                                Échéance: {format(new Date(task.due_date), 'dd MMM yyyy', { locale: fr })}
-                              </Badge>
-                            )}
-                          </div>
-                          {task.created_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Créée le {format(new Date(task.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => editTask(task)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteTask(task.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <TaskList
+                tasks={filteredTasks}
+                loading={loading}
+                onEdit={editTask}
+                onDelete={deleteTask}
+                onToggleComplete={toggleComplete}
+              />
             </CardContent>
           </Card>
         </TabsContent>
