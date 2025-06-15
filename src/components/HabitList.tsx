@@ -175,13 +175,15 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                       variant="outline"
                       size="lg"
                       onClick={() => onComplete(habit.id, habit.is_completed_today)}
-                      className={`h-10 w-10 p-0 rounded-full transition-colors ${
-                        habit.is_completed_today 
-                          ? "text-white bg-green-600 hover:bg-green-700" 
-                          : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                      }`}
+                      className={`h-11 w-11 sm:h-14 sm:w-14 p-0 rounded-full transition-colors flex items-center justify-center 
+                        ${
+                          habit.is_completed_today 
+                            ? "text-white bg-green-600 hover:bg-green-700" 
+                            : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                        }`}
+                      aria-label={habit.is_completed_today ? "Décocher l'habitude" : "Cocher l'habitude"}
                     >
-                      <CheckCircle className="h-5 w-5" />
+                      <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7" />
                     </Button>
                   )}
                   {onEdit && (
