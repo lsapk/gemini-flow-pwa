@@ -1,4 +1,3 @@
-
 import { Goal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,19 +65,17 @@ export default function GoalList({
     );
   }
 
-  // Catégories uniques présentes dans les objectifs (corrigé : pas de doublon "other")
-  const rawCategories = goals.map((g) => g.category || "other");
-  const categories: string[] = Array.from(new Set(rawCategories));
+  // Corrigé : collecter les catégories présentes dans les objectifs
+  // On utilise un Set pour garantir qu'on ait UNE SEULE fois "other" peu importe combien d'objectifs sans catégorie existent
+  const categoriesSet = new Set<string>();
+  goals.forEach((g) => categoriesSet.add(g.category || "other"));
+  const categories: string[] = Array.from(categoriesSet);
 
   // Comptage par catégorie
   const goalsByCat: Record<string, Goal[]> = {};
   categories.forEach((cat) => {
     goalsByCat[cat] = goals.filter((g) => (g.category || "other") === cat);
   });
-
-  // Filtre unique "other"
-  // Supprime les doublons de "other", s'il y a plusieurs objectifs sans catégorie
-  // (Set et filter le garde déjà unique grâce à Set)
 
   // Résumé - cards catégorie
   const summaryCards = (
