@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -202,7 +203,11 @@ export default function Focus() {
       loadSessionsToday();
     } catch (error) {
       console.error('Error stopping session:', error);
-      toast.error("Erreur lors de l'arrêt de la session.");
+      toast({
+        variant: "destructive",
+        title: "Erreur lors de l'arrêt de la session",
+        description: "Un problème est survenu. Veuillez réessayer.",
+      });
     } finally {
       localStorage.removeItem('active_focus_session');
       resetSession();

@@ -13,6 +13,7 @@ interface ActiveFocusSession {
   startTime: number; // timestamp
   userId: string;
   isActive: boolean; // Add isActive to sync pause state
+  timeLeft?: number; // Add timeLeft to sync pause state
 }
 
 export const FocusTimer = () => {
@@ -75,7 +76,7 @@ export const FocusTimer = () => {
   }, []);
 
   useEffect(() => {
-    let timerInterval: number | undefined;
+    let timerInterval: ReturnType<typeof setInterval> | undefined;
     if (session && session.isActive) {
       timerInterval = setInterval(() => {
         setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
