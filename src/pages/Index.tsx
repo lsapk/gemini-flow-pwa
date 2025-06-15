@@ -1,5 +1,6 @@
 
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   ListTodoIcon, 
@@ -7,8 +8,29 @@ import {
   TimerIcon, 
   BrainCircuitIcon 
 } from "@/components/icons/DeepFlowIcons";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const shouldRemember = localStorage.getItem("deepflow_remember_me") === "true";
+    if (user && shouldRemember) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+
+  // Affiche rien le temps de vérifier l'état de connexion
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="glass-nav py-4">
@@ -118,3 +140,4 @@ const Index = () => {
 };
 
 export default Index;
+
