@@ -1,260 +1,196 @@
+
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, CheckSquare, Calendar, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, PlusCircle, CheckSquare, AlertCircle, Clock, Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+import { useAuth } from "@/hooks/useAuth";
+import CreateModal from "@/components/modals/CreateModal";
+import CreateTaskForm from "@/components/modals/CreateTaskForm";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
 } from "@/components/ui/dialog";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  priority: 'high' | 'medium' | 'low';
-  due_date?: string;
-  user_id: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import TaskList from "@/components/TaskList";
+import { Task } from "@/types";
+import { useTaskDragAndDrop } from "@/hooks/useTaskDragAndDrop";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
-  const [dueDate, setDueDate] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [subtaskParent, setSubtaskParent] = useState<string | null>(null);
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const fetchTasks = async () => {
     if (!user) return;
 
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true });
 
-      if (error) {
-        console.error("Error fetching tasks:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les tâches.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (error) throw error;
 
-      setTasks((data || []).map(task => ({
+      // Organiser les tâches avec leurs sous-tâches
+      const mainTasks = (data || []).filter(task => !task.parent_task_id);
+      const subtasksByParent = (data || []).filter(task => task.parent_task_id)
+        .reduce((acc, task) => {
+          if (!acc[task.parent_task_id!]) acc[task.parent_task_id!] = [];
+          acc[task.parent_task_id!].push(task);
+          return acc;
+        }, {} as Record<string, Task[]>);
+
+      const tasksWithSubtasks = mainTasks.map(task => ({
         ...task,
-        priority: (task.priority as 'high' | 'medium' | 'low') || 'medium'
-      })));
+        subtasks: subtasksByParent[task.id] || []
+      }));
+
+      setTasks(tasksWithSubtasks);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les tâches.",
-        variant: "destructive",
-      });
+      console.error('Error fetching tasks:', error);
+      toast.error('Erreur lors du chargement des tâches');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
+
+  // Hook pour le glisser-déposer
+  const { handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useTaskDragAndDrop(
+    tasks,
+    async (reorderedTasks) => {
+      setTasks(reorderedTasks);
+      
+      try {
+        const updates = reorderedTasks.map((task, index) => ({
+          id: task.id,
+          sort_order: index
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('tasks')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        }
+
+        toast.success('Ordre des tâches mis à jour !');
+      } catch (error) {
+        console.error('Erreur lors du réordonnancement:', error);
+        toast.error('Erreur lors de la mise à jour de l\'ordre');
+        fetchTasks();
+      }
+    }
+  );
 
   useEffect(() => {
     fetchTasks();
   }, [user]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !title.trim()) return;
-
-    try {
-      const taskData = {
-        title: title.trim(),
-        description: description.trim() || null,
-        priority,
-        due_date: dueDate || null,
-        user_id: user.id,
-        completed: editingTask?.completed || false,
-      };
-
-      if (editingTask) {
-        const { error } = await supabase
-          .from('tasks')
-          .update(taskData)
-          .eq('id', editingTask.id);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Tâche modifiée",
-          description: "Votre tâche a été modifiée avec succès.",
-        });
-      } else {
-        const { error } = await supabase
-          .from('tasks')
-          .insert(taskData);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Tâche créée",
-          description: "Votre tâche a été créée avec succès.",
-        });
-      }
-      
-      resetForm();
-      fetchTasks();
-    } catch (error) {
-      console.error("Error saving task:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder la tâche.",
-        variant: "destructive",
-      });
-    }
+  const handleEdit = (task: Task) => {
+    setEditingTask(task);
+    setIsEditModalOpen(true);
   };
 
-  const toggleComplete = async (id: string, completed: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed: !completed })
-        .eq('id', id);
-
-      if (error) {
-        console.error("Error updating task:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de mettre à jour la tâche.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setTasks(tasks.map(task =>
-        task.id === id ? { ...task, completed: !completed } : task
-      ));
-      
-      toast({
-        title: !completed ? "Tâche terminée !" : "Tâche rouverte",
-        description: !completed ? "Félicitations pour avoir terminé cette tâche !" : "La tâche a été marquée comme non terminée.",
-      });
-    } catch (error) {
-      console.error("Error updating task:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour la tâche.",
-        variant: "destructive",
-      });
-    }
+  const requestDelete = (taskId: string) => {
+    setTaskToDelete(taskId);
+    setIsDeleteDialogOpen(true);
   };
 
-  const deleteTask = async (id: string) => {
+  const confirmDelete = async () => {
+    if (!user || !taskToDelete) return;
+
     try {
       const { error } = await supabase
         .from('tasks')
         .delete()
-        .eq('id', id);
+        .eq('id', taskToDelete)
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error("Error deleting task:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de supprimer la tâche.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (error) throw error;
 
-      setTasks(tasks.filter(task => task.id !== id));
-      toast({
-        title: "Tâche supprimée",
-        description: "La tâche a été supprimée avec succès.",
-      });
+      toast.success('Tâche supprimée !');
+      fetchTasks();
     } catch (error) {
-      console.error("Error deleting task:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer la tâche.",
-        variant: "destructive",
-      });
+      console.error('Error deleting task:', error);
+      toast.error('Erreur lors de la suppression de la tâche');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setTaskToDelete(null);
     }
   };
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setPriority('medium');
-    setDueDate("");
+  const toggleTaskCompletion = async (taskId: string, isCompleted: boolean) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: !isCompleted })
+        .eq('id', taskId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success(isCompleted ? 'Tâche marquée comme non terminée' : 'Tâche terminée !');
+      fetchTasks();
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+      toast.error('Erreur lors de la mise à jour de la tâche');
+    }
+  };
+
+  const handleCreateSubtask = (parentId: string) => {
+    setSubtaskParent(parentId);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateSuccess = () => {
+    setIsCreateModalOpen(false);
+    setSubtaskParent(null);
+    fetchTasks();
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditModalOpen(false);
     setEditingTask(null);
-    setIsFormOpen(false);
-  };
-
-  const editTask = (task: Task) => {
-    setTitle(task.title);
-    setDescription(task.description || "");
-    setPriority(task.priority);
-    setDueDate(task.due_date ? task.due_date.split('T')[0] : "");
-    setEditingTask(task);
-    setIsFormOpen(true);
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high': return <AlertCircle className="h-3 w-3" />;
-      case 'medium': return <Clock className="h-3 w-3" />;
-      case 'low': return <CheckSquare className="h-3 w-3" />;
-      default: return null;
-    }
+    fetchTasks();
   };
 
   const getFilteredTasks = () => {
     switch (activeTab) {
-      case 'completed': return tasks.filter(t => t.completed);
-      case 'pending': return tasks.filter(t => !t.completed);
-      case 'high': return tasks.filter(t => t.priority === 'high');
-      default: return tasks;
+      case "pending":
+        return tasks.filter(task => !task.completed);
+      case "completed":
+        return tasks.filter(task => task.completed);
+      case "today":
+        const today = new Date().toISOString().split('T')[0];
+        return tasks.filter(task => 
+          task.due_date && task.due_date.startsWith(today) && !task.completed
+        );
+      default:
+        return tasks.filter(task => !task.completed); // "all" ne montre que les non terminées
     }
   };
 
@@ -264,179 +200,82 @@ export default function Tasks() {
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tâches</h1>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => setIsFormOpen(true)}
-              size="sm"
-              className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvelle tâche
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="mx-2 sm:mx-0 max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTask ? "Modifier la tâche" : "Nouvelle tâche"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Nom de votre tâche"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Description de votre tâche (optionnel)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priorité</Label>
-                <Select value={priority} onValueChange={(value: 'high' | 'medium' | 'low') => setPriority(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner la priorité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">🔴 Élevée</SelectItem>
-                    <SelectItem value="medium">🟡 Moyenne</SelectItem>
-                    <SelectItem value="low">🟢 Faible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Date d'échéance</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  {editingTask ? "Modifier" : "Créer"}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Annuler
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle tâche
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div
-        className="
-          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
-        "
-      >
-        {/* Total */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
-              <CheckSquare className="text-blue-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-blue-800">
-                Total
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Terminées */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
-              <span className="text-lg sm:text-2xl">✅</span>
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-green-800">
-                Terminées
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => t.completed).length} tâche{tasks.filter(t => t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* En cours */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-orange-100">
-              <Clock className="text-orange-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-orange-800">
-                En cours
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => !t.completed).length} tâche{tasks.filter(t => !t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Priorité haute */}
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-red-100">
-              <AlertCircle className="text-red-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-red-800">
-                Urgentes
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => t.priority === 'high' && !t.completed).length} tâche{tasks.filter(t => t.priority === 'high' && !t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tasks Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Toutes ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="pending">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
-          <TabsTrigger value="completed">Terminées ({tasks.filter(t => t.completed).length})</TabsTrigger>
-          <TabsTrigger value="high">Urgentes ({tasks.filter(t => t.priority === 'high').length})</TabsTrigger>
+          <TabsTrigger value="all" className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4" />
+            Tout ({tasks.filter(t => !t.completed).length})
+          </TabsTrigger>
+          <TabsTrigger value="today" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Aujourd'hui
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            En cours
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4" />
+            Terminées ({tasks.filter(t => t.completed).length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vos tâches</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TaskList
-                tasks={filteredTasks}
-                loading={loading}
-                onEdit={editTask}
-                onDelete={deleteTask}
-                onToggleComplete={toggleComplete}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value={activeTab}>
+          <TaskList 
+            tasks={filteredTasks}
+            loading={isLoading}
+            onEdit={handleEdit}
+            onDelete={requestDelete}
+            onToggleComplete={toggleTaskCompletion}
+            onCreateSubtask={handleCreateSubtask}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+          />
         </TabsContent>
       </Tabs>
+
+      {isCreateModalOpen && (
+        <CreateModal 
+          type="task"
+          onSuccess={handleCreateSuccess}
+          parentTaskId={subtaskParent}
+        />
+      )}
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la tâche</DialogTitle>
+          </DialogHeader>
+          <CreateTaskForm 
+            onSuccess={handleEditSuccess}
+            task={editingTask}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La tâche sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
