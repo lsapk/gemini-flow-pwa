@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -6,6 +7,52 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+async function getUserData(user_id: string, supabase: any) {
+  // Récupérer toutes les données utilisateur en temps réel
+  const [
+    { data: tasks },
+    { data: habits },
+    { data: goals },
+    { data: journalEntries },
+    { data: focusSessions },
+    { data: backgroundSessions },
+    { data: userProfile }
+  ] = await Promise.all([
+    supabase.from('tasks').select('*').eq('user_id', user_id).order('created_at', { ascending: false }),
+    supabase.from('habits').select('*').eq('user_id', user_id).eq('is_archived', false).order('sort_order'),
+    supabase.from('goals').select('*').eq('user_id', user_id).eq('is_archived', false).order('created_at', { ascending: false }),
+    supabase.from('journal_entries').select('*').eq('user_id', user_id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('focus_sessions').select('*').eq('user_id', user_id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('background_focus_sessions').select('*').eq('user_id', user_id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('user_profiles').select('*').eq('id', user_id).single()
+  ]);
+
+  return {
+    tasks: tasks || [],
+    habits: habits || [],
+    goals: goals || [],
+    journal_entries: journalEntries || [],
+    focus_sessions: focusSessions || [],
+    background_focus_sessions: backgroundSessions || [],
+    user_profile: userProfile
+  };
+}
+
+async function createPendingAction(action: any, user_id: string, supabase: any) {
+  const { data, error } = await supabase
+    .from('ai_pending_actions')
+    .insert({
+      user_id: user_id,
+      action_type: action.type,
+      action_data: action.data
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
 
 async function executeAction(action: any, user_id: string, supabase: any) {
   console.log("Executing action:", action);
@@ -25,7 +72,9 @@ async function executeAction(action: any, user_id: string, supabase: any) {
           description: action.data.description || null,
           priority: ['high', 'medium', 'low'].includes(action.data.priority) ? action.data.priority : 'medium',
           due_date: action.data.due_date || null,
-          completed: false
+          completed: false,
+          parent_task_id: action.data.parent_task_id || null,
+          sort_order: action.data.sort_order || 0
         })
         .select()
         .single();
@@ -48,7 +97,8 @@ async function executeAction(action: any, user_id: string, supabase: any) {
           frequency: ['daily', 'weekly', 'monthly'].includes(action.data.frequency) ? action.data.frequency : 'daily',
           category: ['health', 'productivity', 'personal'].includes(action.data.category) ? action.data.category : null,
           target: Math.max(1, parseInt(action.data.target) || 1),
-          streak: 0
+          streak: 0,
+          sort_order: action.data.sort_order || 0
         })
         .select()
         .single();
@@ -118,12 +168,12 @@ serve(async (req) => {
   }
 
   try {
-    const { message, context, user_id, action } = await req.json();
+    const { message, user_id, action, confirm_action } = await req.json();
     
-    console.log("Received request:", { message, user_id, action, contextKeys: Object.keys(context || {}) });
+    console.log("Received request:", { message, user_id, action, confirm_action });
     
-    if (!message && !action) {
-      throw new Error('Message or action is required');
+    if (!message && !action && !confirm_action) {
+      throw new Error('Message, action or confirm_action is required');
     }
     
     if (!user_id) {
@@ -146,6 +196,50 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
+    // Si c'est une confirmation d'action
+    if (confirm_action) {
+      try {
+        const { data: pendingAction, error: fetchError } = await supabase
+          .from('ai_pending_actions')
+          .select('*')
+          .eq('id', confirm_action)
+          .eq('user_id', user_id)
+          .single();
+
+        if (fetchError || !pendingAction) {
+          throw new Error('Action non trouvée ou expirée');
+        }
+
+        const actionResult = await executeAction({
+          type: pendingAction.action_type,
+          data: pendingAction.action_data
+        }, user_id, supabase);
+
+        // Supprimer l'action en attente
+        await supabase
+          .from('ai_pending_actions')
+          .delete()
+          .eq('id', confirm_action);
+
+        return new Response(JSON.stringify({ 
+          response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
+                      actionResult.type === 'habit_created' ? 'Habitude' : 
+                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
+          action_result: actionResult
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Error confirming action:', error);
+        return new Response(JSON.stringify({ 
+          response: `❌ Erreur lors de la confirmation : ${error.message}`,
+          error: true 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Si une action est passée directement, on l'exécute
     if (action && action.type) {
       try {
@@ -153,8 +247,8 @@ serve(async (req) => {
         console.log("Action executed successfully:", actionResult);
         return new Response(JSON.stringify({ 
           response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
-                    actionResult.type === 'habit_created' ? 'Habitude' : 
-                    actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
+                      actionResult.type === 'habit_created' ? 'Habitude' : 
+                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
           action_result: actionResult
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -170,40 +264,30 @@ serve(async (req) => {
       }
     }
 
+    // Récupérer toutes les données utilisateur
+    const userData = await getUserData(user_id, supabase);
+
     const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
 Tu parles TOUJOURS en français et tu utilises TOUJOURS des emojis appropriés dans tes réponses (1 à 3 par réponse) 😊.
 Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
 
-IMPORTANT : Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
+IMPORTANT : 
+- Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
+- Pour créer plusieurs éléments ou des éléments complexes, tu dois TOUJOURS demander confirmation explicite avec le format JSON ci-dessous.
+- Ne crée des éléments directement QUE si l'utilisateur le demande explicitement ET simplement.
 
-Pour créer un élément (tâche, habitude, etc.), ta réponse DOIT contenir un bloc de code. N'ajoute aucun commentaire ou texte explicatif à l'intérieur de ce bloc. Le bloc doit commencer par \`\`\`json et se terminer par \`\`\`. Voici le format à l'intérieur du bloc :
+Pour créer un élément qui nécessite une confirmation, ta réponse DOIT contenir un bloc de code. N'ajoute aucun commentaire ou texte explicatif à l'intérieur de ce bloc. Le bloc doit commencer par \`\`\`json et se terminer par \`\`\`. Voici le format à l'intérieur du bloc :
 \`\`\`json
-{"action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
+{"pending_action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
 \`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_habit","data":{"title":"titre","description":"description","frequency":"daily","category":"health","target":1}}}
-\`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_goal","data":{"title":"titre","description":"description","category":"personal","target_date":"YYYY-MM-DD"}}}
-\`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_journal","data":{"title":"titre","content":"contenu","mood":"good","tags":["tag1","tag2"]}}}
-\`\`\`
-Tu peux ajouter un petit texte d'accompagnement avant ou après le bloc JSON.
 
-DONNÉES UTILISATEUR ACTUELLES:
-${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
-
-HISTORIQUE RÉCENT DE CONVERSATION:
-${context?.recent_messages?.map((msg) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
+DONNÉES UTILISATEUR ACTUELLES (EN TEMPS RÉEL):
+${JSON.stringify(userData, null, 2)}
 
 CAPACITÉS:
 - Analyser les données de productivité de l'utilisateur en détail 📊
-- Créer des tâches, habitudes, objectifs, entrées de journal ✨
-- Donner des conseils personnalisés basés sur les vraies données 💡
+- Créer des tâches, habitudes, objectifs, entrées de journal avec confirmation ✨
+- Donner des conseils personnalisés basés sur les vraies données temps réel 💡
 - Fournir des statistiques précises et des analyses approfondies 📈
 - Proposer des améliorations concrètes et réalisables 🚀
 
@@ -212,7 +296,8 @@ INSTRUCTIONS:
 - Sois encourageant, constructif et empathique 💪
 - Propose des actions concrètes et réalisables ✅
 - Utilise un ton amical et professionnel 🤝
-- Si une demande de création est faite, utilise le format JSON spécifié ci-dessus.
+- Pour les créations multiples ou complexes, utilise TOUJOURS le format JSON de confirmation ci-dessus.
+- Analyse les données temps réel pour donner des conseils précis et personnalisés.
 `;
 
     console.log("Calling Gemini API...");
@@ -232,7 +317,7 @@ INSTRUCTIONS:
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 1500,
           topP: 0.8,
           topK: 40
         }
@@ -259,20 +344,47 @@ INSTRUCTIONS:
     let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer. 😅";
     console.log("Final AI response:", responseText);
 
-    // Vérifier si la réponse contient une action JSON
-    const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*?"action"[\s\S]*?\})/;
-    const match = responseText.match(jsonRegex);
+    // Vérifier si la réponse contient une action en attente
+    const pendingActionRegex = /```json\s*(\{[\s\S]*?"pending_action"[\s\S]*?\})\s*```/;
+    const match = responseText.match(pendingActionRegex);
 
     if (match) {
       try {
-        const jsonString = match[1] || match[2];
+        const jsonString = match[1];
+        const actionJson = JSON.parse(jsonString);
+
+        if (actionJson.pending_action) {
+          console.log("Pending action detected, creating:", actionJson.pending_action);
+          
+          const pendingAction = await createPendingAction(actionJson.pending_action, user_id, supabase);
+          const cleanedResponse = responseText.replace(match[0], '').trim();
+          
+          return new Response(JSON.stringify({ 
+            response: cleanedResponse || "J'ai préparé une action pour vous. Veuillez la confirmer ci-dessous. 🤔",
+            pending_action: pendingAction
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (e) {
+        console.error("Error processing pending action from AI response:", e.message);
+      }
+    }
+
+    // Vérifier si la réponse contient une action directe (pour compatibilité)
+    const directActionRegex = /```json\s*(\{[\s\S]*?"action"[\s\S]*?\})\s*```/;
+    const directMatch = responseText.match(directActionRegex);
+
+    if (directMatch) {
+      try {
+        const jsonString = directMatch[1];
         const actionJson = JSON.parse(jsonString);
 
         if (actionJson.action) {
-          console.log("Action detected in response, executing directly:", actionJson.action);
+          console.log("Direct action detected, executing:", actionJson.action);
           
           const actionResult = await executeAction(actionJson.action, user_id, supabase);
-          const cleanedResponse = responseText.replace(match[0], '').trim();
+          const cleanedResponse = responseText.replace(directMatch[0], '').trim();
           
           const successMessage = `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
                                   actionResult.type === 'habit_created' ? 'Habitude' : 
@@ -286,13 +398,7 @@ INSTRUCTIONS:
           });
         }
       } catch (e) {
-        console.error("Error processing action from AI response:", e.message);
-        const cleanedResponse = responseText.replace(match[0] || '', '').trim();
-        return new Response(JSON.stringify({
-          response: cleanedResponse + "\n\n" + "PS : J'ai bien compris votre demande de création, mais une erreur technique est survenue lors de l'enregistrement. Veuillez réessayer. 🛠️"
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.error("Error processing direct action from AI response:", e.message);
       }
     }
 

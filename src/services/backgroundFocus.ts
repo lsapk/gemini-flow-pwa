@@ -1,163 +1,126 @@
-interface FocusSession {
-  id: string;
-  title: string;
-  duration: number;
-  startTime: number;
-  isRunning: boolean;
-}
+
+import { supabase } from '@/integrations/supabase/client';
 
 class BackgroundFocusService {
-  private static instance: BackgroundFocusService;
-  private sessions: Map<string, FocusSession> = new Map();
-  private intervals: Map<string, NodeJS.Timeout> = new Map();
-  private callbacks: Map<string, (timeLeft: number, isComplete: boolean) => void> = new Map();
+  private sessionId: string | null = null;
+  private startTime: Date | null = null;
+  private intervalId: NodeJS.Timeout | null = null;
 
-  static getInstance(): BackgroundFocusService {
-    if (!BackgroundFocusService.instance) {
-      BackgroundFocusService.instance = new BackgroundFocusService();
-    }
-    return BackgroundFocusService.instance;
-  }
-
-  startSession(id: string, title: string, duration: number): void {
-    if (this.sessions.has(id)) {
-      this.stopSession(id);
-    }
-    const session: FocusSession = {
-      id,
-      title,
-      duration: duration * 60, // mins to seconds
-      startTime: Date.now(),
-      isRunning: true,
-    };
-
-    this.sessions.set(id, session);
-    this.clearInterval(id);
-
-    const interval = setInterval(() => {
-      this.updateSession(id);
-    }, 1000);
-
-    this.intervals.set(id, interval);
-
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }
-
-  pauseSession(id: string): void {
-    const session = this.sessions.get(id);
-    if (session && session.isRunning) {
-      this.clearInterval(id);
-      const elapsed = (Date.now() - session.startTime) / 1000;
-      session.duration = session.duration - elapsed; // Update duration to remaining time
-      session.isRunning = false;
-    }
-  }
-
-  resumeSession(id: string): void {
-    const session = this.sessions.get(id);
-    if (session && !session.isRunning) {
-      session.isRunning = true;
-      session.startTime = Date.now(); // Reset start time
-      
-      const interval = setInterval(() => {
-        this.updateSession(id);
-      }, 1000);
-      
-      this.intervals.set(id, interval);
-    }
-  }
-
-  stopSession(id: string): void {
-    this.clearInterval(id);
-    this.sessions.delete(id);
-    this.callbacks.delete(id);
-  }
-
-  getTimeLeft(id: string): number {
-    const session = this.sessions.get(id);
-    if (!session) return 0;
-
-    if (!session.isRunning) {
-      return Math.max(0, session.duration);
-    }
-
-    const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
-    return Math.max(0, session.duration - elapsed);
-  }
-
-  isSessionActive(id: string): boolean {
-    const session = this.sessions.get(id);
-    return session ? session.isRunning : false;
-  }
-
-  onSessionUpdate(id: string, callback: (timeLeft: number, isComplete: boolean) => void): void {
-    this.callbacks.set(id, callback);
-  }
-
-  private updateSession(id: string): void {
-    const session = this.sessions.get(id);
-    const callback = this.callbacks.get(id);
-    
-    if (!session || !callback) return;
-
-    const timeLeft = this.getTimeLeft(id);
-    const isComplete = timeLeft <= 0;
-
-    callback(timeLeft, isComplete);
-
-    if (isComplete) {
-      this.handleSessionComplete(id, session);
-    }
-  }
-
-  private handleSessionComplete(id: string, session: FocusSession): void {
-    // Show notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Session terminée !', {
-        body: `Votre session "${session.title}" est terminée. Bien joué !`,
-        icon: '/favicon.ico',
-        tag: 'focus-complete'
-      });
-    }
-
-    // Play sound if browser supports it
+  async startSession(userId: string): Promise<string | null> {
     try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DrwGWYC0GWrJO3B+l0W6BdHr+e3FMGOD1Yh89p4B/e53v6uC1');
-      audio.play().catch(() => {
-        // Ignore audio play errors
-      });
-    } catch (error) {
-      // Ignore audio errors
-    }
+      // Vérifier s'il y a déjà une session active
+      const { data: existingSession } = await supabase
+        .from('background_focus_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
 
-    this.stopSession(id);
-  }
+      if (existingSession) {
+        // Reprendre la session existante
+        this.sessionId = existingSession.id;
+        this.startTime = new Date(existingSession.started_at);
+      } else {
+        // Créer une nouvelle session
+        const { data, error } = await supabase
+          .from('background_focus_sessions')
+          .insert({
+            user_id: userId,
+            is_active: true
+          })
+          .select()
+          .single();
 
-  private clearInterval(id: string): void {
-    const interval = this.intervals.get(id);
-    if (interval) {
-      clearInterval(interval);
-      this.intervals.delete(id);
-    }
-  }
+        if (error) throw error;
 
-  getAllActiveSessions(): Array<{ id: string; title: string; timeLeft: number }> {
-    const activeSessions: Array<{ id: string; title: string; timeLeft: number }> = [];
-    
-    this.sessions.forEach((session, id) => {
-      if (session.isRunning) {
-        activeSessions.push({
-          id,
-          title: session.title,
-          timeLeft: this.getTimeLeft(id)
-        });
+        this.sessionId = data.id;
+        this.startTime = new Date();
       }
-    });
-    
-    return activeSessions;
+
+      // Démarrer le suivi du temps
+      this.startTracking();
+      return this.sessionId;
+    } catch (error) {
+      console.error('Erreur lors du démarrage de la session focus:', error);
+      return null;
+    }
+  }
+
+  async endSession(): Promise<void> {
+    if (!this.sessionId || !this.startTime) return;
+
+    try {
+      const endTime = new Date();
+      const durationMinutes = Math.floor((endTime.getTime() - this.startTime.getTime()) / (1000 * 60));
+
+      await supabase
+        .from('background_focus_sessions')
+        .update({
+          ended_at: endTime.toISOString(),
+          duration_minutes: durationMinutes,
+          is_active: false
+        })
+        .eq('id', this.sessionId);
+
+      // Créer aussi une entrée dans focus_sessions pour la compatibilité
+      await supabase
+        .from('focus_sessions')
+        .insert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          title: 'Session Focus en arrière-plan',
+          duration: durationMinutes * 60, // en secondes
+          started_at: this.startTime.toISOString(),
+          completed_at: endTime.toISOString()
+        });
+
+      this.stopTracking();
+      this.sessionId = null;
+      this.startTime = null;
+    } catch (error) {
+      console.error('Erreur lors de la fin de la session focus:', error);
+    }
+  }
+
+  private startTracking(): void {
+    // Mettre à jour la durée toutes les minutes
+    this.intervalId = setInterval(() => {
+      this.updateSessionDuration();
+    }, 60000); // 1 minute
+  }
+
+  private stopTracking(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  private async updateSessionDuration(): Promise<void> {
+    if (!this.sessionId || !this.startTime) return;
+
+    try {
+      const currentTime = new Date();
+      const durationMinutes = Math.floor((currentTime.getTime() - this.startTime.getTime()) / (1000 * 60));
+
+      await supabase
+        .from('background_focus_sessions')
+        .update({
+          duration_minutes: durationMinutes
+        })
+        .eq('id', this.sessionId);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la session:', error);
+    }
+  }
+
+  isActive(): boolean {
+    return this.sessionId !== null;
+  }
+
+  getCurrentDuration(): number {
+    if (!this.startTime) return 0;
+    return Math.floor((new Date().getTime() - this.startTime.getTime()) / (1000 * 60));
   }
 }
 
-export default BackgroundFocusService;
+export const backgroundFocusService = new BackgroundFocusService();

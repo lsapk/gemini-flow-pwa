@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, subDays, startOfToday, parseISO } from "date-fns";
 
 type AnalyticsDataType = {
-  // Types de données pour les graphiques
   habitsData: { name: string; value: number }[];
   tasksData: { name: string; completed: number; pending: number }[];
   focusData: { date: string; minutes: number }[];
@@ -37,47 +36,43 @@ export const useAnalyticsData = (): AnalyticsDataType => {
     setError(null);
     
     try {
-      // Récupérer les données des habitudes
+      // Récupérer les données des habitudes (non archivées)
       const { data: habitsRawData, error: habitsError } = await supabase
         .from('habits')
         .select('title, id, streak')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_archived', false);
         
       if (habitsError) throw new Error("Erreur lors de la récupération des habitudes: " + habitsError.message);
       
-      // Format the habit data using the correct column name (title instead of name)
       let maxStreak = 0;
       const formattedHabitsData = (habitsRawData || []).map(habit => {
         const streak = habit.streak || 0;
         if (streak > maxStreak) maxStreak = streak;
         return {
-          name: habit.title, // Using 'title' instead of 'name'
+          name: habit.title,
           value: streak
         };
       });
       
-      // Update global streak count
       setStreakCount(maxStreak);
-      
-      // Set habits data
       setHabitsData(formattedHabitsData.length > 0 ? formattedHabitsData : [
         { name: "Pas d'habitudes", value: 0 }
       ]);
       
-      // Récupérer les données des tâches
+      // Récupérer les données des tâches (non terminées seulement)
       const { data: tasksRawData, error: tasksError } = await supabase
         .from('tasks')
         .select('priority, completed')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .is('parent_task_id', null); // Seulement les tâches principales
         
       if (tasksError) throw new Error("Erreur lors de la récupération des tâches: " + tasksError.message);
       
-      // Calculate task completion rate
       const totalTasks = (tasksRawData || []).length;
       const completedTasks = (tasksRawData || []).filter(task => task.completed).length;
       setTaskCompletionRate(totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0);
       
-      // Regrouper par priorité
       const tasksByPriority = (tasksRawData || []).reduce((acc: Record<string, {completed: number, pending: number}>, task) => {
         const priority = task.priority || 'non-défini';
         if (!acc[priority]) {
@@ -103,20 +98,26 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         { name: "Pas de tâches", completed: 0, pending: 0 }
       ]);
       
-      // Récupérer les données des sessions focus
-      const { data: focusRawData, error: focusError } = await supabase
-        .from('focus_sessions')
-        .select('duration, created_at')
-        .eq('user_id', user.id)
-        .gt('created_at', subDays(new Date(), 14).toISOString())
-        .order('created_at', { ascending: false });
-        
-      if (focusError) throw new Error("Erreur lors de la récupération des sessions focus: " + focusError.message);
+      // Récupérer les données des sessions focus + sessions en arrière-plan
+      const [focusResult, backgroundResult] = await Promise.all([
+        supabase
+          .from('focus_sessions')
+          .select('duration, created_at')
+          .eq('user_id', user.id)
+          .gt('created_at', subDays(new Date(), 14).toISOString())
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('background_focus_sessions')
+          .select('duration_minutes, created_at')
+          .eq('user_id', user.id)
+          .gt('created_at', subDays(new Date(), 14).toISOString())
+          .order('created_at', { ascending: false })
+      ]);
       
-      // Calculer le temps total de focus en minutes
+      if (focusResult.error) throw new Error("Erreur lors de la récupération des sessions focus: " + focusResult.error.message);
+      if (backgroundResult.error) throw new Error("Erreur lors de la récupération des sessions focus en arrière-plan: " + backgroundResult.error.message);
+      
       let totalMinutes = 0;
-      
-      // Formater les données de focus
       const focusByDay: Record<string, number> = {};
       const last7Days = Array.from({ length: 7 }).map((_, i) => {
         const date = new Date();
@@ -126,8 +127,8 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         return formattedDate;
       }).reverse();
       
-      // Agréger les sessions par jour
-      (focusRawData || []).forEach(session => {
+      // Sessions focus normales
+      (focusResult.data || []).forEach(session => {
         const sessionDate = format(parseISO(session.created_at), 'yyyy-MM-dd');
         const durationMinutes = Math.round(session.duration / 60);
         totalMinutes += durationMinutes;
@@ -137,10 +138,19 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         }
       });
       
-      // Mettre à jour le temps total de focus
+      // Sessions focus en arrière-plan
+      (backgroundResult.data || []).forEach(session => {
+        const sessionDate = format(parseISO(session.created_at), 'yyyy-MM-dd');
+        const durationMinutes = session.duration_minutes || 0;
+        totalMinutes += durationMinutes;
+        
+        if (last7Days.includes(sessionDate)) {
+          focusByDay[sessionDate] = (focusByDay[sessionDate] || 0) + durationMinutes;
+        }
+      });
+      
       setTotalFocusTime(totalMinutes);
       
-      // Formater les données pour le graphique
       const formattedFocusData = Object.entries(focusByDay).map(([date, minutes]) => ({
         date: format(parseISO(date), 'dd MMM'),
         minutes
@@ -155,56 +165,23 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         return date.toISOString().split('T')[0];
       }).reverse();
       
-      // Compter toutes les activités par jour en utilisant des requêtes directes
       const startDate = last7DaysDates[0];
       const endDate = last7DaysDates[last7DaysDates.length - 1] + 'T23:59:59';
       
-      // Get habits activity
-      const { data: habitsActivityData, error: habitsActivityError } = await supabase
-        .from('habits')
-        .select('updated_at')
-        .eq('user_id', user.id)
-        .gte('updated_at', startDate)
-        .lte('updated_at', endDate);
-        
-      // Get tasks activity
-      const { data: tasksActivityData, error: tasksActivityError } = await supabase
-        .from('tasks')
-        .select('updated_at')
-        .eq('user_id', user.id)
-        .gte('updated_at', startDate)
-        .lte('updated_at', endDate);
-        
-      // Get focus sessions activity
-      const { data: focusActivityData, error: focusActivityError } = await supabase
-        .from('focus_sessions')
-        .select('created_at')
-        .eq('user_id', user.id)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-        
-      // Get journal entries activity
-      const { data: journalActivityData, error: journalActivityError } = await supabase
-        .from('journal_entries')
-        .select('created_at')
-        .eq('user_id', user.id)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate);
-        
-      if (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError) {
-        throw new Error("Erreur lors de la récupération des données d'activité: " 
-          + (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError).message);
-      }
+      const [habitsActivity, tasksActivity, focusActivity, journalActivity] = await Promise.all([
+        supabase.from('habits').select('updated_at').eq('user_id', user.id).gte('updated_at', startDate).lte('updated_at', endDate),
+        supabase.from('tasks').select('updated_at').eq('user_id', user.id).gte('updated_at', startDate).lte('updated_at', endDate),
+        supabase.from('focus_sessions').select('created_at').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate),
+        supabase.from('journal_entries').select('created_at').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate)
+      ]);
       
-      // Combine all activity data
       const allActivityData = [
-        ...(habitsActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(tasksActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] })),
-        ...(journalActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
+        ...(habitsActivity.data || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
+        ...(tasksActivity.data || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
+        ...(focusActivity.data || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] })),
+        ...(journalActivity.data || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
       ];
       
-      // Mapper les activités par jour
       const activityByDay: Record<string, number> = {};
       last7DaysDates.forEach(day => {
         activityByDay[day] = 0;
@@ -227,7 +204,6 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       console.error("Erreur lors de la récupération des données pour l'analyse:", err);
       setError(err.message || "Erreur lors du chargement des données d'analyse");
       
-      // Définir des données par défaut en cas d'erreur
       if (habitsData.length === 0) {
         setHabitsData([{ name: "Pas de données", value: 0 }]);
       }
