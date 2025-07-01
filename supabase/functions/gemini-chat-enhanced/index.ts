@@ -153,6 +153,39 @@ async function executeAction(action: any, user_id: string, supabase: any) {
       if (journalError) throw journalError;
       actionResult = { type: 'journal_created', data: journalData };
       break;
+
+    case 'create_tasks':
+      if (!Array.isArray(action.data) || action.data.length === 0) {
+        throw new Error('Aucune tâche à créer');
+      }
+      
+      const createdTasks = [];
+      for (const taskData of action.data) {
+        if (!taskData.title || taskData.title.trim() === '') {
+          continue; // Skip tasks without title
+        }
+        
+        const { data: newTask, error: taskErr } = await supabase
+          .from('tasks')
+          .insert({
+            user_id: user_id,
+            title: taskData.title.trim(),
+            description: taskData.description || null,
+            priority: ['high', 'medium', 'low'].includes(taskData.priority) ? taskData.priority : 'medium',
+            due_date: taskData.due_date || null,
+            completed: false,
+            sort_order: taskData.sort_order || 0
+          })
+          .select()
+          .single();
+        
+        if (!taskErr && newTask) {
+          createdTasks.push(newTask);
+        }
+      }
+      
+      actionResult = { type: 'tasks_created', data: createdTasks, count: createdTasks.length };
+      break;
   }
   
   if (!actionResult) {
@@ -224,7 +257,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
                       actionResult.type === 'habit_created' ? 'Habitude' : 
-                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
+                      actionResult.type === 'goal_created' ? 'Objectif' : 
+                      actionResult.type === 'tasks_created' ? `${actionResult.count} tâches` : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
           action_result: actionResult
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -248,7 +282,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           response: `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
                       actionResult.type === 'habit_created' ? 'Habitude' : 
-                      actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
+                      actionResult.type === 'goal_created' ? 'Objectif' : 
+                      actionResult.type === 'tasks_created' ? `${actionResult.count} tâches` : 'Entrée de journal'} créé(e) avec succès ! 🎉`,
           action_result: actionResult
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -281,6 +316,11 @@ Pour créer un élément qui nécessite une confirmation, ta réponse DOIT conte
 {"pending_action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
 \`\`\`
 
+Pour plusieurs éléments :
+\`\`\`json
+{"pending_action":{"type":"create_tasks","data":[{"title":"titre1","description":"desc1","priority":"high","due_date":"YYYY-MM-DD"},{"title":"titre2","description":"desc2","priority":"medium"}]}}
+\`\`\`
+
 DONNÉES UTILISATEUR ACTUELLES (EN TEMPS RÉEL):
 ${JSON.stringify(userData, null, 2)}
 
@@ -298,6 +338,7 @@ INSTRUCTIONS:
 - Utilise un ton amical et professionnel 🤝
 - Pour les créations multiples ou complexes, utilise TOUJOURS le format JSON de confirmation ci-dessus.
 - Analyse les données temps réel pour donner des conseils précis et personnalisés.
+- Tu as accès aux habitudes archivées, utilise ces informations pour donner des conseils pertinents.
 `;
 
     console.log("Calling Gemini API...");
@@ -388,7 +429,8 @@ INSTRUCTIONS:
           
           const successMessage = `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
                                   actionResult.type === 'habit_created' ? 'Habitude' : 
-                                  actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`;
+                                  actionResult.type === 'goal_created' ? 'Objectif' : 
+                                  actionResult.type === 'tasks_created' ? `${actionResult.count} tâches` : 'Entrée de journal'} créé(e) avec succès ! 🎉`;
 
           return new Response(JSON.stringify({ 
             response: cleanedResponse || successMessage,
