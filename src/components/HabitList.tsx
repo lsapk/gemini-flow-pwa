@@ -137,7 +137,7 @@ export default function HabitList({
           <Card 
             key={habit.id} 
             className={`hover:shadow-sm transition-shadow ${habit.is_archived ? 'opacity-60' : ''}`}
-            draggable={!habit.is_archived && onDragStart}
+            draggable={!habit.is_archived && onDragStart ? true : false}
             onDragStart={onDragStart ? (e) => onDragStart(e, habit.id, index) : undefined}  
             onDragOver={onDragOver}
             onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
@@ -189,7 +189,7 @@ export default function HabitList({
                   {!habit.is_archived && onComplete && (
                     <Button
                       size="lg"
-                      onClick={() => onComplete(habit.id, habit.is_completed_today)}
+                      onClick={() => onComplete(habit.id, habit.is_completed_today || false)}
                       className={`h-14 w-14 sm:h-20 sm:w-20 p-0 rounded-full transition-colors flex items-center justify-center 
                         ${
                           habit.is_completed_today 
@@ -206,7 +206,7 @@ export default function HabitList({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onArchive(habit.id, habit.is_archived)}
+                      onClick={() => onArchive(habit.id, habit.is_archived || false)}
                       className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                       title={habit.is_archived ? "Restaurer" : "Archiver"}
                     >

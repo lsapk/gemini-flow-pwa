@@ -1,4 +1,3 @@
-
 export interface Habit {
   id: string;
   title: string;
@@ -12,6 +11,8 @@ export interface Habit {
   updated_at?: string;
   user_id: string;
   is_completed_today?: boolean;
+  is_archived?: boolean;
+  sort_order?: number;
 }
 
 export interface Goal {
