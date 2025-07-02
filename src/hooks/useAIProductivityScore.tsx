@@ -13,6 +13,11 @@ export const useAIProductivityScore = () => {
   const calculateScore = useCallback(async () => {
     if (!user) return;
 
+    // Initialize variables outside try block so they're accessible in catch
+    let habits: any[] = [];
+    let tasks: any[] = [];
+    let goals: any[] = [];
+
     try {
       setIsLoading(true);
       
@@ -26,9 +31,9 @@ export const useAIProductivityScore = () => {
       ]);
 
       // Calculer les métriques
-      const habits = habitsRes.data || [];
-      const tasks = tasksRes.data || [];
-      const goals = goalsRes.data || [];
+      habits = habitsRes.data || [];
+      tasks = tasksRes.data || [];
+      goals = goalsRes.data || [];
       const journalEntries = journalRes.data || [];
       const focusSessions = focusRes.data || [];
 
