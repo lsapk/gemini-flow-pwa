@@ -35,7 +35,7 @@ export const useAIProductivityScore = () => {
       // Calculs des métriques
       const activeHabits = habits.filter(h => !h.is_archived);
       const completedTasks = tasks.filter(t => t.completed);
-      const totalProgress = goals.reduce((sum, g) => sum + g.progress, 0);
+      const totalProgress = goals.reduce((sum, g) => sum + (g.progress || 0), 0);
       const avgGoalProgress = goals.length > 0 ? totalProgress / goals.length : 0;
       const totalFocusTime = focusSessions.reduce((sum, f) => sum + (f.duration || 0), 0);
 
@@ -81,7 +81,7 @@ export const useAIProductivityScore = () => {
       const fallbackScore = Math.min(100, Math.round(
         (habits.filter(h => !h.is_archived && h.streak && h.streak > 0).length * 20) +
         (tasks.filter(t => t.completed).length * 10) +
-        (goals.reduce((sum, g) => sum + g.progress, 0) / Math.max(goals.length, 1))
+        (goals.reduce((sum, g) => sum + (g.progress || 0), 0) / Math.max(goals.length, 1))
       ));
       setScore(fallbackScore);
       setInsights(['Analyse en cours...']);

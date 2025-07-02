@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, Star, Target, Zap } from "lucide-react";
-import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
+import { useProductivityScore } from "@/hooks/useProductivityScore";
 import { motion } from "framer-motion";
 
 export function ProductivityScore() {
-  const { score, level, badges, completionRate, focusTimeScore, consistencyScore, streakBonus } = useRealtimeProductivityScore();
+  const { score, level, badges, completionRate, focusTimeScore, consistencyScore, streakBonus } = useProductivityScore();
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
