@@ -8,10 +8,10 @@ export const useRealtimeProductivityScore = () => {
   const productivityData = useProductivityScore();
 
   useEffect(() => {
-    // Mettre à jour toutes les 5 minutes
+    // Mettre à jour toutes les 2 minutes pour plus de réactivité
     const interval = setInterval(() => {
       refetch();
-    }, 5 * 60 * 1000);
+    }, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [refetch]);
@@ -26,6 +26,34 @@ export const useRealtimeProductivityScore = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refetch]);
+
+  // Écouter les changements en temps réel sur les tables importantes
+  useEffect(() => {
+    const { supabase } = require('@/integrations/supabase/client');
+    
+    const channel = supabase
+      .channel('productivity-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'habits' },
+        () => refetch()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => refetch()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'goals' },
+        () => refetch()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   return productivityData;
