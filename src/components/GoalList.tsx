@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Edit, Trash2, Target, Calendar, CheckCircle } from "lucide-react";
+import { Edit, Trash2, Target, Calendar, CheckCircle, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Goal } from "@/types";
@@ -16,9 +16,23 @@ interface GoalListProps {
   onEdit: (goal: Goal) => void;
   onDelete: (id: string) => void;
   showCompleted?: boolean;
+  onDragStart?: (e: React.DragEvent, id: string, index: number) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent, index: number) => void;
+  onDragEnd?: () => void;
 }
 
-export default function GoalList({ goals, loading, onEdit, onDelete, showCompleted = false }: GoalListProps) {
+export default function GoalList({ 
+  goals, 
+  loading, 
+  onEdit, 
+  onDelete, 
+  showCompleted = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
+}: GoalListProps) {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -64,28 +78,40 @@ export default function GoalList({ goals, loading, onEdit, onDelete, showComplet
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {filteredGoals.map((goal) => (
+      {filteredGoals.map((goal, index) => (
         <Card 
           key={goal.id} 
           className={`hover:shadow-md transition-shadow ${
             goal.completed ? 'bg-green-50 border-green-200' : ''
           }`}
+          draggable={!goal.completed && onDragStart ? true : false}
+          onDragStart={onDragStart && !goal.completed ? (e) => onDragStart(e, goal.id, index) : undefined}
+          onDragOver={onDragOver}
+          onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
+          onDragEnd={onDragEnd}
         >
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <CardTitle className={`text-lg mb-2 ${goal.completed ? 'text-green-800' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    {goal.completed && <CheckCircle className="h-5 w-5 text-green-600" />}
-                    {goal.title}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {!goal.completed && onDragStart && (
+                  <div className="cursor-grab active:cursor-grabbing">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </CardTitle>
-                
-                {goal.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {goal.description}
-                  </p>
                 )}
+                <div className="flex-1 min-w-0">
+                  <CardTitle className={`text-lg mb-2 ${goal.completed ? 'text-green-800' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      {goal.completed && <CheckCircle className="h-5 w-5 text-green-600" />}
+                      {goal.title}
+                    </div>
+                  </CardTitle>
+                  
+                  {goal.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {goal.description}
+                    </p>
+                  )}
+                </div>
               </div>
               
               <div className="flex gap-1 ml-2">

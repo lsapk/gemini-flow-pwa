@@ -19,13 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import MobileInsights from "@/components/ui/MobileInsights";
-import { useAIProductivityScore } from "@/hooks/useAIProductivityScore";
+import { ProductivityScore } from "@/components/ui/ProductivityScore";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [lastLogin, setLastLogin] = useState<string | null>(null);
   const productivityData = useRealtimeProductivityScore();
-  const aiScore = useAIProductivityScore();
 
   useEffect(() => {
     const fetchLastLogin = async () => {
@@ -68,61 +67,13 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6 p-3 sm:p-6">
       {/* Mobile Insights - visible only on mobile */}
       <div className="block sm:hidden">
-        <MobileInsights 
-          insights={aiScore.insights}
-          score={aiScore.score}
-          isLoading={aiScore.isLoading}
-          lastUpdate={aiScore.lastUpdate}
-        />
+        <ProductivityScore />
       </div>
 
       {/* Desktop layout */}
       <div className="hidden sm:block">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Score de productivité IA</h2>
-                <p className="text-sm text-muted-foreground">
-                  Analyse en temps réel de vos habitudes
-                </p>
-              </div>
-              {aiScore.isLoading ? (
-                <Skeleton className="w-[80px] h-[40px] rounded-md" />
-              ) : (
-                <Badge className={aiScore.score >= 70 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                  {aiScore.score}/100
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Conseils personnalisés</h2>
-              <ScrollArea className="h-32">
-                <div className="space-y-2">
-                  {aiScore.isLoading ? (
-                    <>
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </>
-                  ) : aiScore.insights.length > 0 ? (
-                    aiScore.insights.map((insight, index) => (
-                      <p key={index} className="text-sm text-muted-foreground">
-                        {insight}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Aucun conseil disponible pour le moment.
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <ProductivityScore />
         </div>
       </div>
 
@@ -131,9 +82,9 @@ export default function Dashboard() {
           <CardContent className="flex flex-col items-center justify-center py-8">
             <CalendarIcon className="h-10 w-10 text-blue-500 mb-3" />
             <h3 className="text-xl font-semibold mb-1">Dernière connexion</h3>
-            <p className="text-muted-foreground">
+            <div className="text-muted-foreground">
               {lastLogin ? lastLogin : <Skeleton className="w-24" />}
-            </p>
+            </div>
           </CardContent>
         </Card>
 

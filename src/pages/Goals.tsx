@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import GoalList from "@/components/GoalList";
 import { Goal } from "@/types";
+import { useGoalDragAndDrop } from "@/hooks/useGoalDragAndDrop";
 
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -38,6 +39,34 @@ export default function Goals() {
   const [activeTab, setActiveTab] = useState("active");
   const { user } = useAuth();
 
+  // Hook pour le glisser-déposer
+  const { handleDragStart, handleDragOver, handleDrop, handleDragEnd } = useGoalDragAndDrop(
+    goals,
+    async (reorderedGoals) => {
+      setGoals(reorderedGoals);
+      
+      try {
+        const updates = reorderedGoals.map((goal, index) => ({
+          id: goal.id,
+          sort_order: index
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('goals')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        }
+
+        toast.success('Ordre des objectifs mis à jour !');
+      } catch (error) {
+        console.error('Erreur lors du réordonnancement:', error);
+        toast.error('Erreur lors de la mise à jour de l\'ordre');
+        fetchGoals();
+      }
+    }
+  );
+
   const fetchGoals = async () => {
     if (!user) return;
 
@@ -46,7 +75,7 @@ export default function Goals() {
         .from('goals')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true });
 
       if (error) throw error;
 
@@ -139,6 +168,10 @@ export default function Goals() {
             onEdit={handleEdit}
             onDelete={requestDelete}
             showCompleted={false}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
           />
         </TabsContent>
 

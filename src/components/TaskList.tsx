@@ -110,12 +110,13 @@ export default function TaskList({
           onDragOver={onDragOver}
           onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
           onDragEnd={onDragEnd}
+          style={{ touchAction: 'none' }}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               {/* Drag handle - only for main tasks */}
               {!task.parent_task_id && onDragStart && (
-                <div className="cursor-grab active:cursor-grabbing">
+                <div className="cursor-grab active:cursor-grabbing touch-none">
                   <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
               )}

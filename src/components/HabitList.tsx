@@ -112,8 +112,8 @@ export default function HabitList({
                 <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
                   <span className="text-xl sm:text-3xl">{label.emoji}</span>
                 </div>
-                <div className="flex flex-col gap-0.5 sm:gap-1">
-                  <div className={`font-semibold text-xs sm:text-base ${label.color.text}`}>
+                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 flex-1">
+                  <div className={`font-semibold text-xs sm:text-base ${label.color.text} truncate`}>
                     {label.name}
                   </div>
                   <div className="text-[10px] sm:text-sm text-muted-foreground">
@@ -142,28 +142,29 @@ export default function HabitList({
             onDragOver={onDragOver}
             onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
             onDragEnd={onDragEnd}
+            style={{ touchAction: 'none' }}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 {/* Handle de glisser-déposer */}
                 {!habit.is_archived && onDragStart && (
-                  <div className="flex items-center mr-2 cursor-grab active:cursor-grabbing">
+                  <div className="flex items-center mr-2 cursor-grab active:cursor-grabbing touch-none">
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
                 
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-sm sm:text-base">{habit.title}</h3>
+                <div className="flex-1 space-y-2 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-medium text-sm sm:text-base truncate">{habit.title}</h3>
                     {habit.category && (
-                      <Badge variant="secondary" className={`${getCategoryColor(habit.category).bg} ${getCategoryColor(habit.category).text}`}>
+                      <Badge variant="secondary" className={`${getCategoryColor(habit.category).bg} ${getCategoryColor(habit.category).text} text-xs shrink-0`}>
                         {habit.category === 'health' ? 'Santé' : 
                          habit.category === 'productivity' ? 'Productivité' : 
                          habit.category === 'personal' ? 'Personnel' : habit.category}
                       </Badge>
                     )}
                     {habit.is_archived && (
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="shrink-0">
                         <Archive className="h-3 w-3 mr-1" />
                         Archivée
                       </Badge>
@@ -185,12 +186,12 @@ export default function HabitList({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 ml-4 shrink-0">
                   {!habit.is_archived && onComplete && (
                     <Button
                       size="lg"
                       onClick={() => onComplete(habit.id, habit.is_completed_today || false)}
-                      className={`h-14 w-14 sm:h-20 sm:w-20 p-0 rounded-full transition-colors flex items-center justify-center 
+                      className={`h-12 w-12 sm:h-16 sm:w-16 p-0 rounded-full transition-colors flex items-center justify-center 
                         ${
                           habit.is_completed_today 
                             ? "text-white bg-green-600 hover:bg-green-700" 
@@ -198,7 +199,7 @@ export default function HabitList({
                         }`}
                       aria-label={habit.is_completed_today ? "Décocher l'habitude" : "Cocher l'habitude"}
                     >
-                      <CheckCircle className="h-9 w-9 sm:h-12 sm:w-12" />
+                      <CheckCircle className="h-7 w-7 sm:h-9 sm:w-9" />
                     </Button>
                   )}
                   
