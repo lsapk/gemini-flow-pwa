@@ -1,66 +1,67 @@
 
-import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import CreateHabitForm from "@/components/modals/CreateHabitForm";
-import CreateTaskForm from "@/components/modals/CreateTaskForm";
-import CreateGoalForm from "@/components/modals/CreateGoalForm";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { CreateModal as BaseCreateModal } from "@/components/ui/CreateModal";
+import CreateGoalForm from "./CreateGoalForm";
+import CreateHabitForm from "./CreateHabitForm";
+import CreateTaskForm from "./CreateTaskForm";
 
 interface CreateModalProps {
-  type: 'habit' | 'task' | 'goal' | 'journal';
+  type: "goal" | "habit" | "task";
   onSuccess: () => void;
-  parentTaskId?: string;
+  variant?: "default" | "outline";
+  children?: React.ReactNode;
 }
 
-export default function CreateModal({ type, onSuccess, parentTaskId }: CreateModalProps) {
-  const [open, setOpen] = React.useState(true);
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+export default function CreateModal({ type, onSuccess, variant = "default", children }: CreateModalProps) {
+  const [isOpen, setIsOpen] = useState(true);
 
   const getTitle = () => {
     switch (type) {
-      case 'habit':
-        return 'Créer une nouvelle habitude';
-      case 'task':
-        return parentTaskId ? 'Créer une sous-tâche' : 'Créer une nouvelle tâche';
-      case 'goal':
-        return 'Créer un nouvel objectif';
-      case 'journal':
-        return 'Nouvelle entrée de journal';
+      case "goal":
+        return "Créer un objectif";
+      case "habit":
+        return "Créer une habitude";
+      case "task":
+        return "Créer une tâche";
       default:
-        return 'Créer';
+        return "Créer";
     }
   };
 
-  const renderForm = () => {
+  const getFormComponent = () => {
+    const props = { onSuccess: handleSuccess };
+    
     switch (type) {
-      case 'habit':
-        return <CreateHabitForm onSuccess={onSuccess} />;
-      case 'task':
-        return <CreateTaskForm onSuccess={onSuccess} parentTaskId={parentTaskId} />;
-      case 'goal':
-        return <CreateGoalForm onSuccess={onSuccess} />;
-      case 'journal':
-        return <div>Journal form à implémenter</div>;
+      case "goal":
+        return <CreateGoalForm {...props} />;
+      case "habit":
+        return <CreateHabitForm {...props} />;
+      case "task":
+        return <CreateTaskForm {...props} />;
       default:
         return null;
     }
   };
 
+  const handleSuccess = () => {
+    setIsOpen(false);
+    onSuccess();
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    onSuccess();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{getTitle()}</DialogTitle>
-        </DialogHeader>
-        {renderForm()}
-      </DialogContent>
-    </Dialog>
+    <BaseCreateModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={getTitle()}
+    >
+      {getFormComponent()}
+    </BaseCreateModal>
   );
 }

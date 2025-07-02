@@ -1,8 +1,7 @@
-
 import { Habit } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle, Edit, Archive, ArchiveRestore, GripVertical } from "lucide-react";
+import { Trash2, CheckCircle, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -13,25 +12,9 @@ interface HabitListProps {
   onEdit?: (habit: Habit) => void;
   onComplete?: (id: string, isCompleted: boolean) => void;
   onRefresh: () => void;
-  onArchive?: (id: string, isArchived: boolean) => void;
-  onDragStart?: (e: React.DragEvent, id: string, index: number) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent, index: number) => void;
-  onDragEnd?: () => void;
 }
 
-export default function HabitList({ 
-  habits, 
-  loading, 
-  onDelete, 
-  onEdit, 
-  onComplete, 
-  onArchive,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd
-}: HabitListProps) {
+export default function HabitList({ habits, loading, onDelete, onEdit, onComplete }: HabitListProps) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -99,21 +82,43 @@ export default function HabitList({
 
   return (
     <div className="space-y-6">
-      {/* Cartes catégorie simplifiées */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
+      {/* Cartes catégorie simplifiées, maintenant plus compactes sur mobile */}
+      <div
+        className="
+          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
+        "
+      >
         {Object.entries(categoryLabels).map(([key, label]) => {
           const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
           const count = habitsInCategory.length;
           const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
 
           return (
-            <Card key={key} className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-              <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}>
+            <Card
+              key={key}
+              className="
+                flex
+                h-auto
+                sm:h-[110px]
+                px-2 py-2 sm:p-4
+                items-center
+                transition-shadow
+                "
+            >
+              <CardContent
+                className="
+                  p-0 flex items-center gap-2 sm:gap-4 w-full
+                "
+              >
+                <div
+                  className={`
+                    w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}
+                  `}
+                >
                   <span className="text-xl sm:text-3xl">{label.emoji}</span>
                 </div>
-                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 flex-1">
-                  <div className={`font-semibold text-xs sm:text-base ${label.color.text} truncate`}>
+                <div className="flex flex-col gap-0.5 sm:gap-1">
+                  <div className={`font-semibold text-xs sm:text-base ${label.color.text}`}>
                     {label.name}
                   </div>
                   <div className="text-[10px] sm:text-sm text-muted-foreground">
@@ -121,7 +126,7 @@ export default function HabitList({
                   </div>
                   {count > 0 && (
                     <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                      Aujourd'hui : {completedToday} / {count}
+                      Aujourd’hui : {completedToday} / {count}
                     </div>
                   )}
                 </div>
@@ -133,40 +138,18 @@ export default function HabitList({
 
       {/* Liste détaillée des habitudes */}
       <div className="space-y-3">
-        {habits.map((habit, index) => (
-          <Card 
-            key={habit.id} 
-            className={`hover:shadow-sm transition-shadow ${habit.is_archived ? 'opacity-60' : ''}`}
-            draggable={!habit.is_archived && onDragStart ? true : false}
-            onDragStart={onDragStart ? (e) => onDragStart(e, habit.id, index) : undefined}  
-            onDragOver={onDragOver}
-            onDrop={onDrop ? (e) => onDrop(e, index) : undefined}
-            onDragEnd={onDragEnd}
-            style={{ touchAction: 'none' }}
-          >
+        {habits.map((habit) => (
+          <Card key={habit.id} className="hover:shadow-sm transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                {/* Handle de glisser-déposer */}
-                {!habit.is_archived && onDragStart && (
-                  <div className="flex items-center mr-2 cursor-grab active:cursor-grabbing touch-none">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-                
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-medium text-sm sm:text-base truncate">{habit.title}</h3>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-sm sm:text-base">{habit.title}</h3>
                     {habit.category && (
-                      <Badge variant="secondary" className={`${getCategoryColor(habit.category).bg} ${getCategoryColor(habit.category).text} text-xs shrink-0`}>
+                      <Badge variant="secondary" className={`${getCategoryColor(habit.category).bg} ${getCategoryColor(habit.category).text}`}>
                         {habit.category === 'health' ? 'Santé' : 
                          habit.category === 'productivity' ? 'Productivité' : 
                          habit.category === 'personal' ? 'Personnel' : habit.category}
-                      </Badge>
-                    )}
-                    {habit.is_archived && (
-                      <Badge variant="outline" className="shrink-0">
-                        <Archive className="h-3 w-3 mr-1" />
-                        Archivée
                       </Badge>
                     )}
                   </div>
@@ -186,12 +169,12 @@ export default function HabitList({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 ml-4 shrink-0">
-                  {!habit.is_archived && onComplete && (
+                <div className="flex items-center gap-2 ml-4">
+                  {onComplete && (
                     <Button
                       size="lg"
-                      onClick={() => onComplete(habit.id, habit.is_completed_today || false)}
-                      className={`h-12 w-12 sm:h-16 sm:w-16 p-0 rounded-full transition-colors flex items-center justify-center 
+                      onClick={() => onComplete(habit.id, habit.is_completed_today)}
+                      className={`h-14 w-14 sm:h-20 sm:w-20 p-0 rounded-full transition-colors flex items-center justify-center 
                         ${
                           habit.is_completed_today 
                             ? "text-white bg-green-600 hover:bg-green-700" 
@@ -199,26 +182,9 @@ export default function HabitList({
                         }`}
                       aria-label={habit.is_completed_today ? "Décocher l'habitude" : "Cocher l'habitude"}
                     >
-                      <CheckCircle className="h-7 w-7 sm:h-9 sm:w-9" />
+                      <CheckCircle className="h-9 w-9 sm:h-12 sm:w-12" />
                     </Button>
                   )}
-                  
-                  {onArchive && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onArchive(habit.id, habit.is_archived || false)}
-                      className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                      title={habit.is_archived ? "Restaurer" : "Archiver"}
-                    >
-                      {habit.is_archived ? (
-                        <ArchiveRestore className="h-4 w-4" />
-                      ) : (
-                        <Archive className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                  
                   {onEdit && (
                     <Button
                       variant="outline"
@@ -229,7 +195,6 @@ export default function HabitList({
                       <Edit className="h-4 w-4" />
                     </Button>
                   )}
-                  
                   <Button
                     variant="outline"
                     size="sm"
