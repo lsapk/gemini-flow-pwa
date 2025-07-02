@@ -52,10 +52,12 @@ export default function Goals() {
         }));
 
         for (const update of updates) {
-          await supabase
+          const { error } = await supabase
             .from('goals')
-            .update({ sort_order: update.sort_order })
+            .update({ sort_order: update.sort_order } as any)
             .eq('id', update.id);
+          
+          if (error) throw error;
         }
 
         toast.success('Ordre des objectifs mis à jour !');
