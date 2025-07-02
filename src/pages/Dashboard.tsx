@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -7,7 +8,7 @@ import {
   ListChecks,
   Target,
 } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -16,7 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import MobileInsights from "@/components/ui/MobileInsights";
 import { useAIProductivityScore } from "@/hooks/useAIProductivityScore";
@@ -32,19 +32,20 @@ export default function Dashboard() {
       if (!user) return;
 
       try {
+        // Récupérer les données du profil utilisateur
         const { data, error } = await supabase
-          .from('users')
-          .select('last_sign_in_at')
+          .from('user_profiles')
+          .select('created_at')
           .eq('id', user.id)
           .single();
 
         if (error) {
-          console.error("Error fetching last login:", error);
+          console.error("Error fetching user profile:", error);
         } else {
-          setLastLogin(data?.last_sign_in_at ? format(new Date(data.last_sign_in_at), "dd MMMM yyyy", { locale: fr }) : "Inconnu");
+          setLastLogin(data?.created_at ? format(new Date(data.created_at), "dd MMMM yyyy", { locale: fr }) : "Inconnu");
         }
       } catch (error) {
-        console.error("Unexpected error fetching last login:", error);
+        console.error("Unexpected error fetching user data:", error);
       }
     };
 

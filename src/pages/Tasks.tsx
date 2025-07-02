@@ -53,17 +53,21 @@ export default function Tasks() {
 
       if (error) throw error;
 
-      // Organiser les tâches avec leurs sous-tâches
+      // Organiser les tâches avec leurs sous-tâches et corriger les types
       const mainTasks = (data || []).filter(task => !task.parent_task_id);
       const subtasksByParent = (data || []).filter(task => task.parent_task_id)
         .reduce((acc, task) => {
           if (!acc[task.parent_task_id!]) acc[task.parent_task_id!] = [];
-          acc[task.parent_task_id!].push(task);
+          acc[task.parent_task_id!].push({
+            ...task,
+            priority: (task.priority as 'high' | 'medium' | 'low') || 'low'
+          });
           return acc;
         }, {} as Record<string, Task[]>);
 
       const tasksWithSubtasks = mainTasks.map(task => ({
         ...task,
+        priority: (task.priority as 'high' | 'medium' | 'low') || 'low',
         subtasks: subtasksByParent[task.id] || []
       }));
 

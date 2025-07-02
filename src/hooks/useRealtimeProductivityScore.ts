@@ -1,32 +1,67 @@
 
-import { useEffect } from 'react';
-import { useProductivityScore } from './useProductivityScore';
-import { useAnalyticsData } from './useAnalyticsData';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { subDays, format } from 'date-fns';
 
-export const useRealtimeProductivityScore = () => {
-  const { refetch } = useAnalyticsData();
-  const productivityData = useProductivityScore();
+interface ProductivityData {
+  tasksCompleted: number;
+  goalsCompleted: number;
+  isLoading: boolean;
+  focusData: Array<{ date: string; minutes: number }>;
+}
+
+export const useRealtimeProductivityScore = (): ProductivityData => {
+  const { user } = useAuth();
+  const [data, setData] = useState<ProductivityData>({
+    tasksCompleted: 0,
+    goalsCompleted: 0,
+    isLoading: true,
+    focusData: []
+  });
 
   useEffect(() => {
-    // Mettre à jour toutes les 5 minutes
-    const interval = setInterval(() => {
-      refetch();
-    }, 5 * 60 * 1000);
+    if (!user) return;
 
-    return () => clearInterval(interval);
-  }, [refetch]);
+    const fetchData = async () => {
+      try {
+        const [tasksRes, goalsRes, focusRes] = await Promise.all([
+          supabase.from('tasks').select('*').eq('user_id', user.id).eq('completed', true),
+          supabase.from('goals').select('*').eq('user_id', user.id).eq('completed', true),
+          supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('created_at', subDays(new Date(), 7).toISOString())
+        ]);
 
-  // Mettre à jour quand l'utilisateur revient sur la page
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refetch();
+        // Préparer les données de focus pour le graphique
+        const focusData = [];
+        for (let i = 6; i >= 0; i--) {
+          const date = subDays(new Date(), i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const dayFocus = focusRes.data?.filter(session => 
+            session.created_at?.startsWith(dateStr)
+          ) || [];
+          
+          const totalMinutes = dayFocus.reduce((sum, session) => sum + (session.duration || 0), 0);
+          
+          focusData.push({
+            date: format(date, 'dd/MM'),
+            minutes: Math.round(totalMinutes / 60)
+          });
+        }
+
+        setData({
+          tasksCompleted: tasksRes.data?.length || 0,
+          goalsCompleted: goalsRes.data?.length || 0,
+          isLoading: false,
+          focusData
+        });
+      } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+        setData(prev => ({ ...prev, isLoading: false }));
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refetch]);
+    fetchData();
+  }, [user]);
 
-  return productivityData;
+  return data;
 };

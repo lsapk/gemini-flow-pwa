@@ -1,3 +1,5 @@
+
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +9,6 @@ import {
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import CreateTaskForm from "@/components/modals/CreateTaskForm";
 import CreateGoalForm from "@/components/modals/CreateGoalForm";
-import CreateJournalForm from "@/components/modals/CreateJournalForm";
 
 interface CreateModalProps {
   type: 'habit' | 'task' | 'goal' | 'journal';
@@ -46,7 +47,7 @@ export default function CreateModal({ type, onSuccess, parentTaskId }: CreateMod
       case 'goal':
         return <CreateGoalForm onSuccess={onSuccess} />;
       case 'journal':
-        return <CreateJournalForm onSuccess={onSuccess} />;
+        return <div>Journal form à implémenter</div>;
       default:
         return null;
     }
