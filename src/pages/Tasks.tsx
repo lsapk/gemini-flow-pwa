@@ -13,6 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, PlusCircle, CheckSquare, AlertCircle, Clock, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { AIAssistantEnhanced } from "@/components/ui/AIAssistantEnhanced";
+import { useDragAndDrop } from "@/hooks/useDragAndDrop";
+import { DraggableItem } from "@/components/ui/DraggableItem";
+import { SubTaskManager } from "@/components/ui/SubTaskManager";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +41,8 @@ interface Task {
   user_id: string;
   created_at?: string;
   updated_at?: string;
+  parent_task_id?: string;
+  subtasks?: Task[];
 }
 
 import TaskList from "@/components/TaskList";
@@ -53,6 +59,7 @@ export default function Tasks() {
   const [activeTab, setActiveTab] = useState("all");
   const { user } = useAuth();
   const { toast } = useToast();
+  const { draggedItem, handleDragStart, handleDragEnd, handleDrop } = useDragAndDrop();
 
   const fetchTasks = async () => {
     if (!user) return;
@@ -63,7 +70,8 @@ export default function Tasks() {
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .is('parent_task_id', null)
+        .order('sort_order', { ascending: true });
 
       if (error) {
         console.error("Error fetching tasks:", error);
@@ -75,10 +83,27 @@ export default function Tasks() {
         return;
       }
 
-      setTasks((data || []).map(task => ({
-        ...task,
-        priority: (task.priority as 'high' | 'medium' | 'low') || 'medium'
-      })));
+      // Charger les tâches avec leurs sous-tâches
+      const tasksWithSubtasks = await Promise.all(
+        (data || []).map(async (task) => {
+          const { data: subtasks } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('parent_task_id', task.id)
+            .order('sort_order', { ascending: true });
+
+          return {
+            ...task,
+            priority: (task.priority as 'high' | 'medium' | 'low') || 'medium',
+            subtasks: (subtasks || []).map(subtask => ({
+              ...subtask,
+              priority: (subtask.priority as 'high' | 'medium' | 'low') || 'medium'
+            }))
+          };
+        })
+      );
+
+      setTasks(tasksWithSubtasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
       toast({
@@ -254,8 +279,13 @@ export default function Tasks() {
       case 'completed': return tasks.filter(t => t.completed);
       case 'pending': return tasks.filter(t => !t.completed);
       case 'high': return tasks.filter(t => t.priority === 'high');
-      default: return tasks;
+      default: return tasks.filter(t => !t.completed); // Ne plus montrer les tâches terminées dans "Toutes"
     }
+  };
+
+  const handleReorder = async (targetIndex: number) => {
+    const updatedTasks = await handleDrop(targetIndex, tasks, 'tasks');
+    setTasks(updatedTasks);
   };
 
   const filteredTasks = getFilteredTasks();
@@ -414,8 +444,8 @@ export default function Tasks() {
       {/* Tasks Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Toutes ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="pending">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
+          <TabsTrigger value="all">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
+          <TabsTrigger value="pending">Actives ({tasks.filter(t => !t.completed).length})</TabsTrigger>
           <TabsTrigger value="completed">Terminées ({tasks.filter(t => t.completed).length})</TabsTrigger>
           <TabsTrigger value="high">Urgentes ({tasks.filter(t => t.priority === 'high').length})</TabsTrigger>
         </TabsList>
@@ -426,17 +456,39 @@ export default function Tasks() {
               <CardTitle>Vos tâches</CardTitle>
             </CardHeader>
             <CardContent>
-              <TaskList
-                tasks={filteredTasks}
-                loading={loading}
-                onEdit={editTask}
-                onDelete={deleteTask}
-                onToggleComplete={toggleComplete}
-              />
+              <div className="space-y-4">
+                {filteredTasks.map((task, index) => (
+                  <DraggableItem
+                    key={task.id}
+                    onDragStart={() => handleDragStart({ id: task.id, index, type: 'task' })}
+                    onDragEnd={handleDragEnd}
+                    onDrop={() => handleReorder(index)}
+                    isDragging={draggedItem?.id === task.id}
+                  >
+                    <div className="space-y-2">
+                      <TaskList
+                        tasks={[task]}
+                        loading={loading}
+                        onEdit={editTask}
+                        onDelete={deleteTask}
+                        onToggleComplete={toggleComplete}
+                      />
+                      <SubTaskManager
+                        parentTask={task}
+                        subtasks={task.subtasks || []}
+                        onSubTasksChange={fetchTasks}
+                      />
+                    </div>
+                  </DraggableItem>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* AI Assistant */}
+      <AIAssistantEnhanced />
     </div>
   );
 }
