@@ -6,7 +6,7 @@ import { Checkbox } from './checkbox';
 import { Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 interface SubTaskManagerProps {

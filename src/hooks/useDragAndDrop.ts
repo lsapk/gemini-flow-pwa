@@ -19,7 +19,7 @@ export const useDragAndDrop = () => {
     setDraggedItem(null);
   }, []);
 
-  const handleDrop = useCallback(async (targetIndex: number, items: any[], tableName: string) => {
+  const handleDrop = useCallback(async (targetIndex: number, items: any[], tableName: 'habits' | 'tasks' | 'goals') => {
     if (!draggedItem) return items;
 
     const newItems = [...items];
@@ -37,10 +37,22 @@ export const useDragAndDrop = () => {
 
     try {
       for (const update of updates) {
-        await supabase
-          .from(tableName)
-          .update({ sort_order: update.sort_order })
-          .eq('id', update.id);
+        if (tableName === 'habits') {
+          await supabase
+            .from('habits')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        } else if (tableName === 'tasks') {
+          await supabase
+            .from('tasks')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        } else if (tableName === 'goals') {
+          await supabase
+            .from('goals')
+            .update({ sort_order: update.sort_order })
+            .eq('id', update.id);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'ordre:', error);

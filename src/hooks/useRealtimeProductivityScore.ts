@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useProductivityScore } from './useProductivityScore';
 import { useAnalyticsData } from './useAnalyticsData';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useRealtimeProductivityScore = () => {
   const { refetch } = useAnalyticsData();
@@ -30,8 +31,6 @@ export const useRealtimeProductivityScore = () => {
 
   // Écouter les changements en temps réel sur les tables importantes
   useEffect(() => {
-    const { supabase } = require('@/integrations/supabase/client');
-    
     const channel = supabase
       .channel('productivity-updates')
       .on(
