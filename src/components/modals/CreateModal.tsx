@@ -12,23 +12,10 @@ interface CreateModalProps {
   onSuccess: () => void;
   variant?: "default" | "outline";
   children?: React.ReactNode;
-  autoOpen?: boolean;
 }
 
-export default function CreateModal({ 
-  type, 
-  onSuccess, 
-  variant = "default", 
-  children,
-  autoOpen = false 
-}: CreateModalProps) {
-  const [isOpen, setIsOpen] = useState(autoOpen);
-
-  useEffect(() => {
-    if (autoOpen) {
-      setIsOpen(true);
-    }
-  }, [autoOpen]);
+export default function CreateModal({ type, onSuccess, variant = "default", children }: CreateModalProps) {
+  const [isOpen, setIsOpen] = useState(true);
 
   const getTitle = () => {
     switch (type) {
@@ -68,37 +55,13 @@ export default function CreateModal({
     onSuccess();
   };
 
-  if (autoOpen) {
-    return (
-      <BaseCreateModal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title={getTitle()}
-      >
-        {getFormComponent()}
-      </BaseCreateModal>
-    );
-  }
-
   return (
-    <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        variant={variant}
-        size="sm"
-        className="gap-2"
-      >
-        <PlusCircle className="w-4 h-4" />
-        {children || getTitle()}
-      </Button>
-      
-      <BaseCreateModal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title={getTitle()}
-      >
-        {getFormComponent()}
-      </BaseCreateModal>
-    </>
+    <BaseCreateModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={getTitle()}
+    >
+      {getFormComponent()}
+    </BaseCreateModal>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Target, Archive } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -7,9 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
-import { AIAssistantEnhanced } from "@/components/ui/AIAssistantEnhanced";
-import { useDragAndDrop } from "@/hooks/useDragAndDrop";
-import { DraggableItem } from "@/components/ui/DraggableItem";
 import { 
   Dialog, 
   DialogContent, 
@@ -37,9 +34,7 @@ export default function Habits() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
   const { user } = useAuth();
-  const { draggedItem, handleDragStart, handleDragEnd, handleDrop } = useDragAndDrop();
 
   const fetchHabits = async () => {
     if (!user) return;
@@ -49,8 +44,7 @@ export default function Habits() {
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
-        .eq('is_archived', showArchived)
-        .order('sort_order', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -99,29 +93,23 @@ export default function Habits() {
     if (!user || !habitToDelete) return;
 
     try {
-      // Archiver au lieu de supprimer
       const { error } = await supabase
         .from('habits')
-        .update({ is_archived: true })
+        .delete()
         .eq('id', habitToDelete)
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      toast.success('Habitude archivée !');
+      toast.success('Habitude supprimée !');
       fetchHabits();
     } catch (error) {
-      console.error('Error archiving habit:', error);
-      toast.error('Erreur lors de l\'archivage de l\'habitude');
+      console.error('Error deleting habit:', error);
+      toast.error('Erreur lors de la suppression de l\'habitude');
     } finally {
       setIsDeleteDialogOpen(false);
       setHabitToDelete(null);
     }
-  };
-
-  const handleReorder = async (targetIndex: number) => {
-    const updatedHabits = await handleDrop(targetIndex, habits, 'habits');
-    setHabits(updatedHabits);
   };
 
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
@@ -193,22 +181,12 @@ export default function Habits() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setShowArchived(!showArchived)} 
-            variant="outline" 
-            size="sm"
-          >
-            <Archive className="h-4 w-4 mr-2" />
-            {showArchived ? "Voir actives" : "Voir archivées"}
-          </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle habitude
-          </Button>
-        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle habitude
+        </Button>
       </div>
 
       {isLoading ? (
@@ -237,26 +215,14 @@ export default function Habits() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {habits.map((habit, index) => (
-            <DraggableItem
-              key={habit.id}
-              onDragStart={() => handleDragStart({ id: habit.id, index, type: 'habit' })}
-              onDragEnd={handleDragEnd}
-              onDrop={() => handleReorder(index)}
-              isDragging={draggedItem?.id === habit.id}
-            >
-              <HabitList 
-                habits={[habit]}
-                loading={isLoading}
-                onDelete={requestDelete}
-                onEdit={handleEdit}
-                onComplete={toggleHabitCompletion}
-                onRefresh={fetchHabits}
-              />
-            </DraggableItem>
-          ))}
-        </div>
+        <HabitList 
+          habits={habits}
+          loading={isLoading}
+          onDelete={requestDelete}
+          onEdit={handleEdit}
+          onComplete={toggleHabitCompletion}
+          onRefresh={fetchHabits}
+        />
       )}
 
       {isCreateModalOpen && (
@@ -265,9 +231,6 @@ export default function Habits() {
           onSuccess={handleCreateSuccess}
         />
       )}
-
-      {/* AI Assistant - positionné à la fin */}
-      <AIAssistantEnhanced />
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent>
@@ -286,12 +249,12 @@ export default function Habits() {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              L'habitude sera archivée et pourra être récupérée plus tard.
+              Cette action est irréversible. L'habitude sera définitivement supprimée.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Archiver</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

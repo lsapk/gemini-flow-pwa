@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
-import { AIAssistantEnhanced } from "@/components/ui/AIAssistantEnhanced";
 import { Link } from "react-router-dom";
 import { 
   CheckSquare, 
@@ -265,9 +264,6 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </motion.div>
-
-      {/* AI Assistant */}
-      <AIAssistantEnhanced />
     </div>
   );
 }

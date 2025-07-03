@@ -11,12 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Goal } from "@/types";
 import { getGoals, createGoal, updateGoal, deleteGoal } from "@/lib/api";
-import { Plus, PlusCircle, Target, Calendar, CheckCircle2, Edit, Trash2, Archive } from "lucide-react";
+import { Plus, PlusCircle, Target, Calendar, CheckCircle2, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { AIAssistantEnhanced } from "@/components/ui/AIAssistantEnhanced";
-import { useDragAndDrop } from "@/hooks/useDragAndDrop";
-import { DraggableItem } from "@/components/ui/DraggableItem";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +32,8 @@ export default function Goals() {
   const [targetDate, setTargetDate] = useState("");
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { draggedItem, handleDragStart, handleDragEnd, handleDrop } = useDragAndDrop();
 
   useEffect(() => {
     fetchGoals();
@@ -113,34 +108,22 @@ export default function Goals() {
 
   const handleDelete = async (id: string) => {
     try {
-      // Archiver au lieu de supprimer
-      const goal = goals.find(g => g.id === id);
-      if (!goal) return;
-
-      const { error } = await updateGoal(id, {
-        ...goal,
-        is_archived: true
-      });
+      const { error } = await deleteGoal(id);
       if (error) throw error;
       
       setGoals(goals.filter((goal) => goal.id !== id));
       toast({
-        title: "Objectif archivé",
-        description: "Votre objectif a été archivé avec succès.",
+        title: "Objectif supprimé",
+        description: "Votre objectif a été supprimé avec succès.",
       });
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible d'archiver l'objectif.",
+        description: "Impossible de supprimer l'objectif.",
         variant: "destructive",
       });
-      console.error("Error archiving goal:", error);
+      console.error("Error deleting goal:", error);
     }
-  };
-
-  const handleReorder = async (targetIndex: number) => {
-    const updatedGoals = await handleDrop(targetIndex, goals, 'goals');
-    setGoals(updatedGoals);
   };
 
   const handleProgressUpdate = async (goalId: string, newProgress: number) => {
@@ -190,33 +173,23 @@ export default function Goals() {
 
   const completedGoals = goals.filter(g => g.completed).length;
   const avgProgress = goals.length > 0 ? goals.reduce((sum, g) => sum + g.progress, 0) / goals.length : 0;
-  
-  const filteredGoals = showCompleted ? goals.filter(g => g.completed) : goals.filter(g => !g.completed);
 
+  // On retire les cartes résumé de l'ancienne version et la grid pour utiliser GoalList
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Objectifs</h1>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setShowCompleted(!showCompleted)} 
-            variant="outline" 
-            size="sm"
-          >
-            <Archive className="h-4 w-4 mr-2" />
-            {showCompleted ? "Voir en cours" : "Voir terminés"}
-          </Button>
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => setIsFormOpen(true)}
-                size="sm"
-                className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Nouvel objectif
-              </Button>
-            </DialogTrigger>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button
+              onClick={() => setIsFormOpen(true)}
+              size="sm"
+              className="bg-[#715FFA] hover:bg-[#715FFA]/90 text-white font-semibold rounded-lg px-5 py-2 flex gap-2 items-center transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nouvel objectif
+            </Button>
+          </DialogTrigger>
           <DialogContent className="mx-2 sm:mx-0 max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -282,33 +255,16 @@ export default function Goals() {
             </form>
           </DialogContent>
         </Dialog>
-        </div>
       </div>
 
-      {/* GoalList avec drag and drop */}
-      <div className="space-y-4">
-        {filteredGoals.map((goal, index) => (
-          <DraggableItem
-            key={goal.id}
-            onDragStart={() => handleDragStart({ id: goal.id, index, type: 'goal' })}
-            onDragEnd={handleDragEnd}
-            onDrop={() => handleReorder(index)}
-            isDragging={draggedItem?.id === goal.id}
-            className={goal.completed ? "bg-green-50 border-green-200" : ""}
-          >
-            <GoalList
-              goals={[goal]}
-              loading={loading}
-              onEdit={editGoal}
-              onDelete={handleDelete}
-              onProgressUpdate={handleProgressUpdate}
-            />
-          </DraggableItem>
-        ))}
-      </div>
-
-      {/* AI Assistant */}
-      <AIAssistantEnhanced />
+      {/* GoalList avec cards résumé et liste */}
+      <GoalList
+        goals={goals}
+        loading={loading}
+        onEdit={editGoal}
+        onDelete={handleDelete}
+        onProgressUpdate={handleProgressUpdate}
+      />
     </div>
   );
 }
