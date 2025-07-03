@@ -259,16 +259,15 @@ export default function Habits() {
         </div>
       )}
 
-      {/* AI Assistant */}
-      <AIAssistantEnhanced />
-      
-
       {isCreateModalOpen && (
         <CreateModal 
           type="habit"
           onSuccess={handleCreateSuccess}
         />
       )}
+
+      {/* AI Assistant - positionné à la fin */}
+      <AIAssistantEnhanced />
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent>
