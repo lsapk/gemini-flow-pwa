@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useDragAndDrop } from "@/hooks/useDragAndDrop";
+import { DragHandle } from "@/components/DragHandle";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { 
@@ -36,6 +38,9 @@ export default function Habits() {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const { user } = useAuth();
 
+  // Ajouter le hook pour le drag & drop
+  const dragAndDrop = useDragAndDrop(habits, 'habits', fetchHabits);
+
   const fetchHabits = async () => {
     if (!user) return;
 
@@ -44,6 +49,7 @@ export default function Habits() {
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -215,14 +221,41 @@ export default function Habits() {
           </CardContent>
         </Card>
       ) : (
-        <HabitList 
-          habits={habits}
-          loading={isLoading}
-          onDelete={requestDelete}
-          onEdit={handleEdit}
-          onComplete={toggleHabitCompletion}
-          onRefresh={fetchHabits}
-        />
+        <div className="space-y-4">
+          {habits.map((habit, index) => (
+            <Card 
+              key={habit.id}
+              draggable
+              onDragStart={(e) => dragAndDrop.handleDragStart(e, habit.id, index)}
+              onDragOver={dragAndDrop.handleDragOver}
+              onDrop={(e) => dragAndDrop.handleDrop(e, index)}
+              className={`transition-all duration-200 ${
+                dragAndDrop.draggedItem?.id === habit.id ? 'opacity-50 scale-95' : ''
+              }`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <DragHandle
+                    onDragStart={(e) => dragAndDrop.handleDragStart(e, habit.id, index)}
+                    onTouchStart={() => dragAndDrop.handleTouchStart(habit.id, index)}
+                    onTouchMove={dragAndDrop.handleTouchMove}
+                    onTouchEnd={() => dragAndDrop.handleTouchEnd(index)}
+                  />
+                  <div className="flex-1">
+                    <HabitList 
+                      habits={[habit]}
+                      loading={false}
+                      onDelete={requestDelete}
+                      onEdit={handleEdit}
+                      onComplete={toggleHabitCompletion}
+                      onRefresh={fetchHabits}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {isCreateModalOpen && (
