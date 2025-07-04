@@ -3,7 +3,7 @@ import { Goal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, CheckCircle2, Calendar, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { Edit, Trash2, CheckCircle2, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -46,8 +46,7 @@ export default function GoalList({
   onDelete,
   onProgressUpdate,
 }: GoalListProps) {
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<'active' | 'completed' | null>('active');
+  const [activeView, setActiveView] = useState<'active' | 'completed'>('active');
 
   if (loading) {
     return (
@@ -128,6 +127,7 @@ export default function GoalList({
         key={goal.id} 
         className={`
           hover:shadow-sm transition-shadow
+          border
           ${isCompleted ? 'bg-green-50 border-green-200' : ''}
         `}
       >
@@ -234,6 +234,24 @@ export default function GoalList({
     <div className="space-y-6">
       {summaryCards}
 
+      {/* Boutons de navigation simple */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={activeView === 'active' ? 'default' : 'outline'}
+          onClick={() => setActiveView('active')}
+          className="flex items-center gap-2"
+        >
+          En cours ({activeGoals.length})
+        </Button>
+        <Button
+          variant={activeView === 'completed' ? 'default' : 'outline'}
+          onClick={() => setActiveView('completed')}
+          className="flex items-center gap-2"
+        >
+          Terminés ({completedGoals.length})
+        </Button>
+      </div>
+
       <div className="space-y-4">
         {activeGoals.length === 0 && completedGoals.length === 0 ? (
           <Card>
@@ -246,53 +264,29 @@ export default function GoalList({
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Section Objectifs en cours */}
-            {activeGoals.length > 0 && (
-              <div>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between p-3 h-auto mb-3"
-                  onClick={() => setExpandedSection(expandedSection === 'active' ? null : 'active')}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Objectifs en cours</span>
-                    <Badge variant="outline">{activeGoals.length}</Badge>
-                  </div>
-                  {expandedSection === 'active' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-                
-                {expandedSection === 'active' && (
-                  <div className="space-y-3">
-                    {activeGoals.map(goal => renderGoal(goal, false))}
-                  </div>
-                )}
-              </div>
+          <div className="space-y-3">
+            {activeView === 'active' ? (
+              activeGoals.length > 0 ? (
+                activeGoals.map(goal => renderGoal(goal, false))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">Aucun objectif en cours</p>
+                  </CardContent>
+                </Card>
+              )
+            ) : (
+              completedGoals.length > 0 ? (
+                completedGoals.map(goal => renderGoal(goal, true))
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">Aucun objectif terminé</p>
+                  </CardContent>
+                </Card>
+              )
             )}
-            
-            {/* Section Objectifs terminés */}
-            {completedGoals.length > 0 && (
-              <div>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between p-3 h-auto mb-3"
-                  onClick={() => setExpandedSection(expandedSection === 'completed' ? null : 'completed')}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-green-700">Objectifs terminés</span>
-                    <Badge variant="outline" className="bg-green-100 text-green-800">{completedGoals.length}</Badge>
-                  </div>
-                  {expandedSection === 'completed' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-                
-                {expandedSection === 'completed' && (
-                  <div className="space-y-3">
-                    {completedGoals.map(goal => renderGoal(goal, true))}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
     </div>
