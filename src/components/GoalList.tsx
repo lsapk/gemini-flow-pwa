@@ -1,12 +1,13 @@
+
 import { Goal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, CheckCircle2, Calendar } from "lucide-react";
+import { Edit, Trash2, CheckCircle2, Calendar, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import React from "react";
+import React, { useState } from "react";
 
 interface GoalListProps {
   goals: Goal[];
@@ -45,6 +46,8 @@ export default function GoalList({
   onDelete,
   onProgressUpdate,
 }: GoalListProps) {
+  const [showCompleted, setShowCompleted] = useState(false);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -65,12 +68,14 @@ export default function GoalList({
     );
   }
 
-  // Correction FINALE : collecte des catégories uniques, gestion stricte de "other"
+  // Séparer les objectifs terminés et en cours
+  const completedGoals = goals.filter(g => g.completed);
+  const activeGoals = goals.filter(g => !g.completed);
+
+  // Collecte des catégories uniques pour les objectifs actifs
   const categoriesMap = new Map<string, boolean>();
-  goals.forEach((g) => {
-    // On normalise systématiquement la valeur en catégorie connue ou "other"
+  activeGoals.forEach((g) => {
     let cat = typeof g.category === "string" && g.category.trim() ? g.category.trim() : "other";
-    // Si la catégorie n’existe pas dans la méta, on stocke "other"
     if (!categoryMeta.hasOwnProperty(cat)) {
       cat = "other";
     }
@@ -78,10 +83,10 @@ export default function GoalList({
   });
   const categories: string[] = Array.from(categoriesMap.keys());
 
-  // Comptage par catégorie (toujours avec la même normalisation)
+  // Comptage par catégorie (objectifs actifs seulement)
   const goalsByCat: Record<string, Goal[]> = {};
   categories.forEach((cat) => {
-    goalsByCat[cat] = goals.filter((g) => {
+    goalsByCat[cat] = activeGoals.filter((g) => {
       let gc = typeof g.category === "string" && g.category.trim() ? g.category.trim() : "other";
       if (!categoryMeta.hasOwnProperty(gc)) {
         gc = "other";
@@ -90,17 +95,12 @@ export default function GoalList({
     });
   });
 
-  // Résumé - cards catégorie
+  // Résumé - cards catégorie (seulement pour les objectifs actifs)
   const summaryCards = (
-    <div
-      className="
-        grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
-      "
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
       {categories.map((cat) => {
         const meta = getCategoryProps(cat);
         const catGoals = goalsByCat[cat];
-        const completed = catGoals.filter((g) => g.completed).length;
         return (
           <Card key={cat} className="flex px-2 py-2 sm:p-4 items-center transition-shadow">
             <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
@@ -112,9 +112,6 @@ export default function GoalList({
                 <div className="text-[11px] sm:text-sm text-muted-foreground">
                   {catGoals.length} objectif{catGoals.length > 1 ? "s" : ""}
                 </div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">
-                  {completed} terminé{completed > 1 ? "s" : ""}
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -123,13 +120,123 @@ export default function GoalList({
     </div>
   );
 
-  // Liste détaillée en cards
+  const renderGoal = (goal: Goal, isCompleted = false) => {
+    const catProps = getCategoryProps(goal.category);
+    return (
+      <Card 
+        key={goal.id} 
+        className={`
+          hover:shadow transition-shadow
+          ${isCompleted ? 'bg-green-50 border-green-200' : ''}
+        `}
+      >
+        <CardContent className="p-4 flex flex-col gap-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className={`font-semibold text-base ${isCompleted ? 'text-green-800' : ''}`}>
+                  {goal.title}
+                </h3>
+                {goal.completed && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                )}
+                <Badge 
+                  variant="secondary" 
+                  className={`${isCompleted ? 'bg-green-200 text-green-800' : catProps.color} ml-1`}
+                >
+                  {catProps.label}
+                </Badge>
+                {goal.target_date && (
+                  <Badge variant="outline" className="ml-1">
+                    <Calendar className="w-3 h-3 inline-block mr-0.5 -mt-0.5" />
+                    {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}
+                  </Badge>
+                )}
+              </div>
+              {goal.description && (
+                <p className={`text-xs mt-1 ${isCompleted ? 'text-green-700' : 'text-muted-foreground'}`}>
+                  {goal.description}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-1 ml-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onEdit(goal)}
+                className="h-7 w-7"
+                aria-label="Modifier"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onDelete(goal.id)}
+                className="h-7 w-7"
+                aria-label="Supprimer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Progress section */}
+          <div className="flex flex-col gap-1 mt-2">
+            <div className="flex justify-between items-center text-xs">
+              <span>Progrès</span>
+              <span className={isCompleted ? 'text-green-700 font-semibold' : ''}>
+                {goal.progress || 0}%
+              </span>
+            </div>
+            <Progress 
+              value={goal.progress} 
+              className={`h-2 ${isCompleted ? '[&>div]:bg-green-500' : ''}`} 
+            />
+            {!isCompleted && (
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    onProgressUpdate(goal.id, Math.max(0, (goal.progress ?? 0) - 10))
+                  }
+                  className="text-xs"
+                >
+                  -10%
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    onProgressUpdate(goal.id, Math.min(100, (goal.progress ?? 0) + 10))
+                  }
+                  className="text-xs"
+                >
+                  +10%
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => onProgressUpdate(goal.id, 100)}
+                  className="text-xs"
+                >
+                  Terminer
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {summaryCards}
 
       <div className="space-y-3">
-        {goals.length === 0 ? (
+        {activeGoals.length === 0 && completedGoals.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center flex flex-col items-center">
               <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-3" />
@@ -140,98 +247,33 @@ export default function GoalList({
             </CardContent>
           </Card>
         ) : (
-          goals.map((goal) => {
-            const catProps = getCategoryProps(goal.category);
-            return (
-              <Card key={goal.id} className="hover:shadow transition-shadow">
-                <CardContent className="p-4 flex flex-col gap-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-base">{goal.title}</h3>
-                        {goal.completed && (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        )}
-                        <Badge variant="secondary" className={`${catProps.color} ml-1`}>
-                          {catProps.label}
-                        </Badge>
-                        {goal.target_date && (
-                          <Badge variant="outline" className="ml-1">
-                            <Calendar className="w-3 h-3 inline-block mr-0.5 -mt-0.5" />
-                            {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}
-                          </Badge>
-                        )}
-                      </div>
-                      {goal.description && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {goal.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 ml-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(goal)}
-                        className="h-7 w-7"
-                        aria-label="Modifier"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDelete(goal.id)}
-                        className="h-7 w-7"
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+          <>
+            {/* Objectifs en cours */}
+            {activeGoals.map(goal => renderGoal(goal, false))}
+            
+            {/* Section des objectifs terminés */}
+            {completedGoals.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCompleted(!showCompleted)}
+                    className="flex items-center gap-2"
+                  >
+                    {showCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showCompleted ? 'Masquer' : 'Voir'} les objectifs terminés ({completedGoals.length})
+                  </Button>
+                </div>
+                
+                {showCompleted && (
+                  <div className="space-y-3">
+                    {completedGoals.map(goal => renderGoal(goal, true))}
                   </div>
-                  {/* Progress section */}
-                  <div className="flex flex-col gap-1 mt-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span>Progrès</span>
-                      <span>{goal.progress || 0}%</span>
-                    </div>
-                    <Progress value={goal.progress} className="h-2" />
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          onProgressUpdate(goal.id, Math.max(0, (goal.progress ?? 0) - 10))
-                        }
-                        className="text-xs"
-                      >
-                        -10%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          onProgressUpdate(goal.id, Math.min(100, (goal.progress ?? 0) + 10))
-                        }
-                        className="text-xs"
-                      >
-                        +10%
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => onProgressUpdate(goal.id, 100)}
-                        disabled={goal.completed}
-                        className="text-xs"
-                      >
-                        Terminer
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -37,6 +37,7 @@ interface Task {
   user_id: string;
   created_at?: string;
   updated_at?: string;
+  parent_task_id?: string;
 }
 
 import TaskList from "@/components/TaskList";
@@ -250,11 +251,12 @@ export default function Tasks() {
   };
 
   const getFilteredTasks = () => {
+    const mainTasks = tasks.filter(t => !t.parent_task_id);
     switch (activeTab) {
       case 'completed': return tasks.filter(t => t.completed);
       case 'pending': return tasks.filter(t => !t.completed);
       case 'high': return tasks.filter(t => t.priority === 'high');
-      default: return tasks;
+      default: return mainTasks.filter(t => !t.completed); // Exclure les tâches terminées de "Toutes"
     }
   };
 
@@ -353,7 +355,7 @@ export default function Tasks() {
                 Total
               </div>
               <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
+                {tasks.filter(t => !t.parent_task_id).length} tâche{tasks.filter(t => !t.parent_task_id).length > 1 ? "s" : ""}
               </div>
             </div>
           </CardContent>
@@ -387,7 +389,7 @@ export default function Tasks() {
                 En cours
               </div>
               <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => !t.completed).length} tâche{tasks.filter(t => !t.completed).length > 1 ? "s" : ""}
+                {tasks.filter(t => !t.completed && !t.parent_task_id).length} tâche{tasks.filter(t => !t.completed && !t.parent_task_id).length > 1 ? "s" : ""}
               </div>
             </div>
           </CardContent>
@@ -414,7 +416,7 @@ export default function Tasks() {
       {/* Tasks Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Toutes ({tasks.length})</TabsTrigger>
+          <TabsTrigger value="all">Toutes ({tasks.filter(t => !t.parent_task_id && !t.completed).length})</TabsTrigger>
           <TabsTrigger value="pending">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
           <TabsTrigger value="completed">Terminées ({tasks.filter(t => t.completed).length})</TabsTrigger>
           <TabsTrigger value="high">Urgentes ({tasks.filter(t => t.priority === 'high').length})</TabsTrigger>
@@ -432,6 +434,7 @@ export default function Tasks() {
                 onEdit={editTask}
                 onDelete={deleteTask}
                 onToggleComplete={toggleComplete}
+                onRefresh={fetchTasks}
               />
             </CardContent>
           </Card>

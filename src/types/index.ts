@@ -1,4 +1,3 @@
-
 export interface Habit {
   id: string;
   title: string;
@@ -37,6 +36,7 @@ export interface Task {
   user_id: string;
   created_at?: string;
   updated_at?: string;
+  parent_task_id?: string;
 }
 
 export interface JournalEntry {

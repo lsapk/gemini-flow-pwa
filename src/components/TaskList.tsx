@@ -3,10 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock } from "lucide-react";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import React from "react";
+import React, { useState } from "react";
+import SubTaskForm from "./SubTaskForm";
 
 type Task = {
   id: string;
@@ -16,6 +17,7 @@ type Task = {
   priority: "high" | "medium" | "low";
   due_date?: string;
   created_at?: string;
+  parent_task_id?: string;
 };
 
 interface TaskListProps {
@@ -24,6 +26,7 @@ interface TaskListProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
+  onRefresh?: () => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -50,7 +53,19 @@ export default function TaskList({
   onEdit,
   onDelete,
   onToggleComplete,
+  onRefresh,
 }: TaskListProps) {
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
+  };
 
   if (loading) {
     return (
@@ -72,7 +87,19 @@ export default function TaskList({
     );
   }
 
-  if (tasks.length === 0) {
+  // Séparer les tâches principales des sous-tâches
+  const mainTasks = tasks.filter(task => !task.parent_task_id);
+  const subTasksMap = tasks.reduce((acc, task) => {
+    if (task.parent_task_id) {
+      if (!acc[task.parent_task_id]) {
+        acc[task.parent_task_id] = [];
+      }
+      acc[task.parent_task_id].push(task);
+    }
+    return acc;
+  }, {} as Record<string, Task[]>);
+
+  if (mainTasks.length === 0) {
     return (
       <Card>
         <CardContent className="text-center py-8">
@@ -86,81 +113,123 @@ export default function TaskList({
     );
   }
 
-  return (
-    <div className={`
-      grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3
-      mt-2
-    `}>
-      {tasks.map(task => (
-        <Card 
-          key={task.id}
-          className={`
-            flex flex-col justify-between
-            hover:shadow-md transition-shadow
-            border
-            ${task.completed ? "bg-muted/60 opacity-80" : ""}
-          `}
-        >
-          <CardContent className="p-4 flex flex-col gap-2">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={() => onToggleComplete(task.id, task.completed)}
-                  className="mt-1"
-                />
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
-                      {task.title}
-                    </h3>
-                  </div>
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground break-words">
-                      {task.description}
-                    </p>
+  const renderTask = (task: Task, isSubTask = false) => {
+    const subTasks = subTasksMap[task.id] || [];
+    const hasSubTasks = subTasks.length > 0;
+    const isExpanded = expandedTasks.has(task.id);
+
+    return (
+      <Card 
+        key={task.id}
+        className={`
+          ${isSubTask ? 'ml-6 border-l-2 border-l-blue-200' : ''}
+          hover:shadow-md transition-shadow
+          border
+          ${task.completed ? "bg-muted/60 opacity-80" : ""}
+        `}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3 flex-1">
+              <Checkbox
+                checked={task.completed}
+                onCheckedChange={() => onToggleComplete(task.id, task.completed)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  {!isSubTask && hasSubTasks && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpanded(task.id)}
+                      className="h-5 w-5 p-0"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                  <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
+                    {task.title}
+                  </h3>
+                  {hasSubTasks && (
+                    <Badge variant="outline" className="text-xs">
+                      {subTasks.length} sous-tâche{subTasks.length > 1 ? 's' : ''}
+                    </Badge>
                   )}
                 </div>
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(task)}
-                  aria-label="Modifier"
-                  className="h-7 w-7"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(task.id)}
-                  aria-label="Supprimer"
-                  className="h-7 w-7"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {task.description && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    {task.description}
+                  </p>
+                )}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
-                {getPriorityIcon(task.priority)} {task.priority}
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(task)}
+                aria-label="Modifier"
+                className="h-7 w-7"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(task.id)}
+                aria-label="Supprimer"
+                className="h-7 w-7"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
+              {getPriorityIcon(task.priority)} {task.priority}
+            </Badge>
+            {task.due_date && (
+              <Badge variant="outline">
+                Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
               </Badge>
-              {task.due_date && (
-                <Badge variant="outline">
-                  Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
-                </Badge>
-              )}
-              {task.created_at && (
-                <span className="text-xs text-muted-foreground ml-auto">
-                  création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
-                </span>
-              )}
+            )}
+            {task.created_at && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
+              </span>
+            )}
+          </div>
+
+          {!isSubTask && isExpanded && (
+            <div className="mt-3 space-y-2">
+              {subTasks.map(subTask => renderTask(subTask, true))}
+              <SubTaskForm 
+                parentTaskId={task.id} 
+                onSubTaskCreated={() => onRefresh?.()} 
+              />
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          )}
+
+          {!isSubTask && !isExpanded && hasSubTasks === false && (
+            <SubTaskForm 
+              parentTaskId={task.id} 
+              onSubTaskCreated={() => onRefresh?.()} 
+            />
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-3 mt-2">
+      {mainTasks.map(task => renderTask(task))}
     </div>
   );
 }
