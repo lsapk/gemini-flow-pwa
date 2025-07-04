@@ -38,12 +38,6 @@ export default function Goals() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Séparer les objectifs en cours et terminés
-  const activeGoals = goals.filter(goal => !goal.completed);
-  const completedGoals = goals.filter(goal => goal.completed);
-  
-  const dragAndDrop = useDragAndDrop(activeGoals, 'goals', fetchGoals);
-
   useEffect(() => {
     fetchGoals();
   }, [user]);
@@ -69,6 +63,12 @@ export default function Goals() {
       setLoading(false);
     }
   };
+
+  // Séparer les objectifs en cours et terminés
+  const activeGoals = goals.filter(goal => !goal.completed);
+  const completedGoals = goals.filter(goal => goal.completed);
+  
+  const dragAndDrop = useDragAndDrop(activeGoals, 'goals', fetchGoals);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

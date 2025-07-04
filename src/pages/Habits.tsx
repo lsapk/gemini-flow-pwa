@@ -38,9 +38,6 @@ export default function Habits() {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Ajouter le hook pour le drag & drop
-  const dragAndDrop = useDragAndDrop(habits, 'habits', fetchHabits);
-
   const fetchHabits = async () => {
     if (!user) return;
 
@@ -80,6 +77,9 @@ export default function Habits() {
       setIsLoading(false);
     }
   };
+
+  // Ajouter le hook pour le drag & drop après la déclaration de fetchHabits
+  const dragAndDrop = useDragAndDrop(habits, 'habits', fetchHabits);
 
   useEffect(() => {
     fetchHabits();

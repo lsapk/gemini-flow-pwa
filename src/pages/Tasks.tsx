@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,10 +43,6 @@ export default function Tasks() {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Séparer les tâches principales et sous-tâches
-  const mainTasks = tasks.filter(task => !task.parent_task_id);
-  const dragAndDrop = useDragAndDrop(mainTasks, 'tasks', fetchTasks);
-
   const fetchTasks = async () => {
     if (!user) return;
 
@@ -80,6 +77,10 @@ export default function Tasks() {
       setIsLoading(false);
     }
   };
+
+  // Séparer les tâches principales et sous-tâches
+  const mainTasks = tasks.filter(task => !task.parent_task_id);
+  const dragAndDrop = useDragAndDrop(mainTasks, 'tasks', fetchTasks);
 
   useEffect(() => {
     fetchTasks();
@@ -189,7 +190,6 @@ export default function Tasks() {
               onDelete={requestDelete}
               onEdit={handleEdit}
               onToggle={toggleTask}
-              onRefresh={fetchTasks}
             />
             
             {/* Afficher les sous-tâches */}
@@ -297,7 +297,6 @@ export default function Tasks() {
                 onDelete={requestDelete}
                 onEdit={handleEdit}
                 onToggle={toggleTask}
-                onRefresh={fetchTasks}
               />
             ))}
           </div>
@@ -318,7 +317,6 @@ export default function Tasks() {
           </DialogHeader>
           <CreateTaskForm 
             onSuccess={handleEditSuccess}
-            task={editingTask}
           />
         </DialogContent>
       </Dialog>

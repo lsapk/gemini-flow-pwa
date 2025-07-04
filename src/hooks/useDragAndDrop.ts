@@ -8,7 +8,9 @@ interface DragItem {
   index: number;
 }
 
-export const useDragAndDrop = (items: any[], tableName: string, onReorder: () => void) => {
+type TableName = 'habits' | 'tasks' | 'goals';
+
+export const useDragAndDrop = (items: any[], tableName: TableName, onReorder: () => void) => {
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -45,10 +47,12 @@ export const useDragAndDrop = (items: any[], tableName: string, onReorder: () =>
       }));
 
       for (const update of updates) {
-        await supabase
+        const { error } = await supabase
           .from(tableName)
           .update({ sort_order: update.sort_order })
           .eq('id', update.id);
+        
+        if (error) throw error;
       }
 
       onReorder();
@@ -87,10 +91,12 @@ export const useDragAndDrop = (items: any[], tableName: string, onReorder: () =>
       }));
 
       for (const update of updates) {
-        await supabase
+        const { error } = await supabase
           .from(tableName)
           .update({ sort_order: update.sort_order })
           .eq('id', update.id);
+        
+        if (error) throw error;
       }
 
       onReorder();
