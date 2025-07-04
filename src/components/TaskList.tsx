@@ -3,11 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock } from "lucide-react";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React, { useState } from "react";
-import SubTaskButton from "./SubTaskButton";
 
 type Task = {
   id: string;
@@ -28,6 +27,7 @@ interface TaskListProps {
   onDelete: (id: string) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
   onRefresh?: () => void;
+  onCreateSubTask: (parentTaskId: string) => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -55,6 +55,7 @@ export default function TaskList({
   onDelete,
   onToggleComplete,
   onRefresh,
+  onCreateSubTask,
 }: TaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
@@ -142,6 +143,21 @@ export default function TaskList({
                     <h3 className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""} text-sm`}>
                       {task.title}
                     </h3>
+                    {!isSubTask && subtasksCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleExpanded(task.id)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3 mr-1" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 mr-1" />
+                        )}
+                        {subtasksCount} sous-tâche{subtasksCount > 1 ? 's' : ''}
+                      </Button>
+                    )}
                   </div>
                   {task.description && (
                     <p className="text-xs text-muted-foreground mb-2">
@@ -164,16 +180,6 @@ export default function TaskList({
                       </span>
                     )}
                   </div>
-
-                  {!isSubTask && (
-                    <SubTaskButton
-                      taskId={task.id}
-                      subtasksCount={subtasksCount}
-                      isExpanded={isExpanded}
-                      onToggleExpanded={() => toggleExpanded(task.id)}
-                      onSubTaskCreated={() => onRefresh?.()}
-                    />
-                  )}
                 </div>
               </div>
               
@@ -186,6 +192,16 @@ export default function TaskList({
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
+                {!isSubTask && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onCreateSubTask(task.id)}
+                    className="h-7 w-7 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

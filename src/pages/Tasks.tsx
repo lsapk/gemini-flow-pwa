@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export default function Tasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -116,6 +118,7 @@ export default function Tasks() {
         due_date: dueDate || null,
         user_id: user.id,
         completed: editingTask?.completed || false,
+        parent_task_id: parentTaskId,
       };
 
       if (editingTask) {
@@ -138,8 +141,8 @@ export default function Tasks() {
         if (error) throw error;
         
         toast({
-          title: "Tâche créée",
-          description: "Votre tâche a été créée avec succès.",
+          title: parentTaskId ? "Sous-tâche créée" : "Tâche créée",
+          description: parentTaskId ? "Votre sous-tâche a été créée avec succès." : "Votre tâche a été créée avec succès.",
         });
       }
       
@@ -228,6 +231,7 @@ export default function Tasks() {
     setPriority('medium');
     setDueDate("");
     setEditingTask(null);
+    setParentTaskId(null);
     setIsFormOpen(false);
   };
 
@@ -237,6 +241,17 @@ export default function Tasks() {
     setPriority(task.priority);
     setDueDate(task.due_date ? task.due_date.split('T')[0] : "");
     setEditingTask(task);
+    setParentTaskId(null);
+    setIsFormOpen(true);
+  };
+
+  const createSubTask = (taskId: string) => {
+    setTitle("");
+    setDescription("");
+    setPriority('medium');
+    setDueDate("");
+    setEditingTask(null);
+    setParentTaskId(taskId);
     setIsFormOpen(true);
   };
 
@@ -288,7 +303,11 @@ export default function Tasks() {
           <DialogContent className="mx-2 sm:mx-0 max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {editingTask ? "Modifier la tâche" : "Nouvelle tâche"}
+                {editingTask 
+                  ? "Modifier la tâche" 
+                  : parentTaskId 
+                    ? "Créer une sous-tâche" 
+                    : "Nouvelle tâche"}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -443,6 +462,7 @@ export default function Tasks() {
                 onDelete={deleteTask}
                 onToggleComplete={toggleComplete}
                 onRefresh={fetchTasks}
+                onCreateSubTask={createSubTask}
               />
             </CardContent>
           </Card>
