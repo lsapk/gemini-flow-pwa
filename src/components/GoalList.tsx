@@ -3,7 +3,7 @@ import { Goal } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, CheckCircle2, Calendar, Eye, EyeOff } from "lucide-react";
+import { Edit, Trash2, CheckCircle2, Calendar, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -47,10 +47,11 @@ export default function GoalList({
   onProgressUpdate,
 }: GoalListProps) {
   const [showCompleted, setShowCompleted] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<'active' | 'completed' | null>('active');
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-4">
         {[1, 2, 3].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-4">
@@ -97,12 +98,12 @@ export default function GoalList({
 
   // Résumé - cards catégorie (seulement pour les objectifs actifs)
   const summaryCards = (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
       {categories.map((cat) => {
         const meta = getCategoryProps(cat);
         const catGoals = goalsByCat[cat];
         return (
-          <Card key={cat} className="flex px-2 py-2 sm:p-4 items-center transition-shadow">
+          <Card key={cat} className="flex px-2 py-2 sm:p-4 items-center transition-shadow hover:shadow-sm">
             <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
               <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${meta.color}`}>
                 <span className="text-xl sm:text-2xl">{meta.emoji}</span>
@@ -126,14 +127,14 @@ export default function GoalList({
       <Card 
         key={goal.id} 
         className={`
-          hover:shadow transition-shadow
+          hover:shadow-sm transition-shadow
           ${isCompleted ? 'bg-green-50 border-green-200' : ''}
         `}
       >
-        <CardContent className="p-4 flex flex-col gap-2">
+        <CardContent className="p-4 flex flex-col gap-3">
           <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
                 <h3 className={`font-semibold text-base ${isCompleted ? 'text-green-800' : ''}`}>
                   {goal.title}
                 </h3>
@@ -142,30 +143,29 @@ export default function GoalList({
                 )}
                 <Badge 
                   variant="secondary" 
-                  className={`${isCompleted ? 'bg-green-200 text-green-800' : catProps.color} ml-1`}
+                  className={`${isCompleted ? 'bg-green-200 text-green-800' : catProps.color}`}
                 >
                   {catProps.label}
                 </Badge>
                 {goal.target_date && (
-                  <Badge variant="outline" className="ml-1">
-                    <Calendar className="w-3 h-3 inline-block mr-0.5 -mt-0.5" />
+                  <Badge variant="outline">
+                    <Calendar className="w-3 h-3 inline-block mr-1" />
                     {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}
                   </Badge>
                 )}
               </div>
               {goal.description && (
-                <p className={`text-xs mt-1 ${isCompleted ? 'text-green-700' : 'text-muted-foreground'}`}>
+                <p className={`text-sm mb-3 ${isCompleted ? 'text-green-700' : 'text-muted-foreground'}`}>
                   {goal.description}
                 </p>
               )}
             </div>
-            <div className="flex gap-1 ml-2">
+            <div className="flex gap-1">
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => onEdit(goal)}
-                className="h-7 w-7"
-                aria-label="Modifier"
+                className="h-8 w-8 p-0"
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -173,8 +173,7 @@ export default function GoalList({
                 size="sm"
                 variant="ghost"
                 onClick={() => onDelete(goal.id)}
-                className="h-7 w-7"
-                aria-label="Supprimer"
+                className="h-8 w-8 p-0"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -182,10 +181,10 @@ export default function GoalList({
           </div>
           
           {/* Progress section */}
-          <div className="flex flex-col gap-1 mt-2">
-            <div className="flex justify-between items-center text-xs">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-sm">
               <span>Progrès</span>
-              <span className={isCompleted ? 'text-green-700 font-semibold' : ''}>
+              <span className={`font-medium ${isCompleted ? 'text-green-700' : ''}`}>
                 {goal.progress || 0}%
               </span>
             </div>
@@ -201,7 +200,7 @@ export default function GoalList({
                   onClick={() =>
                     onProgressUpdate(goal.id, Math.max(0, (goal.progress ?? 0) - 10))
                   }
-                  className="text-xs"
+                  className="text-xs h-7"
                 >
                   -10%
                 </Button>
@@ -211,7 +210,7 @@ export default function GoalList({
                   onClick={() =>
                     onProgressUpdate(goal.id, Math.min(100, (goal.progress ?? 0) + 10))
                   }
-                  className="text-xs"
+                  className="text-xs h-7"
                 >
                   +10%
                 </Button>
@@ -219,7 +218,7 @@ export default function GoalList({
                   size="sm"
                   variant="default"
                   onClick={() => onProgressUpdate(goal.id, 100)}
-                  className="text-xs"
+                  className="text-xs h-7"
                 >
                   Terminer
                 </Button>
@@ -235,7 +234,7 @@ export default function GoalList({
     <div className="space-y-6">
       {summaryCards}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {activeGoals.length === 0 && completedGoals.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center flex flex-col items-center">
@@ -248,25 +247,45 @@ export default function GoalList({
           </Card>
         ) : (
           <>
-            {/* Objectifs en cours */}
-            {activeGoals.map(goal => renderGoal(goal, false))}
-            
-            {/* Section des objectifs terminés */}
-            {completedGoals.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCompleted(!showCompleted)}
-                    className="flex items-center gap-2"
-                  >
-                    {showCompleted ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    {showCompleted ? 'Masquer' : 'Voir'} les objectifs terminés ({completedGoals.length})
-                  </Button>
-                </div>
+            {/* Section Objectifs en cours */}
+            {activeGoals.length > 0 && (
+              <div>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-3 h-auto mb-3"
+                  onClick={() => setExpandedSection(expandedSection === 'active' ? null : 'active')}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Objectifs en cours</span>
+                    <Badge variant="outline">{activeGoals.length}</Badge>
+                  </div>
+                  {expandedSection === 'active' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
                 
-                {showCompleted && (
+                {expandedSection === 'active' && (
+                  <div className="space-y-3">
+                    {activeGoals.map(goal => renderGoal(goal, false))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Section Objectifs terminés */}
+            {completedGoals.length > 0 && (
+              <div>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-3 h-auto mb-3"
+                  onClick={() => setExpandedSection(expandedSection === 'completed' ? null : 'completed')}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">Objectifs terminés</span>
+                    <Badge variant="outline" className="bg-green-100 text-green-800">{completedGoals.length}</Badge>
+                  </div>
+                  {expandedSection === 'completed' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+                
+                {expandedSection === 'completed' && (
                   <div className="space-y-3">
                     {completedGoals.map(goal => renderGoal(goal, true))}
                   </div>

@@ -3,11 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React, { useState } from "react";
-import SubTaskForm from "./SubTaskForm";
+import SubTaskButton from "./SubTaskButton";
 
 type Task = {
   id: string;
@@ -18,6 +18,7 @@ type Task = {
   due_date?: string;
   created_at?: string;
   parent_task_id?: string;
+  subtasks_count?: number;
 };
 
 interface TaskListProps {
@@ -115,120 +116,100 @@ export default function TaskList({
 
   const renderTask = (task: Task, isSubTask = false) => {
     const subTasks = subTasksMap[task.id] || [];
-    const hasSubTasks = subTasks.length > 0;
+    const subtasksCount = subTasks.length;
     const isExpanded = expandedTasks.has(task.id);
 
     return (
-      <Card 
-        key={task.id}
-        className={`
-          ${isSubTask ? 'ml-6 border-l-2 border-l-blue-200' : ''}
-          hover:shadow-md transition-shadow
-          border
-          ${task.completed ? "bg-muted/60 opacity-80" : ""}
-        `}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3 flex-1">
-              <Checkbox
-                checked={task.completed}
-                onCheckedChange={() => onToggleComplete(task.id, task.completed)}
-                className="mt-1"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  {!isSubTask && hasSubTasks && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleExpanded(task.id)}
-                      className="h-5 w-5 p-0"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-3 w-3" />
-                      ) : (
-                        <ChevronRight className="h-3 w-3" />
-                      )}
-                    </Button>
+      <div key={task.id}>
+        <Card 
+          className={`
+            ${isSubTask ? 'ml-6 border-l-2 border-l-blue-200' : ''}
+            hover:shadow-sm transition-shadow
+            border
+            ${task.completed ? "bg-muted/50 opacity-75" : ""}
+          `}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1">
+                <Checkbox
+                  checked={task.completed}
+                  onCheckedChange={() => onToggleComplete(task.id, task.completed)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""} text-sm`}>
+                      {task.title}
+                    </h3>
+                  </div>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {task.description}
+                    </p>
                   )}
-                  <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
-                    {task.title}
-                  </h3>
-                  {hasSubTasks && (
-                    <Badge variant="outline" className="text-xs">
-                      {subTasks.length} sous-tâche{subTasks.length > 1 ? 's' : ''}
+                  
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
+                      {getPriorityIcon(task.priority)} {task.priority}
                     </Badge>
+                    {task.due_date && (
+                      <Badge variant="outline" className="text-xs">
+                        {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+                      </Badge>
+                    )}
+                    {task.created_at && (
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(task.created_at), "dd MMM", { locale: fr })}
+                      </span>
+                    )}
+                  </div>
+
+                  {!isSubTask && (
+                    <SubTaskButton
+                      taskId={task.id}
+                      subtasksCount={subtasksCount}
+                      isExpanded={isExpanded}
+                      onToggleExpanded={() => toggleExpanded(task.id)}
+                      onSubTaskCreated={() => onRefresh?.()}
+                    />
                   )}
                 </div>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground break-words">
-                    {task.description}
-                  </p>
-                )}
+              </div>
+              
+              <div className="flex gap-1 ml-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(task)}
+                  className="h-7 w-7 p-0"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(task.id)}
+                  className="h-7 w-7 p-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(task)}
-                aria-label="Modifier"
-                className="h-7 w-7"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(task.id)}
-                aria-label="Supprimer"
-                className="h-7 w-7"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
-              {getPriorityIcon(task.priority)} {task.priority}
-            </Badge>
-            {task.due_date && (
-              <Badge variant="outline">
-                Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
-              </Badge>
-            )}
-            {task.created_at && (
-              <span className="text-xs text-muted-foreground ml-auto">
-                création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
-              </span>
-            )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {!isSubTask && isExpanded && (
-            <div className="mt-3 space-y-2">
-              {subTasks.map(subTask => renderTask(subTask, true))}
-              <SubTaskForm 
-                parentTaskId={task.id} 
-                onSubTaskCreated={() => onRefresh?.()} 
-              />
-            </div>
-          )}
-
-          {!isSubTask && !isExpanded && hasSubTasks === false && (
-            <SubTaskForm 
-              parentTaskId={task.id} 
-              onSubTaskCreated={() => onRefresh?.()} 
-            />
-          )}
-        </CardContent>
-      </Card>
+        {isExpanded && subTasks.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {subTasks.map(subTask => renderTask(subTask, true))}
+          </div>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="space-y-3 mt-2">
+    <div className="space-y-3">
       {mainTasks.map(task => renderTask(task))}
     </div>
   );

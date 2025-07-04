@@ -11,6 +11,7 @@ export interface Habit {
   updated_at?: string;
   user_id: string;
   is_completed_today?: boolean;
+  is_archived?: boolean;
 }
 
 export interface Goal {
@@ -37,6 +38,7 @@ export interface Task {
   created_at?: string;
   updated_at?: string;
   parent_task_id?: string;
+  subtasks_count?: number;
 }
 
 export interface JournalEntry {

@@ -38,6 +38,7 @@ interface Task {
   created_at?: string;
   updated_at?: string;
   parent_task_id?: string;
+  subtasks_count?: number;
 }
 
 import TaskList from "@/components/TaskList";
@@ -76,10 +77,17 @@ export default function Tasks() {
         return;
       }
 
-      setTasks((data || []).map(task => ({
-        ...task,
-        priority: (task.priority as 'high' | 'medium' | 'low') || 'medium'
-      })));
+      // Ajouter le comptage des sous-tâches
+      const tasksWithSubtaskCount = (data || []).map(task => {
+        const subtasksCount = data?.filter(t => t.parent_task_id === task.id).length || 0;
+        return {
+          ...task,
+          priority: (task.priority as 'high' | 'medium' | 'low') || 'medium',
+          subtasks_count: subtasksCount
+        };
+      });
+
+      setTasks(tasksWithSubtaskCount);
     } catch (error) {
       console.error("Error fetching tasks:", error);
       toast({

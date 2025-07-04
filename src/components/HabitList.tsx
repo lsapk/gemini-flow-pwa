@@ -1,7 +1,8 @@
+
 import { Habit } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle, Edit } from "lucide-react";
+import { Trash2, CheckCircle, Edit, Archive, ArchiveRestore } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -12,9 +13,21 @@ interface HabitListProps {
   onEdit?: (habit: Habit) => void;
   onComplete?: (id: string, isCompleted: boolean) => void;
   onRefresh: () => void;
+  onArchive?: (id: string) => void;
+  onUnarchive?: (id: string) => void;
+  showArchived?: boolean;
 }
 
-export default function HabitList({ habits, loading, onDelete, onEdit, onComplete }: HabitListProps) {
+export default function HabitList({ 
+  habits, 
+  loading, 
+  onDelete, 
+  onEdit, 
+  onComplete, 
+  onArchive,
+  onUnarchive,
+  showArchived 
+}: HabitListProps) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -61,8 +74,8 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
     }
   };
 
-  // Grouping by category
-  const habitsByCategory = {
+  // Grouping by category (seulement pour les habitudes actives)
+  const habitsByCategory = !showArchived ? {
     health: habits.filter((h) => h.category === "health"),
     productivity: habits.filter((h) => h.category === "productivity"),
     personal: habits.filter((h) => h.category === "personal"),
@@ -71,7 +84,7 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
         !h.category ||
         !["health", "productivity", "personal"].includes(h.category)
     ),
-  };
+  } : {};
 
   const categoryLabels = {
     health: { name: "Santé", color: getCategoryColor("health"), emoji: "🏃" },
@@ -82,64 +95,49 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
 
   return (
     <div className="space-y-6">
-      {/* Cartes catégorie simplifiées, maintenant plus compactes sur mobile */}
-      <div
-        className="
-          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
-        "
-      >
-        {Object.entries(categoryLabels).map(([key, label]) => {
-          const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
-          const count = habitsInCategory.length;
-          const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
+      {/* Cartes catégorie seulement pour les habitudes actives */}
+      {!showArchived && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
+          {Object.entries(categoryLabels).map(([key, label]) => {
+            const habitsInCategory = habitsByCategory[key as keyof typeof habitsByCategory] || [];
+            const count = habitsInCategory.length;
+            const completedToday = habitsInCategory.filter(h => h.is_completed_today).length;
 
-          return (
-            <Card
-              key={key}
-              className="
-                flex
-                h-auto
-                sm:h-[110px]
-                px-2 py-2 sm:p-4
-                items-center
-                transition-shadow
-                "
-            >
-              <CardContent
-                className="
-                  p-0 flex items-center gap-2 sm:gap-4 w-full
-                "
+            return (
+              <Card
+                key={key}
+                className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow"
               >
-                <div
-                  className={`
-                    w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}
-                  `}
-                >
-                  <span className="text-xl sm:text-3xl">{label.emoji}</span>
-                </div>
-                <div className="flex flex-col gap-0.5 sm:gap-1">
-                  <div className={`font-semibold text-xs sm:text-base ${label.color.text}`}>
-                    {label.name}
+                <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
+                  <div
+                    className={`w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${label.color.bg}`}
+                  >
+                    <span className="text-xl sm:text-3xl">{label.emoji}</span>
                   </div>
-                  <div className="text-[10px] sm:text-sm text-muted-foreground">
-                    {count} habitude{count > 1 ? "s" : ""}
-                  </div>
-                  {count > 0 && (
-                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                      Aujourd’hui : {completedToday} / {count}
+                  <div className="flex flex-col gap-0.5 sm:gap-1">
+                    <div className={`font-semibold text-xs sm:text-base ${label.color.text}`}>
+                      {label.name}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                    <div className="text-[10px] sm:text-sm text-muted-foreground">
+                      {count} habitude{count > 1 ? "s" : ""}
+                    </div>
+                    {count > 0 && (
+                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                        Aujourd'hui : {completedToday} / {count}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Liste détaillée des habitudes */}
       <div className="space-y-3">
         {habits.map((habit) => (
-          <Card key={habit.id} className="hover:shadow-sm transition-shadow">
+          <Card key={habit.id} className={`hover:shadow-sm transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 space-y-2">
@@ -151,6 +149,9 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                          habit.category === 'productivity' ? 'Productivité' : 
                          habit.category === 'personal' ? 'Personnel' : habit.category}
                       </Badge>
+                    )}
+                    {showArchived && (
+                      <Badge variant="outline">Archivée</Badge>
                     )}
                   </div>
                   
@@ -170,7 +171,7 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                 </div>
                 
                 <div className="flex items-center gap-2 ml-4">
-                  {onComplete && (
+                  {!showArchived && onComplete && (
                     <Button
                       size="lg"
                       onClick={() => onComplete(habit.id, habit.is_completed_today)}
@@ -185,6 +186,7 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                       <CheckCircle className="h-9 w-9 sm:h-12 sm:w-12" />
                     </Button>
                   )}
+                  
                   {onEdit && (
                     <Button
                       variant="outline"
@@ -195,6 +197,31 @@ export default function HabitList({ habits, loading, onDelete, onEdit, onComplet
                       <Edit className="h-4 w-4" />
                     </Button>
                   )}
+                  
+                  {showArchived ? (
+                    onUnarchive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onUnarchive(habit.id)}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <ArchiveRestore className="h-4 w-4" />
+                      </Button>
+                    )
+                  ) : (
+                    onArchive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onArchive(habit.id)}
+                        className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                    )
+                  )}
+                  
                   <Button
                     variant="outline"
                     size="sm"

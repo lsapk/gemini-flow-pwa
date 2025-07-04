@@ -34,6 +34,7 @@ export default function Habits() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -179,14 +180,67 @@ export default function Habits() {
     fetchHabits();
   };
 
+  const archiveHabit = async (habitId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_archived: true })
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Habitude archivée !');
+      fetchHabits();
+    } catch (error) {
+      console.error('Error archiving habit:', error);
+      toast.error('Erreur lors de l\'archivage de l\'habitude');
+    }
+  };
+
+  const unarchiveHabit = async (habitId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_archived: false })
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Habitude restaurée !');
+      fetchHabits();
+    } catch (error) {
+      console.error('Error unarchiving habit:', error);
+      toast.error('Erreur lors de la restauration de l\'habitude');
+    }
+  };
+
+  const displayedHabits = showArchived 
+    ? habits.filter(h => h.is_archived)
+    : habits.filter(h => !h.is_archived);
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle habitude
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            {showArchived ? 'Voir actives' : 'Voir archivées'}
+          </Button>
+          <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvelle habitude
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -200,28 +254,38 @@ export default function Habits() {
             </Card>
           ))}
         </div>
-      ) : habits.length === 0 ? (
+      ) : displayedHabits.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Target className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucune habitude</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {showArchived ? 'Aucune habitude archivée' : 'Aucune habitude'}
+            </h3>
             <p className="text-muted-foreground text-center mb-4">
-              Commencez à créer de bonnes habitudes pour améliorer votre productivité.
+              {showArchived 
+                ? 'Vous n\'avez pas d\'habitudes archivées.'
+                : 'Commencez à créer de bonnes habitudes pour améliorer votre productivité.'
+              }
             </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer votre première habitude
-            </Button>
+            {!showArchived && (
+              <Button onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Créer votre première habitude
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <HabitList 
-          habits={habits}
+          habits={displayedHabits}
           loading={isLoading}
           onDelete={requestDelete}
           onEdit={handleEdit}
           onComplete={toggleHabitCompletion}
           onRefresh={fetchHabits}
+          onArchive={archiveHabit}
+          onUnarchive={unarchiveHabit}
+          showArchived={showArchived}
         />
       )}
 
