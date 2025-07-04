@@ -23,8 +23,7 @@ interface TaskListProps {
   loading?: boolean;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
-  onToggle: (id: string, completed: boolean) => void;
-  onRefresh?: () => void;
+  onToggleComplete: (id: string, completed: boolean) => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -50,7 +49,7 @@ export default function TaskList({
   loading,
   onEdit,
   onDelete,
-  onToggle,
+  onToggleComplete,
 }: TaskListProps) {
 
   if (loading) {
@@ -107,7 +106,7 @@ export default function TaskList({
               <div className="flex items-start gap-3">
                 <Checkbox
                   checked={task.completed}
-                  onCheckedChange={() => onToggle(task.id, !task.completed)}
+                  onCheckedChange={() => onToggleComplete(task.id, task.completed)}
                   className="mt-1"
                 />
                 <div>

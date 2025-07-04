@@ -9,33 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      ai_pending_actions: {
-        Row: {
-          action_data: Json
-          action_type: string
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          user_id: string
-        }
-        Insert: {
-          action_data: Json
-          action_type: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          user_id: string
-        }
-        Update: {
-          action_data?: Json
-          action_type?: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       ai_requests: {
         Row: {
           created_at: string | null
@@ -255,36 +228,6 @@ export type Database = {
           startedAt?: string
           status?: string
           updated?: number
-        }
-        Relationships: []
-      }
-      background_focus_sessions: {
-        Row: {
-          created_at: string | null
-          duration_minutes: number | null
-          ended_at: string | null
-          id: string
-          is_active: boolean | null
-          started_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          ended_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          started_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          ended_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          started_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -648,9 +591,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
-          is_archived: boolean | null
           progress: number | null
-          sort_order: number | null
           target_date: string | null
           title: string
           updated_at: string | null
@@ -662,9 +603,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          is_archived?: boolean | null
           progress?: number | null
-          sort_order?: number | null
           target_date?: string | null
           title: string
           updated_at?: string | null
@@ -676,9 +615,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          is_archived?: boolean | null
           progress?: number | null
-          sort_order?: number | null
           target_date?: string | null
           title?: string
           updated_at?: string | null
@@ -828,9 +765,7 @@ export type Database = {
           description: string | null
           frequency: string
           id: string
-          is_archived: boolean | null
           last_completed_at: string | null
-          sort_order: number | null
           streak: number | null
           target: number
           title: string
@@ -843,9 +778,7 @@ export type Database = {
           description?: string | null
           frequency: string
           id?: string
-          is_archived?: boolean | null
           last_completed_at?: string | null
-          sort_order?: number | null
           streak?: number | null
           target: number
           title: string
@@ -858,9 +791,7 @@ export type Database = {
           description?: string | null
           frequency?: string
           id?: string
-          is_archived?: boolean | null
           last_completed_at?: string | null
-          sort_order?: number | null
           streak?: number | null
           target?: number
           title?: string
@@ -1309,9 +1240,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
-          parent_task_id: string | null
           priority: string | null
-          sort_order: number | null
           title: string
           updated_at: string | null
           user_id: string
@@ -1322,9 +1251,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
-          parent_task_id?: string | null
           priority?: string | null
-          sort_order?: number | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -1335,22 +1262,12 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
-          parent_task_id?: string | null
           priority?: string | null
-          sort_order?: number | null
           title?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_parent_task_id_fkey"
-            columns: ["parent_task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       test_case_execution: {
         Row: {
