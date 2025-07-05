@@ -49,7 +49,7 @@ export class AIActionsService {
       const actionsToInsert = this.pendingActions.map(action => ({
         user_id: user.id,
         action_type: action.type,
-        action_data: action as any, // Cast to any to satisfy Json type
+        action_data: JSON.parse(JSON.stringify(action)), // Convert to plain object
         expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
       }));
 
@@ -76,9 +76,9 @@ export class AIActionsService {
       if (tasks.length > 0) {
         const tasksToInsert = tasks.map(task => ({
           title: task.title,
-          description: task.description,
-          priority: task.priority || 'medium',
-          due_date: task.due_date,
+          description: task.description || null,
+          priority: (task.priority as 'high' | 'medium' | 'low') || 'medium',
+          due_date: task.due_date || null,
           user_id: user.id
         }));
         
@@ -92,9 +92,9 @@ export class AIActionsService {
       if (habits.length > 0) {
         const habitsToInsert = habits.map(habit => ({
           title: habit.title,
-          description: habit.description,
+          description: habit.description || null,
           frequency: habit.frequency || 'daily',
-          category: habit.category,
+          category: habit.category || null,
           target: habit.target || 1,
           user_id: user.id
         }));
@@ -109,9 +109,9 @@ export class AIActionsService {
       if (goals.length > 0) {
         const goalsToInsert = goals.map(goal => ({
           title: goal.title,
-          description: goal.description,
+          description: goal.description || null,
           category: goal.category || 'personal',
-          target_date: goal.target_date,
+          target_date: goal.target_date || null,
           user_id: user.id
         }));
         
