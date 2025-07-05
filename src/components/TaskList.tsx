@@ -7,6 +7,10 @@ import { Edit, Trash2, AlertCircle, CheckSquare, Clock, Plus, ChevronDown, Chevr
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React, { useState } from "react";
+import DraggableList from "./DraggableList";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 type Task = {
   id: string;
@@ -18,6 +22,7 @@ type Task = {
   created_at?: string;
   parent_task_id?: string;
   subtasks_count?: number;
+  sort_order?: number;
 };
 
 interface TaskListProps {
@@ -58,6 +63,7 @@ export default function TaskList({
   onCreateSubTask,
 }: TaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   const toggleExpanded = (taskId: string) => {
     const newExpanded = new Set(expandedTasks);
@@ -69,17 +75,42 @@ export default function TaskList({
     setExpandedTasks(newExpanded);
   };
 
+  const updateTaskOrder = async (reorderedTasks: Task[]) => {
+    if (!user) return;
+
+    try {
+      const updates = reorderedTasks.map((task, index) => ({
+        id: task.id,
+        sort_order: index,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('tasks')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id)
+          .eq('user_id', user.id);
+      }
+
+      if (onRefresh) onRefresh();
+      toast.success('Ordre des tâches mis à jour');
+    } catch (error) {
+      console.error('Error updating task order:', error);
+      toast.error('Erreur lors de la mise à jour de l\'ordre');
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
         {[1,2,3].map(i => (
           <Card key={i} className="animate-pulse">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-muted" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg bg-muted" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-muted rounded w-2/3" />
-                  <div className="h-3 bg-muted rounded w-1/3" />
+                  <div className="h-3 sm:h-4 bg-muted rounded w-2/3" />
+                  <div className="h-2 sm:h-3 bg-muted rounded w-1/3" />
                 </div>
               </div>
             </CardContent>
@@ -90,7 +121,8 @@ export default function TaskList({
   }
 
   // Séparer les tâches principales des sous-tâches
-  const mainTasks = tasks.filter(task => !task.parent_task_id);
+  const mainTasks = tasks.filter(task => !task.parent_task_id)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const subTasksMap = tasks.reduce((acc, task) => {
     if (task.parent_task_id) {
       if (!acc[task.parent_task_id]) {
@@ -104,10 +136,10 @@ export default function TaskList({
   if (mainTasks.length === 0) {
     return (
       <Card>
-        <CardContent className="text-center py-8">
-          <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
-          <p className="text-muted-foreground mb-4">
+        <CardContent className="text-center py-6 sm:py-8 px-3 sm:px-4">
+          <CheckSquare className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-medium mb-2">Aucune tâche</h3>
+          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
             Commencez par créer votre première tâche !
           </p>
         </CardContent>
@@ -124,23 +156,23 @@ export default function TaskList({
       <div key={task.id}>
         <Card 
           className={`
-            ${isSubTask ? 'ml-6 border-l-2 border-l-blue-200' : ''}
+            ${isSubTask ? 'ml-4 sm:ml-6 border-l-2 border-l-blue-200' : ''}
             hover:shadow-sm transition-shadow
             border
             ${task.completed ? "bg-muted/50 opacity-75" : ""}
           `}
         >
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3 flex-1">
+              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
                 <Checkbox
                   checked={task.completed}
                   onCheckedChange={() => onToggleComplete(task.id, task.completed)}
-                  className="mt-1"
+                  className="mt-0.5 sm:mt-1 flex-shrink-0"
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""} text-sm`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2 flex-wrap">
+                    <h3 className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""} text-sm sm:text-base break-words`}>
                       {task.title}
                     </h3>
                     {!isSubTask && subtasksCount > 0 && (
@@ -148,34 +180,46 @@ export default function TaskList({
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleExpanded(task.id)}
-                        className="h-6 px-2 text-xs"
+                        className="h-5 sm:h-6 px-1 sm:px-2 text-xs flex-shrink-0"
                       >
                         {isExpanded ? (
                           <ChevronDown className="h-3 w-3 mr-1" />
                         ) : (
                           <ChevronRight className="h-3 w-3 mr-1" />
                         )}
-                        {subtasksCount} sous-tâche{subtasksCount > 1 ? 's' : ''}
+                        <span className="hidden sm:inline">
+                          {subtasksCount} sous-tâche{subtasksCount > 1 ? 's' : ''}
+                        </span>
+                        <span className="sm:hidden">
+                          {subtasksCount}
+                        </span>
                       </Button>
                     )}
                   </div>
                   {task.description && (
-                    <p className="text-xs text-muted-foreground mb-2">
+                    <p className="text-xs text-muted-foreground mb-2 break-words">
                       {task.description}
                     </p>
                   )}
                   
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
                     <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
-                      {getPriorityIcon(task.priority)} {task.priority}
+                      {getPriorityIcon(task.priority)} 
+                      <span className="hidden sm:inline">{task.priority}</span>
+                      <span className="sm:hidden">{task.priority[0].toUpperCase()}</span>
                     </Badge>
                     {task.due_date && (
                       <Badge variant="outline" className="text-xs">
-                        {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+                        <span className="hidden sm:inline">
+                          {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+                        </span>
+                        <span className="sm:hidden">
+                          {format(new Date(task.due_date), "dd/MM", { locale: fr })}
+                        </span>
                       </Badge>
                     )}
                     {task.created_at && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
                         {format(new Date(task.created_at), "dd MMM", { locale: fr })}
                       </span>
                     )}
@@ -183,32 +227,32 @@ export default function TaskList({
                 </div>
               </div>
               
-              <div className="flex gap-1 ml-2">
+              <div className="flex gap-0.5 sm:gap-1 ml-2 flex-shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(task)}
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
                 {!isSubTask && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onCreateSubTask(task.id)}
-                    className="h-7 w-7 p-0"
+                    className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(task.id)}
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             </div>
@@ -225,8 +269,11 @@ export default function TaskList({
   };
 
   return (
-    <div className="space-y-3">
-      {mainTasks.map(task => renderTask(task))}
-    </div>
+    <DraggableList
+      items={mainTasks}
+      onReorder={updateTaskOrder}
+      renderItem={(task) => renderTask(task)}
+      getItemId={(task) => task.id}
+    />
   );
 }
