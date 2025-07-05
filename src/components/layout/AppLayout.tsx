@@ -1,9 +1,11 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIActions } from "@/hooks/useAIActions";
 import { Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
+import AIActionConfirmation from "@/components/AIActionConfirmation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface AppLayoutProps {
@@ -13,6 +15,14 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, isLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Hook pour les actions IA globales
+  const {
+    pendingActions,
+    showConfirmation,
+    confirmActions,
+    cancelActions
+  } = useAIActions();
 
   if (isLoading) {
     return (
@@ -47,10 +57,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         `}
       </style>
       
-      {/* Mobile Header */}
       <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
       
-      {/* Mobile Navigation Sheet */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64">
           <Sidebar className="border-0 static" onItemClick={closeMobileMenu} />
@@ -58,14 +66,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </Sheet>
 
       <div className="flex">
-        {/* Desktop Sidebar - Fixed position */}
         <div className="hidden md:block">
           <Sidebar className="fixed top-0 left-0 h-full z-40" />
         </div>
 
-        {/* Main Content - Prevent horizontal overflow on mobile */}
         <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-4 w-full min-w-0 overflow-x-hidden">
           <div className="w-full max-w-full px-3 sm:px-4 md:px-6">
+            {/* Confirmation des actions IA - affichée globalement */}
+            {showConfirmation && (
+              <div className="mb-6">
+                <AIActionConfirmation
+                  actions={pendingActions}
+                  onConfirm={confirmActions}
+                  onCancel={cancelActions}
+                />
+              </div>
+            )}
             {children}
           </div>
         </main>

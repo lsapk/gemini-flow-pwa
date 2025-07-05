@@ -5,8 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIActions } from "@/hooks/useAIActions";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
+import AIActionConfirmation from "@/components/AIActionConfirmation";
 import { 
   Dialog, 
   DialogContent, 
@@ -36,6 +38,14 @@ export default function Habits() {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const { user } = useAuth();
+  
+  // Hook pour les actions IA
+  const {
+    pendingActions,
+    showConfirmation,
+    confirmActions,
+    cancelActions
+  } = useAIActions();
 
   const fetchHabits = async () => {
     if (!user) return;
@@ -220,6 +230,11 @@ export default function Habits() {
     }
   };
 
+  const handleConfirmActions = async () => {
+    await confirmActions();
+    fetchHabits(); // Actualiser la liste après confirmation
+  };
+
   const displayedHabits = showArchived 
     ? habits.filter(h => h.is_archived)
     : habits.filter(h => !h.is_archived);
@@ -242,6 +257,15 @@ export default function Habits() {
           </Button>
         </div>
       </div>
+
+      {/* Confirmation des actions IA */}
+      {showConfirmation && (
+        <AIActionConfirmation
+          actions={pendingActions}
+          onConfirm={handleConfirmActions}
+          onCancel={cancelActions}
+        />
+      )}
 
       {isLoading ? (
         <div className="grid gap-4 md:gap-6">
