@@ -46,16 +46,16 @@ export class AIActionsService {
     if (!user) return;
 
     try {
+      const actionsToInsert = this.pendingActions.map(action => ({
+        user_id: user.id,
+        action_type: action.type,
+        action_data: action as any, // Cast to any to satisfy Json type
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+      }));
+
       await supabase
         .from('ai_pending_actions')
-        .insert(
-          this.pendingActions.map(action => ({
-            user_id: user.id,
-            action_type: action.type,
-            action_data: action,
-            expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-          }))
-        );
+        .insert(actionsToInsert);
     } catch (error) {
       console.error('Error saving pending actions:', error);
     }
@@ -74,50 +74,50 @@ export class AIActionsService {
       // Créer les tâches
       const tasks = actionsToExecute.filter(action => action.type === 'task');
       if (tasks.length > 0) {
+        const tasksToInsert = tasks.map(task => ({
+          title: task.title,
+          description: task.description,
+          priority: task.priority || 'medium',
+          due_date: task.due_date,
+          user_id: user.id
+        }));
+        
         await supabase
           .from('tasks')
-          .insert(
-            tasks.map(task => ({
-              title: task.title,
-              description: task.description,
-              priority: task.priority || 'medium',
-              due_date: task.due_date,
-              user_id: user.id
-            }))
-          );
+          .insert(tasksToInsert);
       }
 
       // Créer les habitudes
       const habits = actionsToExecute.filter(action => action.type === 'habit');
       if (habits.length > 0) {
+        const habitsToInsert = habits.map(habit => ({
+          title: habit.title,
+          description: habit.description,
+          frequency: habit.frequency || 'daily',
+          category: habit.category,
+          target: habit.target || 1,
+          user_id: user.id
+        }));
+        
         await supabase
           .from('habits')
-          .insert(
-            habits.map(habit => ({
-              title: habit.title,
-              description: habit.description,
-              frequency: habit.frequency || 'daily',
-              category: habit.category,
-              target: habit.target || 1,
-              user_id: user.id
-            }))
-          );
+          .insert(habitsToInsert);
       }
 
       // Créer les objectifs
       const goals = actionsToExecute.filter(action => action.type === 'goal');
       if (goals.length > 0) {
+        const goalsToInsert = goals.map(goal => ({
+          title: goal.title,
+          description: goal.description,
+          category: goal.category || 'personal',
+          target_date: goal.target_date,
+          user_id: user.id
+        }));
+        
         await supabase
           .from('goals')
-          .insert(
-            goals.map(goal => ({
-              title: goal.title,
-              description: goal.description,
-              category: goal.category || 'personal',
-              target_date: goal.target_date,
-              user_id: user.id
-            }))
-          );
+          .insert(goalsToInsert);
       }
 
       // Supprimer les actions en attente
