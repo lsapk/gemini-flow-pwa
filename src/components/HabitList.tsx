@@ -1,34 +1,22 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Archive, ArchiveRestore, Flame, Target, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, CheckCircle2, Circle, Target, Trash2, RotateCcw } from "lucide-react";
+import { format, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Habit } from "@/types";
-import DraggableHabitList from "./DraggableHabitList";
+import { Habit } from "@/types/index";
 
 interface HabitListProps {
   habits: Habit[];
-  loading: boolean;
+  onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (habit: Habit) => void;
-  onComplete: (id: string, isCompleted: boolean) => void;
-  onRefresh: () => void;
-  onArchive: (id: string) => void;
-  onUnarchive: (id: string) => void;
-  showArchived: boolean;
+  onRestore: (id: string) => void;
+  showArchived?: boolean;
 }
 
-const getFrequencyColor = (frequency: string) => {
-  switch (frequency) {
-    case 'daily': return 'bg-green-100 text-green-800 border-green-200';
-    case 'weekly': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'monthly': return 'bg-purple-100 text-purple-800 border-purple-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getFrequencyLabel = (frequency: string) => {
+const getFrequencyText = (frequency: string) => {
   switch (frequency) {
     case 'daily': return 'Quotidien';
     case 'weekly': return 'Hebdomadaire';
@@ -37,198 +25,137 @@ const getFrequencyLabel = (frequency: string) => {
   }
 };
 
-export default function HabitList({
-  habits,
-  loading,
-  onDelete,
-  onEdit,
-  onComplete,
-  onRefresh,
-  onArchive,
-  onUnarchive,
-  showArchived
+const getCategoryColor = (category: string | null) => {
+  switch (category) {
+    case 'health': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    case 'productivity': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    case 'personal': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+    case 'learning': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  }
+};
+
+export default function HabitList({ 
+  habits, 
+  onToggle, 
+  onDelete, 
+  onRestore, 
+  showArchived = false 
 }: HabitListProps) {
-  const activeHabits = habits.filter(h => !h.is_archived);
-  const completedToday = activeHabits.filter(h => h.is_completed_today).length;
-  const avgStreak = activeHabits.length > 0 ? 
-    activeHabits.reduce((sum, h) => sum + (h.streak || 0), 0) / activeHabits.length : 0;
-
-  const renderHabit = (habit: Habit) => (
-    <Card className={`hover:shadow-sm transition-shadow border ${habit.is_completed_today ? "bg-green-50 border-green-200" : ""}`}>
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <h3 className={`font-medium text-base sm:text-lg ${habit.is_completed_today ? "line-through text-muted-foreground" : ""} break-words`}>
-                  {habit.title}
-                </h3>
-                {habit.is_completed_today && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200 text-sm">
-                    ✓ Fait
-                  </Badge>
-                )}
-                {habit.is_archived && (
-                  <Badge variant="secondary" className="text-sm">
-                    Archivée
-                  </Badge>
-                )}
-              </div>
-              
-              {habit.description && (
-                <p className="text-sm text-muted-foreground mb-3 break-words">
-                  {habit.description}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <Badge className={`${getFrequencyColor(habit.frequency)} text-sm`}>
-                  {getFrequencyLabel(habit.frequency)}
-                </Badge>
-                {habit.category && (
-                  <Badge variant="outline" className="text-sm">
-                    {habit.category}
-                  </Badge>
-                )}
-                {habit.streak && habit.streak > 0 && (
-                  <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-sm">
-                    <Flame className="h-4 w-4 mr-1" />
-                    {habit.streak} jour{habit.streak > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-              
-              {habit.last_completed_at && (
-                <p className="text-sm text-muted-foreground">
-                  Dernière fois: {format(new Date(habit.last_completed_at), "dd MMM yyyy à HH:mm", { locale: fr })}
-                </p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-            {/* Bouton rond plus gros pour cocher/décocher l'habitude */}
-            <button
-              onClick={() => onComplete(habit.id, habit.is_completed_today || false)}
-              disabled={habit.is_archived}
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full border-3 flex items-center justify-center transition-all duration-200 ${
-                habit.is_completed_today
-                  ? 'bg-green-500 border-green-500 text-white shadow-lg'
-                  : 'border-gray-400 hover:border-green-500 bg-white hover:bg-green-50 shadow-md'
-              } ${habit.is_archived ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
-            >
-              {habit.is_completed_today && (
-                <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-            
-            <div className="flex flex-col gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(habit)}
-                className="h-8 w-8 p-0"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => habit.is_archived ? onUnarchive(habit.id) : onArchive(habit.id)}
-                className="h-8 w-8 p-0"
-              >
-                {habit.is_archived ? (
-                  <ArchiveRestore className="h-4 w-4" />
-                ) : (
-                  <Archive className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(habit.id)}
-                className="h-8 w-8 p-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (loading) {
+  if (habits.length === 0) {
     return (
-      <div className="space-y-4 sm:space-y-6">
-        <div className="grid gap-3 sm:gap-4 grid-cols-2">
-          {[1, 2].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <div className="h-4 bg-muted rounded w-1/3" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-3 sm:p-4">
-                <div className="h-4 bg-muted rounded mb-2" />
-                <div className="h-3 bg-muted rounded w-2/3" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="text-center py-8 text-muted-foreground">
+        <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium">
+          {showArchived ? 'Aucune habitude archivée' : 'Aucune habitude'}
+        </p>
+        <p className="text-sm">
+          {!showArchived && 'Créez votre première habitude pour commencer !'}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Cartes résumé - version mobile simplifiée */}
-      {!showArchived && (
-        <div className="grid gap-2 sm:gap-4 grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Faites</CardTitle>
-              <Target className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-            </CardHeader>
-            <CardContent className="pb-2 sm:pb-4">
-              <div className="text-lg sm:text-2xl font-bold">{completedToday}/{activeHabits.length}</div>
+    <div className="space-y-4">
+      {habits.map((habit) => {
+        const wasCompletedToday = habit.last_completed_at && isToday(new Date(habit.last_completed_at));
+        
+        return (
+          <Card key={habit.id} className="transition-all duration-200 hover:shadow-md">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                {!showArchived && (
+                  <Button
+                    onClick={() => onToggle(habit.id)}
+                    variant="ghost"
+                    size="sm"
+                    className={`
+                      h-8 w-8 md:h-10 md:w-10 rounded-full p-0 shrink-0
+                      ${wasCompletedToday 
+                        ? 'bg-green-500 hover:bg-green-600 text-white' 
+                        : 'border-2 border-green-500 hover:bg-green-50 dark:hover:bg-green-950 text-green-500'
+                      }
+                    `}
+                  >
+                    {wasCompletedToday ? (
+                      <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" />
+                    ) : (
+                      <Circle className="h-4 w-4 md:h-5 md:w-5" />
+                    )}
+                  </Button>
+                )}
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                    <h3 className={`font-semibold text-sm md:text-base truncate ${showArchived ? 'text-muted-foreground' : ''}`}>
+                      {habit.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {getFrequencyText(habit.frequency)}
+                      </Badge>
+                      {habit.category && (
+                        <Badge className={`text-xs ${getCategoryColor(habit.category)}`}>
+                          {habit.category}
+                        </Badge>
+                      )}
+                      {habit.streak && habit.streak > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          🔥 {habit.streak} jour{habit.streak > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {habit.description && (
+                    <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">
+                      {habit.description}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Target className="h-3 w-3" />
+                      <span>Objectif: {habit.target}</span>
+                    </div>
+                    {habit.last_completed_at && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          Dernière: {format(new Date(habit.last_completed_at), "dd MMM", { locale: fr })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  {showArchived ? (
+                    <Button
+                      onClick={() => onRestore(habit.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => onDelete(habit.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Série</CardTitle>
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent className="pb-2 sm:pb-4">
-              <div className="text-lg sm:text-2xl font-bold">{Math.round(avgStreak)}j</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Liste des habitudes */}
-      <DraggableHabitList
-        habits={habits}
-        loading={loading}
-        onDelete={onDelete}
-        onEdit={onEdit}
-        onComplete={onComplete}
-        onRefresh={onRefresh}
-        onArchive={onArchive}
-        onUnarchive={onUnarchive}
-        showArchived={showArchived}
-        renderHabit={renderHabit}
-      />
+        );
+      })}
     </div>
   );
 }

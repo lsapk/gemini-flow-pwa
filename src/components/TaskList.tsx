@@ -1,279 +1,218 @@
 
-import { Badge } from "@/components/ui/badge";
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock, Plus, ChevronDown, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, CheckCircle2, Circle, Clock, Target, Trash2, RotateCcw, Plus } from "lucide-react";
+import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { fr } from "date-fns/locale";
-import React, { useState } from "react";
-import DraggableList from "./DraggableList";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-
-type Task = {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  priority: "high" | "medium" | "low";
-  due_date?: string;
-  created_at?: string;
-  parent_task_id?: string;
-  subtasks_count?: number;
-  sort_order?: number;
-};
+import { Task } from "@/types/index";
+import SubTaskButton from "./SubTaskButton";
 
 interface TaskListProps {
   tasks: Task[];
-  loading?: boolean;
-  onEdit: (task: Task) => void;
+  onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onToggleComplete: (id: string, completed: boolean) => void;
-  onRefresh?: () => void;
-  onCreateSubTask: (parentTaskId: string) => void;
+  onRestore: (id: string) => void;
+  showCompleted?: boolean;
+  showArchived?: boolean;
 }
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'high': return 'bg-red-100 text-red-800 border-red-200';
-    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'low': return 'bg-green-100 text-green-800 border-green-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+    case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
   }
 };
 
-const getPriorityIcon = (priority: string) => {
+const getPriorityLabel = (priority: string) => {
   switch (priority) {
-    case 'high': return <AlertCircle className="h-3 w-3" />;
-    case 'medium': return <Clock className="h-3 w-3" />;
-    case 'low': return <CheckSquare className="h-3 w-3" />;
-    default: return null;
+    case 'high': return 'Haute';
+    case 'medium': return 'Moyenne';
+    case 'low': return 'Basse';
+    default: return priority;
   }
 };
 
-export default function TaskList({
-  tasks,
-  loading,
-  onEdit,
-  onDelete,
-  onToggleComplete,
-  onRefresh,
-  onCreateSubTask,
+const getDateInfo = (dueDate: string | null) => {
+  if (!dueDate) return null;
+  
+  const date = new Date(dueDate);
+  const now = new Date();
+  
+  if (isToday(date)) {
+    return { text: "Aujourd'hui", color: "text-orange-600 dark:text-orange-400", urgent: true };
+  } else if (isTomorrow(date)) {
+    return { text: "Demain", color: "text-blue-600 dark:text-blue-400", urgent: false };
+  } else if (isPast(date)) {
+    return { text: "En retard", color: "text-red-600 dark:text-red-400", urgent: true };
+  } else {
+    return { 
+      text: format(date, "dd MMM", { locale: fr }), 
+      color: "text-muted-foreground", 
+      urgent: false 
+    };
+  }
+};
+
+export default function TaskList({ 
+  tasks, 
+  onToggle, 
+  onDelete, 
+  onRestore, 
+  showCompleted = false, 
+  showArchived = false 
 }: TaskListProps) {
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const { user } = useAuth();
-
-  const toggleExpanded = (taskId: string) => {
-    const newExpanded = new Set(expandedTasks);
-    if (newExpanded.has(taskId)) {
-      newExpanded.delete(taskId);
-    } else {
-      newExpanded.add(taskId);
-    }
-    setExpandedTasks(newExpanded);
-  };
-
-  const updateTaskOrder = async (reorderedTasks: Task[]) => {
-    if (!user) return;
-
-    try {
-      const updates = reorderedTasks.map((task, index) => ({
-        id: task.id,
-        sort_order: index,
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('tasks')
-          .update({ sort_order: update.sort_order })
-          .eq('id', update.id)
-          .eq('user_id', user.id);
-      }
-
-      if (onRefresh) onRefresh();
-      toast.success('Ordre des tâches mis à jour');
-    } catch (error) {
-      console.error('Error updating task order:', error);
-      toast.error('Erreur lors de la mise à jour de l\'ordre');
-    }
-  };
-
-  if (loading) {
+  if (tasks.length === 0) {
     return (
-      <div className="space-y-3">
-        {[1,2,3].map(i => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg bg-muted" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 sm:h-4 bg-muted rounded w-2/3" />
-                  <div className="h-2 sm:h-3 bg-muted rounded w-1/3" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="text-center py-8 text-muted-foreground">
+        <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium">
+          {showArchived ? 'Aucune tâche archivée' : showCompleted ? 'Aucune tâche terminée' : 'Aucune tâche'}
+        </p>
+        <p className="text-sm">
+          {!showCompleted && !showArchived && 'Créez votre première tâche pour commencer !'}
+        </p>
       </div>
     );
   }
 
-  // Séparer les tâches principales des sous-tâches
-  const mainTasks = tasks.filter(task => !task.parent_task_id)
-    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-  const subTasksMap = tasks.reduce((acc, task) => {
-    if (task.parent_task_id) {
-      if (!acc[task.parent_task_id]) {
-        acc[task.parent_task_id] = [];
-      }
-      acc[task.parent_task_id].push(task);
-    }
-    return acc;
-  }, {} as Record<string, Task[]>);
-
-  if (mainTasks.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-6 sm:py-8 px-3 sm:px-4">
-          <CheckSquare className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-          <h3 className="text-base sm:text-lg font-medium mb-2">Aucune tâche</h3>
-          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
-            Commencez par créer votre première tâche !
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const renderTask = (task: Task, isSubTask = false) => {
-    const subTasks = subTasksMap[task.id] || [];
-    const subtasksCount = subTasks.length;
-    const isExpanded = expandedTasks.has(task.id);
-
-    return (
-      <div key={task.id}>
-        <Card 
-          className={`
-            ${isSubTask ? 'ml-4 sm:ml-6 border-l-2 border-l-blue-200' : ''}
-            hover:shadow-sm transition-shadow
-            border
-            ${task.completed ? "bg-muted/50 opacity-75" : ""}
-          `}
-        >
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={() => onToggleComplete(task.id, task.completed)}
-                  className="mt-0.5 sm:mt-1 flex-shrink-0"
-                />
+  return (
+    <div className="space-y-4">
+      {tasks.map((task) => {
+        const dateInfo = getDateInfo(task.due_date);
+        
+        return (
+          <Card key={task.id} className="transition-all duration-200 hover:shadow-md">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-start gap-3 md:gap-4">
+                {!showArchived && (
+                  <Button
+                    onClick={() => onToggle(task.id)}
+                    variant="ghost"
+                    size="sm"
+                    className={`
+                      h-6 w-6 md:h-8 md:w-8 rounded-full p-0 shrink-0 mt-1
+                      ${task.completed 
+                        ? 'bg-green-500 hover:bg-green-600 text-white' 
+                        : 'border-2 border-green-500 hover:bg-green-50 dark:hover:bg-green-950 text-green-500'
+                      }
+                    `}
+                  >
+                    {task.completed ? (
+                      <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
+                    ) : (
+                      <Circle className="h-3 w-3 md:h-4 md:w-4" />
+                    )}
+                  </Button>
+                )}
+                
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2 flex-wrap">
-                    <h3 className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""} text-sm sm:text-base break-words`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 mb-2">
+                    <h3 className={`font-semibold text-sm md:text-base leading-tight ${
+                      task.completed ? 'line-through text-muted-foreground' : 
+                      showArchived ? 'text-muted-foreground' : ''
+                    }`}>
                       {task.title}
                     </h3>
-                    {!isSubTask && subtasksCount > 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(task.id)}
-                        className="h-5 sm:h-6 px-1 sm:px-2 text-xs flex-shrink-0"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 mr-1" />
-                        )}
-                        <span className="hidden sm:inline">
-                          {subtasksCount} sous-tâche{subtasksCount > 1 ? 's' : ''}
-                        </span>
-                        <span className="sm:hidden">
-                          {subtasksCount}
-                        </span>
-                      </Button>
-                    )}
+                    <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-auto">
+                      <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
+                        {getPriorityLabel(task.priority)}
+                      </Badge>
+                      {dateInfo && (
+                        <Badge 
+                          variant={dateInfo.urgent ? "destructive" : "outline"} 
+                          className="text-xs"
+                        >
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {dateInfo.text}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
+                  
                   {task.description && (
-                    <p className="text-xs text-muted-foreground mb-2 break-words">
+                    <p className="text-xs md:text-sm text-muted-foreground mb-3 leading-relaxed">
                       {task.description}
                     </p>
                   )}
                   
-                  <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
-                    <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
-                      {getPriorityIcon(task.priority)} 
-                      <span className="hidden sm:inline">{task.priority}</span>
-                      <span className="sm:hidden">{task.priority[0].toUpperCase()}</span>
-                    </Badge>
-                    {task.due_date && (
-                      <Badge variant="outline" className="text-xs">
-                        <span className="hidden sm:inline">
-                          {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Sous-tâches ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length})
                         </span>
-                        <span className="sm:hidden">
-                          {format(new Date(task.due_date), "dd/MM", { locale: fr })}
-                        </span>
-                      </Badge>
-                    )}
-                    {task.created_at && (
-                      <span className="text-xs text-muted-foreground hidden sm:inline">
-                        {format(new Date(task.created_at), "dd MMM", { locale: fr })}
-                      </span>
+                      </div>
+                      <div className="space-y-1">
+                        {task.subtasks.map((subtask) => (
+                          <div key={subtask.id} className="flex items-center gap-2 text-xs">
+                            <div className={`h-2 w-2 rounded-full ${
+                              subtask.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                            }`} />
+                            <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>
+                              {subtask.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {task.created_at && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Créée le {format(new Date(task.created_at), "dd MMM", { locale: fr })}
+                          </span>
+                        </div>
+                      )}
+                      {task.updated_at && task.completed && (
+                        <div className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>
+                            Terminée le {format(new Date(task.updated_at), "dd MMM", { locale: fr })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!showArchived && !task.completed && (
+                      <SubTaskButton taskId={task.id} />
                     )}
                   </div>
                 </div>
+                
+                <div className="flex items-center gap-1">
+                  {showArchived ? (
+                    <Button
+                      onClick={() => onRestore(task.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => onDelete(task.id)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex gap-0.5 sm:gap-1 ml-2 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(task)}
-                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-                >
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
-                {!isSubTask && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onCreateSubTask(task.id)}
-                    className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-                  >
-                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(task.id)}
-                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-                >
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {isExpanded && subTasks.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {subTasks.map(subTask => renderTask(subTask, true))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <DraggableList
-      items={mainTasks}
-      onReorder={updateTaskOrder}
-      renderItem={(task) => renderTask(task)}
-      getItemId={(task) => task.id}
-    />
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }

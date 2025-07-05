@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,6 @@ export default function Analysis() {
     focus: Math.round(focusTimeScore)
   };
 
-  // Préparer les données pour les graphiques avec des données réelles
   const tasksChartData = tasksData && tasksData.length > 0 ? tasksData.map(task => ({
     name: task.name,
     completed: task.completed || 0,
@@ -91,9 +91,9 @@ export default function Analysis() {
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-      {/* Score de productivité avec fond contrastant */}
+      {/* Score de productivité */}
       <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
             <BarChart3 className="h-6 w-6" />
             Score de Productivité
@@ -101,49 +101,47 @@ export default function Analysis() {
         </CardHeader>
         <CardContent>
           <div className="text-center mb-6">
-            <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+            <div className="text-4xl md:text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">
               {score}%
             </div>
-            <p className="text-lg text-blue-700 dark:text-blue-300">Score Global</p>
+            <p className="text-sm md:text-lg text-blue-700 dark:text-blue-300">Score Global</p>
           </div>
           
-          {breakdown && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {breakdown.tasks}%
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Tâches</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+            <div className="text-center p-2 md:p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+              <div className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">
+                {breakdown.tasks}%
               </div>
-              <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {breakdown.habits}%
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Habitudes</p>
-              </div>
-              <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {breakdown.goals}%
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Objectifs</p>
-              </div>
-              <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {breakdown.focus}%
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Focus</p>
-              </div>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Tâches</p>
             </div>
-          )}
+            <div className="text-center p-2 md:p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+              <div className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {breakdown.habits}%
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Habitudes</p>
+            </div>
+            <div className="text-center p-2 md:p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+              <div className="text-lg md:text-2xl font-bold text-purple-600 dark:text-purple-400">
+                {breakdown.goals}%
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Objectifs</p>
+            </div>
+            <div className="text-center p-2 md:p-4 bg-white/50 dark:bg-black/20 rounded-lg">
+              <div className="text-lg md:text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {breakdown.focus}%
+              </div>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Focus</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* CONSEILS IA : Section générée par l’IA et placée ici */}
+      {/* Conseils IA */}
       {(insightsLoading || (insights && insights.length > 0)) && (
         <div>
-          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+          <h2 className="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2">
             <span role="img" aria-label="idées">💡</span>
-            Conseils personnalisés générés par l’IA
+            Conseils personnalisés générés par l'IA
           </h2>
           {insightsLoading ? (
             <div className="p-4 text-muted-foreground">Chargement des conseils IA...</div>
@@ -156,7 +154,7 @@ export default function Analysis() {
                   insight={insight.insight}
                   recommendation={insight.recommendation}
                   priority={insight.priority}
-                  icon={BarChart3} // Use BarChart3 Lucide icon here
+                  icon={BarChart3}
                   metric={insight.metric}
                 />
               ))}
@@ -165,12 +163,12 @@ export default function Analysis() {
         </div>
       )}
 
-      {/* Graphiques d'analyse avec données réelles */}
+      {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Progression des Tâches</CardTitle>
-            <p className="text-sm text-muted-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base md:text-lg">Progression des Tâches</CardTitle>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {tasksData && tasksData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
             </p>
           </CardHeader>
@@ -187,9 +185,9 @@ export default function Analysis() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Habitudes Complétées</CardTitle>
-            <p className="text-sm text-muted-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base md:text-lg">Habitudes Complétées</CardTitle>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {habitsData && habitsData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
             </p>
           </CardHeader>
@@ -199,9 +197,9 @@ export default function Analysis() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sessions de Focus</CardTitle>
-            <p className="text-sm text-muted-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base md:text-lg">Sessions de Focus</CardTitle>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {focusData && focusData.length > 0 ? 'Données en temps réel (minutes)' : 'Données de démonstration'}
             </p>
           </CardHeader>
@@ -211,9 +209,9 @@ export default function Analysis() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Répartition des Activités</CardTitle>
-            <p className="text-sm text-muted-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base md:text-lg">Répartition des Activités</CardTitle>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {activityData && activityData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
             </p>
           </CardHeader>

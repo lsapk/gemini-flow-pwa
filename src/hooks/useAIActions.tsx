@@ -7,34 +7,37 @@ export const useAIActions = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
-    // Écouter les changements d'actions en attente
     const checkPendingActions = () => {
       const actions = aiActionsService.getPendingActions();
-      setPendingActions(actions);
-      setShowConfirmation(actions.length > 0);
+      if (actions.length > 0) {
+        setPendingActions(actions);
+        setShowConfirmation(true);
+      }
     };
 
-    // Vérifier immédiatement
     checkPendingActions();
-
-    // Vérifier périodiquement (pour les actions créées par l'assistant)
     const interval = setInterval(checkPendingActions, 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const proposeActions = (actions: Omit<PendingAIAction, 'id'>[]) => {
-    const actionsWithIds = aiActionsService.proposeActions(
-      actions as PendingAIAction[],
+  const proposeActions = async (actions: Omit<PendingAIAction, 'id'>[]) => {
+    const actionsWithIds = actions.map(action => ({
+      ...action,
+      id: action.id || crypto.randomUUID()
+    })) as PendingAIAction[];
+    
+    const proposedActions = aiActionsService.proposeActions(
+      actionsWithIds,
       () => {
-        // Callback après confirmation
         setPendingActions([]);
         setShowConfirmation(false);
       }
     );
-    setPendingActions(actionsWithIds);
+    
+    setPendingActions(proposedActions);
     setShowConfirmation(true);
-    return actionsWithIds;
+    return proposedActions;
   };
 
   const confirmActions = async () => {
@@ -54,6 +57,6 @@ export const useAIActions = () => {
     proposeActions,
     confirmActions,
     cancelActions,
-    hasPendingActions: aiActionsService.hasPendingActions()
+    hasPendingActions: pendingActions.length > 0
   };
 };
