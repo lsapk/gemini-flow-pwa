@@ -241,19 +241,25 @@ export default function Habits() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowArchived(!showArchived)}
+            className="text-xs sm:text-sm"
           >
             {showArchived ? 'Voir actives' : 'Voir archivées'}
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle habitude
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)} 
+            size="sm"
+            className="text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap"
+          >
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Nouvelle habitude</span>
+            <span className="xs:hidden">Nouvelle</span>
           </Button>
         </div>
       </div>

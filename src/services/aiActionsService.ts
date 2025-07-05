@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PendingAIAction {
@@ -26,12 +25,14 @@ export class AIActionsService {
     return AIActionsService.instance;
   }
 
-  // Méthode pour proposer des actions à créer
+  // Méthode améliorée pour proposer plusieurs actions
   proposeActions(actions: PendingAIAction[], onConfirm: (actions: PendingAIAction[]) => void) {
+    // Accepter plusieurs actions et leur donner des IDs uniques
     this.pendingActions = actions.map(action => ({
       ...action,
-      id: crypto.randomUUID()
+      id: action.id || crypto.randomUUID()
     }));
+    
     this.confirmationCallback = onConfirm;
     
     // Sauvegarder les actions en attente dans la base de données
@@ -61,50 +62,35 @@ export class AIActionsService {
     }
   }
 
-  // Confirmer et exécuter les actions
+  // Confirmer et exécuter les actions sélectionnées
   async confirmActions(actionIds: string[]) {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
 
-    // Simplify the filtering to avoid complex type inference
-    const actionsToExecute: PendingAIAction[] = [];
-    for (const action of this.pendingActions) {
-      if (actionIds.includes(action.id)) {
-        actionsToExecute.push(action);
-      }
-    }
+    const actionsToExecute = this.pendingActions.filter(action => 
+      actionIds.includes(action.id)
+    );
 
     try {
-      // Créer les tâches
-      const tasks: PendingAIAction[] = [];
-      const habits: PendingAIAction[] = [];
-      const goals: PendingAIAction[] = [];
+      // Séparer par type
+      const tasks = actionsToExecute.filter(a => a.type === 'task');
+      const habits = actionsToExecute.filter(a => a.type === 'habit');
+      const goals = actionsToExecute.filter(a => a.type === 'goal');
 
-      // Separate actions by type
-      for (const action of actionsToExecute) {
-        if (action.type === 'task') {
-          tasks.push(action);
-        } else if (action.type === 'habit') {
-          habits.push(action);
-        } else if (action.type === 'goal') {
-          goals.push(action);
-        }
-      }
-
+      // Créer les tâches en lot
       if (tasks.length > 0) {
         const tasksToInsert = tasks.map(task => ({
           title: task.title,
           description: task.description || null,
-          priority: (task.priority as 'high' | 'medium' | 'low') || 'medium',
+          priority: task.priority || 'medium',
           due_date: task.due_date || null,
           user_id: user.id
         }));
         
-        await supabase
-          .from('tasks')
-          .insert(tasksToInsert);
+        await supabase.from('tasks').insert(tasksToInsert);
       }
 
+      // Créer les habitudes en lot
       if (habits.length > 0) {
         const habitsToInsert = habits.map(habit => ({
           title: habit.title,
@@ -115,11 +101,10 @@ export class AIActionsService {
           user_id: user.id
         }));
         
-        await supabase
-          .from('habits')
-          .insert(habitsToInsert);
+        await supabase.from('habits').insert(habitsToInsert);
       }
 
+      // Créer les objectifs en lot
       if (goals.length > 0) {
         const goalsToInsert = goals.map(goal => ({
           title: goal.title,
@@ -129,25 +114,17 @@ export class AIActionsService {
           user_id: user.id
         }));
         
-        await supabase
-          .from('goals')
-          .insert(goalsToInsert);
+        await supabase.from('goals').insert(goalsToInsert);
       }
 
-      // Supprimer les actions en attente - simplified approach
-      const { error: deleteError } = await supabase
+      // Supprimer les actions en attente
+      await supabase
         .from('ai_pending_actions')
         .delete()
         .eq('user_id', user.id);
 
-      if (deleteError) {
-        console.error('Error deleting pending actions:', deleteError);
-      }
-
       // Nettoyer les actions locales
-      this.pendingActions = this.pendingActions.filter(action => 
-        !actionIds.includes(action.id)
-      );
+      this.pendingActions = [];
 
       if (this.confirmationCallback) {
         this.confirmationCallback(actionsToExecute);
