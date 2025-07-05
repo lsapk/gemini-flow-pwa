@@ -6,23 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, Target, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-
-interface AIAction {
-  id: string;
-  type: 'task' | 'habit' | 'goal';
-  title: string;
-  description?: string;
-  priority?: 'high' | 'medium' | 'low';
-  due_date?: string;
-  category?: string;
-  frequency?: string;
-  target?: number;
-  target_date?: string;
-}
+import { toast } from "sonner";
+import { aiActionsService, PendingAIAction } from "@/services/aiActionsService";
 
 interface AIActionConfirmationProps {
-  actions: AIAction[];
-  onConfirm: (actions: AIAction[]) => void;
+  actions: PendingAIAction[];
+  onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -63,6 +52,7 @@ export default function AIActionConfirmation({
   const [selectedActions, setSelectedActions] = useState<string[]>(
     actions.map(action => action.id)
   );
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const toggleAction = (actionId: string) => {
     setSelectedActions(prev =>
@@ -72,11 +62,26 @@ export default function AIActionConfirmation({
     );
   };
 
-  const handleConfirm = () => {
-    const confirmedActions = actions.filter(action => 
-      selectedActions.includes(action.id)
-    );
-    onConfirm(confirmedActions);
+  const handleConfirm = async () => {
+    if (selectedActions.length === 0) return;
+    
+    setIsConfirming(true);
+    
+    try {
+      await aiActionsService.confirmActions(selectedActions);
+      toast.success(`${selectedActions.length} élément${selectedActions.length > 1 ? 's' : ''} créé${selectedActions.length > 1 ? 's' : ''} avec succès !`);
+      onConfirm();
+    } catch (error) {
+      console.error('Error confirming actions:', error);
+      toast.error('Erreur lors de la création des éléments');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    await aiActionsService.cancelActions();
+    onCancel();
   };
 
   return (
@@ -91,86 +96,88 @@ export default function AIActionConfirmation({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {actions.map((action) => (
-          <Card 
-            key={action.id} 
-            className={`cursor-pointer transition-colors ${
-              selectedActions.includes(action.id) 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => toggleAction(action.id)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <input
-                    type="checkbox"
-                    checked={selectedActions.includes(action.id)}
-                    onChange={() => toggleAction(action.id)}
-                    className="rounded border-gray-300"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className={getTypeColor(action.type)}>
-                      {getTypeIcon(action.type)}
-                      {getTypeLabel(action.type)}
-                    </Badge>
-                    <h3 className="font-medium">{action.title}</h3>
+        <div className="max-h-96 overflow-y-auto space-y-3">
+          {actions.map((action) => (
+            <Card 
+              key={action.id} 
+              className={`cursor-pointer transition-colors ${
+                selectedActions.includes(action.id) 
+                  ? 'border-blue-500 bg-blue-50' 
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+              onClick={() => toggleAction(action.id)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedActions.includes(action.id)}
+                      onChange={() => toggleAction(action.id)}
+                      className="rounded border-gray-300"
+                    />
                   </div>
-                  
-                  {action.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {action.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {action.priority && (
-                      <Badge variant="outline">
-                        Priorité: {action.priority}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={getTypeColor(action.type)}>
+                        {getTypeIcon(action.type)}
+                        {getTypeLabel(action.type)}
                       </Badge>
+                      <h3 className="font-medium break-words">{action.title}</h3>
+                    </div>
+                    
+                    {action.description && (
+                      <p className="text-sm text-muted-foreground break-words">
+                        {action.description}
+                      </p>
                     )}
-                    {action.due_date && (
-                      <Badge variant="outline">
-                        Échéance: {format(new Date(action.due_date), "dd MMM yyyy", { locale: fr })}
-                      </Badge>
-                    )}
-                    {action.category && (
-                      <Badge variant="outline">
-                        Catégorie: {action.category}
-                      </Badge>
-                    )}
-                    {action.frequency && (
-                      <Badge variant="outline">
-                        Fréquence: {action.frequency}
-                      </Badge>
-                    )}
-                    {action.target && (
-                      <Badge variant="outline">
-                        Objectif: {action.target}
-                      </Badge>
-                    )}
-                    {action.target_date && (
-                      <Badge variant="outline">
-                        Date cible: {format(new Date(action.target_date), "dd MMM yyyy", { locale: fr })}
-                      </Badge>
-                    )}
+                    
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {action.priority && (
+                        <Badge variant="outline">
+                          Priorité: {action.priority}
+                        </Badge>
+                      )}
+                      {action.due_date && (
+                        <Badge variant="outline">
+                          Échéance: {format(new Date(action.due_date), "dd MMM yyyy", { locale: fr })}
+                        </Badge>
+                      )}
+                      {action.category && (
+                        <Badge variant="outline">
+                          Catégorie: {action.category}
+                        </Badge>
+                      )}
+                      {action.frequency && (
+                        <Badge variant="outline">
+                          Fréquence: {action.frequency}
+                        </Badge>
+                      )}
+                      {action.target && (
+                        <Badge variant="outline">
+                          Objectif: {action.target}
+                        </Badge>
+                      )}
+                      {action.target_date && (
+                        <Badge variant="outline">
+                          Date cible: {format(new Date(action.target_date), "dd MMM yyyy", { locale: fr })}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
         
         <div className="flex gap-3 pt-4">
           <Button
             onClick={handleConfirm}
-            disabled={selectedActions.length === 0 || loading}
+            disabled={selectedActions.length === 0 || loading || isConfirming}
             className="flex-1"
           >
-            {loading ? (
+            {isConfirming ? (
               <>
                 <Clock className="h-4 w-4 mr-2 animate-spin" />
                 Création en cours...
@@ -184,8 +191,8 @@ export default function AIActionConfirmation({
           </Button>
           <Button
             variant="outline"
-            onClick={onCancel}
-            disabled={loading}
+            onClick={handleCancel}
+            disabled={loading || isConfirming}
           >
             <XCircle className="h-4 w-4 mr-2" />
             Annuler
