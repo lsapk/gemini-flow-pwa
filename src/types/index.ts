@@ -12,6 +12,7 @@ export interface Habit {
   user_id: string;
   is_completed_today?: boolean;
   is_archived?: boolean;
+  sort_order?: number;
 }
 
 export interface Goal {
@@ -25,6 +26,7 @@ export interface Goal {
   created_at: string;
   updated_at?: string;
   user_id: string;
+  sort_order?: number;
 }
 
 export interface Task {
