@@ -66,13 +66,31 @@ export class AIActionsService {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
 
-    const actionsToExecute = this.pendingActions.filter(action => 
-      actionIds.includes(action.id)
-    );
+    // Simplify the filtering to avoid complex type inference
+    const actionsToExecute: PendingAIAction[] = [];
+    for (const action of this.pendingActions) {
+      if (actionIds.includes(action.id)) {
+        actionsToExecute.push(action);
+      }
+    }
 
     try {
       // Créer les tâches
-      const tasks = actionsToExecute.filter(action => action.type === 'task');
+      const tasks: PendingAIAction[] = [];
+      const habits: PendingAIAction[] = [];
+      const goals: PendingAIAction[] = [];
+
+      // Separate actions by type
+      for (const action of actionsToExecute) {
+        if (action.type === 'task') {
+          tasks.push(action);
+        } else if (action.type === 'habit') {
+          habits.push(action);
+        } else if (action.type === 'goal') {
+          goals.push(action);
+        }
+      }
+
       if (tasks.length > 0) {
         const tasksToInsert = tasks.map(task => ({
           title: task.title,
@@ -87,8 +105,6 @@ export class AIActionsService {
           .insert(tasksToInsert);
       }
 
-      // Créer les habitudes
-      const habits = actionsToExecute.filter(action => action.type === 'habit');
       if (habits.length > 0) {
         const habitsToInsert = habits.map(habit => ({
           title: habit.title,
@@ -104,8 +120,6 @@ export class AIActionsService {
           .insert(habitsToInsert);
       }
 
-      // Créer les objectifs
-      const goals = actionsToExecute.filter(action => action.type === 'goal');
       if (goals.length > 0) {
         const goalsToInsert = goals.map(goal => ({
           title: goal.title,
@@ -120,12 +134,15 @@ export class AIActionsService {
           .insert(goalsToInsert);
       }
 
-      // Supprimer les actions en attente
-      await supabase
+      // Supprimer les actions en attente - simplified approach
+      const { error: deleteError } = await supabase
         .from('ai_pending_actions')
         .delete()
-        .eq('user_id', user.id)
-        .in('action_data->id', actionIds);
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('Error deleting pending actions:', deleteError);
+      }
 
       // Nettoyer les actions locales
       this.pendingActions = this.pendingActions.filter(action => 
