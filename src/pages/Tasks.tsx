@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -191,6 +190,13 @@ export default function Tasks() {
         description: "Impossible de mettre à jour la tâche.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleToggleComplete = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      toggleComplete(id, task.completed);
     }
   };
 
@@ -466,7 +472,7 @@ export default function Tasks() {
             <CardContent className="pt-0">
               <TaskList
                 tasks={filteredTasks}
-                onToggle={toggleComplete}
+                onToggle={handleToggleComplete}
                 onDelete={deleteTask}
                 onRestore={() => {}}
                 showCompleted={activeTab === 'completed'}
