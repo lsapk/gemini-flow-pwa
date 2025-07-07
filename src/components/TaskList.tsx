@@ -1,238 +1,166 @@
 
-import React, { useState } from 'react';
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle2, Circle, Clock, Target, Trash2, RotateCcw, Plus } from "lucide-react";
-import { format, isPast, isToday, isTomorrow } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Task } from "@/types/index";
+import React from "react";
+
+type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  priority: "high" | "medium" | "low";
+  due_date?: string;
+  created_at?: string;
+};
 
 interface TaskListProps {
   tasks: Task[];
-  onToggle: (id: string) => void;
+  loading?: boolean;
+  onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
-  onRestore: (id: string) => void;
-  showCompleted?: boolean;
-  showArchived?: boolean;
+  onToggleComplete: (id: string, completed: boolean) => void;
 }
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-    case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    case 'high': return 'bg-red-100 text-red-800 border-red-200';
+    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'low': return 'bg-green-100 text-green-800 border-green-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
-const getPriorityLabel = (priority: string) => {
+const getPriorityIcon = (priority: string) => {
   switch (priority) {
-    case 'high': return 'Haute';
-    case 'medium': return 'Moyenne';
-    case 'low': return 'Basse';
-    default: return priority;
+    case 'high': return <AlertCircle className="h-3 w-3" />;
+    case 'medium': return <Clock className="h-3 w-3" />;
+    case 'low': return <CheckSquare className="h-3 w-3" />;
+    default: return null;
   }
 };
 
-const getDateInfo = (dueDate: string | null) => {
-  if (!dueDate) return null;
-  
-  const date = new Date(dueDate);
-  const now = new Date();
-  
-  if (isToday(date)) {
-    return { text: "Aujourd'hui", color: "text-orange-600 dark:text-orange-400", urgent: true };
-  } else if (isTomorrow(date)) {
-    return { text: "Demain", color: "text-blue-600 dark:text-blue-400", urgent: false };
-  } else if (isPast(date)) {
-    return { text: "En retard", color: "text-red-600 dark:text-red-400", urgent: true };
-  } else {
-    return { 
-      text: format(date, "dd MMM", { locale: fr }), 
-      color: "text-muted-foreground", 
-      urgent: false 
-    };
-  }
-};
-
-export default function TaskList({ 
-  tasks, 
-  onToggle, 
-  onDelete, 
-  onRestore, 
-  showCompleted = false, 
-  showArchived = false 
+export default function TaskList({
+  tasks,
+  loading,
+  onEdit,
+  onDelete,
+  onToggleComplete,
 }: TaskListProps) {
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  const toggleExpanded = (taskId: string) => {
-    const newExpanded = new Set(expandedTasks);
-    if (newExpanded.has(taskId)) {
-      newExpanded.delete(taskId);
-    } else {
-      newExpanded.add(taskId);
-    }
-    setExpandedTasks(newExpanded);
-  };
-
-  if (tasks.length === 0) {
+  if (loading) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-        <p className="text-lg font-medium">
-          {showArchived ? 'Aucune tâche archivée' : showCompleted ? 'Aucune tâche terminée' : 'Aucune tâche'}
-        </p>
-        <p className="text-sm">
-          {!showCompleted && !showArchived && 'Créez votre première tâche pour commencer !'}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {tasks.map((task) => {
-        const dateInfo = getDateInfo(task.due_date);
-        const isExpanded = expandedTasks.has(task.id);
-        const subtasksCount = task.subtasks?.length || 0;
-        
-        return (
-          <Card key={task.id} className="transition-all duration-200 hover:shadow-md">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-start gap-3 md:gap-4">
-                {!showArchived && (
-                  <Button
-                    onClick={() => onToggle(task.id)}
-                    variant="ghost"
-                    size="sm"
-                    className={`
-                      h-6 w-6 md:h-8 md:w-8 rounded-full p-0 shrink-0 mt-1
-                      ${task.completed 
-                        ? 'bg-green-500 hover:bg-green-600 text-white' 
-                        : 'border-2 border-green-500 hover:bg-green-50 dark:hover:bg-green-950 text-green-500'
-                      }
-                    `}
-                  >
-                    {task.completed ? (
-                      <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4" />
-                    ) : (
-                      <Circle className="h-3 w-3 md:h-4 md:w-4" />
-                    )}
-                  </Button>
-                )}
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 mb-2">
-                    <h3 className={`font-semibold text-base md:text-lg leading-tight ${
-                      task.completed ? 'line-through text-muted-foreground' : 
-                      showArchived ? 'text-muted-foreground' : ''
-                    }`}>
-                      {task.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-1 sm:gap-2 sm:ml-auto">
-                      <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
-                        {getPriorityLabel(task.priority)}
-                      </Badge>
-                      {dateInfo && (
-                        <Badge 
-                          variant={dateInfo.urgent ? "destructive" : "outline"} 
-                          className="text-xs"
-                        >
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {dateInfo.text}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {task.description && (
-                    <p className="text-sm md:text-base text-muted-foreground mb-3 leading-relaxed">
-                      {task.description}
-                    </p>
-                  )}
-                  
-                  {task.subtasks && task.subtasks.length > 0 && (
-                    <div className="mb-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(task.id)}
-                        className="h-6 px-2 text-xs mb-2"
-                      >
-                        {isExpanded ? (
-                          <><span className="mr-1">▼</span></>
-                        ) : (
-                          <><span className="mr-1">▶</span></>
-                        )}
-                        Sous-tâches ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length})
-                      </Button>
-                      
-                      {isExpanded && (
-                        <div className="space-y-1 ml-4">
-                          {task.subtasks.map((subtask) => (
-                            <div key={subtask.id} className="flex items-center gap-2 text-sm">
-                              <div className={`h-2 w-2 rounded-full ${
-                                subtask.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                              }`} />
-                              <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>
-                                {subtask.title}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      {task.created_at && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            Créée le {format(new Date(task.created_at), "dd MMM", { locale: fr })}
-                          </span>
-                        </div>
-                      )}
-                      {task.updated_at && task.completed && (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          <span>
-                            Terminée le {format(new Date(task.updated_at), "dd MMM", { locale: fr })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-1">
-                  {showArchived ? (
-                    <Button
-                      onClick={() => onRestore(task.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => onDelete(task.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+      <div className="space-y-3">
+        {[1,2,3].map(i => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-2/3" />
+                  <div className="h-3 bg-muted rounded w-1/3" />
                 </div>
               </div>
             </CardContent>
           </Card>
-        );
-      })}
+        ))}
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Aucune tâche</h3>
+          <p className="text-muted-foreground mb-4">
+            Commencez par créer votre première tâche !
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className={`
+      grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3
+      mt-2
+    `}>
+      {tasks.map(task => (
+        <Card 
+          key={task.id}
+          className={`
+            flex flex-col justify-between
+            hover:shadow-md transition-shadow
+            border
+            ${task.completed ? "bg-muted/60 opacity-80" : ""}
+          `}
+        >
+          <CardContent className="p-4 flex flex-col gap-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={task.completed}
+                  onCheckedChange={() => onToggleComplete(task.id, task.completed)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
+                      {task.title}
+                    </h3>
+                  </div>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground break-words">
+                      {task.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(task)}
+                  aria-label="Modifier"
+                  className="h-7 w-7"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(task.id)}
+                  aria-label="Supprimer"
+                  className="h-7 w-7"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
+                {getPriorityIcon(task.priority)} {task.priority}
+              </Badge>
+              {task.due_date && (
+                <Badge variant="outline">
+                  Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+                </Badge>
+              )}
+              {task.created_at && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
