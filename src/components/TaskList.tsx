@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,6 @@ import { Calendar, CheckCircle2, Circle, Clock, Target, Trash2, RotateCcw, Plus 
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Task } from "@/types/index";
-import SubTaskButton from "./SubTaskButton";
 
 interface TaskListProps {
   tasks: Task[];
@@ -65,6 +64,18 @@ export default function TaskList({
   showCompleted = false, 
   showArchived = false 
 }: TaskListProps) {
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
+  };
+
   if (tasks.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -83,6 +94,8 @@ export default function TaskList({
     <div className="space-y-4">
       {tasks.map((task) => {
         const dateInfo = getDateInfo(task.due_date);
+        const isExpanded = expandedTasks.has(task.id);
+        const subtasksCount = task.subtasks?.length || 0;
         
         return (
           <Card key={task.id} className="transition-all duration-200 hover:shadow-md">
@@ -111,7 +124,7 @@ export default function TaskList({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2 mb-2">
-                    <h3 className={`font-semibold text-sm md:text-base leading-tight ${
+                    <h3 className={`font-semibold text-base md:text-lg leading-tight ${
                       task.completed ? 'line-through text-muted-foreground' : 
                       showArchived ? 'text-muted-foreground' : ''
                     }`}>
@@ -134,30 +147,41 @@ export default function TaskList({
                   </div>
                   
                   {task.description && (
-                    <p className="text-xs md:text-sm text-muted-foreground mb-3 leading-relaxed">
+                    <p className="text-sm md:text-base text-muted-foreground mb-3 leading-relaxed">
                       {task.description}
                     </p>
                   )}
                   
                   {task.subtasks && task.subtasks.length > 0 && (
                     <div className="mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Sous-tâches ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length})
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        {task.subtasks.map((subtask) => (
-                          <div key={subtask.id} className="flex items-center gap-2 text-xs">
-                            <div className={`h-2 w-2 rounded-full ${
-                              subtask.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                            }`} />
-                            <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>
-                              {subtask.title}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleExpanded(task.id)}
+                        className="h-6 px-2 text-xs mb-2"
+                      >
+                        {isExpanded ? (
+                          <><span className="mr-1">▼</span></>
+                        ) : (
+                          <><span className="mr-1">▶</span></>
+                        )}
+                        Sous-tâches ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length})
+                      </Button>
+                      
+                      {isExpanded && (
+                        <div className="space-y-1 ml-4">
+                          {task.subtasks.map((subtask) => (
+                            <div key={subtask.id} className="flex items-center gap-2 text-sm">
+                              <div className={`h-2 w-2 rounded-full ${
+                                subtask.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                              }`} />
+                              <span className={subtask.completed ? 'line-through text-muted-foreground' : ''}>
+                                {subtask.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -180,10 +204,6 @@ export default function TaskList({
                         </div>
                       )}
                     </div>
-                    
-                    {!showArchived && !task.completed && (
-                      <SubTaskButton taskId={task.id} />
-                    )}
                   </div>
                 </div>
                 

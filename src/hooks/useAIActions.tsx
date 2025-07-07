@@ -24,7 +24,7 @@ export const useAIActions = () => {
   const proposeActions = async (actions: Omit<PendingAIAction, 'id'>[]) => {
     const actionsWithIds = actions.map(action => ({
       ...action,
-      id: action.id || crypto.randomUUID()
+      id: crypto.randomUUID()
     })) as PendingAIAction[];
     
     const proposedActions = aiActionsService.proposeActions(
@@ -41,6 +41,8 @@ export const useAIActions = () => {
   };
 
   const confirmActions = async () => {
+    const actionIds = pendingActions.map(action => action.id);
+    await aiActionsService.confirmActions(actionIds);
     setShowConfirmation(false);
     setPendingActions([]);
   };

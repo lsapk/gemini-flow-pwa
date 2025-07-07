@@ -71,24 +71,24 @@ export default function HabitList({
                     variant="ghost"
                     size="sm"
                     className={`
-                      h-8 w-8 md:h-10 md:w-10 rounded-full p-0 shrink-0
+                      h-10 w-10 md:h-12 md:w-12 rounded-full p-0 shrink-0 border-4
                       ${wasCompletedToday 
-                        ? 'bg-green-500 hover:bg-green-600 text-white' 
-                        : 'border-2 border-green-500 hover:bg-green-50 dark:hover:bg-green-950 text-green-500'
+                        ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' 
+                        : 'border-green-500 hover:bg-green-50 dark:hover:bg-green-950 text-green-500 bg-white dark:bg-transparent'
                       }
                     `}
                   >
                     {wasCompletedToday ? (
-                      <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5" />
+                      <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6" />
                     ) : (
-                      <Circle className="h-4 w-4 md:h-5 md:w-5" />
+                      <Circle className="h-5 w-5 md:h-6 md:w-6" />
                     )}
                   </Button>
                 )}
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                    <h3 className={`font-semibold text-sm md:text-base truncate ${showArchived ? 'text-muted-foreground' : ''}`}>
+                    <h3 className={`font-semibold text-base md:text-lg truncate ${showArchived ? 'text-muted-foreground' : ''}`}>
                       {habit.title}
                     </h3>
                     <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -109,7 +109,7 @@ export default function HabitList({
                   </div>
                   
                   {habit.description && (
-                    <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">
+                    <p className="text-sm md:text-base text-muted-foreground mb-2 line-clamp-2">
                       {habit.description}
                     </p>
                   )}

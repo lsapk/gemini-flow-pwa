@@ -308,13 +308,9 @@ export default function Habits() {
       ) : (
         <HabitList 
           habits={displayedHabits}
-          loading={isLoading}
           onDelete={requestDelete}
-          onEdit={handleEdit}
-          onComplete={toggleHabitCompletion}
-          onRefresh={fetchHabits}
-          onArchive={archiveHabit}
-          onUnarchive={unarchiveHabit}
+          onRestore={showArchived ? unarchiveHabit : archiveHabit}
+          onToggle={toggleHabitCompletion}
           showArchived={showArchived}
         />
       )}

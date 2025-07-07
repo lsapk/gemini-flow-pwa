@@ -8,14 +8,20 @@ import { toast } from 'sonner';
 
 interface DraggableGoalListProps {
   goals: Goal[];
-  onRefresh: () => void;
-  renderGoal: (goal: Goal) => React.ReactNode;
+  onReorder: (reorderedGoals: Goal[]) => void;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onProgressUpdate: (goalId: string, newProgress: number) => void;
+  showArchived: boolean;
 }
 
 export default function DraggableGoalList({
   goals,
-  onRefresh,
-  renderGoal
+  onReorder,
+  onToggle,
+  onDelete,
+  onProgressUpdate,
+  showArchived
 }: DraggableGoalListProps) {
   const { user } = useAuth();
 
@@ -36,7 +42,7 @@ export default function DraggableGoalList({
           .eq('user_id', user.id);
       }
 
-      onRefresh();
+      onReorder(reorderedGoals);
       toast.success('Ordre des objectifs mis à jour');
     } catch (error) {
       console.error('Error updating goal order:', error);
@@ -50,7 +56,9 @@ export default function DraggableGoalList({
     <DraggableList
       items={sortedGoals}
       onReorder={updateGoalOrder}
-      renderItem={renderGoal}
+      renderItem={(goal) => (
+        <div>Goal: {goal.title}</div>
+      )}
       getItemId={(goal) => goal.id}
     />
   );

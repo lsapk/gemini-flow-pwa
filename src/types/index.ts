@@ -1,3 +1,4 @@
+
 export interface Habit {
   id: string;
   title: string;
@@ -27,6 +28,7 @@ export interface Goal {
   updated_at?: string;
   user_id: string;
   sort_order?: number;
+  is_archived?: boolean;
 }
 
 export interface Task {
@@ -41,6 +43,7 @@ export interface Task {
   updated_at?: string;
   parent_task_id?: string;
   subtasks_count?: number;
+  subtasks?: Task[];
 }
 
 export interface JournalEntry {
