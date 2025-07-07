@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -465,12 +466,11 @@ export default function Tasks() {
             <CardContent className="pt-0">
               <TaskList
                 tasks={filteredTasks}
-                loading={loading}
-                onEdit={editTask}
+                onToggle={toggleComplete}
                 onDelete={deleteTask}
-                onToggleComplete={toggleComplete}
-                onRefresh={fetchTasks}
-                onCreateSubTask={createSubTask}
+                onRestore={() => {}}
+                showCompleted={activeTab === 'completed'}
+                showArchived={false}
               />
             </CardContent>
           </Card>

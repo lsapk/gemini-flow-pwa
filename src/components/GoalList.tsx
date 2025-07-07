@@ -235,7 +235,11 @@ export default function GoalList({ goals, loading, onEdit, onDelete, onProgressU
       ) : (
         <DraggableGoalList
           goals={goals}
-          onRefresh={() => window.location.reload()}
+          onReorder={() => {}}
+          onToggle={() => {}}
+          onDelete={onDelete}
+          onProgressUpdate={onProgressUpdate}
+          showArchived={false}
           renderGoal={renderGoal}
         />
       )}

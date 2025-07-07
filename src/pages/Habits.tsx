@@ -123,8 +123,11 @@ export default function Habits() {
     }
   };
 
-  const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
-    if (!user) return;
+  const toggleHabitCompletion = async (habitId: string) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit || !user) return;
+
+    const isCompleted = habit.is_completed_today;
 
     try {
       if (isCompleted) {

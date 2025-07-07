@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -154,7 +153,6 @@ export default function Goals() {
     updateProgress.mutate({ goalId, newProgress });
   };
 
-  // Statistiques
   const totalGoals = goals.length;
   const completedGoals = goals.filter(goal => goal.completed).length;
   const inProgressGoals = goals.filter(goal => !goal.completed && (goal.progress || 0) > 0).length;
@@ -181,7 +179,6 @@ export default function Goals() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-6xl">
-      {/* En-tête */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
@@ -214,7 +211,6 @@ export default function Goals() {
         </div>
       </div>
 
-      {/* Statistiques - Optimisées pour mobile */}
       {!showArchived && totalGoals > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
@@ -271,7 +267,6 @@ export default function Goals() {
         </div>
       )}
 
-      {/* Liste des objectifs */}
       <DraggableGoalList
         goals={goals}
         onReorder={handleReorder}
@@ -281,11 +276,9 @@ export default function Goals() {
         showArchived={showArchived}
       />
 
-      {/* Modal de création */}
       <CreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
         type="goal"
+        onSuccess={() => setShowCreateModal(false)}
       />
     </div>
   );

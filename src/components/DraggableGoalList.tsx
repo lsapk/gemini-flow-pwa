@@ -13,6 +13,7 @@ interface DraggableGoalListProps {
   onDelete: (id: string) => void;
   onProgressUpdate: (goalId: string, newProgress: number) => void;
   showArchived: boolean;
+  renderGoal?: (goal: Goal) => React.ReactElement;
 }
 
 export default function DraggableGoalList({
@@ -21,7 +22,8 @@ export default function DraggableGoalList({
   onToggle,
   onDelete,
   onProgressUpdate,
-  showArchived
+  showArchived,
+  renderGoal
 }: DraggableGoalListProps) {
   const { user } = useAuth();
 
@@ -56,9 +58,9 @@ export default function DraggableGoalList({
     <DraggableList
       items={sortedGoals}
       onReorder={updateGoalOrder}
-      renderItem={(goal) => (
-        <div>Goal: {goal.title}</div>
-      )}
+      renderItem={(goal) => 
+        renderGoal ? renderGoal(goal) : <div>Goal: {goal.title}</div>
+      }
       getItemId={(goal) => goal.id}
     />
   );
