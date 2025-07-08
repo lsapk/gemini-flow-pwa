@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ import TaskList from "@/components/TaskList";
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [subtasks, setSubtasks] = useState<{ [taskId: string]: any[] }>({});
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -91,8 +93,38 @@ export default function Tasks() {
     }
   };
 
+  const fetchSubtasks = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('subtasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching subtasks:", error);
+        return;
+      }
+
+      const subtasksByTask = (data || []).reduce((acc, subtask) => {
+        if (!acc[subtask.parent_task_id]) {
+          acc[subtask.parent_task_id] = [];
+        }
+        acc[subtask.parent_task_id].push(subtask);
+        return acc;
+      }, {} as { [taskId: string]: any[] });
+
+      setSubtasks(subtasksByTask);
+    } catch (error) {
+      console.error("Error fetching subtasks:", error);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
+    fetchSubtasks();
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -231,29 +263,12 @@ export default function Tasks() {
     setIsFormOpen(true);
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high': return <AlertCircle className="h-3 w-3" />;
-      case 'medium': return <Clock className="h-3 w-3" />;
-      case 'low': return <CheckSquare className="h-3 w-3" />;
-      default: return null;
-    }
-  };
-
   const getFilteredTasks = () => {
     switch (activeTab) {
       case 'completed': return tasks.filter(t => t.completed);
       case 'pending': return tasks.filter(t => !t.completed);
       case 'high': return tasks.filter(t => t.priority === 'high');
+      case 'all': return tasks.filter(t => !t.completed); // Exclure les terminées de "Tout"
       default: return tasks;
     }
   };
@@ -337,12 +352,7 @@ export default function Tasks() {
       </div>
 
       {/* Stats Cards */}
-      <div
-        className="
-          grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3
-        "
-      >
-        {/* Total */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
         <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
           <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
             <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
@@ -359,7 +369,6 @@ export default function Tasks() {
           </CardContent>
         </Card>
 
-        {/* Terminées */}
         <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
           <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
             <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
@@ -376,7 +385,6 @@ export default function Tasks() {
           </CardContent>
         </Card>
 
-        {/* En cours */}
         <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
           <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
             <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-orange-100">
@@ -393,7 +401,6 @@ export default function Tasks() {
           </CardContent>
         </Card>
 
-        {/* Priorité haute */}
         <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
           <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
             <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-red-100">
@@ -414,8 +421,8 @@ export default function Tasks() {
       {/* Tasks Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Toutes ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="pending">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
+          <TabsTrigger value="all">En cours ({tasks.filter(t => !t.completed).length})</TabsTrigger>
+          <TabsTrigger value="pending">Toutes ({tasks.filter(t => !t.completed).length})</TabsTrigger>
           <TabsTrigger value="completed">Terminées ({tasks.filter(t => t.completed).length})</TabsTrigger>
           <TabsTrigger value="high">Urgentes ({tasks.filter(t => t.priority === 'high').length})</TabsTrigger>
         </TabsList>
@@ -432,6 +439,8 @@ export default function Tasks() {
                 onEdit={editTask}
                 onDelete={deleteTask}
                 onToggleComplete={toggleComplete}
+                subtasks={subtasks}
+                onRefreshSubtasks={fetchSubtasks}
               />
             </CardContent>
           </Card>

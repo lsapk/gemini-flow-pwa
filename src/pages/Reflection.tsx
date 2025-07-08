@@ -4,118 +4,84 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { BookOpen, Send, History, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Lightbulb, 
-  Heart, 
-  TrendingUp, 
-  Calendar,
-  Eye,
-  BarChart3,
-  RefreshCw,
-  Save,
-  Clock
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { format, startOfToday, subDays } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-interface DailyReflection {
+interface Reflection {
   id: string;
   question: string;
   answer: string;
   created_at: string;
-  user_id: string;
 }
 
-const DAILY_QUESTIONS = [
-  "Qu'est-ce qui vous a le plus motivé aujourd'hui ?",
-  "Une petite victoire que vous avez célébrée ?",
-  "Si vous pouviez changer une chose dans votre journée, quelle serait-elle et pourquoi ?",
-  "Une leçon apprise ou une idée inattendue ?",
-  "Pour quoi êtes-vous reconnaissant aujourd'hui ?",
-  "Quel moment vous a apporté le plus de joie ?",
-  "Comment avez-vous fait preuve de courage aujourd'hui ?",
-  "Qu'avez-vous découvert sur vous-même ?",
-  "Quel impact positif avez-vous eu sur quelqu'un ?",
-  "Qu'est-ce qui vous rend fier de votre journée ?",
-  "Quel défi avez-vous surmonté ?",
-  "Comment vous êtes-vous amélioré depuis hier ?",
-  // Nouvelles questions ajoutées :
-  "Quel a été le moment le plus paisible de votre journée ?",
-  "Qui ou quoi vous a inspiré aujourd'hui ?",
-  "Quel est le plus beau geste que vous avez reçu ou offert ?",
-  "Quelle idée aimeriez-vous explorer davantage demain ?",
-  "Sur quels objectifs avez-vous avancé aujourd'hui ?",
-  "Quelle émotion avez-vous le plus ressentie aujourd'hui et pourquoi ?",
-  "Quel compliment pourriez-vous vous faire ce soir ?",
-  "Quelle action simple a eu un impact positif sur votre journée ?",
-  "Comment avez-vous aidé quelqu’un ou reçu de l’aide ?",
-  "Quelle découverte vous a surpris aujourd'hui ?",
-  "Un moment où vous avez ressenti de la gratitude envers quelqu'un ?",
-  "Un défi qui vous semble aujourd’hui plus accessible qu’hier ?"
+// Questions pour mieux connaître la personne
+const REFLECTION_QUESTIONS = [
+  "Quelle est votre plus grande source de motivation dans la vie ?",
+  "Qu'est-ce qui vous rend le plus fier(e) de vous ?",
+  "Quels sont vos trois plus grands rêves ou aspirations ?",
+  "Comment décririez-vous votre personnalité en quelques mots ?",
+  "Quelle est votre plus grande force selon vous ?",
+  "Qu'est-ce qui vous fait vous sentir le plus épanoui(e) ?",
+  "Quels sont vos hobbies ou passions préférés ?",
+  "Comment gérez-vous le stress et les défis ?",
+  "Qu'est-ce qui vous inspire le plus chez les autres ?",
+  "Quel impact aimeriez-vous avoir sur le monde ?",
+  "Quelles sont vos valeurs les plus importantes ?",
+  "Comment vous détendez-vous après une journée difficile ?",
+  "Qu'est-ce qui vous donne de l'énergie ?",
+  "Quel est votre environnement de travail idéal ?",
+  "Comment définiriez-vous le succès pour vous ?",
+  "Quels sont vos talents cachés ?",
+  "Qu'est-ce qui vous fait rire le plus ?",
+  "Comment prenez-vous vos décisions importantes ?",
+  "Qu'est-ce qui vous pousse à sortir de votre zone de confort ?",
+  "Quels sont vos rituels ou habitudes préférés ?"
 ];
 
 export default function Reflection() {
+  const [reflections, setReflections] = useState<Reflection[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [reflections, setReflections] = useState<DailyReflection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasAnsweredToday, setHasAnsweredToday] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
 
-  // Générer une question basée sur la date
-  const getTodaysQuestion = () => {
-    const today = new Date();
-    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-    return DAILY_QUESTIONS[dayOfYear % DAILY_QUESTIONS.length];
+  const getRandomQuestion = () => {
+    const randomIndex = Math.floor(Math.random() * REFLECTION_QUESTIONS.length);
+    return REFLECTION_QUESTIONS[randomIndex];
   };
 
-  // Charger les réflexions
-  const loadReflections = async () => {
+  const fetchReflections = async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('daily_reflections')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(30);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      setReflections(data as DailyReflection[] || []);
-      
-      // Vérifier si l'utilisateur a déjà répondu aujourd'hui
-      const today = startOfToday();
-      const todayReflection = data?.find(r => 
-        new Date(r.created_at) >= today
-      );
-      setHasAnsweredToday(!!todayReflection);
-      
+      setReflections(data || []);
     } catch (error) {
-      console.error('Erreur lors du chargement des réflexions:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos réflexions.",
-        variant: "destructive",
-      });
+      console.error('Error fetching reflections:', error);
+      toast.error('Erreur lors du chargement des réflexions');
     }
   };
 
-  useEffect(() => {
-    setCurrentQuestion(getTodaysQuestion());
-    loadReflections();
-  }, [user]);
+  const generateNewQuestion = () => {
+    const question = getRandomQuestion();
+    setCurrentQuestion(question);
+    setAnswer("");
+  };
 
   const saveReflection = async () => {
-    if (!user || !answer.trim()) return;
-    
+    if (!user || !currentQuestion.trim() || !answer.trim()) return;
+
     setIsLoading(true);
     try {
       const { error } = await supabase
@@ -127,203 +93,128 @@ export default function Reflection() {
         });
 
       if (error) throw error;
-      
-      toast({
-        title: "Réflexion sauvegardée ! 🎉",
-        description: "Votre réflexion quotidienne a été enregistrée.",
-      });
-      
+
+      toast.success('Réflexion sauvegardée !');
       setAnswer("");
-      setHasAnsweredToday(true);
-      loadReflections();
-      
+      generateNewQuestion();
+      fetchReflections();
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder votre réflexion.",
-        variant: "destructive",
-      });
+      console.error('Error saving reflection:', error);
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getNewQuestion = () => {
-    let newQuestion;
-    do {
-      newQuestion = DAILY_QUESTIONS[Math.floor(Math.random() * DAILY_QUESTIONS.length)];
-    } while (newQuestion === currentQuestion);
-    setCurrentQuestion(newQuestion);
-    setAnswer("");
-  };
-
-  // Statistiques
-  const totalReflections = reflections.length;
-  const recentStreak = reflections.filter(r => 
-    new Date(r.created_at) >= subDays(new Date(), 7)
-  ).length;
-  const averageWordCount = reflections.length > 0 
-    ? Math.round(reflections.reduce((sum, r) => sum + r.answer.split(' ').length, 0) / reflections.length)
-    : 0;
+  useEffect(() => {
+    fetchReflections();
+    generateNewQuestion();
+  }, [user]);
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Micro-Réflexion Quotidienne</h1>
-          <p className="text-muted-foreground">
-            Quelques minutes pour cultiver la conscience de soi
-          </p>
+        <div className="flex items-center gap-3">
+          <BookOpen className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Réflexion personnelle</h1>
         </div>
-        <div className="text-right">
-          <Badge variant="secondary" className="mb-2">
-            {format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
-          </Badge>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-2"
+        >
+          <History className="h-4 w-4" />
+          {showHistory ? 'Masquer' : 'Historique'}
+        </Button>
       </div>
 
-      {/* Statistiques rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Calendar className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-2xl font-bold">{totalReflections}</p>
-              <p className="text-sm text-muted-foreground">Réflexions totales</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-2xl font-bold">{recentStreak}</p>
-              <p className="text-sm text-muted-foreground">Cette semaine</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-2xl font-bold">{averageWordCount}</p>
-              <p className="text-sm text-muted-foreground">Mots en moyenne</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Question du jour */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5" />
-            Question du jour
-            {hasAnsweredToday && (
-              <Badge variant="outline" className="ml-auto">
-                ✓ Répondu
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-primary/5 p-4 rounded-lg border-l-4 border-primary">
-            <p className="text-lg font-medium">{currentQuestion}</p>
-          </div>
-          
-          {!hasAnsweredToday ? (
-            <div className="space-y-4">
+      {!showHistory ? (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Question du moment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-lg font-medium">{currentQuestion}</p>
+              </div>
+              
               <Textarea
-                placeholder="Prenez quelques instants pour réfléchir et noter vos pensées..."
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Prenez le temps de réfléchir et écrivez votre réponse..."
                 className="min-h-[120px]"
               />
               
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={saveReflection}
-                  disabled={!answer.trim() || isLoading}
-                  className="flex-1"
+                  disabled={isLoading || !answer.trim()}
+                  className="flex items-center gap-2"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? "Sauvegarde..." : "Sauvegarder ma réflexion"}
+                  <Send className="h-4 w-4" />
+                  {isLoading ? 'Sauvegarde...' : 'Sauvegarder'}
                 </Button>
                 
-                <Button 
-                  variant="outline" 
-                  onClick={getNewQuestion}
-                  size="icon"
+                <Button
+                  variant="outline"
+                  onClick={generateNewQuestion}
+                  disabled={isLoading}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  Nouvelle question
                 </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Historique des réflexions</h2>
+            <Badge variant="secondary">
+              {reflections.length} réflexion{reflections.length > 1 ? 's' : ''}
+            </Badge>
+          </div>
+          
+          {reflections.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8">
+                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Aucune réflexion enregistrée pour le moment.
+                </p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="text-center py-8">
-              <Heart className="h-12 w-12 text-green-600 mx-auto mb-4" />
-              <p className="text-lg font-medium text-green-600">
-                Merci pour votre réflexion d'aujourd'hui !
-              </p>
-              <p className="text-muted-foreground">
-                Revenez demain pour une nouvelle question.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Historique des réflexions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Vos réflexions passées
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px]">
-            <AnimatePresence>
-              {reflections.length > 0 ? (
-                <div className="space-y-4">
-                  {reflections.map((reflection, index) => (
-                    <motion.div
-                      key={reflection.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="border rounded-lg p-4 space-y-2"
-                    >
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-sm text-primary">
-                          {reflection.question}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {format(new Date(reflection.created_at), 'dd MMM', { locale: fr })}
+            <div className="space-y-4">
+              {reflections.map((reflection) => (
+                <Card key={reflection.id}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">
+                          {format(new Date(reflection.created_at), 'dd MMM yyyy', { locale: fr })}
                         </Badge>
                       </div>
-                      <p className="text-muted-foreground">
-                        {reflection.answer}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Aucune réflexion pour le moment. Commencez dès aujourd'hui !
-                  </p>
-                </div>
-              )}
-            </AnimatePresence>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                      
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="font-medium text-sm">{reflection.question}</p>
+                      </div>
+                      
+                      <div className="prose prose-sm max-w-none">
+                        <p className="text-sm leading-relaxed">{reflection.answer}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

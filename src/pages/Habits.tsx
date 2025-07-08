@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
-import { Plus, Target } from "lucide-react";
+import { Plus, Target, Archive, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,18 +24,26 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [archivedHabits, setArchivedHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("active");
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -66,7 +76,12 @@ export default function Habits() {
         })
       );
 
-      setHabits(habitsWithCompletion);
+      // Séparer les habitudes actives et archivées
+      const active = habitsWithCompletion.filter(h => !h.is_archived);
+      const archived = habitsWithCompletion.filter(h => h.is_archived);
+      
+      setHabits(active);
+      setArchivedHabits(archived);
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast.error('Erreur lors du chargement des habitudes');
@@ -112,12 +127,30 @@ export default function Habits() {
     }
   };
 
+  const toggleArchive = async (habitId: string, isArchived: boolean) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_archived: !isArchived })
+        .eq('id', habitId);
+
+      if (error) throw error;
+
+      toast.success(isArchived ? 'Habitude restaurée !' : 'Habitude archivée !');
+      fetchHabits();
+    } catch (error) {
+      console.error('Error toggling archive:', error);
+      toast.error('Erreur lors de l\'archivage');
+    }
+  };
+
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
 
     try {
       if (isCompleted) {
-        // Un-complete the habit
         const today = new Date().toISOString().split('T')[0];
         const { error: deleteError } = await supabase
           .from('habit_completions')
@@ -135,7 +168,6 @@ export default function Habits() {
         
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        // Complete the habit
         const today = new Date().toISOString().split('T')[0];
         
         const { error } = await supabase
@@ -179,6 +211,8 @@ export default function Habits() {
     fetchHabits();
   };
 
+  const currentHabits = activeTab === "active" ? habits : archivedHabits;
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
@@ -189,41 +223,71 @@ export default function Habits() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:gap-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-6 bg-muted rounded mb-4"></div>
-                <div className="h-4 bg-muted rounded w-2/3"></div>
+      {/* Tabs pour actives/archivées */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Actives ({habits.length})
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="flex items-center gap-2">
+            <Archive className="h-4 w-4" />
+            Archivées ({archivedHabits.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-4">
+          {isLoading ? (
+            <div className="grid gap-4 md:gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-6 bg-muted rounded mb-4"></div>
+                    <div className="h-4 bg-muted rounded w-2/3"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : currentHabits.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                {activeTab === "active" ? (
+                  <>
+                    <Target className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Aucune habitude active</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Commencez à créer de bonnes habitudes pour améliorer votre productivité.
+                    </p>
+                    <Button onClick={() => setIsCreateModalOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Créer votre première habitude
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Aucune habitude archivée</h3>
+                    <p className="text-muted-foreground text-center">
+                      Les habitudes que vous archivez apparaîtront ici.
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : habits.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Target className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucune habitude</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Commencez à créer de bonnes habitudes pour améliorer votre productivité.
-            </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer votre première habitude
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <HabitList 
-          habits={habits}
-          loading={isLoading}
-          onDelete={requestDelete}
-          onEdit={handleEdit}
-          onComplete={toggleHabitCompletion}
-          onRefresh={fetchHabits}
-        />
-      )}
+          ) : (
+            <HabitList 
+              habits={currentHabits}
+              loading={isLoading}
+              onDelete={requestDelete}
+              onEdit={handleEdit}
+              onComplete={toggleHabitCompletion}
+              onRefresh={fetchHabits}
+              onArchive={toggleArchive}
+              showArchived={activeTab === "archived"}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
 
       {isCreateModalOpen && (
         <CreateModal 
