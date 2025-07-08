@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Plus, Target, Trophy, CheckCircle } from "lucide-react";
+import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -262,7 +261,7 @@ export default function Goals() {
           </DialogHeader>
           <CreateGoalForm 
             onSuccess={handleEditSuccess}
-            goal={editingGoal}
+            initialGoal={editingGoal}
           />
         </DialogContent>
       </Dialog>

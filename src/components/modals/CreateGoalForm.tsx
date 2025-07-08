@@ -1,25 +1,38 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { createGoal } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
+import { Goal } from "@/types";
 
 interface CreateGoalFormProps {
   onSuccess: () => void;
+  initialGoal?: Goal | null;
 }
 
-export default function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
+export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [completed, setCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialGoal) {
+      setTitle(initialGoal.title);
+      setDescription(initialGoal.description || "");
+      setCategory(initialGoal.category);
+      setProgress(initialGoal.progress || 0);
+      setCompleted(initialGoal.completed);
+    }
+  }, [initialGoal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,30 +40,37 @@ export default function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
 
     setIsSubmitting(true);
     try {
-      const { error } = await createGoal({
+      const goalData = {
         title: title.trim(),
         description: description.trim() || null,
         category,
+        progress,
+        completed,
         user_id: user.id,
-        progress: 0,
-        completed: false,
-      });
+      };
+
+      let error;
+      if (initialGoal) {
+        // Update existing goal
+        ({ error } = await supabase
+          .from('goals')
+          .update(goalData)
+          .eq('id', initialGoal.id)
+          .eq('user_id', user.id));
+      } else {
+        // Create new goal
+        ({ error } = await supabase
+          .from('goals')
+          .insert(goalData));
+      }
 
       if (error) throw error;
 
-      toast({
-        title: "Objectif créé",
-        description: "Votre objectif a été créé avec succès.",
-      });
-      
+      toast.success(initialGoal ? 'Objectif modifié !' : 'Objectif créé !');
       onSuccess();
     } catch (error) {
-      console.error("Error creating goal:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer l'objectif.",
-        variant: "destructive",
-      });
+      console.error("Error saving goal:", error);
+      toast.error("Erreur lors de la sauvegarde de l'objectif");
     } finally {
       setIsSubmitting(false);
     }
@@ -92,9 +112,36 @@ export default function CreateGoalForm({ onSuccess }: CreateGoalFormProps) {
           </SelectContent>
         </Select>
       </div>
+
+      {initialGoal && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="progress">Progrès (%)</Label>
+            <Input
+              id="progress"
+              type="number"
+              min="0"
+              max="100"
+              value={progress}
+              onChange={(e) => setProgress(Number(e.target.value))}
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              id="completed"
+              type="checkbox"
+              checked={completed}
+              onChange={(e) => setCompleted(e.target.checked)}
+              className="rounded"
+            />
+            <Label htmlFor="completed">Objectif terminé</Label>
+          </div>
+        </>
+      )}
       
       <Button type="submit" disabled={isSubmitting || !title.trim() || !category} className="w-full">
-        {isSubmitting ? "Création..." : "Créer l'objectif"}
+        {isSubmitting ? "Sauvegarde..." : initialGoal ? "Modifier l'objectif" : "Créer l'objectif"}
       </Button>
     </form>
   );
