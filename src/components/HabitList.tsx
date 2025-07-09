@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,13 +82,11 @@ export default function HabitList({
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
-                {!showArchived && (
-                  <Checkbox
-                    checked={habit.is_completed_today || false}
-                    onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                    className="mt-1"
-                  />
-                )}
+                <Checkbox
+                  checked={habit.is_completed_today || false}
+                  onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
+                  className="mt-1"
+                />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-semibold text-lg">{habit.title}</h3>

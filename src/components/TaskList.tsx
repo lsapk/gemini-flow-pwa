@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -132,20 +131,18 @@ export default function TaskList({
                       <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
                         {task.title}
                       </h3>
-                      {taskSubtasks.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleExpanded(task.id)}
-                          className="h-5 w-5 p-0"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleExpanded(task.id)}
+                        className="h-5 w-5 p-0"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </Button>
                     </div>
                     {task.description && (
                       <p className="text-xs text-muted-foreground break-words">

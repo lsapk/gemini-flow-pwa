@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -112,7 +111,7 @@ export default function Reflection() {
   }, [user]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-3 sm:p-6">
+    <div className="max-w-7xl mx-auto space-y-6 p-3 sm:p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BookOpen className="h-8 w-8 text-primary" />
@@ -130,7 +129,7 @@ export default function Reflection() {
 
       {!showHistory ? (
         <div className="space-y-6">
-          <Card>
+          <Card className="max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
@@ -146,7 +145,7 @@ export default function Reflection() {
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="Prenez le temps de réfléchir et écrivez votre réponse..."
-                className="min-h-[120px]"
+                className="min-h-[200px] text-base"
               />
               
               <div className="flex gap-2">
@@ -171,7 +170,7 @@ export default function Reflection() {
           </Card>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Historique des réflexions</h2>
             <Badge variant="secondary">
