@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -185,63 +186,9 @@ export default function Goals() {
           ) : (
             <GoalList 
               goals={currentGoals}
-              onRefresh={fetchGoals}
-              renderGoal={(goal) => (
-                <Card key={goal.id} className={`hover:shadow-md transition-shadow ${goal.completed ? 'opacity-75' : ''}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{goal.title}</h3>
-                          {goal.completed && (
-                            <Badge className="bg-green-100 text-green-800 border-green-200">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Terminé
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {goal.description && (
-                          <p className="text-muted-foreground mb-3">{goal.description}</p>
-                        )}
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Target className="h-4 w-4" />
-                            <span>Progrès: {goal.progress}%</span>
-                          </div>
-                          
-                          {goal.category && (
-                            <Badge variant="outline">{goal.category}</Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(goal)}
-                          aria-label="Modifier"
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => requestDelete(goal.id)}
-                          aria-label="Supprimer"
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              loading={false}
+              onEdit={handleEdit}
+              onDelete={requestDelete}
             />
           )}
         </TabsContent>
