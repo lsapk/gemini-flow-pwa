@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React from "react";
@@ -131,18 +131,20 @@ export default function TaskList({
                       <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
                         {task.title}
                       </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(task.id)}
-                        className="h-5 w-5 p-0"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
-                        )}
-                      </Button>
+                      {taskSubtasks.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleExpanded(task.id)}
+                          className="h-5 w-5 p-0"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                     {task.description && (
                       <p className="text-xs text-muted-foreground break-words">
@@ -188,6 +190,19 @@ export default function TaskList({
                   </span>
                 )}
               </div>
+
+              {/* Bouton pour ajouter des sous-tâches */}
+              {taskSubtasks.length === 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleExpanded(task.id)}
+                  className="text-xs text-muted-foreground self-start mt-2"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Ajouter une sous-tâche
+                </Button>
+              )}
 
               {isExpanded && (
                 <SubtaskList

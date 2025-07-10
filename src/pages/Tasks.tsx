@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -349,73 +348,6 @@ export default function Tasks() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
-              <CheckSquare className="text-blue-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-blue-800">
-                Total
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
-              <span className="text-lg sm:text-2xl">✅</span>
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-green-800">
-                Terminées
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => t.completed).length} tâche{tasks.filter(t => t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-orange-100">
-              <Clock className="text-orange-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-orange-800">
-                En cours
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => !t.completed).length} tâche{tasks.filter(t => !t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-red-100">
-              <AlertCircle className="text-red-600 w-5 h-5 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-red-800">
-                Urgentes
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {tasks.filter(t => t.priority === 'high' && !t.completed).length} tâche{tasks.filter(t => t.priority === 'high' && !t.completed).length > 1 ? "s" : ""}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Tasks Tabs */}
