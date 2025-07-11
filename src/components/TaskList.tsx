@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,7 +160,7 @@ export default function TaskList({
                     size="sm"
                     onClick={() => onEdit(task)}
                     aria-label="Modifier"
-                    className="h-7 w-7"
+                    className="h-7 w-7 p-0"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -168,7 +169,7 @@ export default function TaskList({
                     size="sm"
                     onClick={() => onDelete(task.id)}
                     aria-label="Supprimer"
-                    className="h-7 w-7"
+                    className="h-7 w-7 p-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -176,11 +177,11 @@ export default function TaskList({
               </div>
               
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1`}>
+                <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
                   {getPriorityIcon(task.priority)} {task.priority}
                 </Badge>
                 {task.due_date && (
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs">
                     Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
                   </Badge>
                 )}
@@ -191,13 +192,13 @@ export default function TaskList({
                 )}
               </div>
 
-              {/* Bouton pour ajouter des sous-tâches */}
+              {/* Bouton pour ajouter des sous-tâches - plus petit */}
               {taskSubtasks.length === 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleExpanded(task.id)}
-                  className="text-xs text-muted-foreground self-start mt-2"
+                  className="text-xs text-muted-foreground self-start mt-2 h-6 px-2"
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Ajouter une sous-tâche

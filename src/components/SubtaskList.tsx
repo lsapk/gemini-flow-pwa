@@ -95,7 +95,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
                 size="sm"
                 variant="ghost"
                 onClick={() => handleEdit(subtask)}
-                className="h-6 w-6"
+                className="h-6 w-6 p-0"
               >
                 <Edit2 className="h-3 w-3" />
               </Button>
@@ -103,7 +103,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
                 size="sm"
                 variant="ghost"
                 onClick={() => deleteSubtask(subtask.id)}
-                className="h-6 w-6"
+                className="h-6 w-6 p-0"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -116,7 +116,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
         size="sm"
         variant="ghost"
         onClick={() => setIsFormOpen(true)}
-        className="text-xs text-muted-foreground"
+        className="text-xs text-muted-foreground h-6 px-2"
       >
         <Plus className="h-3 w-3 mr-1" />
         Ajouter une sous-tâche

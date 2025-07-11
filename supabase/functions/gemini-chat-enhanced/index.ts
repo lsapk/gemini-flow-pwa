@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
@@ -174,25 +175,7 @@ serve(async (req) => {
 Tu parles TOUJOURS en français et tu utilises TOUJOURS des emojis appropriés dans tes réponses (1 à 3 par réponse) 😊.
 Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
 
-IMPORTANT : Tu ne dois JAMAIS mentionner le mot "JSON", "format JSON" ni d'instruction technique à l'utilisateur.
-
-Pour créer un élément (tâche, habitude, etc.), ta réponse DOIT contenir un bloc de code. N'ajoute aucun commentaire ou texte explicatif à l'intérieur de ce bloc. Le bloc doit commencer par \`\`\`json et se terminer par \`\`\`. Voici le format à l'intérieur du bloc :
-\`\`\`json
-{"action":{"type":"create_task","data":{"title":"titre","description":"description","priority":"medium","due_date":"YYYY-MM-DD"}}}
-\`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_habit","data":{"title":"titre","description":"description","frequency":"daily","category":"health","target":1}}}
-\`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_goal","data":{"title":"titre","description":"description","category":"personal","target_date":"YYYY-MM-DD"}}}
-\`\`\`
-ou
-\`\`\`json
-{"action":{"type":"create_journal","data":{"title":"titre","content":"contenu","mood":"good","tags":["tag1","tag2"]}}}
-\`\`\`
-Tu peux ajouter un petit texte d'accompagnement avant ou après le bloc JSON.
+IMPORTANT : Avant de créer quoi que ce soit, tu dois TOUJOURS demander la confirmation de l'utilisateur. Ne crée JAMAIS directement sans demander.
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
@@ -202,7 +185,7 @@ ${context?.recent_messages?.map((msg) => `${msg.role}: ${msg.content}`).join('\n
 
 CAPACITÉS:
 - Analyser les données de productivité de l'utilisateur en détail 📊
-- Créer des tâches, habitudes, objectifs, entrées de journal ✨
+- Proposer la création de tâches, habitudes, objectifs, entrées de journal ✨
 - Donner des conseils personnalisés basés sur les vraies données 💡
 - Fournir des statistiques précises et des analyses approfondies 📈
 - Proposer des améliorations concrètes et réalisables 🚀
@@ -210,9 +193,9 @@ CAPACITÉS:
 INSTRUCTIONS:
 - Réponds TOUJOURS en français et avec des emojis adaptés 😊
 - Sois encourageant, constructif et empathique 💪
-- Propose des actions concrètes et réalisables ✅
+- Propose des actions concrètes et demande TOUJOURS confirmation avant de créer
 - Utilise un ton amical et professionnel 🤝
-- Si une demande de création est faite, utilise le format JSON spécifié ci-dessus.
+- DEMANDE TOUJOURS la permission avant de créer quoi que ce soit
 `;
 
     console.log("Calling Gemini API...");
@@ -258,43 +241,6 @@ INSTRUCTIONS:
 
     let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer. 😅";
     console.log("Final AI response:", responseText);
-
-    // Vérifier si la réponse contient une action JSON
-    const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```|(\{[\s\S]*?"action"[\s\S]*?\})/;
-    const match = responseText.match(jsonRegex);
-
-    if (match) {
-      try {
-        const jsonString = match[1] || match[2];
-        const actionJson = JSON.parse(jsonString);
-
-        if (actionJson.action) {
-          console.log("Action detected in response, executing directly:", actionJson.action);
-          
-          const actionResult = await executeAction(actionJson.action, user_id, supabase);
-          const cleanedResponse = responseText.replace(match[0], '').trim();
-          
-          const successMessage = `✅ ${actionResult.type === 'task_created' ? 'Tâche' : 
-                                  actionResult.type === 'habit_created' ? 'Habitude' : 
-                                  actionResult.type === 'goal_created' ? 'Objectif' : 'Entrée de journal'} créé(e) avec succès ! 🎉`;
-
-          return new Response(JSON.stringify({ 
-            response: cleanedResponse || successMessage,
-            action_result: actionResult
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (e) {
-        console.error("Error processing action from AI response:", e.message);
-        const cleanedResponse = responseText.replace(match[0] || '', '').trim();
-        return new Response(JSON.stringify({
-          response: cleanedResponse + "\n\n" + "PS : J'ai bien compris votre demande de création, mais une erreur technique est survenue lors de l'enregistrement. Veuillez réessayer. 🛠️"
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
 
     return new Response(JSON.stringify({ response: responseText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
