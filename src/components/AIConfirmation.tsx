@@ -3,6 +3,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Check, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface AIConfirmationProps {
   type: "task" | "goal" | "habit";
@@ -13,6 +16,7 @@ interface AIConfirmationProps {
 
 export default function AIConfirmation({ type, data, onConfirm, onCancel }: AIConfirmationProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
 
   const getTypeLabel = () => {
     switch (type) {
@@ -24,9 +28,61 @@ export default function AIConfirmation({ type, data, onConfirm, onCancel }: AICo
   };
 
   const handleConfirm = async () => {
+    if (!user) return;
+    
     setIsProcessing(true);
     try {
+      // Créer l'élément dans la base de données selon le type
+      let result;
+      
+      if (type === "task") {
+        const { error } = await supabase
+          .from('tasks')
+          .insert({
+            user_id: user.id,
+            title: data.title,
+            description: data.description || null,
+            priority: data.priority || 'medium',
+            due_date: data.due_date || null,
+            completed: false
+          });
+        if (error) throw error;
+        result = "Tâche créée avec succès !";
+      } else if (type === "habit") {
+        const { error } = await supabase
+          .from('habits')
+          .insert({
+            user_id: user.id,
+            title: data.title,
+            description: data.description || null,
+            frequency: data.frequency || 'daily',
+            category: data.category || null,
+            target: data.target || 1,
+            streak: 0
+          });
+        if (error) throw error;
+        result = "Habitude créée avec succès !";
+      } else if (type === "goal") {
+        const { error } = await supabase
+          .from('goals')
+          .insert({
+            user_id: user.id,
+            title: data.title,
+            description: data.description || null,
+            category: data.category || 'personal',
+            target_date: data.target_date || null,
+            progress: 0,
+            completed: false
+          });
+        if (error) throw error;
+        result = "Objectif créé avec succès !";
+      }
+
+      toast.success(result);
       await onConfirm();
+    } catch (error) {
+      console.error('Erreur lors de la création:', error);
+      toast.error('Erreur lors de la création');
     } finally {
       setIsProcessing(false);
     }

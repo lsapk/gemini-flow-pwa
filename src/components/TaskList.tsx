@@ -192,18 +192,18 @@ export default function TaskList({
                 )}
               </div>
 
-              {/* Bouton pour ajouter des sous-tâches - plus petit */}
-              {taskSubtasks.length === 0 && (
+              {/* Bouton simple "+" pour ajouter des sous-tâches - apparaît toujours */}
+              <div className="flex items-center gap-2 mt-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleExpanded(task.id)}
-                  className="text-xs text-muted-foreground self-start mt-2 h-6 px-2"
+                  className="text-xs text-muted-foreground h-6 px-2 flex items-center gap-1"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Ajouter une sous-tâche
+                  <Plus className="h-3 w-3" />
+                  Sous-tâche
                 </Button>
-              )}
+              </div>
 
               {isExpanded && (
                 <SubtaskList

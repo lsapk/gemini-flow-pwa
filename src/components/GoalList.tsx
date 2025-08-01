@@ -1,52 +1,72 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Edit, Trash2, Target, Calendar, Archive, RotateCcw } from "lucide-react";
+import { Edit, Trash2, Target, Calendar, Plus, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-
-export interface Goal {
-  id: string;
-  title: string;
-  description?: string;
-  category?: string;
-  target_date?: string;
-  progress: number;
-  completed: boolean;
-  created_at?: string;
-  updated_at?: string;
-  user_id: string;
-  is_archived?: boolean;
-  sort_order?: number;
-}
+import { Goal } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface GoalListProps {
   goals: Goal[];
   loading?: boolean;
   onEdit: (goal: Goal) => void;
   onDelete: (id: string) => void;
-  onArchive?: (id: string, isArchived: boolean) => void;
-  showArchived?: boolean;
 }
 
-export default function GoalList({
-  goals,
-  loading,
-  onEdit,
-  onDelete,
-  onArchive,
-  showArchived = false
-}: GoalListProps) {
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case 'personal': return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'professional': return 'bg-green-100 text-green-800 border-green-200';
+    case 'health': return 'bg-red-100 text-red-800 border-red-200';
+    case 'finance': return 'bg-purple-100 text-purple-800 border-purple-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+export default function GoalList({ goals, loading, onEdit, onDelete }: GoalListProps) {
+  const { user } = useAuth();
+
+  const updateProgress = async (goalId: string, currentProgress: number, increment: boolean) => {
+    if (!user) return;
+    
+    const newProgress = increment 
+      ? Math.min(100, currentProgress + 10)
+      : Math.max(0, currentProgress - 10);
+    
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .update({ 
+          progress: newProgress,
+          completed: newProgress >= 100,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', goalId);
+
+      if (error) throw error;
+      
+      toast.success(`Progrès mis à jour à ${newProgress}%`);
+      // Refresh the page to see changes
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      toast.error('Erreur lors de la mise à jour du progrès');
+    }
+  };
+
   if (loading) {
     return (
-      <div className="grid gap-4 md:gap-6">
-        {[1, 2, 3].map((i) => (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-6">
               <div className="h-6 bg-muted rounded mb-4"></div>
-              <div className="h-4 bg-muted rounded w-2/3 mb-2"></div>
-              <div className="h-2 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded w-2/3"></div>
             </CardContent>
           </Card>
         ))}
@@ -69,88 +89,83 @@ export default function GoalList({
   }
 
   return (
-    <div className="grid gap-4 md:gap-6">
-      {goals.map((goal) => (
-        <Card key={goal.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
+    <div className="space-y-4">
+      {goals.map(goal => (
+        <Card key={goal.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-lg">{goal.title}</h3>
-                  {goal.category && (
-                    <Badge variant="outline">{goal.category}</Badge>
-                  )}
-                </div>
-                
+                <h3 className={`text-lg font-semibold mb-2 ${goal.completed ? 'text-green-600' : ''}`}>
+                  {goal.title}
+                </h3>
                 {goal.description && (
                   <p className="text-muted-foreground mb-3">{goal.description}</p>
                 )}
                 
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <div className="flex items-center gap-1">
-                    <Target className="h-4 w-4" />
-                    <span>Progression: {goal.progress}%</span>
-                  </div>
-                  
+                <div className="flex items-center gap-4 mb-4">
+                  <Badge className={getCategoryColor(goal.category || 'personal')}>
+                    {goal.category || 'personnel'}
+                  </Badge>
                   {goal.target_date && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>Échéance: {format(new Date(goal.target_date), 'dd MMM yyyy', { locale: fr })}</span>
+                      {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}
                     </div>
                   )}
                 </div>
                 
+                {/* Barre de progression avec boutons +/- */}
                 <div className="space-y-2">
-                  <Progress value={goal.progress} className="w-full h-3" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Progrès: {goal.progress}%</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateProgress(goal.id, goal.progress, false)}
+                        className="h-6 w-6 p-0"
+                        disabled={goal.progress <= 0}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateProgress(goal.id, goal.progress, true)}
+                        className="h-6 w-6 p-0"
+                        disabled={goal.progress >= 100}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <Progress value={goal.progress} className="w-full" />
+                  
+                  {/* Marques tous les 10% */}
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>0%</span>
-                    <span>10%</span>
-                    <span>20%</span>
-                    <span>30%</span>
-                    <span>40%</span>
-                    <span>50%</span>
-                    <span>60%</span>
-                    <span>70%</span>
-                    <span>80%</span>
-                    <span>90%</span>
-                    <span>100%</span>
+                    {Array.from({ length: 11 }, (_, i) => (
+                      <span key={i} className="text-center">
+                        {i * 10}%
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
               
               <div className="flex gap-2 ml-4">
-                {onArchive && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onArchive(goal.id, showArchived)}
-                    aria-label={showArchived ? "Restaurer" : "Archiver"}
-                    className="h-8 w-8"
-                  >
-                    {showArchived ? (
-                      <RotateCcw className="h-4 w-4" />
-                    ) : (
-                      <Archive className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-                
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(goal)}
                   aria-label="Modifier"
-                  className="h-8 w-8"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-                
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(goal.id)}
                   aria-label="Supprimer"
-                  className="h-8 w-8"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
