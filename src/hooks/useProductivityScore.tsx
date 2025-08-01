@@ -31,7 +31,7 @@ export const useProductivityScore = (): ProductivityMetrics => {
 
   const [aiMetrics, setAiMetrics] = useState<ProductivityMetrics>({
     score: 0,
-    level: 'Novice',
+    level: 'Débutant',
     badges: [],
     streakBonus: 0,
     completionRate: 0,
@@ -92,13 +92,13 @@ export const useProductivityScore = (): ProductivityMetrics => {
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: `Calcule un score de productivité détaillé et personnalisé basé sur toutes ces données utilisateur. Analyse en profondeur les habitudes, tâches, objectifs, sessions de focus et entrées de journal pour fournir un score précis et des insights. Retourne UNIQUEMENT un objet JSON valide avec les propriétés exactes: 
+          message: `Analyse en profondeur ces données et calcule un score de productivité détaillé. Retourne UNIQUEMENT un objet JSON avec ces propriétés exactes:
           {
             "score": nombre_0_à_100,
-            "level": "string_français_niveau", 
-            "badges": ["array", "de", "badges", "français"],
+            "level": "Débutant|Intermédiaire|Avancé|Expert|Maître",
+            "badges": ["array_de_badges_français_pertinents"],
             "streakBonus": nombre_0_à_20,
-            "completionRate": nombre_pourcentage,
+            "completionRate": pourcentage_tasks_completed,
             "focusTimeScore": nombre_0_à_25,
             "consistencyScore": nombre_0_à_25,
             "qualityScore": nombre_0_à_25,
@@ -107,7 +107,24 @@ export const useProductivityScore = (): ProductivityMetrics => {
             "goalScore": nombre_0_à_15
           }
           
-          Données complètes: ${JSON.stringify(completeUserData)}`,
+          BADGES DISPONIBLES (choisis les plus pertinents):
+          - "🎯 Organisateur"
+          - "⚡ Rapide"
+          - "🔥 Persévérant" 
+          - "📚 Studieux"
+          - "💡 Innovateur"
+          - "🏆 Champion"
+          - "⏰ Ponctuel"
+          - "🎨 Créatif"
+          - "🚀 Productif"
+          - "💪 Discipliné"
+          - "🧘 Zen"
+          - "📈 Progressif"
+          - "🎉 Motivé"
+          - "🏃 Actif"
+          - "💎 Excellence"
+          
+          Données: ${JSON.stringify(completeUserData)}`,
           user_id: user.id,
           context: {
             user_data: completeUserData,
@@ -141,7 +158,7 @@ export const useProductivityScore = (): ProductivityMetrics => {
         console.log("Using AI-calculated metrics:", parsedMetrics);
         setAiMetrics({
           score: Math.max(0, Math.min(100, parsedMetrics.score)),
-          level: parsedMetrics.level || 'Novice',
+          level: parsedMetrics.level || 'Débutant',
           badges: Array.isArray(parsedMetrics.badges) ? parsedMetrics.badges : [],
           streakBonus: Math.max(0, Math.min(20, parsedMetrics.streakBonus || 0)),
           completionRate: Math.max(0, Math.min(100, parsedMetrics.completionRate || taskCompletionRate)),
@@ -166,54 +183,60 @@ export const useProductivityScore = (): ProductivityMetrics => {
   };
 
   const calculateFallbackMetrics = () => {
-    // Fallback calculation when AI fails
+    // Calcul de fallback amélioré
     let totalPossibleScore = 0;
     let earnedScore = 0;
     
     const hasTaskData = taskCompletionRate > 0 || activityData.some(day => day.count > 0);
     if (hasTaskData) {
-      const completionScore = Math.min(20, (taskCompletionRate / 100) * 20);
-      totalPossibleScore += 20;
+      const completionScore = Math.min(25, (taskCompletionRate / 100) * 25);
+      totalPossibleScore += 25;
       earnedScore += completionScore;
     }
     
     const hasFocusData = totalFocusTime > 0 || focusData.some(session => session.minutes > 0);
     if (hasFocusData) {
       const avgDailyFocus = totalFocusTime / 7;
-      const focusTimeScore = Math.min(20, (avgDailyFocus / 120) * 20);
-      totalPossibleScore += 20;
+      const focusTimeScore = Math.min(25, (avgDailyFocus / 120) * 25);
+      totalPossibleScore += 25;
       earnedScore += focusTimeScore;
     }
     
     const hasHabitsData = habitsData.length > 0;
     if (hasHabitsData) {
-      totalPossibleScore += 15;
-      earnedScore += Math.min(15, (streakCount / 21) * 15);
+      totalPossibleScore += 25;
+      earnedScore += Math.min(25, (streakCount / 21) * 25);
     }
+    
+    // Score de base
+    totalPossibleScore += 25;
+    earnedScore += 15; // Score de base pour l'utilisation de l'app
     
     const totalScore = totalPossibleScore > 0 ? Math.round((earnedScore / totalPossibleScore) * 100) : 0;
     
-    let level = 'Novice';
-    if (totalScore >= 80) level = 'Expert';
-    else if (totalScore >= 60) level = 'Avancé';
+    let level = 'Débutant';
+    if (totalScore >= 90) level = 'Maître';
+    else if (totalScore >= 80) level = 'Expert';
+    else if (totalScore >= 65) level = 'Avancé';
     else if (totalScore >= 40) level = 'Intermédiaire';
-    else if (totalScore >= 20) level = 'Débutant';
     
     const badges = [];
-    if (taskCompletionRate >= 80) badges.push('Organisé');
-    if (totalFocusTime >= 120) badges.push('Focalisé');
-    if (streakCount >= 7) badges.push('Persévérant');
+    if (taskCompletionRate >= 80) badges.push('🎯 Organisateur');
+    if (totalFocusTime >= 180) badges.push('⚡ Rapide');
+    if (streakCount >= 7) badges.push('🔥 Persévérant');
+    if (habitsData.length >= 3) badges.push('💪 Discipliné');
+    if (totalScore >= 70) badges.push('🚀 Productif');
     
     setAiMetrics({
       score: totalScore,
       level,
       badges,
-      streakBonus: Math.min(5, streakCount / 10),
+      streakBonus: Math.min(10, streakCount / 5),
       completionRate: taskCompletionRate,
-      focusTimeScore: hasFocusData ? Math.min(20, (totalFocusTime / 7 / 120) * 20) : 0,
-      consistencyScore: hasHabitsData ? Math.min(15, (streakCount / 21) * 15) : 0,
-      qualityScore: 0,
-      timeManagementScore: 0,
+      focusTimeScore: hasFocusData ? Math.min(25, (totalFocusTime / 7 / 120) * 25) : 0,
+      consistencyScore: hasHabitsData ? Math.min(25, (streakCount / 21) * 25) : 0,
+      qualityScore: Math.min(25, totalScore / 4),
+      timeManagementScore: Math.min(25, (taskCompletionRate / 100) * 25),
       journalScore: 0,
       goalScore: 0
     });

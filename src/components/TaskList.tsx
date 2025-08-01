@@ -121,7 +121,7 @@ export default function TaskList({
           >
             <CardContent className="p-4 flex flex-col gap-2">
               <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 flex-1">
                   <Checkbox
                     checked={task.completed}
                     onCheckedChange={() => onToggleComplete(task.id, task.completed)}
@@ -132,23 +132,9 @@ export default function TaskList({
                       <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
                         {task.title}
                       </h3>
-                      {taskSubtasks.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleExpanded(task.id)}
-                          className="h-5 w-5 p-0"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                        </Button>
-                      )}
                     </div>
                     {task.description && (
-                      <p className="text-xs text-muted-foreground break-words">
+                      <p className="text-xs text-muted-foreground break-words mb-2">
                         {task.description}
                       </p>
                     )}
@@ -176,7 +162,7 @@ export default function TaskList({
                 </div>
               </div>
               
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
                   {getPriorityIcon(task.priority)} {task.priority}
                 </Badge>
@@ -192,17 +178,39 @@ export default function TaskList({
                 )}
               </div>
 
-              {/* Bouton simple "+" pour ajouter des sous-tâches - apparaît toujours */}
-              <div className="flex items-center gap-2 mt-2">
+              {/* Contrôles des sous-tâches - toujours visibles */}
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-muted/50">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleExpanded(task.id)}
-                  className="text-xs text-muted-foreground h-6 px-2 flex items-center gap-1"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  title={isExpanded ? "Masquer les sous-tâches" : "Afficher les sous-tâches"}
                 >
-                  <Plus className="h-3 w-3" />
-                  Sous-tâche
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
                 </Button>
+                <span className="text-xs text-muted-foreground">
+                  {taskSubtasks.length} sous-tâche{taskSubtasks.length !== 1 ? 's' : ''}
+                </span>
+                <div className="ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (!isExpanded) {
+                        setExpandedTasks(prev => new Set([...prev, task.id]));
+                      }
+                    }}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    title="Ajouter une sous-tâche"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
 
               {isExpanded && (

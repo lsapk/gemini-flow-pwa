@@ -76,9 +76,9 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
   };
 
   return (
-    <div className="space-y-2 ml-6 mt-2">
+    <div className="space-y-2">
       {subtasks.map((subtask) => (
-        <div key={subtask.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+        <div key={subtask.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md border border-muted/50">
           <Checkbox
             checked={subtask.completed}
             onCheckedChange={(checked) => 
@@ -96,6 +96,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
                 variant="ghost"
                 onClick={() => handleEdit(subtask)}
                 className="h-6 w-6 p-0"
+                title="Modifier"
               >
                 <Edit2 className="h-3 w-3" />
               </Button>
@@ -104,6 +105,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
                 variant="ghost"
                 onClick={() => deleteSubtask(subtask.id)}
                 className="h-6 w-6 p-0"
+                title="Supprimer"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -116,7 +118,7 @@ export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskList
         size="sm"
         variant="ghost"
         onClick={() => setIsFormOpen(true)}
-        className="text-xs text-muted-foreground h-6 px-2"
+        className="text-xs text-muted-foreground h-6 px-2 w-full justify-center border border-dashed border-muted"
       >
         <Plus className="h-3 w-3 mr-1" />
         Ajouter une sous-tâche

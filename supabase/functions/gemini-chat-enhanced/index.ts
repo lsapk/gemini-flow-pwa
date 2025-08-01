@@ -95,7 +95,7 @@ async function executeAction(action: any, user_id: string, supabase: any) {
           user_id: user_id,
           title: action.data.title.trim(),
           content: action.data.content.trim(),
-          mood: ['excellent', 'good', 'neutral', 'bad', 'terrible'].includes(action.data.mood) ? action.data.mood : null,
+          mood: ['excellent', 'tres-heureux', 'heureux', 'bien', 'motive', 'optimiste', 'reconnaissant', 'calme', 'neutre', 'fatigue', 'stresse', 'anxieux', 'inquiet', 'triste', 'decu', 'frustre', 'en-colere', 'confus', 'surpris', 'excite'].includes(action.data.mood) ? action.data.mood : null,
           tags: Array.isArray(action.data.tags) ? action.data.tags : null
         })
         .select()
@@ -171,21 +171,28 @@ serve(async (req) => {
       }
     }
 
-    const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
-Tu parles TOUJOURS en français et tu utilises TOUJOURS des emojis appropriés dans tes réponses (1 à 3 par réponse) 😊.
-Tu as accès aux données en temps réel de l'utilisateur et tu peux l'aider à créer des tâches, habitudes, objectifs et entrées de journal.
+    // Préparer le contexte de conversation
+    const conversationContext = context?.recent_messages?.length > 0 ? 
+      `HISTORIQUE RÉCENT:\n${context.recent_messages.map(msg => `${msg.role}: ${msg.content}`).slice(-5).join('\n')}\n\n` : 
+      '';
 
-IMPORTANT : Avant de créer quoi que ce soit, tu dois TOUJOURS demander la confirmation de l'utilisateur. Ne crée JAMAIS directement sans demander.
+    const systemPrompt = `Tu es DeepFlow AI, un assistant IA personnel spécialisé dans le développement personnel et la productivité. 
+Tu parles TOUJOURS en français et tu utilises des emojis appropriés (1 à 3 par réponse) 😊.
+
+${conversationContext}
 
 DONNÉES UTILISATEUR ACTUELLES:
 ${context?.user_data ? JSON.stringify(context.user_data, null, 2) : 'Aucune donnée disponible'}
 
-HISTORIQUE RÉCENT DE CONVERSATION:
-${context?.recent_messages?.map((msg) => `${msg.role}: ${msg.content}`).join('\n') || 'Aucun historique'}
+IMPORTANT - RÈGLES DE CRÉATION:
+- Quand l'utilisateur demande de créer quelque chose, tu PROPOSES directement la création avec les détails
+- Tu NE demandes PAS de confirmation à chaque fois
+- Tu es proactif et efficace
+- Tu te souviens de la conversation précédente
 
 CAPACITÉS:
 - Analyser les données de productivité de l'utilisateur en détail 📊
-- Proposer la création de tâches, habitudes, objectifs, entrées de journal ✨
+- Créer directement des tâches, habitudes, objectifs, entrées de journal ✨
 - Donner des conseils personnalisés basés sur les vraies données 💡
 - Fournir des statistiques précises et des analyses approfondies 📈
 - Proposer des améliorations concrètes et réalisables 🚀
@@ -193,9 +200,9 @@ CAPACITÉS:
 INSTRUCTIONS:
 - Réponds TOUJOURS en français et avec des emojis adaptés 😊
 - Sois encourageant, constructif et empathique 💪
-- Propose des actions concrètes et demande TOUJOURS confirmation avant de créer
+- Sois direct et efficace dans tes réponses
 - Utilise un ton amical et professionnel 🤝
-- DEMANDE TOUJOURS la permission avant de créer quoi que ce soit
+- Souviens-toi du contexte de la conversation
 `;
 
     console.log("Calling Gemini API...");
