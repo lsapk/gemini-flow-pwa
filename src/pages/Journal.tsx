@@ -12,16 +12,7 @@ import { toast } from "sonner";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import { JournalStats } from "@/components/ui/JournalStats";
 import { Plus, BookOpen } from "lucide-react";
-
-interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  mood?: string;
-  tags?: string[];
-  created_at: string;
-  updated_at: string;
-}
+import { JournalEntry } from "@/types";
 
 const moods = [
   { value: "excellent", label: "Excellent", color: "bg-green-100 text-green-800" },
@@ -32,18 +23,64 @@ const moods = [
   { value: "optimiste", label: "Optimiste", color: "bg-yellow-100 text-yellow-800" },
   { value: "reconnaissant", label: "Reconnaissant", color: "bg-pink-100 text-pink-800" },
   { value: "calme", label: "Calme", color: "bg-teal-100 text-teal-800" },
+  { value: "paisible", label: "Paisible", color: "bg-teal-100 text-teal-800" },
+  { value: "serein", label: "Serein", color: "bg-teal-100 text-teal-800" },
+  { value: "confiant", label: "Confiant", color: "bg-blue-100 text-blue-800" },
+  { value: "inspire", label: "Inspiré", color: "bg-purple-100 text-purple-800" },
+  { value: "cratif", label: "Créatif", color: "bg-purple-100 text-purple-800" },
+  { value: "energique", label: "Énergique", color: "bg-orange-100 text-orange-800" },
+  { value: "enthousiaste", label: "Enthousiaste", color: "bg-yellow-100 text-yellow-800" },
+  { value: "amoureux", label: "Amoureux", color: "bg-pink-100 text-pink-800" },
+  { value: "compatissant", label: "Compatissant", color: "bg-pink-100 text-pink-800" },
+  { value: "fier", label: "Fier", color: "bg-purple-100 text-purple-800" },
+  { value: "satisfait", label: "Satisfait", color: "bg-green-100 text-green-800" },
+  { value: "accompli", label: "Accompli", color: "bg-green-100 text-green-800" },
   { value: "neutre", label: "Neutre", color: "bg-gray-100 text-gray-800" },
+  { value: "indifferent", label: "Indifférent", color: "bg-gray-100 text-gray-800" },
+  { value: "vide", label: "Vide", color: "bg-gray-100 text-gray-800" },
   { value: "fatigue", label: "Fatigué", color: "bg-gray-100 text-gray-800" },
+  { value: "epuise", label: "Épuisé", color: "bg-gray-100 text-gray-800" },
+  { value: "accable", label: "Accablé", color: "bg-gray-100 text-gray-800" },
   { value: "stresse", label: "Stressé", color: "bg-orange-100 text-orange-800" },
+  { value: "tendu", label: "Tendu", color: "bg-orange-100 text-orange-800" },
+  { value: "nerveux", label: "Nerveux", color: "bg-orange-100 text-orange-800" },
   { value: "anxieux", label: "Anxieux", color: "bg-orange-100 text-orange-800" },
   { value: "inquiet", label: "Inquiet", color: "bg-orange-100 text-orange-800" },
+  { value: "preoccupe", label: "Préoccupé", color: "bg-orange-100 text-orange-800" },
+  { value: "angoisse", label: "Angoissé", color: "bg-red-100 text-red-800" },
+  { value: "panique", label: "Paniqué", color: "bg-red-100 text-red-800" },
   { value: "triste", label: "Triste", color: "bg-red-100 text-red-800" },
+  { value: "melancolique", label: "Mélancolique", color: "bg-red-100 text-red-800" },
+  { value: "nostalgique", label: "Nostalgique", color: "bg-red-100 text-red-800" },
   { value: "decu", label: "Déçu", color: "bg-red-100 text-red-800" },
+  { value: "desespere", label: "Désespéré", color: "bg-red-100 text-red-800" },
+  { value: "abattu", label: "Abattu", color: "bg-red-100 text-red-800" },
+  { value: "deprime", label: "Déprimé", color: "bg-red-100 text-red-800" },
   { value: "frustre", label: "Frustré", color: "bg-red-100 text-red-800" },
+  { value: "irrite", label: "Irrité", color: "bg-red-100 text-red-800" },
+  { value: "agace", label: "Agacé", color: "bg-red-100 text-red-800" },
   { value: "en-colere", label: "En colère", color: "bg-red-100 text-red-800" },
+  { value: "furieux", label: "Furieux", color: "bg-red-100 text-red-800" },
+  { value: "rage", label: "Rage", color: "bg-red-100 text-red-800" },
+  { value: "jaloux", label: "Jaloux", color: "bg-yellow-100 text-yellow-800" },
+  { value: "envieux", label: "Envieux", color: "bg-yellow-100 text-yellow-800" },
+  { value: "honteux", label: "Honteux", color: "bg-red-100 text-red-800" },
+  { value: "coupable", label: "Coupable", color: "bg-red-100 text-red-800" },
+  { value: "embarrasse", label: "Embarrassé", color: "bg-red-100 text-red-800" },
   { value: "confus", label: "Confus", color: "bg-yellow-100 text-yellow-800" },
+  { value: "perdu", label: "Perdu", color: "bg-yellow-100 text-yellow-800" },
+  { value: "indecis", label: "Indécis", color: "bg-yellow-100 text-yellow-800" },
   { value: "surpris", label: "Surpris", color: "bg-indigo-100 text-indigo-800" },
-  { value: "excite", label: "Excité", color: "bg-purple-100 text-purple-800" }
+  { value: "etonne", label: "Étonné", color: "bg-indigo-100 text-indigo-800" },
+  { value: "choque", label: "Choqué", color: "bg-indigo-100 text-indigo-800" },
+  { value: "excite", label: "Excité", color: "bg-purple-100 text-purple-800" },
+  { value: "impatient", label: "Impatient", color: "bg-orange-100 text-orange-800" },
+  { value: "curieux", label: "Curieux", color: "bg-blue-100 text-blue-800" },
+  { value: "interesse", label: "Intéressé", color: "bg-blue-100 text-blue-800" },
+  { value: "fascine", label: "Fasciné", color: "bg-purple-100 text-purple-800" },
+  { value: "emerveille", label: "Émerveillé", color: "bg-yellow-100 text-yellow-800" },
+  { value: "touche", label: "Touché", color: "bg-pink-100 text-pink-800" },
+  { value: "emu", label: "Ému", color: "bg-pink-100 text-pink-800" }
 ];
 
 export default function Journal() {
@@ -70,7 +107,15 @@ export default function Journal() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEntries(data || []);
+      
+      // Transform the data to match our types
+      const transformedData: JournalEntry[] = (data || []).map(entry => ({
+        ...entry,
+        tags: Array.isArray(entry.tags) ? entry.tags : (entry.tags ? [entry.tags] : []),
+        updated_at: entry.updated_at || entry.created_at
+      }));
+      
+      setEntries(transformedData);
     } catch (error) {
       console.error('Error fetching entries:', error);
       toast.error('Erreur lors du chargement des entrées');
@@ -135,7 +180,7 @@ export default function Journal() {
     setTitle(entry.title);
     setContent(entry.content);
     setMood(entry.mood || "");
-    setTags(entry.tags ? entry.tags.join(', ') : "");
+    setTags(Array.isArray(entry.tags) ? entry.tags.join(', ') : "");
     setShowForm(true);
   };
 
