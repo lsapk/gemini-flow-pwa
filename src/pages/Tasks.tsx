@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -291,6 +291,9 @@ export default function Tasks() {
               <DialogTitle>
                 {editingTask ? "Modifier la tâche" : "Nouvelle tâche"}
               </DialogTitle>
+              <DialogDescription>
+                {editingTask ? "Modifiez les détails de votre tâche." : "Créez une nouvelle tâche pour rester organisé."}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
