@@ -6,7 +6,7 @@ import { Plus, Trash2, Edit2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import SubtaskForm from "./SubtaskForm";
+import { SubtaskForm } from "./SubtaskForm";
 
 interface Subtask {
   id: string;

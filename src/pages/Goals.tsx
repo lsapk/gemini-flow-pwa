@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import GoalList from "@/components/GoalList";
+import { GoalList } from "@/components/GoalList";
 import { Goal } from "@/types";
 
 export default function Goals() {
