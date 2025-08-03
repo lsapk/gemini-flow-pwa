@@ -1,179 +1,132 @@
+import React, { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Goal } from '@/types';
+import { getGoals, updateGoal, deleteGoal } from '@/lib/api';
+import { toast } from 'sonner';
+import { SubobjectiveList } from './SubobjectiveList';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Edit, Trash2, Target, Calendar, Plus, Minus } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Goal } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+export const GoalList = () => {
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-interface GoalListProps {
-  goals: Goal[];
-  loading?: boolean;
-  onEdit: (goal: Goal) => void;
-  onDelete: (id: string) => void;
-}
-
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'personal': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'professional': return 'bg-green-100 text-green-800 border-green-200';
-    case 'health': return 'bg-red-100 text-red-800 border-red-200';
-    case 'finance': return 'bg-purple-100 text-purple-800 border-purple-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-export default function GoalList({ goals, loading, onEdit, onDelete }: GoalListProps) {
-  const { user } = useAuth();
-
-  const updateProgress = async (goalId: string, currentProgress: number, increment: boolean) => {
-    if (!user) return;
-    
-    const newProgress = increment 
-      ? Math.min(100, currentProgress + 10)
-      : Math.max(0, currentProgress - 10);
-    
+  const fetchGoals = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const { error } = await supabase
-        .from('goals')
-        .update({ 
-          progress: newProgress,
-          completed: newProgress >= 100,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', goalId);
-
-      if (error) throw error;
-      
-      toast.success(`Progrès mis à jour à ${newProgress}%`);
-      // Refresh the page to see changes
-      window.location.reload();
-    } catch (error) {
-      console.error('Error updating progress:', error);
-      toast.error('Erreur lors de la mise à jour du progrès');
+      const { data, error } = await getGoals();
+      if (error) {
+        setError(error.message || 'Failed to fetch goals');
+      } else {
+        setGoals(data || []);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map(i => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-6 bg-muted rounded mb-4"></div>
-              <div className="h-4 bg-muted rounded w-2/3"></div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchGoals();
+  }, []);
 
-  if (goals.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Aucun objectif</h3>
-          <p className="text-muted-foreground mb-4">
-            Commencez par créer votre premier objectif !
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const updateGoalStatus = async (id: string, completed: boolean) => {
+    try {
+      await updateGoal(id, { completed });
+      setGoals((prevGoals) =>
+        prevGoals.map((goal) =>
+          goal.id === id ? { ...goal, completed } : goal
+        )
+      );
+      toast.success(`Objectif mis à jour`);
+    } catch (error: any) {
+      toast.error(`Erreur lors de la mise à jour de l'objectif: ${error.message}`);
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    try {
+      await deleteGoal(id);
+      setGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== id));
+      toast.success(`Objectif supprimé`);
+    } catch (error: any) {
+      toast.error(`Erreur lors de la suppression de l'objectif: ${error.message}`);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {goals.map(goal => (
-        <Card key={goal.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className={`text-lg font-semibold mb-2 ${goal.completed ? 'text-green-600' : ''}`}>
-                  {goal.title}
-                </h3>
-                {goal.description && (
-                  <p className="text-muted-foreground mb-3">{goal.description}</p>
-                )}
-                
-                <div className="flex items-center gap-4 mb-4">
-                  <Badge className={getCategoryColor(goal.category || 'personal')}>
-                    {goal.category || 'personnel'}
-                  </Badge>
-                  {goal.target_date && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {format(new Date(goal.target_date), "dd MMM yyyy", { locale: fr })}
-                    </div>
+      {goals.length === 0 ? (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">
+            Aucun objectif pour le moment
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Créez votre premier objectif pour commencer
+          </p>
+        </div>
+      ) : (
+        goals.map((goal) => (
+          <Card key={goal.id} className="p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1">
+                <Checkbox
+                  checked={goal.completed}
+                  onCheckedChange={(checked) =>
+                    updateGoal(goal.id, { completed: checked as boolean })
+                  }
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={`font-medium ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
+                      {goal.title}
+                    </h3>
+                    {goal.category && (
+                      <Badge variant="outline" className="text-xs">
+                        {goal.category}
+                      </Badge>
+                    )}
+                  </div>
+                  {goal.description && (
+                    <p className={`text-sm mb-2 ${goal.completed ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
+                      {goal.description}
+                    </p>
                   )}
-                </div>
-                
-                {/* Barre de progression avec boutons +/- */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Progrès: {goal.progress}%</span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateProgress(goal.id, goal.progress, false)}
-                        className="h-6 w-6 p-0"
-                        disabled={goal.progress <= 0}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateProgress(goal.id, goal.progress, true)}
-                        className="h-6 w-6 p-0"
-                        disabled={goal.progress >= 100}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                  {goal.target_date && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Échéance: {format(parseISO(goal.target_date), 'dd/MM/yyyy', { locale: fr })}
+                    </p>
+                  )}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-muted-foreground">Progrès: {goal.progress}%</span>
                     </div>
+                    <Progress value={goal.progress} className="h-2" />
                   </div>
-                  <Progress value={goal.progress} className="w-full" />
-                  
-                  {/* Marques tous les 10% */}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    {Array.from({ length: 11 }, (_, i) => (
-                      <span key={i} className="text-center">
-                        {i * 10}%
-                      </span>
-                    ))}
-                  </div>
+                  <SubobjectiveList goalId={goal.id} />
                 </div>
               </div>
-              
-              <div className="flex gap-2 ml-4">
+              <div className="flex items-center gap-2 ml-4">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onEdit(goal)}
-                  aria-label="Modifier"
+                  onClick={() => deleteGoal(goal.id)}
+                  className="hover:bg-destructive/10"
                 >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(goal.id)}
-                  aria-label="Supprimer"
-                >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          </Card>
+        ))
+      )}
     </div>
   );
-}
+};

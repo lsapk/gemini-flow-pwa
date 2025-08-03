@@ -978,6 +978,53 @@ export type Database = {
         }
         Relationships: []
       }
+      lessons: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          data: Json | null
+          difficulty: string | null
+          id: string
+          subject_id: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          data?: Json | null
+          difficulty?: string | null
+          id?: string
+          subject_id: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          data?: Json | null
+          difficulty?: string | null
+          id?: string
+          subject_id?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migrations: {
         Row: {
           id: number
@@ -1214,6 +1261,131 @@ export type Database = {
           },
         ]
       }
+      study_sessions: {
+        Row: {
+          completed_at: string | null
+          duration: number
+          id: string
+          lesson_id: string | null
+          score: number | null
+          session_type: string
+          subject_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          duration: number
+          id?: string
+          lesson_id?: string | null
+          score?: number | null
+          session_type: string
+          subject_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          duration?: number
+          id?: string
+          lesson_id?: string | null
+          score?: number | null
+          session_type?: string
+          subject_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          lessons_count: number | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lessons_count?: number | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lessons_count?: number | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subobjectives: {
+        Row: {
+          completed: boolean
+          created_at: string | null
+          description: string | null
+          id: string
+          parent_goal_id: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          parent_goal_id: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          parent_goal_id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subobjectives_parent_goal_id_fkey"
+            columns: ["parent_goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -1290,8 +1462,10 @@ export type Database = {
         Row: {
           completed: boolean
           created_at: string
+          description: string | null
           id: string
           parent_task_id: string
+          priority: string | null
           sort_order: number | null
           title: string
           updated_at: string
@@ -1300,8 +1474,10 @@ export type Database = {
         Insert: {
           completed?: boolean
           created_at?: string
+          description?: string | null
           id?: string
           parent_task_id: string
+          priority?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string
@@ -1310,8 +1486,10 @@ export type Database = {
         Update: {
           completed?: boolean
           created_at?: string
+          description?: string | null
           id?: string
           parent_task_id?: string
+          priority?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string
@@ -1762,7 +1940,9 @@ export type Database = {
         Row: {
           clock_format: string | null
           created_at: string | null
+          dark_mode: boolean | null
           focus_mode: boolean | null
+          gemini_api_key: string | null
           id: string
           karma_points: number | null
           language: string | null
@@ -1775,7 +1955,9 @@ export type Database = {
         Insert: {
           clock_format?: string | null
           created_at?: string | null
+          dark_mode?: boolean | null
           focus_mode?: boolean | null
+          gemini_api_key?: string | null
           id: string
           karma_points?: number | null
           language?: string | null
@@ -1788,7 +1970,9 @@ export type Database = {
         Update: {
           clock_format?: string | null
           created_at?: string | null
+          dark_mode?: boolean | null
           focus_mode?: boolean | null
+          gemini_api_key?: string | null
           id?: string
           karma_points?: number | null
           language?: string | null

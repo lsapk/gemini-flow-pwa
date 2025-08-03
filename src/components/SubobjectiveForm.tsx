@@ -3,22 +3,20 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
-interface SubtaskFormProps {
-  parentTaskId: string;
+interface SubobjectiveFormProps {
+  parentGoalId: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export const SubtaskForm = ({ parentTaskId, onSuccess, onCancel }: SubtaskFormProps) => {
+export const SubobjectiveForm = ({ parentGoalId, onSuccess, onCancel }: SubobjectiveFormProps) => {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('medium');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,27 +26,21 @@ export const SubtaskForm = ({ parentTaskId, onSuccess, onCancel }: SubtaskFormPr
     setIsLoading(true);
     try {
       const { error } = await supabase
-        .from('subtasks')
+        .from('subobjectives')
         .insert({
           title: title.trim(),
           description: description.trim() || null,
-          priority,
-          parent_task_id: parentTaskId,
+          parent_goal_id: parentGoalId,
           user_id: user.id,
-          completed: false,
-          sort_order: 0
         });
 
-      if (error) {
-        console.error('Erreur Supabase:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      toast.success('Sous-tâche créée avec succès');
+      toast.success('Sous-objectif créé avec succès');
       onSuccess();
     } catch (error) {
-      console.error('Erreur lors de la création de la sous-tâche:', error);
-      toast.error('Erreur lors de la création de la sous-tâche');
+      console.error('Erreur lors de la création du sous-objectif:', error);
+      toast.error('Erreur lors de la création du sous-objectif');
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +49,7 @@ export const SubtaskForm = ({ parentTaskId, onSuccess, onCancel }: SubtaskFormPr
   return (
     <form onSubmit={handleSubmit} className="space-y-3 p-3 border rounded-lg bg-card">
       <Input
-        placeholder="Titre de la sous-tâche"
+        placeholder="Titre du sous-objectif"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
@@ -68,16 +60,6 @@ export const SubtaskForm = ({ parentTaskId, onSuccess, onCancel }: SubtaskFormPr
         onChange={(e) => setDescription(e.target.value)}
         rows={2}
       />
-      <Select value={priority} onValueChange={setPriority}>
-        <SelectTrigger>
-          <SelectValue placeholder="Priorité" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="low">Faible</SelectItem>
-          <SelectItem value="medium">Moyenne</SelectItem>
-          <SelectItem value="high">Élevée</SelectItem>
-        </SelectContent>
-      </Select>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={isLoading || !title.trim()}>
           {isLoading ? 'Création...' : 'Créer'}
