@@ -10,17 +10,27 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
-import Sidebar from "@/components/layout/Sidebar"; // Affichage sidebar
-import { useLocation } from "react-router-dom";
+import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useState as useReactState } from "react";
+import AISuggestionDialog from "@/components/AISuggestionDialog";
 
 interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+}
+
+interface AISuggestion {
+  type: "task" | "goal" | "habit";
+  title: string;
+  description?: string;
+  priority?: string;
+  frequency?: string;
+  category?: string;
+  reasoning: string;
 }
 
 const STORAGE_KEY = 'deepflow_ai_conversation';
@@ -30,6 +40,8 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
+  const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Gérer ouverture du menu mobile localement
@@ -96,7 +108,6 @@ export default function AIAssistant() {
     if (!user) return {};
 
     try {
-      // Récupérer toutes les données utilisateur
       const [
         tasksResult,
         habitsResult,
@@ -154,8 +165,6 @@ export default function AIAssistant() {
 
     try {
       const userData = await getUserData();
-
-      // Préparer les messages récents pour la mémoire (derniers 10)
       const recentMessages = messages.slice(-10).map(msg => ({
         role: msg.role,
         content: msg.content
@@ -174,25 +183,13 @@ export default function AIAssistant() {
 
       if (error) throw error;
 
-      // Nettoyer la réponse : évite l'affichage d’objet technique/residu JSON
       let assistantContent = data.response || "Désolé, je n'ai pas pu traiter votre demande.";
-      // Enlève tout bloc de code ou contenu JSON de la réponse, focus sur les phrases utiles pour utilisateur
+      
+      // Clean up response
       assistantContent = assistantContent
         .replace(/```json[\s\S]*?```/g, "")
-        .replace(/\{[\s\S]*?"action"[\s\S]*?\}/g, "")
-        .replace(/```[\s\S]*?```/g, "")
-        .replace(/json[\s\S]*?\}/gi, "");
-
-      // Ajoute un 🎉 si action_result existe (création d'élément, etc.)
-      if (data.action_result) {
-        if (!assistantContent.includes("créé")) {
-          assistantContent += "\n\nÉlément créé avec succès ! 🎉";
-        } else if (!assistantContent.includes("🎉")) {
-          assistantContent += " 🎉";
-        }
-        refetch();
-        toast.success("Action exécutée avec succès !");
-      }
+        .replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "")
+        .replace(/```[\s\S]*?```/g, "");
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -202,6 +199,13 @@ export default function AIAssistant() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Handle AI suggestion
+      if (data.suggestion) {
+        setCurrentSuggestion(data.suggestion);
+        setIsSuggestionDialogOpen(true);
+      }
+
     } catch (error) {
       console.error('Erreur:', error);
       const errorMessage: Message = {
@@ -224,42 +228,29 @@ export default function AIAssistant() {
     }
   };
 
-  // --- CHANGEMENTS CI-DESSOUS : layout mobile header ajouté ---
+  const handleSuggestionConfirm = () => {
+    refetch();
+    toast.success("Élément créé avec succès ! 🎉");
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Mobile Header : visible que sur mobile */}
       <div className="md:hidden">
         <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-        {/* Sidebar mobile en <Sheet> */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetContent side="left" className="p-0 w-64">
-            {/* On passe props onItemClick pour fermer le menu après click */}
             <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
           </SheetContent>
         </Sheet>
       </div>
-      {/* Sidebar desktop : cachée sur mobile */}
+      
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      {/* Main content */}
+      
       <div className="flex-1 w-full h-screen flex flex-col">
-        <Card
-          className={`
-            flex-1 flex flex-col
-            w-full
-            h-[100dvh]
-            rounded-none md:rounded-xl
-            shadow-none md:shadow-lg
-            bg-background
-            md:my-4
-            md:w-[90%] md:mx-auto
-            transition-all
-          `}
-        >
+        <Card className="flex-1 flex flex-col w-full h-[100dvh] rounded-none md:rounded-xl shadow-none md:shadow-lg bg-background md:my-4 md:w-[90%] md:mx-auto transition-all">
           <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
-            {/* On cache ce header interne sur mobile, car MobileHeader s’affiche au-dessus */}
             <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">
               <div className="flex items-center gap-2">
                 <Bot className="h-6 w-6 text-primary" />
@@ -276,16 +267,10 @@ export default function AIAssistant() {
               </Button>
             </CardTitle>
           </CardHeader>
-          {/* ScrollArea : on ajoute pt-14 pour éviter que le header mobile ne cache le début du chat */}
+          
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pt-14 md:pt-0">
             <ScrollArea
-              className="
-                flex-1 px-1 sm:px-8 pt-2 pb-2
-                w-full
-                h-[50vh] sm:h-auto
-                max-h-[60vh] sm:max-h-none
-                overflow-y-auto
-              "
+              className="flex-1 px-1 sm:px-8 pt-2 pb-2 w-full h-[50vh] sm:h-auto max-h-[60vh] sm:max-h-none overflow-y-auto"
               ref={scrollAreaRef}
               style={{
                 minHeight: '200px',
@@ -296,9 +281,9 @@ export default function AIAssistant() {
                 {messages.length === 0 && (
                   <div className="text-center text-muted-foreground py-8">
                     <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
-                    <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
+                    <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
                     <p className="text-sm">
-                      Je peux vous aider à créer des tâches, habitudes, objectifs, analyser votre productivité et bien plus encore ! 🚀
+                      Je peux analyser vos besoins et vous suggérer intelligemment des tâches, habitudes et objectifs ! 🚀
                     </p>
                   </div>
                 )}
@@ -315,17 +300,7 @@ export default function AIAssistant() {
                       </Avatar>
                     )}
 
-                    <div
-                      className={`
-                        max-w-[90vw] sm:max-w-[60%] rounded-lg p-2 sm:p-3 min-w-0
-                        ${message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                        }
-                        text-sm
-                        break-words
-                      `}
-                    >
+                    <div className={`max-w-[90vw] sm:max-w-[60%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words`}>
                       {message.role === 'assistant' ? (
                         <Markdown content={message.content} />
                       ) : (
@@ -364,16 +339,8 @@ export default function AIAssistant() {
                 )}
               </div>
             </ScrollArea>
-            {/* Input area : sticky pour ne pas passer sous le header mobile */}
-            <div
-              className="
-                border-t bg-background
-                px-1 py-2 sm:px-6 flex-shrink-0
-                flex gap-2
-                sticky bottom-0 left-0 w-full
-                z-10
-              "
-            >
+            
+            <div className="border-t bg-background px-1 py-2 sm:px-6 flex-shrink-0 flex gap-2 sticky bottom-0 left-0 w-full z-10">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -399,6 +366,16 @@ export default function AIAssistant() {
           </CardContent>
         </Card>
       </div>
+
+      <AISuggestionDialog
+        suggestion={currentSuggestion}
+        isOpen={isSuggestionDialogOpen}
+        onClose={() => {
+          setIsSuggestionDialogOpen(false);
+          setCurrentSuggestion(null);
+        }}
+        onConfirm={handleSuggestionConfirm}
+      />
     </div>
   );
 }

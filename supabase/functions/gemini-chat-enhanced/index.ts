@@ -28,155 +28,77 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Helper functions for data operations
-    const createTask = async (title: string, description?: string, priority?: string, due_date?: string) => {
-      const { data, error } = await supabaseClient
-        .from('tasks')
-        .insert({
-          title,
-          description: description || null,
-          priority: priority || 'medium',
-          due_date: due_date || null,
-          user_id,
-          completed: false
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    };
-
-    const createHabit = async (title: string, description?: string, frequency?: string, target?: number) => {
-      const { data, error } = await supabaseClient
-        .from('habits')
-        .insert({
-          title,
-          description: description || null,
-          frequency: frequency || 'daily',
-          target: target || 1,
-          user_id,
-          streak: 0
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    };
-
-    const createGoal = async (title: string, description?: string, category?: string, target_date?: string) => {
-      const { data, error } = await supabaseClient
-        .from('goals')
-        .insert({
-          title,
-          description: description || null,
-          category: category || null,
-          target_date: target_date || null,
-          user_id,
-          completed: false,
-          progress: 0
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    };
-
-    // Enhanced system prompt avec règles strictes
+    // Enhanced system prompt for intelligent suggestions
     const systemPrompt = `Tu es un assistant IA spécialisé dans la productivité pour l'application DeepFlow. 
 
-    RÈGLES CRITIQUES POUR LES ACTIONS:
-    - Tu ne crées JAMAIS d'éléments automatiquement
-    - Tu ne crées quelque chose QUE si l'utilisateur dit explicitement "créer", "ajouter", "faire" suivi du type d'élément
-    - Exemples valides: "créer une tâche", "ajouter une habitude", "faire un objectif"
-    - Si l'utilisateur pose juste une question ou demande des conseils, tu réponds SANS créer quoi que ce soit
-    - Si tu n'es pas sûr, demande confirmation avant de créer
-    
-    DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
-    
-    Réponds de manière conversationnelle et utile, en utilisant les données disponibles.`;
+    RÈGLES POUR LES SUGGESTIONS INTELLIGENTES:
+    - Analyse le contexte de chaque message pour comprendre si l'utilisateur pourrait bénéficier d'une tâche, habitude ou objectif
+    - Si tu détectes qu'une création serait utile, propose-la avec des détails précis
+    - Ne crée JAMAIS automatiquement - propose toujours d'abord
+    - Utilise le format JSON suivant pour tes suggestions:
 
-    // Initialize Gemini with the correct model
-    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    // Très strict action detection - seulement créer quand explicitement demandé
-    const lowerMessage = message.toLowerCase();
-    const isExplicitCreateRequest = (
-      (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('faire')) &&
-      (lowerMessage.includes('tâche') || lowerMessage.includes('habitude') || lowerMessage.includes('objectif') || 
-       lowerMessage.includes('task') || lowerMessage.includes('habit') || lowerMessage.includes('goal'))
-    );
-    
-    let actionTaken = null;
-
-    // Only try to create if it's an explicit and clear request
-    if (isExplicitCreateRequest) {
-      console.log('Explicit create request detected:', message);
-      
-      if ((lowerMessage.includes('tâche') || lowerMessage.includes('task')) && 
-          (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('faire'))) {
-        // Extract title from quotes or after keywords
-        const taskMatch = message.match(/"([^"]+)"/) || 
-                          message.match(/(?:tâche|task)[\s:]*([^.!?]+)/i);
-        if (taskMatch && taskMatch[1]) {
-          const title = taskMatch[1].trim();
-          if (title.length > 2 && !title.includes('[{')) { // Avoid malformed titles
-            try {
-              actionTaken = await createTask(title);
-              console.log('Task created:', actionTaken);
-            } catch (error) {
-              console.error('Error creating task:', error);
-            }
-          }
-        }
-      } else if ((lowerMessage.includes('habitude') || lowerMessage.includes('habit')) && 
-                 (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('faire'))) {
-        const habitMatch = message.match(/"([^"]+)"/) || 
-                           message.match(/(?:habitude|habit)[\s:]*([^.!?]+)/i);
-        if (habitMatch && habitMatch[1]) {
-          const title = habitMatch[1].trim();
-          if (title.length > 2 && !title.includes('[{')) {
-            try {
-              actionTaken = await createHabit(title);
-              console.log('Habit created:', actionTaken);
-            } catch (error) {
-              console.error('Error creating habit:', error);
-            }
-          }
-        }
-      } else if ((lowerMessage.includes('objectif') || lowerMessage.includes('goal')) && 
-                 (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('faire'))) {
-        const goalMatch = message.match(/"([^"]+)"/) || 
-                          message.match(/(?:objectif|goal)[\s:]*([^.!?]+)/i);
-        if (goalMatch && goalMatch[1]) {
-          const title = goalMatch[1].trim();
-          if (title.length > 2 && !title.includes('[{')) {
-            try {
-              actionTaken = await createGoal(title);
-              console.log('Goal created:', actionTaken);
-            } catch (error) {
-              console.error('Error creating goal:', error);
-            }
-          }
-        }
+    Format de réponse quand tu suggères quelque chose:
+    {
+      "response": "ta réponse conversationnelle normale",
+      "suggestion": {
+        "type": "task|habit|goal",
+        "title": "titre suggéré",
+        "description": "description suggérée",
+        "priority": "high|medium|low" (pour tâches),
+        "frequency": "daily|weekly|monthly" (pour habitudes),
+        "category": "catégorie suggérée" (pour objectifs),
+        "reasoning": "pourquoi tu suggères cela"
       }
     }
 
-    // Generate AI response
-    const enhancedMessage = actionTaken 
-      ? `${message}\n\nACTION EFFECTUÉE: J'ai créé "${actionTaken.title}" pour toi.`
-      : message;
+    DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
+    
+    Exemples de situations où suggérer:
+    - Utilisateur mentionne quelque chose qu'il veut faire → suggérer une tâche
+    - Utilisateur parle d'améliorer quelque chose régulièrement → suggérer une habitude  
+    - Utilisateur évoque un objectif à long terme → suggérer un objectif
+    - Utilisateur exprime une frustration → suggérer des actions pour l'aider
+
+    Réponds de manière naturelle ET intelligente.`;
+
+    // Initialize Gemini
+    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Préparer les messages récents pour la mémoire (derniers 10)
+    const recentMessages = (context?.recent_messages || []).slice(-10).map((msg: any) => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    const conversationContext = recentMessages.length > 0 
+      ? `\n\nCONVERSATION RÉCENTE:\n${recentMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`
+      : '';
 
     const result = await model.generateContent([
       systemPrompt,
-      `Message utilisateur: ${enhancedMessage}`
+      `Message utilisateur: ${message}${conversationContext}`
     ]);
 
     const response = result.response;
-    const responseText = response.text();
+    let responseText = response.text();
+
+    // Try to parse JSON response for suggestions
+    let suggestion = null;
+    try {
+      // Look for JSON in the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.suggestion) {
+          suggestion = parsed.suggestion;
+          responseText = parsed.response || responseText;
+        }
+      }
+    } catch (e) {
+      // No valid JSON found, continue with normal response
+      console.log('No JSON suggestion found in response');
+    }
 
     // Log AI request
     await supabaseClient.from('ai_requests').insert({
@@ -187,7 +109,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         response: responseText,
-        action: actionTaken ? `Créé: ${actionTaken.title}` : null
+        suggestion: suggestion
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
