@@ -1,64 +1,63 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Goal } from '@/types';
-import { getGoals, updateGoal, deleteGoal } from '@/lib/api';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { SubobjectiveList } from './SubobjectiveList';
 
-export const GoalList = () => {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface GoalListProps {
+  goals: Goal[];
+  loading: boolean;
+  onEdit: (goal: Goal) => void;
+  onDelete: (goalId: string) => void;
+}
 
-  const fetchGoals = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await getGoals();
-      if (error) {
-        setError(error.message || 'Failed to fetch goals');
-      } else {
-        setGoals(data || []);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchGoals();
-  }, []);
+export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) => {
+  const { user } = useAuth();
 
   const updateGoalStatus = async (id: string, completed: boolean) => {
+    if (!user) return;
+
     try {
-      await updateGoal(id, { completed });
-      setGoals((prevGoals) =>
-        prevGoals.map((goal) =>
-          goal.id === id ? { ...goal, completed } : goal
-        )
-      );
-      toast.success(`Objectif mis à jour`);
-    } catch (error: any) {
-      toast.error(`Erreur lors de la mise à jour de l'objectif: ${error.message}`);
+      const { error } = await supabase
+        .from('goals')
+        .update({ completed })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      toast.success(`Objectif ${completed ? 'complété' : 'réactivé'} !`);
+      // Ne pas appeler fetchGoals ici car le parent gère le rafraîchissement
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      toast.error('Erreur lors de la mise à jour de l\'objectif');
     }
   };
 
-  const deleteGoal = async (id: string) => {
-    try {
-      await deleteGoal(id);
-      setGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== id));
-      toast.success(`Objectif supprimé`);
-    } catch (error: any) {
-      toast.error(`Erreur lors de la suppression de l'objectif: ${error.message}`);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:gap-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <div className="p-6">
+              <div className="h-6 bg-muted rounded mb-4"></div>
+              <div className="h-4 bg-muted rounded w-2/3"></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -79,7 +78,7 @@ export const GoalList = () => {
                 <Checkbox
                   checked={goal.completed}
                   onCheckedChange={(checked) =>
-                    updateGoal(goal.id, { completed: checked as boolean })
+                    updateGoalStatus(goal.id, checked as boolean)
                   }
                   className="mt-1"
                 />
@@ -110,14 +109,22 @@ export const GoalList = () => {
                     </div>
                     <Progress value={goal.progress} className="h-2" />
                   </div>
-                  <SubobjectiveList goalId={goal.id} />
+                  <SubobjectiveList goalId={goal.id} onProgressUpdate={() => {}} />
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-4">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => deleteGoal(goal.id)}
+                  onClick={() => onEdit(goal)}
+                  className="hover:bg-muted"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(goal.id)}
                   className="hover:bg-destructive/10"
                 >
                   <Trash2 className="w-4 h-4" />
