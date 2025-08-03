@@ -117,84 +117,83 @@ Deno.serve(async (req) => {
       return data;
     };
 
-    // Enhanced system prompt
-    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans la productivité et le développement personnel pour l'application DeepFlow. Tu peux maintenant créer et modifier des données directement.
+    // Enhanced system prompt with better action detection
+    const systemPrompt = `Tu es un assistant IA personnel spécialisé dans la productivité et le développement personnel pour l'application DeepFlow. Tu peux créer et modifier des données directement SEULEMENT quand l'utilisateur le demande EXPLICITEMENT.
 
+    RÈGLES IMPORTANTES POUR LES ACTIONS:
+    - Ne crée JAMAIS d'éléments automatiquement sans demande explicite
+    - L'utilisateur doit utiliser des mots comme "créer", "ajouter", "faire", "nouveau" pour que tu puisses créer quelque chose
+    - Si l'utilisateur pose juste une question ou demande des conseils, ne crée RIEN
+    - Demande toujours confirmation avant de créer quelque chose d'important
+    
     FONCTIONNALITÉS DISPONIBLES:
-    - Créer des tâches, habitudes, objectifs, entrées de journal
+    - Créer des tâches, habitudes, objectifs, entrées de journal (SEULEMENT sur demande explicite)
     - Analyser les données utilisateur pour des conseils personnalisés
     - Proposer des améliorations basées sur les patterns comportementaux
     
-    INSTRUCTIONS IMPORTANTES:
+    INSTRUCTIONS:
     - Utilise le contexte de conversation pour des réponses personnalisées
     - Ne répète jamais "Bonjour" si c'est un message de suivi dans la conversation
-    - Sois proactif : propose de créer des éléments quand c'est pertinent
     - Donne des conseils concrets et actionables
     - Utilise les données utilisateur pour personnaliser tes réponses
-    
-    ACTIONS POSSIBLES:
-    Quand l'utilisateur demande de créer quelque chose, tu peux utiliser ces fonctions:
-    - createTask(title, description?, priority?, due_date?)
-    - createHabit(title, description?, frequency?, target?)
-    - createGoal(title, description?, category?, target_date?)
-    - createJournalEntry(title, content, mood?, tags?)
-    - createFocusSession(title?, duration)
+    - Sois conversationnel et utile
     
     DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
     MESSAGES RÉCENTS: ${JSON.stringify(context?.recent_messages || [])}
     
     Réponds de manière conversationnelle et utile, en utilisant les données disponibles.`;
 
-    // Initialize Gemini
+    // Initialize Gemini with updated model
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Check if the message is asking to create something
-    const isCreateRequest = /créer|ajouter|faire|nouveau|nouvelle|commencer/i.test(message);
+    // More strict action detection - only create when explicitly asked
+    const isExplicitCreateRequest = /(?:créer|ajouter|faire|nouveau|nouvelle)\s+(?:une?\s+)?(?:tâche|habitude|objectif|goal|task|habit)/i.test(message) ||
+                                   /(?:peux-tu|pourrais-tu|veux-tu|créé)\s+(?:créer|ajouter|faire)/i.test(message);
+    
     let actionTaken = null;
 
-    // Try to detect and execute actions
-    if (isCreateRequest) {
+    // Only try to create if it's an explicit request
+    if (isExplicitCreateRequest) {
       const lowerMessage = message.toLowerCase();
       
-      if (lowerMessage.includes('tâche') || lowerMessage.includes('task')) {
-        const taskMatch = message.match(/(?:tâche|task).*?"([^"]+)"|(?:tâche|task)\s+(.+?)(?:\s+(?:avec|pour|de)|$)/i);
+      if ((lowerMessage.includes('tâche') || lowerMessage.includes('task')) && 
+          (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('nouveau'))) {
+        const taskMatch = message.match(/(?:tâche|task).*?"([^"]+)"|(?:créer|ajouter|nouveau).*?(?:tâche|task).*?([^.!?]+)/i);
         if (taskMatch) {
-          const title = taskMatch[1] || taskMatch[2];
-          try {
-            actionTaken = await createTask(title.trim());
-          } catch (error) {
-            console.error('Error creating task:', error);
+          const title = (taskMatch[1] || taskMatch[2]).trim();
+          if (title.length > 2) {
+            try {
+              actionTaken = await createTask(title);
+            } catch (error) {
+              console.error('Error creating task:', error);
+            }
           }
         }
-      } else if (lowerMessage.includes('habitude') || lowerMessage.includes('habit')) {
-        const habitMatch = message.match(/(?:habitude|habit).*?"([^"]+)"|(?:habitude|habit)\s+(.+?)(?:\s+(?:avec|pour|de)|$)/i);
+      } else if ((lowerMessage.includes('habitude') || lowerMessage.includes('habit')) && 
+                 (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('nouveau'))) {
+        const habitMatch = message.match(/(?:habitude|habit).*?"([^"]+)"|(?:créer|ajouter|nouveau).*?(?:habitude|habit).*?([^.!?]+)/i);
         if (habitMatch) {
-          const title = habitMatch[1] || habitMatch[2];
-          try {
-            actionTaken = await createHabit(title.trim());
-          } catch (error) {
-            console.error('Error creating habit:', error);
+          const title = (habitMatch[1] || habitMatch[2]).trim();
+          if (title.length > 2) {
+            try {
+              actionTaken = await createHabit(title);
+            } catch (error) {
+              console.error('Error creating habit:', error);
+            }
           }
         }
-      } else if (lowerMessage.includes('objectif') || lowerMessage.includes('goal')) {
-        const goalMatch = message.match(/(?:objectif|goal).*?"([^"]+)"|(?:objectif|goal)\s+(.+?)(?:\s+(?:avec|pour|de)|$)/i);
+      } else if ((lowerMessage.includes('objectif') || lowerMessage.includes('goal')) && 
+                 (lowerMessage.includes('créer') || lowerMessage.includes('ajouter') || lowerMessage.includes('nouveau'))) {
+        const goalMatch = message.match(/(?:objectif|goal).*?"([^"]+)"|(?:créer|ajouter|nouveau).*?(?:objectif|goal).*?([^.!?]+)/i);
         if (goalMatch) {
-          const title = goalMatch[1] || goalMatch[2];
-          try {
-            actionTaken = await createGoal(title.trim());
-          } catch (error) {
-            console.error('Error creating goal:', error);
-          }
-        }
-      } else if (lowerMessage.includes('journal') || lowerMessage.includes('note')) {
-        const journalMatch = message.match(/(?:journal|note).*?"([^"]+)"|(?:journal|note)\s+(.+)/i);
-        if (journalMatch) {
-          const content = journalMatch[1] || journalMatch[2];
-          try {
-            actionTaken = await createJournalEntry('Entrée créée par IA', content.trim());
-          } catch (error) {
-            console.error('Error creating journal entry:', error);
+          const title = (goalMatch[1] || goalMatch[2]).trim();
+          if (title.length > 2) {
+            try {
+              actionTaken = await createGoal(title);
+            } catch (error) {
+              console.error('Error creating goal:', error);
+            }
           }
         }
       }
@@ -202,7 +201,7 @@ Deno.serve(async (req) => {
 
     // Generate AI response
     const enhancedMessage = actionTaken 
-      ? `${message}\n\nACTION EFFECTUÉE: J'ai créé ${actionTaken.title || 'un élément'} pour toi.`
+      ? `${message}\n\nACTION EFFECTUÉE: J'ai créé "${actionTaken.title}" pour toi.`
       : message;
 
     const result = await model.generateContent([
@@ -222,7 +221,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         response: responseText,
-        action: actionTaken ? `Créé: ${actionTaken.title || 'élément'}` : null
+        action: actionTaken ? `Créé: ${actionTaken.title}` : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
