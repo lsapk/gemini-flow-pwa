@@ -109,7 +109,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
                     </div>
                     <Progress value={goal.progress} className="h-2" />
                   </div>
-                  <SubobjectiveList goalId={goal.id} onProgressUpdate={() => {}} />
+                  <SubobjectiveList goalId={goal.id} />
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-4">

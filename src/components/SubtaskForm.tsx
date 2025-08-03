@@ -69,7 +69,7 @@ export function SubtaskForm({ isOpen, onClose, taskId, onRefresh, editingSubtask
         const { error } = await supabase
           .from('subtasks')
           .insert({
-            task_id: taskId,
+            parent_task_id: taskId,
             user_id: user.id,
             title: title.trim(),
             description: description.trim() || null,
