@@ -16,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, CheckCircle, Trash2 } from "lucide-react";
+import { CalendarIcon, CheckCircle, Trash2, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,53 +53,92 @@ interface FrequencyTab {
   count: number;
 }
 
-interface TaskListProps {
-  tasks: Task[];
+const TaskCard = ({ task, onTaskUpdate, onTaskDelete }: { 
+  task: Task; 
   onTaskUpdate: (id: string, updates: Partial<Task>) => void;
   onTaskDelete: (id: string) => void;
-}
+}) => {
+  const getPriorityColor = (priority: string | null) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500/20 text-red-400 border border-red-500/30';
+      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+      case 'low': return 'bg-green-500/20 text-green-400 border border-green-500/30';
+      default: return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+    }
+  };
 
-const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate, onTaskDelete }) => {
   return (
-    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-      {tasks.map((task) => (
-        <Card key={task.id} className="bg-card text-card-foreground shadow-md">
-          <CardHeader className="pb-2 p-3 sm:p-4">
-            <CardTitle className="flex justify-between items-center text-sm sm:text-base">
-              {task.title}
-              {task.completed && <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-500 flex-shrink-0" />}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">{task.description || 'Aucune description'}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1 pb-2 p-3 sm:p-4 pt-0">
-            <p className="text-xs sm:text-sm text-muted-foreground">Priorité: {task.priority || 'Aucune'}</p>
-            {task.due_date && (
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Échéance: {new Date(task.due_date).toLocaleDateString()}
-              </p>
+    <Card className="bg-gray-900/50 border-gray-800 text-white">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start gap-3 flex-1">
+            <button 
+              onClick={() => onTaskUpdate(task.id, { completed: !task.completed })}
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                task.completed 
+                  ? 'bg-blue-600 border-blue-600' 
+                  : 'border-gray-500 hover:border-blue-500'
+              }`}
+            >
+              {task.completed && <CheckCircle className="w-3 h-3 text-white" />}
+            </button>
+            <div className="flex-1">
+              <h3 className={`font-medium text-white mb-1 ${task.completed ? 'line-through opacity-60' : ''}`}>
+                {task.title}
+              </h3>
+              {task.description && (
+                <p className="text-sm text-gray-400 mb-2">
+                  {task.description}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {/* TODO: implement edit */}}
+              className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onTaskDelete(task.id)}
+              className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {task.priority && (
+              <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(task.priority)}`}>
+                {task.priority}
+              </span>
             )}
-          </CardContent>
-          <CardFooter className="flex justify-between gap-1 sm:gap-2 pt-2 p-3 sm:p-4">
-            <Button 
-              onClick={() => onTaskUpdate(task.id, { completed: !task.completed })} 
-              variant="outline"
-              size="sm"
-              className="text-xs sm:text-sm flex-1 px-2 py-1 h-7 sm:h-8"
-            >
-              {task.completed ? 'Marquer incomplète' : 'Marquer complète'}
-            </Button>
-            <Button 
-              onClick={() => onTaskDelete(task.id)} 
-              variant="destructive"
-              size="sm"
-              className="text-xs sm:text-sm px-2 py-1 h-7 sm:h-8"
-            >
-              Suppr.
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
+            {task.due_date && (
+              <span className="text-xs text-gray-400">
+                Échéance: {new Date(task.due_date).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          <button className="text-gray-400 hover:text-white">
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">Ajouter une sous-tâche</span>
+          </button>
+        </div>
+        
+        <div className="mt-2 pt-2 border-t border-gray-800">
+          <span className="text-xs text-gray-500">
+            création: {new Date(task.created_at).toLocaleDateString()}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -111,15 +150,17 @@ interface FrequencyTabsProps {
 
 const FrequencyTabs: React.FC<FrequencyTabsProps> = ({ activeTab, onTabChange, tabs }) => {
   return (
-    <div className="inline-flex items-center rounded-md border border-input bg-background p-1 text-xs sm:text-sm">
+    <div className="flex gap-1 bg-gray-900/50 p-1 rounded-lg">
       {tabs.map((tab) => (
         <Button
           key={tab.id}
           variant={activeTab === tab.id ? 'default' : 'ghost'}
           onClick={() => onTabChange(tab.id)}
           className={cn(
-            "rounded-md px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-            activeTab === tab.id ? 'bg-secondary text-secondary-foreground' : ''
+            "flex-1 text-sm py-2 px-3 rounded-md transition-colors",
+            activeTab === tab.id 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
           )}
         >
           {tab.label} ({tab.count})
@@ -174,6 +215,11 @@ const CreateModal: React.FC<CreateModalProps> = () => {
         description: 'Task created successfully',
       });
       setOpen(false);
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setPriority('medium');
+      setDate(undefined);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -184,40 +230,47 @@ const CreateModal: React.FC<CreateModalProps> = () => {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="w-full sm:w-auto text-xs sm:text-sm px-3 py-1 h-8 sm:h-9">Créer une tâche</Button>
+      <Button 
+        onClick={() => setOpen(true)} 
+        className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Nouvelle tâche
+      </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md">
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
-            <DialogTitle className="text-sm sm:text-base md:text-lg">Créer une tâche</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
+            <DialogTitle>Créer une tâche</DialogTitle>
+            <DialogDescription className="text-gray-400">
               Créez une nouvelle tâche pour rester organisé.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-2 sm:gap-3 py-2">
-            <div className="grid gap-1 sm:gap-2">
-              <Label htmlFor="title" className="text-xs sm:text-sm">Titre</Label>
+          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title" className="text-white">Titre</Label>
               <Input
                 type="text"
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="text-xs sm:text-sm h-8 sm:h-9"
+                className="bg-gray-800 border-gray-700 text-white"
+                required
               />
             </div>
-            <div className="grid gap-1 sm:gap-2">
-              <Label htmlFor="description" className="text-xs sm:text-sm">Description</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-white">Description</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="text-xs sm:text-sm min-h-[60px] sm:min-h-[80px]"
+                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
-            <div className="grid gap-1 sm:gap-2">
-              <Label htmlFor="priority" className="text-xs sm:text-sm">Priorité</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="priority" className="text-white">Priorité</Label>
               <select
                 id="priority"
-                className="flex h-8 sm:h-9 w-full rounded-md border border-input bg-background px-2 sm:px-3 py-1 text-xs sm:text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-1 text-white"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
               >
@@ -226,36 +279,36 @@ const CreateModal: React.FC<CreateModalProps> = () => {
                 <option value="high">Haute</option>
               </select>
             </div>
-            <div className="grid gap-1 sm:gap-2">
-              <Label className="text-xs sm:text-sm">Date d'échéance</Label>
+            <div className="grid gap-2">
+              <Label className="text-white">Date d'échéance</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={'outline'}
                     className={cn(
-                      'w-full justify-start text-left font-normal text-xs sm:text-sm h-8 sm:h-9',
-                      !date && 'text-muted-foreground'
+                      'w-full justify-start text-left font-normal bg-gray-800 border-gray-700 text-white',
+                      !date && 'text-gray-400'
                     )}
                   >
-                    <CalendarIcon className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, 'PPP') : <span>Choisir une date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700">
                   <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
-                    disabled={(date) =>
-                      date < new Date()
-                    }
+                    disabled={(date) => date < new Date()}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
-            <DialogFooter className="pt-2">
-              <Button type="submit" className="w-full text-xs sm:text-sm h-8 sm:h-9">Créer</Button>
+            <DialogFooter>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                Créer
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -266,7 +319,7 @@ const CreateModal: React.FC<CreateModalProps> = () => {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('pending');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -389,48 +442,33 @@ export default function Tasks() {
     }
   };
 
-  const tasksToday = tasks.filter((task) => {
+  const pendingTasks = tasks.filter(task => !task.completed);
+  const allTasks = tasks;
+  const completedTasks = tasks.filter(task => task.completed);
+  const urgentTasks = tasks.filter(task => {
     if (!task.due_date) return false;
     const today = new Date();
     const dueDate = new Date(task.due_date);
-    return (
-      dueDate.getFullYear() === today.getFullYear() &&
-      dueDate.getMonth() === today.getMonth() &&
-      dueDate.getDate() === today.getDate()
-    );
-  });
-
-  const tasksThisWeek = tasks.filter((task) => {
-    if (!task.due_date) return false;
-    const today = new Date();
-    const dueDate = new Date(task.due_date);
-    const diffTime = Math.abs(dueDate.getTime() - today.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 7 && dueDate >= today;
-  });
-
-  const overdueTasks = tasks.filter((task) => {
-    if (!task.due_date) return false;
-    const today = new Date();
-    const dueDate = new Date(task.due_date);
-    return dueDate < today;
+    return dueDate <= today && !task.completed;
   });
 
   const filteredTasks = (() => {
     switch (activeTab) {
-      case 'today':
-        return tasksToday;
-      case 'week':
-        return tasksThisWeek;
-      case 'overdue':
-        return overdueTasks;
+      case 'pending':
+        return pendingTasks;
+      case 'all':
+        return allTasks;
+      case 'completed':
+        return completedTasks;
+      case 'urgent':
+        return urgentTasks;
       default:
-        return tasks;
+        return pendingTasks;
     }
   })();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       <div className="flex">
         <div className="hidden md:block">
           <Sidebar />
@@ -445,57 +483,57 @@ export default function Tasks() {
             </Sheet>
           </div>
           
-          <div className="pt-16 md:pt-6 px-2 sm:px-4 md:px-6">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 md:mb-6">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Mes Tâches</h1>
-                <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 w-full sm:w-auto">
-                  <CreateModal />
-                  <Button 
-                    onClick={handleDeleteAll}
-                    variant="destructive"
-                    size="sm"
-                    disabled={tasks.length === 0}
-                    className="w-full sm:w-auto text-xs sm:text-sm px-3 py-1 h-8 sm:h-9"
-                  >
-                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Tout supprimer
-                  </Button>
-                </div>
+          <div className="pt-16 md:pt-6 px-4 md:px-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Tâches</h1>
+                <CreateModal />
               </div>
 
-              <div className="mb-3 sm:mb-4 md:mb-6 overflow-x-auto">
+              <div className="mb-6">
                 <FrequencyTabs 
                   activeTab={activeTab} 
                   onTabChange={setActiveTab}
                   tabs={[
-                    { id: 'all', label: 'Toutes', count: tasks.length },
-                    { id: 'today', label: 'Aujourd\'hui', count: tasksToday.length },
-                    { id: 'week', label: 'Cette semaine', count: tasksThisWeek.length },
-                    { id: 'overdue', label: 'En retard', count: overdueTasks.length }
+                    { id: 'pending', label: 'En cours', count: pendingTasks.length },
+                    { id: 'all', label: 'Toutes', count: allTasks.length },
+                    { id: 'completed', label: 'Terminées', count: completedTasks.length },
+                    { id: 'urgent', label: 'Urgentes', count: urgentTasks.length }
                   ]}
                 />
               </div>
 
-              <TaskList 
-                tasks={filteredTasks} 
-                onTaskUpdate={handleTaskUpdate}
-                onTaskDelete={handleTaskDelete}
-              />
+              {filteredTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <h2 className="text-xl font-semibold text-white mb-2">Vos tâches</h2>
+                  <p className="text-gray-400">Aucune tâche pour le moment</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredTasks.map(task => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onTaskUpdate={handleTaskUpdate}
+                      onTaskDelete={handleTaskDelete}
+                    />
+                  ))}
+                </div>
+              )}
 
               <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-md">
+                <DialogContent className="bg-gray-900 border-gray-800 text-white">
                   <DialogHeader>
-                    <DialogTitle className="text-sm sm:text-base md:text-lg">Confirmer la suppression</DialogTitle>
-                    <DialogDescription className="text-xs sm:text-sm">
+                    <DialogTitle>Confirmer la suppression</DialogTitle>
+                    <DialogDescription className="text-gray-400">
                       Êtes-vous sûr de vouloir supprimer toutes les tâches ? Cette action est irréversible.
                     </DialogDescription>
                   </DialogHeader>
-                  <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="text-xs sm:text-sm h-8 sm:h-9">
+                  <DialogFooter className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                       Annuler
                     </Button>
-                    <Button variant="destructive" onClick={confirmDeleteAll} className="text-xs sm:text-sm h-8 sm:h-9">
+                    <Button variant="destructive" onClick={confirmDeleteAll}>
                       Supprimer tout
                     </Button>
                   </DialogFooter>

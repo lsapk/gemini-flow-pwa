@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,23 +186,24 @@ export default function AIAssistant() {
 
       let assistantContent = data.response || "Désolé, je n'ai pas pu traiter votre demande.";
       
-      // Clean up response
+      // Clean up response - remove any JSON artifacts
       assistantContent = assistantContent
         .replace(/```json[\s\S]*?```/g, "")
         .replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "")
-        .replace(/```[\s\S]*?```/g, "");
+        .replace(/```[\s\S]*?```/g, "")
+        .trim();
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: assistantContent.trim(),
+        content: assistantContent,
         role: 'assistant',
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Handle AI suggestion
-      if (data.suggestion) {
+      // Handle AI suggestion only if one is provided
+      if (data.suggestion && data.suggestion.type && data.suggestion.title) {
         setCurrentSuggestion(data.suggestion);
         setIsSuggestionDialogOpen(true);
       }
