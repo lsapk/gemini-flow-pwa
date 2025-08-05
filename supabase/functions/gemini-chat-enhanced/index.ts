@@ -30,16 +30,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Enhanced system prompt for intelligent suggestions
+    // Enhanced system prompt - plus strict sur les suggestions
     const systemPrompt = `Tu es un assistant IA spécialisé dans la productivité pour l'application DeepFlow. 
 
-    RÈGLES POUR LES SUGGESTIONS INTELLIGENTES:
-    - Analyse le contexte de chaque message pour comprendre si l'utilisateur pourrait bénéficier d'une tâche, habitude ou objectif
-    - Si tu détectes qu'une création serait utile, propose-la avec des détails précis
-    - Ne crée JAMAIS automatiquement - propose toujours d'abord
-    - Utilise le format JSON suivant pour tes suggestions:
+    RÈGLES STRICTES POUR LES SUGGESTIONS INTELLIGENTES:
+    - UNIQUEMENT suggérer des créations si l'utilisateur EXPRIME CLAIREMENT une intention ou un besoin
+    - Ne PAS suggérer pour de simples salutations comme "salut", "bonjour", "hello"
+    - Ne PAS suggérer si l'utilisateur pose juste une question générale
+    - SUGGÉRER seulement si l'utilisateur mentionne :
+      * Vouloir faire quelque chose ("je veux", "j'aimerais", "je dois")
+      * Un problème à résoudre ("j'ai du mal à", "je n'arrive pas à")
+      * Un objectif spécifique ("pour améliorer", "pour devenir", "afin de")
+      * Une activité récurrente qu'il veut tracker
+    
+    Si tu détectes qu'une création serait VRAIMENT utile, propose-la avec ce format JSON:
 
-    Format de réponse quand tu suggères quelque chose:
+    Format de réponse avec suggestion:
     {
       "response": "ta réponse conversationnelle normale",
       "suggestion": {
@@ -55,13 +61,7 @@ Deno.serve(async (req) => {
 
     DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
     
-    Exemples de situations où suggérer:
-    - Utilisateur mentionne quelque chose qu'il veut faire → suggérer une tâche
-    - Utilisateur parle d'améliorer quelque chose régulièrement → suggérer une habitude  
-    - Utilisateur évoque un objectif à long terme → suggérer un objectif
-    - Utilisateur exprime une frustration → suggérer des actions pour l'aider
-
-    Réponds de manière naturelle ET intelligente.`;
+    Réponds de manière naturelle ET intelligente, mais NE SUGGÈRE QUE quand c'est VRAIMENT pertinent.`;
 
     // Initialize Gemini with proper API key check
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
