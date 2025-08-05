@@ -123,8 +123,8 @@ export default function AIAssistant() {
         supabase.from('goals').select('*').eq('user_id', user.id),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('user_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('user_settings').select('*').eq('id', user.id).single()
+        supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('user_settings').select('*').eq('id', user.id).maybeSingle()
       ]);
 
       return {
@@ -171,6 +171,8 @@ export default function AIAssistant() {
         content: msg.content
       }));
 
+      console.log('Sending message to AI:', { input, userData, recentMessages });
+
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
           message: input,
@@ -182,9 +184,14 @@ export default function AIAssistant() {
         }
       });
 
-      if (error) throw error;
+      console.log('AI response received:', { data, error });
 
-      let assistantContent = data.response || "Désolé, je n'ai pas pu traiter votre demande.";
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      let assistantContent = data?.response || "Désolé, je n'ai pas pu traiter votre demande.";
       
       // Clean up response - remove any JSON artifacts
       assistantContent = assistantContent
@@ -202,14 +209,20 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Handle AI suggestion only if one is provided
-      if (data.suggestion && data.suggestion.type && data.suggestion.title) {
+      // Handle AI suggestion only if one is provided and valid
+      if (data?.suggestion && 
+          data.suggestion.type && 
+          data.suggestion.title && 
+          data.suggestion.reasoning) {
+        console.log('Valid AI suggestion received:', data.suggestion);
         setCurrentSuggestion(data.suggestion);
         setIsSuggestionDialogOpen(true);
+      } else {
+        console.log('No valid AI suggestion in response');
       }
 
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch (error: any) {
+      console.error('Erreur complète:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "Désolé, une erreur s'est produite. Veuillez réessayer.",
