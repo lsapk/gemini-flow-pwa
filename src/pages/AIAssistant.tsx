@@ -44,8 +44,6 @@ export default function AIAssistant() {
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  // Gérer ouverture du menu mobile localement
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
 
   const { 
@@ -59,7 +57,6 @@ export default function AIAssistant() {
     refetch 
   } = useAnalyticsData();
 
-  // Charger la conversation depuis localStorage au démarrage
   useEffect(() => {
     if (user) {
       const storageKey = `${STORAGE_KEY}_${user.id}`;
@@ -78,7 +75,6 @@ export default function AIAssistant() {
     }
   }, [user]);
 
-  // Sauvegarder la conversation dans localStorage à chaque changement
   useEffect(() => {
     if (user && messages.length > 0) {
       const storageKey = `${STORAGE_KEY}_${user.id}`;
@@ -86,7 +82,6 @@ export default function AIAssistant() {
     }
   }, [messages, user]);
 
-  // Auto-scroll vers le bas
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -139,9 +134,9 @@ export default function AIAssistant() {
           taskCompletionRate,
           totalFocusTime,
           streakCount,
-          habitsCount: habitsData.length,
-          focusSessionsCount: focusData.length,
-          activityCount: activityData.reduce((sum, day) => sum + day.count, 0)
+          habitsCount: habitsData?.length || 0,
+          focusSessionsCount: focusData?.length || 0,
+          activityCount: activityData?.reduce((sum, day) => sum + day.count, 0) || 0
         }
       };
     } catch (error) {
@@ -217,8 +212,6 @@ export default function AIAssistant() {
         console.log('Valid AI suggestion received:', data.suggestion);
         setCurrentSuggestion(data.suggestion);
         setIsSuggestionDialogOpen(true);
-      } else {
-        console.log('No valid AI suggestion in response');
       }
 
     } catch (error: any) {
