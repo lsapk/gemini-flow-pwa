@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,10 +46,14 @@ interface Task {
   id: string;
   title: string;
   description: string | null;
-  priority: 'low' | 'medium' | 'high';
+  priority: string | null;
   due_date: string | null;
   completed: boolean;
   created_at: string;
+  updated_at?: string;
+  user_id: string;
+  parent_task_id?: string | null;
+  sort_order?: number;
 }
 
 interface FrequencyTab {
@@ -76,7 +81,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate, onTaskDelete }
             <CardDescription>{task.description || 'No description'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">Priority: {task.priority}</p>
+            <p className="text-sm text-muted-foreground">Priority: {task.priority || 'None'}</p>
             {task.due_date && (
               <p className="text-sm text-muted-foreground">
                 Due Date: {new Date(task.due_date).toLocaleDateString()}
@@ -279,7 +284,8 @@ export default function Tasks() {
           throw new Error(error.message);
         }
 
-        setTasks(data || []);
+        // Cast the data to ensure type compatibility
+        setTasks((data || []) as Task[]);
       } catch (error: any) {
         toast({
           title: 'Error',
