@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
   try {
     const { message, user_id, context } = await req.json();
 
+    console.log('Received request:', { message, user_id, hasContext: !!context });
+
     if (!user_id) {
       return new Response(
         JSON.stringify({ error: 'User ID is required' }),
@@ -61,8 +63,13 @@ Deno.serve(async (req) => {
 
     Réponds de manière naturelle ET intelligente.`;
 
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
+    // Initialize Gemini with proper API key check
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Préparer les messages récents pour la mémoire (derniers 10)
@@ -75,6 +82,8 @@ Deno.serve(async (req) => {
       ? `\n\nCONVERSATION RÉCENTE:\n${recentMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`
       : '';
 
+    console.log('Making request to Gemini API...');
+    
     const result = await model.generateContent([
       systemPrompt,
       `Message utilisateur: ${message}${conversationContext}`
@@ -82,6 +91,8 @@ Deno.serve(async (req) => {
 
     const response = result.response;
     let responseText = response.text();
+
+    console.log('Gemini response received:', responseText);
 
     // Try to parse JSON response for suggestions
     let suggestion = null;
@@ -105,6 +116,8 @@ Deno.serve(async (req) => {
       user_id,
       service: 'gemini-chat-enhanced'
     });
+
+    console.log('Returning response:', { responseLength: responseText.length, hasSuggestion: !!suggestion });
 
     return new Response(
       JSON.stringify({ 
