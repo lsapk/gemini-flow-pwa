@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -11,7 +10,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useState as useReactState } from "react";
 import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
-import { CreateModal } from "@/components/ui/CreateModal";
+import CreateModal from "@/components/modals/CreateModal";
 
 interface Task {
   id: string;
@@ -160,6 +159,7 @@ export default function Tasks() {
 
   const handleTaskCreated = () => {
     refetch();
+    fetchSubtasks();
   };
 
   return (
