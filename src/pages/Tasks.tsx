@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -41,6 +42,7 @@ export default function Tasks() {
   const { toast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ['tasks', user?.id],
@@ -158,6 +160,7 @@ export default function Tasks() {
   };
 
   const handleTaskCreated = () => {
+    setIsCreateModalOpen(false);
     refetch();
     fetchSubtasks();
   };
@@ -182,7 +185,10 @@ export default function Tasks() {
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
-                <CreateModal type="task" onSuccess={handleTaskCreated} />
+                <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvelle tâche
+                </Button>
               </div>
 
               <TaskList
@@ -198,6 +204,13 @@ export default function Tasks() {
           </div>
         </div>
       </div>
+
+      {isCreateModalOpen && (
+        <CreateModal 
+          type="task"
+          onSuccess={handleTaskCreated}
+        />
+      )}
     </div>
   );
 }

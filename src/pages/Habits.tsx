@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, Target, Archive, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,9 @@ import {
 } from "@/components/ui/tabs";
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
+import Sidebar from "@/components/layout/Sidebar";
+import MobileHeader from "@/components/layout/MobileHeader";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -44,6 +46,7 @@ export default function Habits() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("active");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -214,80 +217,105 @@ export default function Habits() {
   const currentHabits = activeTab === "active" ? habits : archivedHabits;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Habitudes</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle habitude
-        </Button>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="flex">
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+        <div className="flex-1">
+          <div className="md:hidden">
+            <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetContent side="left" className="p-0 w-64">
+                <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
+          
+          <div className="pt-16 md:pt-6 px-3 md:px-6">
+            <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Habitudes</h1>
+                <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="sm:hidden">Nouvelle</span>
+                  <span className="hidden sm:inline">Nouvelle habitude</span>
+                </Button>
+              </div>
 
-      {/* Tabs pour actives/archivées */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="active" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Actives ({habits.length})
-          </TabsTrigger>
-          <TabsTrigger value="archived" className="flex items-center gap-2">
-            <Archive className="h-4 w-4" />
-            Archivées ({archivedHabits.length})
-          </TabsTrigger>
-        </TabsList>
+              {/* Tabs pour actives/archivées */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-9">
+                  <TabsTrigger value="active" className="flex items-center gap-1 text-xs sm:text-sm">
+                    <Target className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">Actives</span>
+                    <span className="xs:hidden">Act.</span>
+                    ({habits.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="archived" className="flex items-center gap-1 text-xs sm:text-sm">
+                    <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">Archivées</span>
+                    <span className="xs:hidden">Arch.</span>
+                    ({archivedHabits.length})
+                  </TabsTrigger>
+                </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
-          {isLoading ? (
-            <div className="grid gap-4 md:gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-6">
-                    <div className="h-6 bg-muted rounded mb-4"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </CardContent>
-                </Card>
-              ))}
+                <TabsContent value={activeTab} className="mt-4">
+                  {isLoading ? (
+                    <div className="grid gap-3 md:gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <Card key={i} className="animate-pulse">
+                          <CardContent className="p-4 md:p-6">
+                            <div className="h-5 md:h-6 bg-muted rounded mb-3 md:mb-4"></div>
+                            <div className="h-3 md:h-4 bg-muted rounded w-2/3"></div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : currentHabits.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
+                        {activeTab === "active" ? (
+                          <>
+                            <Target className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude active</h3>
+                            <p className="text-sm md:text-base text-muted-foreground text-center mb-3 md:mb-4 px-4">
+                              Commencez à créer de bonnes habitudes pour améliorer votre productivité.
+                            </p>
+                            <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Créer votre première habitude
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude archivée</h3>
+                            <p className="text-sm md:text-base text-muted-foreground text-center px-4">
+                              Les habitudes que vous archivez apparaîtront ici.
+                            </p>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <HabitList 
+                      habits={currentHabits}
+                      loading={isLoading}
+                      onDelete={requestDelete}
+                      onEdit={handleEdit}
+                      onComplete={toggleHabitCompletion}
+                      onRefresh={fetchHabits}
+                      onArchive={toggleArchive}
+                      showArchived={activeTab === "archived"}
+                    />
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
-          ) : currentHabits.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                {activeTab === "active" ? (
-                  <>
-                    <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucune habitude active</h3>
-                    <p className="text-muted-foreground text-center mb-4">
-                      Commencez à créer de bonnes habitudes pour améliorer votre productivité.
-                    </p>
-                    <Button onClick={() => setIsCreateModalOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer votre première habitude
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Archive className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucune habitude archivée</h3>
-                    <p className="text-muted-foreground text-center">
-                      Les habitudes que vous archivez apparaîtront ici.
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <HabitList 
-              habits={currentHabits}
-              loading={isLoading}
-              onDelete={requestDelete}
-              onEdit={handleEdit}
-              onComplete={toggleHabitCompletion}
-              onRefresh={fetchHabits}
-              onArchive={toggleArchive}
-              showArchived={activeTab === "archived"}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+          </div>
+        </div>
+      </div>
 
       {isCreateModalOpen && (
         <CreateModal 
@@ -297,9 +325,9 @@ export default function Habits() {
       )}
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-sm sm:max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle>Modifier l'habitude</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Modifier l'habitude</DialogTitle>
           </DialogHeader>
           <CreateHabitForm 
             onSuccess={handleEditSuccess}
@@ -309,16 +337,16 @@ export default function Habits() {
       </Dialog>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm sm:max-w-md mx-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-base sm:text-lg">Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sm:text-base">
               Cette action est irréversible. L'habitude sera définitivement supprimée.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Supprimer</AlertDialogAction>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="w-full sm:w-auto">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
