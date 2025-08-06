@@ -222,7 +222,7 @@ export default function Habits() {
         <div className="hidden md:block">
           <Sidebar />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="md:hidden">
             <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -235,7 +235,7 @@ export default function Habits() {
           <div className="pt-16 md:pt-6 px-3 md:px-6">
             <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Habitudes</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">Habitudes</h1>
                 <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   <span className="sm:hidden">Nouvelle</span>
@@ -243,20 +243,16 @@ export default function Habits() {
                 </Button>
               </div>
 
-              {/* Tabs pour actives/archivées */}
+              {/* Tabs pour actives/archivées - Optimisés pour mobile */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-9">
-                  <TabsTrigger value="active" className="flex items-center gap-1 text-xs sm:text-sm">
-                    <Target className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden xs:inline">Actives</span>
-                    <span className="xs:hidden">Act.</span>
-                    ({habits.length})
+                <TabsList className="grid w-full grid-cols-2 h-8 sm:h-9">
+                  <TabsTrigger value="active" className="flex items-center gap-1 text-xs px-2">
+                    <Target className="h-3 w-3" />
+                    <span className="truncate">Actives ({habits.length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="archived" className="flex items-center gap-1 text-xs sm:text-sm">
-                    <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden xs:inline">Archivées</span>
-                    <span className="xs:hidden">Arch.</span>
-                    ({archivedHabits.length})
+                  <TabsTrigger value="archived" className="flex items-center gap-1 text-xs px-2">
+                    <Archive className="h-3 w-3" />
+                    <span className="truncate">Archivées ({archivedHabits.length})</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -266,7 +262,7 @@ export default function Habits() {
                       {[1, 2, 3].map((i) => (
                         <Card key={i} className="animate-pulse">
                           <CardContent className="p-4 md:p-6">
-                            <div className="h-5 md:h-6 bg-muted rounded mb-3 md:mb-4"></div>
+                            <div className="h-4 sm:h-5 md:h-6 bg-muted rounded mb-2 md:mb-4"></div>
                             <div className="h-3 md:h-4 bg-muted rounded w-2/3"></div>
                           </CardContent>
                         </Card>
@@ -274,12 +270,12 @@ export default function Habits() {
                     </div>
                   ) : currentHabits.length === 0 ? (
                     <Card>
-                      <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
+                      <CardContent className="flex flex-col items-center justify-center py-6 md:py-12">
                         {activeTab === "active" ? (
                           <>
-                            <Target className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude active</h3>
-                            <p className="text-sm md:text-base text-muted-foreground text-center mb-3 md:mb-4 px-4">
+                            <Target className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+                            <h3 className="text-sm md:text-lg font-semibold mb-2">Aucune habitude active</h3>
+                            <p className="text-xs md:text-base text-muted-foreground text-center mb-3 md:mb-4 px-4">
                               Commencez à créer de bonnes habitudes pour améliorer votre productivité.
                             </p>
                             <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
@@ -289,9 +285,9 @@ export default function Habits() {
                           </>
                         ) : (
                           <>
-                            <Archive className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude archivée</h3>
-                            <p className="text-sm md:text-base text-muted-foreground text-center px-4">
+                            <Archive className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+                            <h3 className="text-sm md:text-lg font-semibold mb-2">Aucune habitude archivée</h3>
+                            <p className="text-xs md:text-base text-muted-foreground text-center px-4">
                               Les habitudes que vous archivez apparaîtront ici.
                             </p>
                           </>

@@ -12,6 +12,13 @@ import { useState as useReactState } from "react";
 import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { CheckSquare, Clock } from "lucide-react";
 
 interface Task {
   id: string;
@@ -43,6 +50,7 @@ export default function Tasks() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("pending");
 
   const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ['tasks', user?.id],
@@ -66,6 +74,11 @@ export default function Tasks() {
     },
     enabled: !!user,
   });
+
+  // Séparer les tâches en cours et terminées
+  const pendingTasks = tasks.filter(task => !task.completed);
+  const completedTasks = tasks.filter(task => task.completed);
+  const currentTasks = activeTab === "pending" ? pendingTasks : completedTasks;
 
   // Charger les sous-tâches
   const fetchSubtasks = async () => {
@@ -191,15 +204,34 @@ export default function Tasks() {
                 </Button>
               </div>
 
-              <TaskList
-                tasks={tasks}
-                loading={isLoading}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onToggleComplete={handleToggleComplete}
-                subtasks={subtasks}
-                onRefreshSubtasks={handleRefreshSubtasks}
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 h-9">
+                  <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">En cours</span>
+                    <span className="xs:hidden">Cours</span>
+                    ({pendingTasks.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm">
+                    <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">Terminées</span>
+                    <span className="xs:hidden">Fini</span>
+                    ({completedTasks.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeTab} className="mt-4">
+                  <TaskList
+                    tasks={currentTasks}
+                    loading={isLoading}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onToggleComplete={handleToggleComplete}
+                    subtasks={subtasks}
+                    onRefreshSubtasks={handleRefreshSubtasks}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
