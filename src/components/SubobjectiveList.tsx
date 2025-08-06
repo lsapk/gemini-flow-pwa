@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus, ChevronRight, ChevronDown } from 'lucide-react';
+import { Trash2, Plus, ChevronRight, ChevronDown, Edit2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ export const SubobjectiveList = ({ goalId }: SubobjectiveListProps) => {
   const [subobjectives, setSubobjectives] = useState<Subobjective[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingSubobjective, setEditingSubobjective] = useState<Subobjective | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchSubobjectives = async () => {
@@ -92,6 +93,22 @@ export const SubobjectiveList = ({ goalId }: SubobjectiveListProps) => {
     }
   };
 
+  const handleEditSubobjective = (subobjective: Subobjective) => {
+    setEditingSubobjective(subobjective);
+    setShowForm(true);
+  };
+
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setEditingSubobjective(null);
+    fetchSubobjectives();
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingSubobjective(null);
+  };
+
   if (subobjectives.length === 0 && !showForm) {
     return (
       <Button
@@ -137,11 +154,9 @@ export const SubobjectiveList = ({ goalId }: SubobjectiveListProps) => {
       {showForm && (
         <SubobjectiveForm
           parentGoalId={goalId}
-          onSuccess={() => {
-            setShowForm(false);
-            fetchSubobjectives();
-          }}
-          onCancel={() => setShowForm(false)}
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+          initialSubobjective={editingSubobjective}
         />
       )}
 
@@ -168,6 +183,14 @@ export const SubobjectiveList = ({ goalId }: SubobjectiveListProps) => {
                   </p>
                 )}
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEditSubobjective(subobjective)}
+                className="h-6 w-6 p-0 hover:bg-accent"
+              >
+                <Edit2 className="w-3 h-3" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

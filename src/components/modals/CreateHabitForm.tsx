@@ -15,15 +15,22 @@ interface CreateHabitFormProps {
   habit?: Habit | null;
 }
 
+interface Goal {
+  id: string;
+  title: string;
+}
+
 export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     frequency: 'daily',
     category: '',
-    target: 1
+    target: 1,
+    linked_goal_id: ''
   });
   const [loading, setLoading] = useState(false);
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -35,7 +42,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         description: habit.description || '',
         frequency: habit.frequency,
         category: habit.category || '',
-        target: habit.target
+        target: habit.target,
+        linked_goal_id: (habit as any).linked_goal_id || ''
       });
     } else {
       setFormData({
@@ -43,10 +51,32 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         description: '',
         frequency: 'daily',
         category: '',
-        target: 1
+        target: 1,
+        linked_goal_id: ''
       });
     }
+
+    // Charger les objectifs disponibles
+    fetchGoals();
   }, [habit]);
+
+  const fetchGoals = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('id, title')
+        .eq('user_id', user.id)
+        .eq('completed', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setGoals(data || []);
+    } catch (error) {
+      console.error('Error fetching goals:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +98,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: formData.frequency,
         category: formData.category.trim() || null,
         target: formData.target,
-        user_id: user.id
+        user_id: user.id,
+        linked_goal_id: formData.linked_goal_id || null
       };
 
       if (habit) {
@@ -176,6 +207,26 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
           onChange={(e) => setFormData(prev => ({ ...prev, target: parseInt(e.target.value) || 1 }))}
           placeholder="1"
         />
+      </div>
+
+      <div>
+        <Label htmlFor="linked_goal">Lier à un objectif</Label>
+        <Select
+          value={formData.linked_goal_id}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, linked_goal_id: value }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choisir un objectif (optionnel)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Aucun objectif</SelectItem>
+            {goals.map((goal) => (
+              <SelectItem key={goal.id} value={goal.id}>
+                {goal.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>

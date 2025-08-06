@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,13 +11,30 @@ interface SubobjectiveFormProps {
   parentGoalId: string;
   onSuccess: () => void;
   onCancel: () => void;
+  initialSubobjective?: {
+    id: string;
+    title: string;
+    description?: string;
+  } | null;
 }
 
-export const SubobjectiveForm = ({ parentGoalId, onSuccess, onCancel }: SubobjectiveFormProps) => {
+export const SubobjectiveForm = ({ 
+  parentGoalId, 
+  onSuccess, 
+  onCancel,
+  initialSubobjective 
+}: SubobjectiveFormProps) => {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialSubobjective) {
+      setTitle(initialSubobjective.title);
+      setDescription(initialSubobjective.description || '');
+    }
+  }, [initialSubobjective]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,22 +42,38 @@ export const SubobjectiveForm = ({ parentGoalId, onSuccess, onCancel }: Subobjec
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('subobjectives')
-        .insert({
-          title: title.trim(),
-          description: description.trim() || null,
-          parent_goal_id: parentGoalId,
-          user_id: user.id,
-        });
+      if (initialSubobjective) {
+        // Modification
+        const { error } = await supabase
+          .from('subobjectives')
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+          })
+          .eq('id', initialSubobjective.id)
+          .eq('user_id', user.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Sous-objectif modifié avec succès');
+      } else {
+        // Création
+        const { error } = await supabase
+          .from('subobjectives')
+          .insert({
+            title: title.trim(),
+            description: description.trim() || null,
+            parent_goal_id: parentGoalId,
+            user_id: user.id,
+          });
 
-      toast.success('Sous-objectif créé avec succès');
+        if (error) throw error;
+        toast.success('Sous-objectif créé avec succès');
+      }
+
       onSuccess();
     } catch (error) {
-      console.error('Erreur lors de la création du sous-objectif:', error);
-      toast.error('Erreur lors de la création du sous-objectif');
+      console.error('Erreur lors de la sauvegarde du sous-objectif:', error);
+      toast.error('Erreur lors de la sauvegarde du sous-objectif');
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +95,7 @@ export const SubobjectiveForm = ({ parentGoalId, onSuccess, onCancel }: Subobjec
       />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={isLoading || !title.trim()}>
-          {isLoading ? 'Création...' : 'Créer'}
+          {isLoading ? 'Sauvegarde...' : initialSubobjective ? 'Modifier' : 'Créer'}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
           Annuler
