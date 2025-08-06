@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
   const [dueDate, setDueDate] = useState("");
-  const [linkedGoalId, setLinkedGoalId] = useState("");
+  const [linkedGoalId, setLinkedGoalId] = useState("none");
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
@@ -36,7 +35,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setDescription(task.description || "");
       setPriority(task.priority);
       setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "");
-      setLinkedGoalId((task as any).linked_goal_id || "");
+      setLinkedGoalId((task as any).linked_goal_id || "none");
     }
 
     // Charger les objectifs disponibles
@@ -73,7 +72,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
         priority,
         due_date: dueDate || null,
         user_id: user.id,
-        linked_goal_id: linkedGoalId || null,
+        linked_goal_id: linkedGoalId === "none" ? null : linkedGoalId,
       };
 
       let error;
@@ -160,7 +159,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
             <SelectValue placeholder="Choisir un objectif (optionnel)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Aucun objectif</SelectItem>
+            <SelectItem value="none">Aucun objectif</SelectItem>
             {goals.map((goal) => (
               <SelectItem key={goal.id} value={goal.id}>
                 {goal.title}

@@ -27,7 +27,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
     frequency: 'daily',
     category: '',
     target: 1,
-    linked_goal_id: ''
+    linked_goal_id: 'none'
   });
   const [loading, setLoading] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -43,7 +43,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: habit.frequency,
         category: habit.category || '',
         target: habit.target,
-        linked_goal_id: (habit as any).linked_goal_id || ''
+        linked_goal_id: (habit as any).linked_goal_id || 'none'
       });
     } else {
       setFormData({
@@ -52,7 +52,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: 'daily',
         category: '',
         target: 1,
-        linked_goal_id: ''
+        linked_goal_id: 'none'
       });
     }
 
@@ -99,7 +99,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         category: formData.category.trim() || null,
         target: formData.target,
         user_id: user.id,
-        linked_goal_id: formData.linked_goal_id || null
+        linked_goal_id: formData.linked_goal_id === 'none' ? null : formData.linked_goal_id
       };
 
       if (habit) {
@@ -219,7 +219,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
             <SelectValue placeholder="Choisir un objectif (optionnel)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Aucun objectif</SelectItem>
+            <SelectItem value="none">Aucun objectif</SelectItem>
             {goals.map((goal) => (
               <SelectItem key={goal.id} value={goal.id}>
                 {goal.title}
