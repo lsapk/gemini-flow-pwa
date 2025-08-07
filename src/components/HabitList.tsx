@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,10 +48,10 @@ export default function HabitList({
 }: HabitListProps) {
   if (loading) {
     return (
-      <div className="grid gap-3 md:gap-4">
+      <div className="grid gap-2 md:gap-4">
         {[1, 2, 3].map((i) => (
           <Card key={i} className="animate-pulse">
-            <CardContent className="p-4 md:p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="h-4 sm:h-5 md:h-6 bg-muted rounded mb-2 md:mb-4"></div>
               <div className="h-3 md:h-4 bg-muted rounded w-2/3"></div>
             </CardContent>
@@ -77,32 +76,32 @@ export default function HabitList({
   }
 
   return (
-    <div className="grid gap-3 md:gap-4">
+    <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
+          <CardContent className="p-3 md:p-6">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
+              <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
                 <div className="flex items-center justify-center flex-shrink-0">
                   <Checkbox
                     checked={habit.is_completed_today || false}
                     onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                    className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 data-[state=checked]:bg-green-500 border-2"
+                    className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mt-0.5 data-[state=checked]:bg-green-500 border-2"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
-                    <h3 className="font-semibold text-sm sm:text-base md:text-lg truncate">{habit.title}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 mb-1 md:mb-2">
+                    <h3 className="font-semibold text-xs sm:text-sm md:text-lg truncate">{habit.title}</h3>
                     <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
                       {getFrequencyLabel(habit.frequency)}
                     </Badge>
                   </div>
                   
                   {habit.description && (
-                    <p className="text-muted-foreground mb-2 text-xs sm:text-sm line-clamp-2">{habit.description}</p>
+                    <p className="text-muted-foreground mb-1 md:mb-2 text-xs line-clamp-2">{habit.description}</p>
                   )}
                   
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 md:gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Target className="h-3 w-3 flex-shrink-0" />
                       <span className="truncate">Objectif: {habit.target}</span>
@@ -125,14 +124,14 @@ export default function HabitList({
                 </div>
               </div>
               
-              <div className="flex gap-1 flex-shrink-0">
+              <div className="flex gap-0.5 md:gap-1 flex-shrink-0">
                 {onArchive && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onArchive(habit.id, showArchived)}
                     aria-label={showArchived ? "Restaurer" : "Archiver"}
-                    className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                    className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 p-0"
                   >
                     {showArchived ? (
                       <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -147,7 +146,7 @@ export default function HabitList({
                   size="sm"
                   onClick={() => onEdit(habit)}
                   aria-label="Modifier"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 p-0"
                 >
                   <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
@@ -157,7 +156,7 @@ export default function HabitList({
                   size="sm"
                   onClick={() => onDelete(habit.id)}
                   aria-label="Supprimer"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                  className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 p-0"
                 >
                   <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>

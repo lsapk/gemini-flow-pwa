@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -12,6 +11,7 @@ import { useState as useReactState } from "react";
 import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
+import EditTaskModal from "@/components/modals/EditTaskModal";
 import {
   Tabs,
   TabsContent,
@@ -50,6 +50,8 @@ export default function Tasks() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
 
   const { data: tasks = [], isLoading, refetch } = useQuery({
@@ -75,12 +77,10 @@ export default function Tasks() {
     enabled: !!user,
   });
 
-  // Séparer les tâches en cours et terminées
   const pendingTasks = tasks.filter(task => !task.completed);
   const completedTasks = tasks.filter(task => task.completed);
   const currentTasks = activeTab === "pending" ? pendingTasks : completedTasks;
 
-  // Charger les sous-tâches
   const fetchSubtasks = async () => {
     if (!user || tasks.length === 0) return;
 
@@ -98,7 +98,6 @@ export default function Tasks() {
       return;
     }
 
-    // Grouper les sous-tâches par task ID
     const subtasksByTask: { [taskId: string]: Subtask[] } = {};
     data?.forEach((subtask) => {
       if (!subtasksByTask[subtask.parent_task_id]) {
@@ -115,7 +114,8 @@ export default function Tasks() {
   }, [user, tasks]);
 
   const handleEdit = (task: Task) => {
-    console.log('Edit task:', task);
+    setEditingTask(task);
+    setIsEditModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -174,6 +174,13 @@ export default function Tasks() {
 
   const handleTaskCreated = () => {
     setIsCreateModalOpen(false);
+    refetch();
+    fetchSubtasks();
+  };
+
+  const handleTaskEdited = () => {
+    setIsEditModalOpen(false);
+    setEditingTask(null);
     refetch();
     fetchSubtasks();
   };
@@ -241,6 +248,15 @@ export default function Tasks() {
         <CreateModal 
           type="task"
           onSuccess={handleTaskCreated}
+        />
+      )}
+
+      {isEditModalOpen && (
+        <EditTaskModal 
+          task={editingTask}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={handleTaskEdited}
         />
       )}
     </div>
