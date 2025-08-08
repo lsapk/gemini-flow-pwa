@@ -7,7 +7,18 @@ import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivitySco
 import { motion } from "framer-motion";
 
 export function ProductivityScore() {
-  const { score, level, badges, completionRate, focusTimeScore, consistencyScore, streakBonus } = useRealtimeProductivityScore();
+  const { data: productivityData, isLoading } = useRealtimeProductivityScore();
+
+  // Default values if data is not available
+  const {
+    score = 0,
+    level = 'Débutant',
+    badges = [],
+    completionRate = 0,
+    focusTimeScore = 0,
+    consistencyScore = 0,
+    streakBonus = 0
+  } = productivityData || {};
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -24,6 +35,25 @@ export function ProductivityScore() {
       default: return <Zap className="h-5 w-5 text-gray-500" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-gray-500" />
+            Score de Productivité
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            <div className="h-16 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

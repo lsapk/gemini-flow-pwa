@@ -80,6 +80,10 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       }));
     } catch (error) {
       console.error('Error fetching habit goal link:', error);
+      setFormData(prev => ({
+        ...prev,
+        linked_goal_id: 'none'
+      }));
     }
   };
 

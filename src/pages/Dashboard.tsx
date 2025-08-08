@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const productivityData = useRealtimeProductivityScore();
+  const { data: productivityData, isLoading } = useRealtimeProductivityScore();
   const [displayName, setDisplayName] = useState<string | null>(null);
+
+  // Default values if data is not available
+  const {
+    score = 0,
+    level = 'Débutant',
+    badges = [],
+    completionRate = 0,
+    focusTimeScore = 0,
+    consistencyScore = 0,
+    journalScore = 0
+  } = productivityData || {};
 
   // Aller chercher le nom d'affichage depuis Supabase au montage si user existe
   useEffect(() => {
@@ -71,6 +83,22 @@ export default function Dashboard() {
     }),
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-2 py-6 space-y-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-2 py-6 space-y-8">
       {/* En-tête du tableau de bord */}
@@ -98,7 +126,7 @@ export default function Dashboard() {
               </span>
             )
             : ""}
-          {" ! Voici votre aperçu de productivité aujourd'hui."}
+          {" ! Voici votre aperçu de productivité aujourd'hui."}
         </motion.p>
       </div>
 
@@ -132,18 +160,18 @@ export default function Dashboard() {
               <div className="flex flex-col items-start sm:items-start">
                 <motion.div
                   className="text-5xl font-extrabold text-primary mb-2"
-                  key={productivityData.score}
+                  key={score}
                   initial={{ opacity: 0, scale: 0.85 }}
                   animate={{ opacity: 1, scale: [0.85, 1.15, 1] }}
                   transition={{ type: "spring", duration: 0.8 }}
                 >
-                  {productivityData.score}
+                  {score}
                 </motion.div>
                 <Badge variant="outline" className="mb-2">
-                  {productivityData.level}
+                  {level}
                 </Badge>
                 <p className="text-sm text-muted-foreground">
-                  Taux de complétion : <span className="font-semibold">{Math.round(productivityData.completionRate)}%</span>
+                  Taux de complétion : <span className="font-semibold">{Math.round(completionRate)}%</span>
                 </p>
               </div>
               <div className="text-right mt-4 sm:mt-0">
@@ -193,7 +221,7 @@ export default function Dashboard() {
       </div>
 
       {/* Badges récents */}
-      {productivityData.badges.length > 0 && (
+      {badges.length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -208,15 +236,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {productivityData.badges.slice(0, 4).map((badge, index) => (
+                {badges.slice(0, 4).map((badge, index) => (
                   <Badge key={index} variant="secondary">
                     {badge}
                   </Badge>
                 ))}
-                {productivityData.badges.length > 4 && (
+                {badges.length > 4 && (
                   <Button asChild variant="outline" size="sm">
                     <Link to="/badges">
-                      Voir tous les badges ({productivityData.badges.length})
+                      Voir tous les badges ({badges.length})
                     </Link>
                   </Button>
                 )}
@@ -240,7 +268,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="p-4 text-center">
               <Calendar className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-              <div className="text-2xl font-bold">{Math.round(productivityData.focusTimeScore)}</div>
+              <div className="text-2xl font-bold">{Math.round(focusTimeScore)}</div>
               <p className="text-sm text-muted-foreground">Score Focus</p>
             </CardContent>
           </Card>
@@ -249,7 +277,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="p-4 text-center">
               <Target className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              <div className="text-2xl font-bold">{Math.round(productivityData.consistencyScore)}</div>
+              <div className="text-2xl font-bold">{Math.round(consistencyScore)}</div>
               <p className="text-sm text-muted-foreground">Score Consistance</p>
             </CardContent>
           </Card>
@@ -258,7 +286,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="p-4 text-center">
               <BookOpen className="h-8 w-8 mx-auto mb-2 text-purple-500" />
-              <div className="text-2xl font-bold">{Math.round(productivityData.journalScore)}</div>
+              <div className="text-2xl font-bold">{Math.round(journalScore)}</div>
               <p className="text-sm text-muted-foreground">Score Journal</p>
             </CardContent>
           </Card>

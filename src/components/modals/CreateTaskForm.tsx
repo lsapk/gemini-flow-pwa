@@ -59,6 +59,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setLinkedGoalId(data?.linked_goal_id || "none");
     } catch (error) {
       console.error('Error fetching task goal link:', error);
+      setLinkedGoalId("none");
     }
   };
 
