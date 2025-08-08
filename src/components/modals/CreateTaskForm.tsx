@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +36,31 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setDescription(task.description || "");
       setPriority(task.priority);
       setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "");
-      setLinkedGoalId((task as any).linked_goal_id || "none");
+      
+      // Charger la liaison avec l'objectif pour les tâches existantes
+      fetchTaskGoalLink(task.id);
     }
 
-    // Charger les objectifs disponibles
     fetchGoals();
   }, [task]);
+
+  const fetchTaskGoalLink = async (taskId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('linked_goal_id')
+        .eq('id', taskId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setLinkedGoalId(data?.linked_goal_id || "none");
+    } catch (error) {
+      console.error('Error fetching task goal link:', error);
+    }
+  };
 
   const fetchGoals = async () => {
     if (!user) return;

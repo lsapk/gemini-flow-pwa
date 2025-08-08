@@ -43,8 +43,11 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: habit.frequency,
         category: habit.category || '',
         target: habit.target,
-        linked_goal_id: (habit as any).linked_goal_id || 'none'
+        linked_goal_id: 'none'
       });
+      
+      // Charger la liaison avec l'objectif pour les habitudes existantes
+      fetchHabitGoalLink(habit.id);
     } else {
       setFormData({
         title: '',
@@ -56,9 +59,29 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       });
     }
 
-    // Charger les objectifs disponibles
     fetchGoals();
   }, [habit]);
+
+  const fetchHabitGoalLink = async (habitId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('linked_goal_id')
+        .eq('id', habitId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setFormData(prev => ({
+        ...prev,
+        linked_goal_id: data?.linked_goal_id || 'none'
+      }));
+    } catch (error) {
+      console.error('Error fetching habit goal link:', error);
+    }
+  };
 
   const fetchGoals = async () => {
     if (!user) return;

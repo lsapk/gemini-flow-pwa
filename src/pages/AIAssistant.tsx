@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Settings } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import Sidebar from "@/components/layout/Sidebar";
@@ -43,6 +45,7 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
+  const [creationModeEnabled, setCreationModeEnabled] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
 
@@ -166,15 +169,24 @@ export default function AIAssistant() {
         content: msg.content
       }));
 
-      console.log('Sending message to AI:', { input, userData, recentMessages });
+      console.log('Sending message to AI:', { input, userData, recentMessages, creationModeEnabled });
+
+      // Modifier le prompt selon le mode création
+      let finalMessage = input;
+      if (creationModeEnabled) {
+        finalMessage = `[MODE CRÉATION ACTIVÉ] ${input} - Tu peux suggérer des créations de tâches, habitudes ou objectifs si pertinent.`;
+      } else {
+        finalMessage = `[MODE DISCUSSION] ${input} - Je veux juste discuter et analyser, ne suggère PAS de créations sauf si je le demande explicitement.`;
+      }
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: input,
+          message: finalMessage,
           user_id: user.id,
           context: {
             user_data: userData,
-            recent_messages: recentMessages
+            recent_messages: recentMessages,
+            creation_mode: creationModeEnabled
           }
         }
       });
@@ -204,8 +216,9 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Handle AI suggestion only if one is provided and valid
-      if (data?.suggestion && 
+      // Handle AI suggestion only if creation mode is enabled and suggestion is valid
+      if (creationModeEnabled && 
+          data?.suggestion && 
           data.suggestion.type && 
           data.suggestion.title && 
           data.suggestion.reasoning) {
@@ -264,15 +277,26 @@ export default function AIAssistant() {
                 <Bot className="h-6 w-6 text-primary" />
                 <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={clearConversation}
-                disabled={messages.length === 0}
-                className="!rounded-lg"
-              >
-                Effacer
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <Settings className="h-4 w-4" />
+                  <Label htmlFor="creation-mode" className="text-xs">Création</Label>
+                  <Switch
+                    id="creation-mode"
+                    checked={creationModeEnabled}
+                    onCheckedChange={setCreationModeEnabled}
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearConversation}
+                  disabled={messages.length === 0}
+                  className="!rounded-lg"
+                >
+                  Effacer
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           
@@ -290,9 +314,16 @@ export default function AIAssistant() {
                   <div className="text-center text-muted-foreground py-8">
                     <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
                     <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
-                    <p className="text-sm">
-                      Je peux analyser vos besoins et vous suggérer intelligemment des tâches, habitudes et objectifs ! 🚀
+                    <p className="text-sm mb-4">
+                      Je suis là pour analyser vos données et discuter de votre productivité ! 🚀
                     </p>
+                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
+                      <p className="font-medium mb-1">💡 Mode Création {creationModeEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}</p>
+                      <p>{creationModeEnabled 
+                        ? 'Je peux créer des tâches, habitudes et objectifs selon vos besoins'
+                        : 'Mode discussion pure - je me concentre sur l\'analyse et les conseils'
+                      }</p>
+                    </div>
                   </div>
                 )}
                 {messages.map((message) => (
@@ -339,7 +370,7 @@ export default function AIAssistant() {
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">
-                          En train de réfléchir... 🤔
+                          En train de {creationModeEnabled ? 'créer et ' : ''}réfléchir... 🤔
                         </span>
                       </div>
                     </div>
@@ -353,7 +384,7 @@ export default function AIAssistant() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Tapez votre message..."
+                placeholder={`Tapez votre message${creationModeEnabled ? ' (mode création activé)' : ''}...`}
                 disabled={isLoading}
                 className="flex-1 text-base h-11 px-2 rounded-lg focus:ring-2 focus:ring-primary"
                 autoFocus
