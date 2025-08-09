@@ -1,25 +1,29 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { useProductivityScore } from "@/hooks/useProductivityScore";
+import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { useAIProductivityInsights } from "@/hooks/useAIProductivityInsights";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
-  const { 
-    score, 
-    completionRate,
-    focusTimeScore,
-    consistencyScore,
-    qualityScore
-  } = useProductivityScore();
+  const { data: productivityData, isLoading: productivityLoading } = useRealtimeProductivityScore();
+
+  // Extract productivity scores from the data with defaults
+  const {
+    score = 0,
+    completionRate = 0,
+    focusTimeScore = 0,
+    consistencyScore = 0,
+    qualityScore = 0
+  } = productivityData || {};
 
   const { insights, isLoading: insightsLoading } = useAIProductivityInsights();
 
-  if (isLoading) {
+  if (isLoading || productivityLoading) {
     return (
       <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
         <div className="text-center py-8">
