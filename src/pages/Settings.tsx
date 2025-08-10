@@ -87,56 +87,76 @@ export default function Settings() {
     if (!user) return;
     
     try {
-      // Utilisation d'une requête SQL brute pour éviter les problèmes de types
-      const { data, error } = await supabase
-        .rpc('get_user_profile', { user_id: user.id })
+      // Requête directe vers la table profiles avec type casting
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
-        // Si la fonction n'existe pas, essayons une approche alternative
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles' as any)
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-          return;
-        }
-
-        if (profileData) {
-          setUserProfile(profileData);
-          setFormData({
-            gemini_api_key: profileData.gemini_api_key || "",
-            notifications_enabled: profileData.notifications_enabled ?? true,
-            sound_enabled: profileData.sound_enabled ?? true,
-            dark_mode: profileData.dark_mode ?? false,
-            language: profileData.language || "fr",
-            theme: profileData.theme || "system",
-            clock_format: profileData.clock_format || "24h",
-            focus_mode: profileData.focus_mode ?? false
-          });
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        // Si le profil n'existe pas, on le crée avec des valeurs par défaut
+        if (profileError.code === 'PGRST116') {
+          await createDefaultProfile();
         }
         return;
       }
 
-      if (data) {
-        setUserProfile(data);
+      if (profileData) {
+        // Cast explicite pour éviter les problèmes TypeScript
+        const profile = profileData as any;
+        setUserProfile(profile);
         setFormData({
-          gemini_api_key: data.gemini_api_key || "",
-          notifications_enabled: data.notifications_enabled ?? true,
-          sound_enabled: data.sound_enabled ?? true,
-          dark_mode: data.dark_mode ?? false,
-          language: data.language || "fr",
-          theme: data.theme || "system",
-          clock_format: data.clock_format || "24h",
-          focus_mode: data.focus_mode ?? false
+          gemini_api_key: profile.gemini_api_key || "",
+          notifications_enabled: profile.notifications_enabled ?? true,
+          sound_enabled: profile.sound_enabled ?? true,
+          dark_mode: profile.dark_mode ?? false,
+          language: profile.language || "fr",
+          theme: profile.theme || "system",
+          clock_format: profile.clock_format || "24h",
+          focus_mode: profile.focus_mode ?? false
         });
+        setStats(prev => ({
+          ...prev,
+          karma_points: profile.karma_points || 0
+        }));
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      // En cas d'erreur, créer un profil par défaut
+      await createDefaultProfile();
+    }
+  };
+
+  const createDefaultProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const defaultProfile = {
+        id: user.id,
+        gemini_api_key: "",
+        notifications_enabled: true,
+        sound_enabled: true,
+        dark_mode: false,
+        language: "fr",
+        theme: "system",
+        clock_format: "24h",
+        focus_mode: false,
+        karma_points: 0
+      };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(defaultProfile)
+        .select()
+        .single();
+
+      if (!error && data) {
+        setUserProfile(data as any);
+      }
+    } catch (error) {
+      console.error('Error creating default profile:', error);
     }
   };
 
@@ -175,9 +195,9 @@ export default function Settings() {
     
     setLoading(true);
     try {
-      // Utilisation d'une requête générique pour éviter les problèmes de types
+      // Utilisation d'upsert pour créer ou mettre à jour le profil
       const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .upsert({
           id: user.id,
           ...formData,
