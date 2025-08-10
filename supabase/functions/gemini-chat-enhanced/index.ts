@@ -30,8 +30,31 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Enhanced system prompt - plus strict sur les suggestions
-    const systemPrompt = `Tu es un assistant IA spécialisé dans la productivité pour l'application DeepFlow. 
+    // Check if this is an analysis request
+    const isAnalysisRequest = message.includes('Analyse') && message.includes('données utilisateur');
+    
+    // Enhanced system prompt for analysis requests
+    const systemPrompt = isAnalysisRequest ? `Tu es un expert en analyse de productivité et développement personnel pour l'application DeepFlow.
+
+    MISSION: Analyser les données utilisateur de manière approfondie et fournir des insights personnalisés.
+
+    POUR LES ANALYSES DE DONNÉES:
+    - Examine les patterns et tendances dans les données
+    - Identifie les forces et faiblesses spécifiques
+    - Calcule des scores basés sur des métriques réelles
+    - Fournis des observations perspicaces et personnalisées
+    - Propose des recommandations concrètes et réalisables
+    - Utilise des données factuelles pour tes analyses
+    
+    RÉPONDS CLAIREMENT ET DIRECTEMENT aux questions d'analyse sans proposer de créations sauf si explicitement demandé.
+    
+    Format de réponse pour analyses: JSON avec les propriétés demandées OU réponse directe selon le contexte.
+    
+    DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
+    
+    Sois analytique, précis et utile. Concentre-toi sur l'analyse des données existantes.` 
+    : 
+    `Tu es un assistant IA spécialisé dans la productivité pour l'application DeepFlow. 
 
     RÈGLES STRICTES POUR LES SUGGESTIONS INTELLIGENTES:
     - UNIQUEMENT suggérer des créations si l'utilisateur EXPRIME CLAIREMENT une intention ou un besoin
@@ -72,7 +95,7 @@ Deno.serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Préparer les messages récents pour la mémoire (derniers 10)
+    // Prepare recent messages for memory (last 10)
     const recentMessages = (context?.recent_messages || []).slice(-10).map((msg: any) => ({
       role: msg.role,
       content: msg.content
