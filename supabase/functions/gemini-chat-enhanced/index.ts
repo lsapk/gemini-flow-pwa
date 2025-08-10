@@ -30,61 +30,91 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check if this is an analysis request
-    const isAnalysisRequest = message.includes('Analyse') && message.includes('données utilisateur');
-    
-    // Enhanced system prompt for analysis requests
-    const systemPrompt = isAnalysisRequest ? `Tu es un expert en analyse de productivité et développement personnel pour l'application DeepFlow.
+    // Déterminer le mode de conversation
+    const analysisMode = context?.analysis_mode || message.includes('[MODE ANALYSE');
+    const creationMode = context?.creation_mode || message.includes('[MODE CRÉATION');
+    const messageContext = context?.message_context || 'conversation normale';
 
-    MISSION: Analyser les données utilisateur de manière approfondie et fournir des insights personnalisés.
+    // Système de prompts adaptatif selon le mode
+    let systemPrompt = '';
 
-    POUR LES ANALYSES DE DONNÉES:
-    - Examine les patterns et tendances dans les données
-    - Identifie les forces et faiblesses spécifiques
-    - Calcule des scores basés sur des métriques réelles
-    - Fournis des observations perspicaces et personnalisées
-    - Propose des recommandations concrètes et réalisables
-    - Utilise des données factuelles pour tes analyses
-    
-    RÉPONDS CLAIREMENT ET DIRECTEMENT aux questions d'analyse sans proposer de créations sauf si explicitement demandé.
-    
-    Format de réponse pour analyses: JSON avec les propriétés demandées OU réponse directe selon le contexte.
-    
-    DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
-    
-    Sois analytique, précis et utile. Concentre-toi sur l'analyse des données existantes.` 
-    : 
-    `Tu es un assistant IA spécialisé dans la productivité pour l'application DeepFlow. 
+    if (analysisMode) {
+      systemPrompt = `Tu es un expert en analyse de données de productivité et développement personnel pour DeepFlow.
 
-    RÈGLES STRICTES POUR LES SUGGESTIONS INTELLIGENTES:
-    - UNIQUEMENT suggérer des créations si l'utilisateur EXPRIME CLAIREMENT une intention ou un besoin
-    - Ne PAS suggérer pour de simples salutations comme "salut", "bonjour", "hello"
-    - Ne PAS suggérer si l'utilisateur pose juste une question générale
-    - SUGGÉRER seulement si l'utilisateur mentionne :
-      * Vouloir faire quelque chose ("je veux", "j'aimerais", "je dois")
-      * Un problème à résoudre ("j'ai du mal à", "je n'arrive pas à")
-      * Un objectif spécifique ("pour améliorer", "pour devenir", "afin de")
-      * Une activité récurrente qu'il veut tracker
-    
-    Si tu détectes qu'une création serait VRAIMENT utile, propose-la avec ce format JSON:
+MISSION PRINCIPALE: Analyser les données utilisateur de manière approfondie et fournir des insights personnalisés, détaillés et actionables.
 
-    Format de réponse avec suggestion:
-    {
-      "response": "ta réponse conversationnelle normale",
-      "suggestion": {
-        "type": "task|habit|goal",
-        "title": "titre suggéré",
-        "description": "description suggérée",
-        "priority": "high|medium|low" (pour tâches),
-        "frequency": "daily|weekly|monthly" (pour habitudes),
-        "category": "catégorie suggérée" (pour objectifs),
-        "reasoning": "pourquoi tu suggères cela"
-      }
+POUR LES ANALYSES APPROFONDIES:
+- Examine minutieusement tous les patterns et tendances dans les données
+- Calcule des métriques avancées et des corrélations
+- Identifie les forces spécifiques et les faiblesses précises
+- Fournis des observations perspicaces basées sur les données réelles
+- Propose des recommandations concrètes, personnalisées et réalisables
+- Utilise des comparaisons temporelles et des benchmarks
+- Identifie des opportunités d'optimisation cachées
+
+STYLE DE RÉPONSE:
+- Analytique et factuel
+- Utilise des données chiffrées pour étayer tes analyses
+- Structure tes réponses avec des sections claires
+- Donne des insights surprenants mais fondés
+- Propose des actions concrètes avec des délais
+- Utilise des métaphores ou comparaisons pour clarifier
+
+DONNÉES UTILISATEUR DISPONIBLES: ${JSON.stringify(context?.user_data || {})}
+
+Sois un véritable analyste de données personnelles, perspicace et utile.`;
+
+    } else if (creationMode) {
+      systemPrompt = `Tu es un assistant IA spécialisé dans la productivité pour DeepFlow, en MODE CRÉATION.
+
+RÈGLES POUR LE MODE CRÉATION:
+- L'utilisateur VEUT que tu puisses suggérer des créations
+- Propose des créations pertinentes basées sur ses demandes explicites
+- Analyse ses besoins et suggère des tâches, habitudes ou objectifs appropriés
+- Sois proactif dans tes suggestions quand c'est demandé
+- Explique pourquoi tu suggères chaque création
+
+Format de réponse avec suggestion:
+{
+  "response": "ta réponse conversationnelle normale",
+  "suggestion": {
+    "type": "task|habit|goal",
+    "title": "titre suggéré",
+    "description": "description suggérée",
+    "priority": "high|medium|low" (pour tâches),
+    "frequency": "daily|weekly|monthly" (pour habitudes),
+    "category": "catégorie suggérée" (pour objectifs),
+    "reasoning": "pourquoi tu suggères cela basé sur ses données"
+  }
+}
+
+DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
+
+Tu es en mode création - aide l'utilisateur à créer ce dont il a besoin !`;
+
+    } else {
+      systemPrompt = `Tu es un assistant IA spécialisé dans la productivité pour DeepFlow, en MODE DISCUSSION.
+
+MISSION: Être un conseiller en productivité bienveillant et expert.
+
+RÈGLES STRICTES:
+- NE SUGGÈRE PAS de créations automatiquement
+- Concentre-toi sur les conseils, l'analyse et la discussion
+- Réponds aux questions de manière approfondie
+- Partage des techniques et méthodes de productivité
+- Aide à résoudre des problèmes spécifiques
+- Donne des insights sur les données existantes
+
+STYLE:
+- Conversationnel et bienveillant
+- Expert mais accessible  
+- Motivant et encourageant
+- Basé sur les meilleures pratiques de productivité
+
+DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
+
+Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans suggestions de création.`;
     }
-
-    DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
-    
-    Réponds de manière naturelle ET intelligente, mais NE SUGGÈRE QUE quand c'est VRAIMENT pertinent.`;
 
     // Initialize Gemini with proper API key check
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
@@ -105,11 +135,11 @@ Deno.serve(async (req) => {
       ? `\n\nCONVERSATION RÉCENTE:\n${recentMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`
       : '';
 
-    console.log('Making request to Gemini API...');
+    console.log('Making request to Gemini API with mode:', messageContext);
     
     const result = await model.generateContent([
       systemPrompt,
-      `Message utilisateur: ${message}${conversationContext}`
+      `Context: ${messageContext}\nMessage utilisateur: ${message}${conversationContext}`
     ]);
 
     const response = result.response;
@@ -117,22 +147,30 @@ Deno.serve(async (req) => {
 
     console.log('Gemini response received:', responseText);
 
-    // Try to parse JSON response for suggestions
+    // Try to parse JSON response for suggestions (only in creation mode)
     let suggestion = null;
-    try {
-      // Look for JSON in the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.suggestion) {
-          suggestion = parsed.suggestion;
-          responseText = parsed.response || responseText;
+    if (creationMode) {
+      try {
+        // Look for JSON in the response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.suggestion) {
+            suggestion = parsed.suggestion;
+            responseText = parsed.response || responseText;
+          }
         }
+      } catch (e) {
+        // No valid JSON found, continue with normal response
+        console.log('No JSON suggestion found in response');
       }
-    } catch (e) {
-      // No valid JSON found, continue with normal response
-      console.log('No JSON suggestion found in response');
     }
+
+    // Clean up response for better readability
+    responseText = responseText
+      .replace(/```json[\s\S]*?```/g, "")
+      .replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "")
+      .trim();
 
     // Log AI request
     await supabaseClient.from('ai_requests').insert({
@@ -140,12 +178,17 @@ Deno.serve(async (req) => {
       service: 'gemini-chat-enhanced'
     });
 
-    console.log('Returning response:', { responseLength: responseText.length, hasSuggestion: !!suggestion });
+    console.log('Returning response:', { 
+      responseLength: responseText.length, 
+      hasSuggestion: !!suggestion,
+      mode: messageContext 
+    });
 
     return new Response(
       JSON.stringify({ 
         response: responseText,
-        suggestion: suggestion
+        suggestion: suggestion,
+        mode: messageContext
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { Send, Bot, User, Loader2, Settings } from "lucide-react";
+import { Send, Bot, User, Loader2, Settings, Sparkles, BarChart3 } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import Sidebar from "@/components/layout/Sidebar";
@@ -46,6 +46,7 @@ export default function AIAssistant() {
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const [creationModeEnabled, setCreationModeEnabled] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
 
@@ -114,15 +115,17 @@ export default function AIAssistant() {
         journalResult,
         focusResult,
         profileResult,
-        settingsResult
+        settingsResult,
+        completionsResult
       ] = await Promise.allSettled([
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('habits').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
         supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('user_settings').select('*').eq('id', user.id).maybeSingle()
+        supabase.from('user_settings').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('habit_completions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50)
       ]);
 
       return {
@@ -131,6 +134,7 @@ export default function AIAssistant() {
         goals: goalsResult.status === 'fulfilled' ? (goalsResult.value.data || []) : [],
         journal_entries: journalResult.status === 'fulfilled' ? (journalResult.value.data || []) : [],
         focus_sessions: focusResult.status === 'fulfilled' ? (focusResult.value.data || []) : [],
+        habit_completions: completionsResult.status === 'fulfilled' ? (completionsResult.value.data || []) : [],
         profile: profileResult.status === 'fulfilled' ? profileResult.value.data : null,
         settings: settingsResult.status === 'fulfilled' ? settingsResult.value.data : null,
         analytics: {
@@ -169,14 +173,20 @@ export default function AIAssistant() {
         content: msg.content
       }));
 
-      console.log('Sending message to AI:', { input, userData, recentMessages, creationModeEnabled });
+      console.log('Sending message to AI:', { input, userData, recentMessages, creationModeEnabled, analysisMode });
 
-      // Modifier le prompt selon le mode création
       let finalMessage = input;
-      if (creationModeEnabled) {
-        finalMessage = `[MODE CRÉATION ACTIVÉ] ${input} - Tu peux suggérer des créations de tâches, habitudes ou objectifs si pertinent.`;
+      let messageContext = "conversation normale";
+
+      if (analysisMode) {
+        finalMessage = `[MODE ANALYSE APPROFONDIE ACTIVÉ] ${input} - Analyse mes données en profondeur et fournis des insights détaillés, des tendances et des recommandations personnalisées basées sur mes métriques réelles.`;
+        messageContext = "analyse approfondie des données";
+      } else if (creationModeEnabled) {
+        finalMessage = `[MODE CRÉATION ACTIVÉ] ${input} - Tu peux suggérer des créations de tâches, habitudes ou objectifs si pertinent selon ma demande.`;
+        messageContext = "mode création";
       } else {
-        finalMessage = `[MODE DISCUSSION] ${input} - Je veux juste discuter et analyser, ne suggère PAS de créations sauf si je le demande explicitement.`;
+        finalMessage = `[MODE DISCUSSION] ${input} - Je veux juste discuter et obtenir des conseils, ne suggère PAS de créations sauf si je le demande explicitement.`;
+        messageContext = "discussion et conseil";
       }
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
@@ -186,7 +196,9 @@ export default function AIAssistant() {
           context: {
             user_data: userData,
             recent_messages: recentMessages,
-            creation_mode: creationModeEnabled
+            creation_mode: creationModeEnabled,
+            analysis_mode: analysisMode,
+            message_context: messageContext
           }
         }
       });
@@ -254,6 +266,12 @@ export default function AIAssistant() {
     toast.success("Élément créé avec succès ! 🎉");
   };
 
+  const getPlaceholderText = () => {
+    if (analysisMode) return "Demandez une analyse approfondie de vos données...";
+    if (creationModeEnabled) return "Décrivez ce que vous souhaitez créer...";
+    return "Posez vos questions sur la productivité...";
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       <div className="md:hidden">
@@ -276,15 +294,32 @@ export default function AIAssistant() {
               <div className="flex items-center gap-2">
                 <Bot className="h-6 w-6 text-primary" />
                 <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
+                {analysisMode && <BarChart3 className="h-4 w-4 text-blue-500" />}
+                {creationModeEnabled && <Sparkles className="h-4 w-4 text-green-500" />}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center space-x-2">
-                  <Settings className="h-4 w-4" />
+                  <BarChart3 className="h-4 w-4" />
+                  <Label htmlFor="analysis-mode" className="text-xs">Analyse</Label>
+                  <Switch
+                    id="analysis-mode"
+                    checked={analysisMode}
+                    onCheckedChange={(checked) => {
+                      setAnalysisMode(checked);
+                      if (checked) setCreationModeEnabled(false);
+                    }}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-4 w-4" />
                   <Label htmlFor="creation-mode" className="text-xs">Création</Label>
                   <Switch
                     id="creation-mode"
                     checked={creationModeEnabled}
-                    onCheckedChange={setCreationModeEnabled}
+                    onCheckedChange={(checked) => {
+                      setCreationModeEnabled(checked);
+                      if (checked) setAnalysisMode(false);
+                    }}
                   />
                 </div>
                 <Button 
@@ -315,14 +350,20 @@ export default function AIAssistant() {
                     <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
                     <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
                     <p className="text-sm mb-4">
-                      Je suis là pour analyser vos données et discuter de votre productivité ! 🚀
+                      {analysisMode ? "Mode analyse approfondie activé - Je vais analyser vos données en détail ! 📊" :
+                       creationModeEnabled ? "Mode création activé - Je peux créer des éléments selon vos besoins ! ✨" :
+                       "Je suis là pour discuter de votre productivité et vous conseiller ! 💬"}
                     </p>
-                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-                      <p className="font-medium mb-1">💡 Mode Création {creationModeEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}</p>
-                      <p>{creationModeEnabled 
-                        ? 'Je peux créer des tâches, habitudes et objectifs selon vos besoins'
-                        : 'Mode discussion pure - je me concentre sur l\'analyse et les conseils'
-                      }</p>
+                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg max-w-md mx-auto">
+                      <p className="font-medium mb-1">
+                        {analysisMode ? "🔍 Mode Analyse Approfondie" :
+                         creationModeEnabled ? "✨ Mode Création" : "💬 Mode Discussion"}
+                      </p>
+                      <p>
+                        {analysisMode ? "Je vais analyser vos données, identifier des tendances et vous donner des insights personnalisés" :
+                         creationModeEnabled ? "Je peux créer des tâches, habitudes et objectifs selon vos besoins" :
+                         "Mode discussion - je me concentre sur l'analyse et les conseils"}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -339,7 +380,7 @@ export default function AIAssistant() {
                       </Avatar>
                     )}
 
-                    <div className={`max-w-[90vw] sm:max-w-[60%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words`}>
+                    <div className={`max-w-[90vw] sm:max-w-[70%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words`}>
                       {message.role === 'assistant' ? (
                         <Markdown content={message.content} />
                       ) : (
@@ -370,7 +411,9 @@ export default function AIAssistant() {
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">
-                          En train de {creationModeEnabled ? 'créer et ' : ''}réfléchir... 🤔
+                          {analysisMode ? "Analyse en cours de vos données... 📊" :
+                           creationModeEnabled ? "Création en cours... ✨" : 
+                           "Réflexion en cours... 🤔"}
                         </span>
                       </div>
                     </div>
@@ -384,7 +427,7 @@ export default function AIAssistant() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={`Tapez votre message${creationModeEnabled ? ' (mode création activé)' : ''}...`}
+                placeholder={getPlaceholderText()}
                 disabled={isLoading}
                 className="flex-1 text-base h-11 px-2 rounded-lg focus:ring-2 focus:ring-primary"
                 autoFocus

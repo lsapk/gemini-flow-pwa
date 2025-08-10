@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,545 +6,531 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTheme } from "@/components/theme-provider";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings as SettingsIcon, User, Bell, Moon, Sun, Shield, Palette, Clock, Globe, Volume2, Key, Lock } from "lucide-react";
+import Sidebar from "@/components/layout/Sidebar";
+import MobileHeader from "@/components/layout/MobileHeader";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { 
+  Settings as SettingsIcon, 
+  User, 
+  Bell, 
+  Palette, 
+  Shield, 
+  Download,
+  Trash2,
+  Moon,
+  Sun,
+  Globe,
+  Smartphone,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Save
+} from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function Settings() {
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [notifications, setNotifications] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [focusMode, setFocusMode] = useState(false);
-  const [language, setLanguage] = useState("fr");
-  const [clockFormat, setClockFormat] = useState("24h");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminCode, setAdminCode] = useState("");
-  const [showAdminDialog, setShowAdminDialog] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  
+  const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Paramètres utilisateur
+  const [userSettings, setUserSettings] = useState({
+    notifications: true,
+    emailNotifications: true,
+    dailyReminders: true,
+    weeklyReports: false,
+    soundEnabled: true,
+    darkMode: theme === 'dark',
+    language: 'fr',
+    timezone: 'Europe/Paris',
+    privacyMode: false,
+    dataSharing: false
+  });
+
+  // Paramètres de compte
+  const [accountData, setAccountData] = useState({
+    email: user?.email || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Statistiques
+  const [stats, setStats] = useState({
+    totalTasks: 0,
+    totalHabits: 0,
+    totalGoals: 0,
+    totalJournalEntries: 0,
+    totalFocusTime: 0,
+    accountCreated: ''
+  });
 
   useEffect(() => {
     if (user) {
       loadUserSettings();
-      checkAdminStatus();
+      loadUserStats();
     }
   }, [user]);
 
   const loadUserSettings = async () => {
-    if (!user) return;
-
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('display_name, email')
-        .eq('id', user.id)
-        .single();
-
-      const { data: settings } = await supabase
+      const { data } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('id', user.id)
-        .single();
+        .eq('id', user?.id)
+        .maybeSingle();
 
-      if (profile) {
-        setDisplayName(profile.display_name || '');
-        setEmail(profile.email || user.email || '');
-      }
-
-      if (settings) {
-        setNotifications(settings.notifications_enabled ?? true);
-        setSoundEnabled(settings.sound_enabled ?? true);
-        setFocusMode(settings.focus_mode ?? false);
-        setLanguage(settings.language || 'fr');
-        setClockFormat(settings.clock_format || '24h');
+      if (data) {
+        setUserSettings(prev => ({ ...prev, ...data.settings }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des paramètres:', error);
     }
   };
 
-  const checkAdminStatus = async () => {
+  const loadUserStats = async () => {
     if (!user) return;
 
     try {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
+      const [tasks, habits, goals, journal, focus] = await Promise.all([
+        supabase.from('tasks').select('*', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('habits').select('*', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('goals').select('*', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('journal_entries').select('*', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('focus_sessions').select('duration').eq('user_id', user.id)
+      ]);
 
-      setIsAdmin(!!data);
+      const totalFocusTime = focus.data?.reduce((sum, session) => sum + session.duration, 0) || 0;
+
+      setStats({
+        totalTasks: tasks.count || 0,
+        totalHabits: habits.count || 0,
+        totalGoals: goals.count || 0,
+        totalJournalEntries: journal.count || 0,
+        totalFocusTime: Math.round(totalFocusTime / 60), // en heures
+        accountCreated: user?.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : ''
+      });
     } catch (error) {
-      setIsAdmin(false);
+      console.error('Erreur lors du chargement des statistiques:', error);
     }
   };
 
-  const saveProfile = async () => {
-    if (!user) return;
-
+  const saveSettings = async () => {
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('user_profiles')
+        .from('user_settings')
         .upsert({
-          id: user.id,
-          display_name: displayName,
-          email: email
+          id: user?.id,
+          settings: userSettings,
+          updated_at: new Date().toISOString()
         });
 
       if (error) throw error;
-
-      toast.success('Profil mis à jour avec succès!');
-    } catch (error: any) {
-      toast.error('Erreur lors de la mise à jour du profil: ' + error.message);
+      
+      toast.success("Paramètres sauvegardés !");
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error("Erreur lors de la sauvegarde");
     } finally {
       setLoading(false);
     }
   };
 
-  const saveSettings = async (key: string, value: any) => {
-    if (!user) return;
+  const changePassword = async () => {
+    if (accountData.newPassword !== accountData.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
 
+    if (accountData.newPassword.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ 
-          id: user.id,
-          [key]: value 
-        });
+      const { error } = await supabase.auth.updateUser({
+        password: accountData.newPassword
+      });
 
       if (error) throw error;
-
-      toast.success('Paramètre mis à jour!');
+      
+      setAccountData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      
+      toast.success("Mot de passe modifié !");
     } catch (error: any) {
-      toast.error('Erreur lors de la mise à jour: ' + error.message);
+      console.error('Erreur:', error);
+      toast.error(error.message || "Erreur lors de la modification");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAdminCode = async () => {
-    if (adminCode === "DEEPFLOW_ADMIN_2024") {
-      try {
-        const { error } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: user?.id,
-            role: 'admin'
-          });
+  const exportData = async () => {
+    setLoading(true);
+    try {
+      const [tasks, habits, goals, journal, focus] = await Promise.all([
+        supabase.from('tasks').select('*').eq('user_id', user?.id),
+        supabase.from('habits').select('*').eq('user_id', user?.id),
+        supabase.from('goals').select('*').eq('user_id', user?.id),
+        supabase.from('journal_entries').select('*').eq('user_id', user?.id),
+        supabase.from('focus_sessions').select('*').eq('user_id', user?.id)
+      ]);
 
-        if (error) {
-          throw error;
-        }
+      const exportData = {
+        export_date: new Date().toISOString(),
+        user_id: user?.id,
+        tasks: tasks.data,
+        habits: habits.data,
+        goals: goals.data,
+        journal_entries: journal.data,
+        focus_sessions: focus.data
+      };
 
-        setIsAdmin(true);
-        setShowAdminDialog(false);
-        setAdminCode("");
-        toast.success('Vous êtes maintenant administrateur!');
-        checkAdminStatus();
-      } catch (error: any) {
-        toast.error('Erreur lors de l\'activation admin: ' + error.message);
-      }
-    } else {
-      toast.error('Code administrateur incorrect');
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `deepflow-export-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      
+      URL.revokeObjectURL(url);
+      toast.success("Données exportées !");
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Fonction pour changer le mot de passe
-  const changePassword = async () => {
-    if (!user) return;
-    if (!currentPassword || !newPassword) {
-      toast.error("Veuillez remplir les deux champs.");
-      return;
-    }
-    setPasswordLoading(true);
-
-    // Vérifier le mot de passe actuel en tentant une reconnexion
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email!,
-      password: currentPassword,
-    });
-
-    if (signInError) {
-      toast.error("Mot de passe actuel incorrect.");
-      setPasswordLoading(false);
+  const deleteAccount = async () => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.")) {
       return;
     }
 
-    // Mettre à jour le mot de passe avec le Supabase SDK
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-      toast.error("Erreur lors du changement de mot de passe : " + error.message);
-    } else {
-      toast.success("Mot de passe changé avec succès !");
-      setShowPasswordDialog(false);
-      setCurrentPassword("");
-      setNewPassword("");
+    if (!confirm("Dernière confirmation : toutes vos données seront définitivement perdues.")) {
+      return;
     }
-    setPasswordLoading(false);
+
+    setLoading(true);
+    try {
+      // Supprimer toutes les données utilisateur
+      await Promise.all([
+        supabase.from('tasks').delete().eq('user_id', user?.id),
+        supabase.from('habits').delete().eq('user_id', user?.id),
+        supabase.from('goals').delete().eq('user_id', user?.id),
+        supabase.from('journal_entries').delete().eq('user_id', user?.id),
+        supabase.from('focus_sessions').delete().eq('user_id', user?.id)
+      ]);
+
+      toast.success("Compte supprimé");
+      await signOut();
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center gap-2 mb-6">
-        <SettingsIcon className="h-6 w-6" />
-        <h1 className="text-3xl font-bold tracking-tight">Paramètres</h1>
-        {isAdmin && (
-          <Badge variant="secondary" className="ml-2">
-            <Shield className="h-3 w-3 mr-1" />
-            Admin
-          </Badge>
-        )}
+    <div className="flex min-h-screen bg-background">
+      <div className="md:hidden">
+        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetContent side="left" className="p-0 w-64">
+            <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
+          </SheetContent>
+        </Sheet>
       </div>
+      
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+      
+      <div className="flex-1 p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Paramètres</h1>
+        </div>
 
-      {/* Profil utilisateur */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Profil utilisateur
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Nom d'affichage</Label>
-            <Input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Votre nom d'affichage"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="votre@email.com"
-            />
-          </div>
-
-          <div className="flex gap-3 flex-col sm:flex-row">
-            <Button onClick={saveProfile} disabled={loading}>
-              {loading ? 'Mise à jour...' : 'Sauvegarder le profil'}
-            </Button>
-            {/* Bouton pour changer le mot de passe */}
-            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-              <DialogTrigger asChild>
-                <Button type="button" variant="outline" className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 mr-1" />
-                  Changer le mot de passe
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Changer le mot de passe</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="old-pwd">Mot de passe actuel</Label>
-                    <Input
-                      id="old-pwd"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Entrer le mot de passe actuel"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-pwd">Nouveau mot de passe</Label>
-                    <Input
-                      id="new-pwd"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Entrer le nouveau mot de passe"
-                    />
-                  </div>
-                  <Button onClick={changePassword} className="w-full" disabled={passwordLoading}>
-                    {passwordLoading ? "Changement en cours..." : "Valider"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications & Sons
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Notifications push</Label>
-              <div className="text-sm text-muted-foreground">
-                Recevoir des notifications pour les rappels et les mises à jour
-              </div>
-            </div>
-            <Switch
-              checked={notifications}
-              onCheckedChange={(checked) => {
-                setNotifications(checked);
-                saveSettings('notifications_enabled', checked);
-              }}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4" />
-                Sons activés
-              </Label>
-              <div className="text-sm text-muted-foreground">
-                Sons pour les notifications et interactions
-              </div>
-            </div>
-            <Switch
-              checked={soundEnabled}
-              onCheckedChange={(checked) => {
-                setSoundEnabled(checked);
-                saveSettings('sound_enabled', checked);
-              }}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Mode focus</Label>
-              <div className="text-sm text-muted-foreground">
-                Réduire les distractions pendant les sessions
-              </div>
-            </div>
-            <Switch
-              checked={focusMode}
-              onCheckedChange={(checked) => {
-                setFocusMode(checked);
-                saveSettings('focus_mode', checked);
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Apparence */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Apparence
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center gap-2">
-                {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                Thème
-              </Label>
-              <div className="text-sm text-muted-foreground">
-                Choisir entre le mode clair, sombre ou automatique
-              </div>
-            </div>
-            <Select value={theme} onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">Clair</SelectItem>
-                <SelectItem value="dark">Sombre</SelectItem>
-                <SelectItem value="system">Auto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Localisation */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Localisation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Langue</Label>
-              <div className="text-sm text-muted-foreground">
-                Langue de l'interface utilisateur
-              </div>
-            </div>
-            <Select value={language} onValueChange={(value) => {
-              setLanguage(value);
-              saveSettings('language', value);
-            }}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fr">Français</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Español</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Format d'heure
-              </Label>
-              <div className="text-sm text-muted-foreground">
-                Format d'affichage de l'heure
-              </div>
-            </div>
-            <Select value={clockFormat} onValueChange={(value) => {
-              setClockFormat(value);
-              saveSettings('clock_format', value);
-            }}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">24h</SelectItem>
-                <SelectItem value="12h">12h</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Code Administrateur */}
-      {!isAdmin && (
+        {/* Statistiques du compte */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
-              Accès Administrateur
+              <User className="h-5 w-5" />
+              Aperçu du compte
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Vous avez un code administrateur ? Activez vos privilèges d'admin.
-              </p>
-              <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Activer le mode Admin
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Code Administrateur</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="adminCode">Code d'accès</Label>
-                      <Input
-                        id="adminCode"
-                        type="password"
-                        value={adminCode}
-                        onChange={(e) => setAdminCode(e.target.value)}
-                        placeholder="Entrez le code administrateur"
-                      />
-                    </div>
-                    <Button onClick={handleAdminCode} className="w-full">
-                      Valider
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.totalTasks}</div>
+                <div className="text-sm text-muted-foreground">Tâches</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.totalHabits}</div>
+                <div className="text-sm text-muted-foreground">Habitudes</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.totalGoals}</div>
+                <div className="text-sm text-muted-foreground">Objectifs</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{stats.totalJournalEntries}</div>
+                <div className="text-sm text-muted-foreground">Journal</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.totalFocusTime}h</div>
+                <div className="text-sm text-muted-foreground">Focus</div>
+              </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="flex justify-between items-center text-sm">
+              <span>Compte créé le</span>
+              <Badge variant="outline">{stats.accountCreated}</Badge>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Paramètres admin */}
-      {isAdmin && (
-        <>
-          <Separator />
-          <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
-                <Shield className="h-5 w-5" />
-                Paramètres Administrateur
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-sm text-orange-700 dark:text-orange-300">
-                  Vous avez accès aux fonctionnalités administrateur de l'application.
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button variant="outline" className="border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900/20">
-                    Gérer les utilisateurs
-                  </Button>
-                  <Button variant="outline" className="border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900/20">
-                    Statistiques système
-                  </Button>
-                  <Button variant="outline" className="border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900/20">
-                    Paramètres globaux
-                  </Button>
-                  <Button variant="outline" className="border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900/20">
-                    Logs système
+        {/* Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Notifications push</Label>
+                <p className="text-sm text-muted-foreground">Recevoir des notifications dans l'app</p>
+              </div>
+              <Switch
+                checked={userSettings.notifications}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, notifications: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Notifications email</Label>
+                <p className="text-sm text-muted-foreground">Recevoir des emails de rappel</p>
+              </div>
+              <Switch
+                checked={userSettings.emailNotifications}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, emailNotifications: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Rappels quotidiens</Label>
+                <p className="text-sm text-muted-foreground">Rappel pour vos habitudes</p>
+              </div>
+              <Switch
+                checked={userSettings.dailyReminders}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, dailyReminders: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Rapports hebdomadaires</Label>
+                <p className="text-sm text-muted-foreground">Résumé de votre semaine</p>
+              </div>
+              <Switch
+                checked={userSettings.weeklyReports}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, weeklyReports: checked }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Apparence */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Apparence
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Thème sombre</Label>
+                <p className="text-sm text-muted-foreground">Mode sombre pour l'interface</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Sun className="h-4 w-4" />
+                <Switch
+                  checked={theme === 'dark'}
+                  onCheckedChange={(checked) => {
+                    setTheme(checked ? 'dark' : 'light');
+                    setUserSettings(prev => ({ ...prev, darkMode: checked }));
+                  }}
+                />
+                <Moon className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Sons</Label>
+                <p className="text-sm text-muted-foreground">Sons pour les notifications</p>
+              </div>
+              <Switch
+                checked={userSettings.soundEnabled}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, soundEnabled: checked }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sécurité et Compte */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Sécurité et Compte
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={accountData.email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <h4 className="font-medium">Changer le mot de passe</h4>
+              <div className="space-y-2">
+                <Label>Nouveau mot de passe</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={accountData.newPassword}
+                    onChange={(e) => setAccountData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    placeholder="Nouveau mot de passe"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+              <div className="space-y-2">
+                <Label>Confirmer le mot de passe</Label>
+                <Input
+                  type="password"
+                  value={accountData.confirmPassword}
+                  onChange={(e) => setAccountData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  placeholder="Confirmer le mot de passe"
+                />
+              </div>
+              <Button 
+                onClick={changePassword} 
+                disabled={loading || !accountData.newPassword || !accountData.confirmPassword}
+                size="sm"
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Changer le mot de passe
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Informations de compte */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informations de compte</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p><strong>Nom affiché:</strong> {displayName || 'Non défini'}</p>
-            <p><strong>Email:</strong> {email || user?.email || 'Non disponible'}</p>
-            <p><strong>ID utilisateur:</strong> {user?.id}</p>
-            <p><strong>Compte créé:</strong> {user?.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : 'Non disponible'}</p>
-            <p><strong>Statut:</strong> {isAdmin ? 'Administrateur' : 'Utilisateur'}</p>
-            <p><strong>Langue:</strong> {language === 'fr' ? 'Français' : language === 'en' ? 'English' : 'Español'}</p>
-            <p><strong>Thème:</strong> {theme === 'light' ? 'Clair' : theme === 'dark' ? 'Sombre' : 'Automatique'}</p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Confidentialité et Données */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Confidentialité et Données
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Mode privé</Label>
+                <p className="text-sm text-muted-foreground">Masquer vos données sensibles</p>
+              </div>
+              <Switch
+                checked={userSettings.privacyMode}
+                onCheckedChange={(checked) => 
+                  setUserSettings(prev => ({ ...prev, privacyMode: checked }))
+                }
+              />
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Button onClick={exportData} disabled={loading} variant="outline" className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Exporter mes données
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Téléchargez toutes vos données au format JSON
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={saveSettings} disabled={loading} className="flex-1">
+            <Save className="h-4 w-4 mr-2" />
+            Sauvegarder les paramètres
+          </Button>
+          
+          <Button 
+            onClick={deleteAccount} 
+            disabled={loading} 
+            variant="destructive"
+            className="flex-1"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Supprimer le compte
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
