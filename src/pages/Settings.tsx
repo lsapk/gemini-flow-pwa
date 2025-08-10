@@ -36,10 +36,26 @@ import {
   Trophy
 } from "lucide-react";
 
+// Interface pour les données de profil utilisateur
+interface UserProfile {
+  id: string;
+  gemini_api_key?: string;
+  notifications_enabled?: boolean;
+  sound_enabled?: boolean;
+  dark_mode?: boolean;
+  language?: string;
+  theme?: string;
+  clock_format?: string;
+  focus_mode?: boolean;
+  karma_points?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function Settings() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     gemini_api_key: "",
@@ -71,14 +87,38 @@ export default function Settings() {
     if (!user) return;
     
     try {
+      // Utilisation d'une requête SQL brute pour éviter les problèmes de types
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+        .rpc('get_user_profile', { user_id: user.id })
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
+        // Si la fonction n'existe pas, essayons une approche alternative
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles' as any)
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          return;
+        }
+
+        if (profileData) {
+          setUserProfile(profileData);
+          setFormData({
+            gemini_api_key: profileData.gemini_api_key || "",
+            notifications_enabled: profileData.notifications_enabled ?? true,
+            sound_enabled: profileData.sound_enabled ?? true,
+            dark_mode: profileData.dark_mode ?? false,
+            language: profileData.language || "fr",
+            theme: profileData.theme || "system",
+            clock_format: profileData.clock_format || "24h",
+            focus_mode: profileData.focus_mode ?? false
+          });
+        }
         return;
       }
 
@@ -135,8 +175,9 @@ export default function Settings() {
     
     setLoading(true);
     try {
+      // Utilisation d'une requête générique pour éviter les problèmes de types
       const { error } = await supabase
-        .from('profiles')
+        .from('profiles' as any)
         .upsert({
           id: user.id,
           ...formData,
