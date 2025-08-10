@@ -53,7 +53,7 @@ export default function Dashboard() {
   // Calculs pour les métriques rapides
   const completedTasks = tasksData?.filter(task => task.completed).length || 0;
   const totalTasks = tasksData?.length || 0;
-  const activeHabits = habitsData?.filter(habit => !habit.is_archived).length || 0;
+  const activeHabits = habitsData?.length || 0;
   const avgFocusTime = focusData.length > 0 ? Math.round(totalFocusTime / focusData.length) : 0;
 
   if (isLoading) {
@@ -178,7 +178,6 @@ export default function Dashboard() {
             <CardContent>
               <SimpleLineChart 
                 data={activityChartData}
-                height={200}
                 color="#3b82f6"
               />
             </CardContent>
@@ -195,7 +194,6 @@ export default function Dashboard() {
             <CardContent>
               <SimpleBarChart 
                 data={focusChartData}
-                height={200}
                 color="#8b5cf6"
               />
             </CardContent>
@@ -218,15 +216,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {habitsData.slice(0, 6).map((habit) => (
-                  <div key={habit.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                {habitsData.slice(0, 6).map((habit, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
-                      <h4 className="font-medium text-sm">{habit.title}</h4>
-                      <p className="text-xs text-muted-foreground">{habit.frequency}</p>
+                      <h4 className="font-medium text-sm">{habit.name}</h4>
+                      <p className="text-xs text-muted-foreground">Habitude quotidienne</p>
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-bold text-green-600">
-                        {habit.streak}
+                        {habit.value}
                       </div>
                       <div className="text-xs text-muted-foreground">jours</div>
                     </div>
