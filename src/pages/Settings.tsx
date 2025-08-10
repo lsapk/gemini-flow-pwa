@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +87,7 @@ export default function Settings() {
     
     try {
       // Requête directe vers la table profiles avec type casting
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await (supabase as any)
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -146,7 +145,7 @@ export default function Settings() {
         karma_points: 0
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('profiles')
         .insert(defaultProfile)
         .select()
@@ -196,7 +195,7 @@ export default function Settings() {
     setLoading(true);
     try {
       // Utilisation d'upsert pour créer ou mettre à jour le profil
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .upsert({
           id: user.id,
