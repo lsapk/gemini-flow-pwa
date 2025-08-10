@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -182,8 +183,6 @@ export default function Settings() {
     const earnedBadge = statBadges.find(badge => value >= badge.min);
     return earnedBadge || null;
   };
-
-  
 
   return (
     <div className="flex min-h-screen bg-background">

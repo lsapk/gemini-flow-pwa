@@ -178,7 +178,7 @@ export default function Dashboard() {
             <CardContent>
               <SimpleLineChart 
                 data={activityChartData}
-                color="#3b82f6"
+                lines={[{ dataKey: "value", name: "Activité", color: "#3b82f6" }]}
               />
             </CardContent>
           </Card>
@@ -194,7 +194,6 @@ export default function Dashboard() {
             <CardContent>
               <SimpleBarChart 
                 data={focusChartData}
-                color="#8b5cf6"
               />
             </CardContent>
           </Card>
