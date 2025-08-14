@@ -41,8 +41,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Configure session persistence to be more reliable
-    supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted) return;
+      
       console.log("Auth state changed:", event);
       setSession(newSession);
       setUser(newSession?.user ?? null);
@@ -50,45 +54,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
       } else if (newSession?.user) {
-        // Utiliser setTimeout pour éviter les blocages potentiels
-        setTimeout(() => {
-          checkAdminRole(newSession.user.id);
-        }, 0);
+        // Check admin role safely
+        try {
+          await checkAdminRole(newSession.user.id);
+        } catch (error) {
+          console.error("Error checking admin role:", error);
+          setIsAdmin(false);
+        }
       }
     });
 
     // Initial session check
     const initSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error);
+          return;
+        }
+        
+        if (!mounted) return;
+        
         console.log("Initial session check:", session ? "Session found" : "No session");
         
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Vérifier si l'utilisateur est administrateur
+        // Check if user is admin
         if (session?.user) {
-          await checkAdminRole(session.user.id);
+          try {
+            await checkAdminRole(session.user.id);
+          } catch (error) {
+            console.error("Error checking admin role:", error);
+            setIsAdmin(false);
+          }
         }
       } catch (error) {
-        console.error("Error checking auth:", error);
+        console.error("Error during auth initialization:", error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     initSession();
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   // Function to check admin role
   const checkAdminRole = async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('role', 'admin')
         .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
       
       setIsAdmin(!!data);
     } catch (error) {
