@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +21,7 @@ import AIAssistant from "./pages/AIAssistant";
 import Badges from "./pages/Badges";
 import Reflection from "./pages/Reflection";
 import PersonalityProfile from "./pages/PersonalityProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -40,9 +41,9 @@ const queryClient = new QueryClient({
 });
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -57,7 +58,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-function App() {
+function AppContent() {
   useKeyboardShortcuts();
   useNotifications();
 
@@ -141,6 +142,14 @@ function App() {
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

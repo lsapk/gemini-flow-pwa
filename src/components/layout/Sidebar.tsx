@@ -1,3 +1,4 @@
+
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ import {
   User,
   Lightbulb
 } from "lucide-react";
-import { DeepFlowLogo } from "@/components/icons/DeepFlowIcons";
+import { BrainCircuitIcon } from "@/components/icons/DeepFlowIcons";
 
 const navigation = [
   { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
@@ -42,7 +43,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   return (
     <div className={cn("flex h-screen w-64 flex-col bg-background border-r", className)}>
       <div className="flex items-center gap-2 px-6 py-4 border-b">
-        <DeepFlowLogo className="h-8 w-8" />
+        <BrainCircuitIcon className="h-8 w-8" />
         <span className="text-xl font-bold">DeepFlow</span>
       </div>
       
