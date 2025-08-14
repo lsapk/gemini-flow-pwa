@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, Target, Archive, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -235,7 +236,7 @@ export default function Habits() {
             <div className="max-w-4xl mx-auto space-y-3 md:space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                 <h1 className="text-lg md:text-2xl font-bold tracking-tight">Habitudes</h1>
-                <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">
+                <Button onClick={() => setIsCreateModalOpen(true)} className="w-full sm:w-auto text-sm px-3 py-2">
                   <Plus className="h-4 w-4 mr-1" />
                   <span className="sm:hidden">Nouvelle</span>
                   <span className="hidden sm:inline">Nouvelle habitude</span>
@@ -243,53 +244,57 @@ export default function Habits() {
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-8 md:h-9">
-                  <TabsTrigger value="active" className="flex items-center gap-1 text-xs md:text-sm py-1">
-                    <Target className="h-3 w-3 md:h-4 md:w-4" />
+                <TabsList className="grid w-full grid-cols-2 h-9">
+                  <TabsTrigger value="active" className="flex items-center gap-1 text-sm py-2 px-3">
+                    <Target className="h-4 w-4" />
                     <span className="hidden xs:inline">Actives</span>
                     <span className="xs:hidden">Act.</span>
-                    <span className="ml-1">({habits.length})</span>
+                    <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5 h-5">
+                      {habits.length}
+                    </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="archived" className="flex items-center gap-1 text-xs md:text-sm py-1">
-                    <Archive className="h-3 w-3 md:h-4 md:w-4" />
+                  <TabsTrigger value="archived" className="flex items-center gap-1 text-sm py-2 px-3">
+                    <Archive className="h-4 w-4" />
                     <span className="hidden xs:inline">Archivées</span>
                     <span className="xs:hidden">Arch.</span>
-                    <span className="ml-1">({archivedHabits.length})</span>
+                    <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0.5 h-5">
+                      {archivedHabits.length}
+                    </Badge>
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value={activeTab} className="mt-3 md:mt-4">
+                <TabsContent value={activeTab} className="mt-4">
                   {isLoading ? (
-                    <div className="grid gap-2 md:gap-4">
+                    <div className="grid gap-3">
                       {[1, 2, 3].map((i) => (
                         <Card key={i} className="animate-pulse">
-                          <CardContent className="p-3 md:p-6">
-                            <div className="h-4 md:h-6 bg-muted rounded mb-2 md:mb-4"></div>
-                            <div className="h-3 md:h-4 bg-muted rounded w-2/3"></div>
+                          <CardContent className="p-4">
+                            <div className="h-5 bg-muted rounded mb-3"></div>
+                            <div className="h-4 bg-muted rounded w-2/3"></div>
                           </CardContent>
                         </Card>
                       ))}
                     </div>
                   ) : currentHabits.length === 0 ? (
                     <Card>
-                      <CardContent className="flex flex-col items-center justify-center py-6 md:py-12">
+                      <CardContent className="flex flex-col items-center justify-center py-8">
                         {activeTab === "active" ? (
                           <>
-                            <Target className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude active</h3>
-                            <p className="text-muted-foreground text-center mb-3 md:mb-4 px-4 text-sm md:text-base">
+                            <Target className="h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">Aucune habitude active</h3>
+                            <p className="text-muted-foreground text-center mb-4 px-4 text-sm">
                               Commencez à créer de bonnes habitudes pour améliorer votre productivité.
                             </p>
-                            <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                            <Button onClick={() => setIsCreateModalOpen(true)} className="px-6">
                               <Plus className="h-4 w-4 mr-2" />
                               Créer votre première habitude
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Archive className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                            <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude archivée</h3>
-                            <p className="text-muted-foreground text-center px-4 text-sm md:text-base">
+                            <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">Aucune habitude archivée</h3>
+                            <p className="text-muted-foreground text-center px-4 text-sm">
                               Les habitudes que vous archivez apparaîtront ici.
                             </p>
                           </>

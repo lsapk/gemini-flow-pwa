@@ -1,41 +1,51 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import React from 'react';
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
+import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Journal from "./pages/Journal";
-import Goals from "./pages/Goals";
-import Badges from "./pages/Badges";
 import Analysis from "./pages/Analysis";
-import AIAssistant from "./pages/AIAssistant";
-import Reflection from "./pages/Reflection";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
-import AppLayout from "./components/layout/AppLayout";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
+import AIAssistant from "./pages/AIAssistant";
+import Badges from "./pages/Badges";
+import Reflection from "./pages/Reflection";
+import PersonalityProfile from "./pages/PersonalityProfile";
+import { useAuth } from "@/hooks/useAuth";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useNotifications } from "@/hooks/useNotifications";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: (failureCount, error: any) => {
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        return failureCount < 2;
+      }
+    },
+  },
+});
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
   
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -45,99 +55,88 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
   
   return <>{children}</>;
-}
+};
 
 function App() {
+  useKeyboardShortcuts();
+  useNotifications();
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <TooltipProvider>
           <Toaster />
-          <Sonner />
           <BrowserRouter>
-            <AuthProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Dashboard />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/tasks" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Tasks />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/habits" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Habits />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/focus" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Focus />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/journal" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Journal />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/goals" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Goals />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/badges" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Badges />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/analysis" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Analysis />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/ai-assistant" element={
-                  <ProtectedRoute>
-                    <AIAssistant />
-                  </ProtectedRoute>
-                } />
-                <Route path="/reflection" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Reflection />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Settings />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AuthProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/tasks" element={
+                <ProtectedRoute>
+                  <Tasks />
+                </ProtectedRoute>
+              } />
+              <Route path="/habits" element={
+                <ProtectedRoute>
+                  <Habits />
+                </ProtectedRoute>
+              } />
+              <Route path="/goals" element={
+                <ProtectedRoute>
+                  <Goals />
+                </ProtectedRoute>
+              } />
+              <Route path="/focus" element={
+                <ProtectedRoute>
+                  <Focus />
+                </ProtectedRoute>
+              } />
+              <Route path="/journal" element={
+                <ProtectedRoute>
+                  <Journal />
+                </ProtectedRoute>
+              } />
+              <Route path="/analysis" element={
+                <ProtectedRoute>
+                  <Analysis />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-assistant" element={
+                <ProtectedRoute>
+                  <AIAssistant />
+                </ProtectedRoute>
+              } />
+              <Route path="/badges" element={
+                <ProtectedRoute>
+                  <Badges />
+                </ProtectedRoute>
+              } />
+              <Route path="/reflection" element={
+                <ProtectedRoute>
+                  <Reflection />
+                </ProtectedRoute>
+              } />
+              <Route path="/personality-profile" element={
+                <ProtectedRoute>
+                  <PersonalityProfile />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
