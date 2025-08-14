@@ -22,8 +22,7 @@ import Badges from "./pages/Badges";
 import Reflection from "./pages/Reflection";
 import PersonalityProfile from "./pages/PersonalityProfile";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useNotifications } from "@/hooks/useNotifications";
+import { AppInitializer } from "@/components/AppInitializer";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,85 +58,84 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function AppContent() {
-  useKeyboardShortcuts();
-  useNotifications();
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <TooltipProvider>
           <Toaster />
           <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/tasks" element={
-                <ProtectedRoute>
-                  <Tasks />
-                </ProtectedRoute>
-              } />
-              <Route path="/habits" element={
-                <ProtectedRoute>
-                  <Habits />
-                </ProtectedRoute>
-              } />
-              <Route path="/goals" element={
-                <ProtectedRoute>
-                  <Goals />
-                </ProtectedRoute>
-              } />
-              <Route path="/focus" element={
-                <ProtectedRoute>
-                  <Focus />
-                </ProtectedRoute>
-              } />
-              <Route path="/journal" element={
-                <ProtectedRoute>
-                  <Journal />
-                </ProtectedRoute>
-              } />
-              <Route path="/analysis" element={
-                <ProtectedRoute>
-                  <Analysis />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-assistant" element={
-                <ProtectedRoute>
-                  <AIAssistant />
-                </ProtectedRoute>
-              } />
-              <Route path="/badges" element={
-                <ProtectedRoute>
-                  <Badges />
-                </ProtectedRoute>
-              } />
-              <Route path="/reflection" element={
-                <ProtectedRoute>
-                  <Reflection />
-                </ProtectedRoute>
-              } />
-              <Route path="/personality-profile" element={
-                <ProtectedRoute>
-                  <PersonalityProfile />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppInitializer>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/tasks" element={
+                  <ProtectedRoute>
+                    <Tasks />
+                  </ProtectedRoute>
+                } />
+                <Route path="/habits" element={
+                  <ProtectedRoute>
+                    <Habits />
+                  </ProtectedRoute>
+                } />
+                <Route path="/goals" element={
+                  <ProtectedRoute>
+                    <Goals />
+                  </ProtectedRoute>
+                } />
+                <Route path="/focus" element={
+                  <ProtectedRoute>
+                    <Focus />
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal" element={
+                  <ProtectedRoute>
+                    <Journal />
+                  </ProtectedRoute>
+                } />
+                <Route path="/analysis" element={
+                  <ProtectedRoute>
+                    <Analysis />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/ai-assistant" element={
+                  <ProtectedRoute>
+                    <AIAssistant />
+                  </ProtectedRoute>
+                } />
+                <Route path="/badges" element={
+                  <ProtectedRoute>
+                    <Badges />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reflection" element={
+                  <ProtectedRoute>
+                    <Reflection />
+                  </ProtectedRoute>
+                } />
+                <Route path="/personality-profile" element={
+                  <ProtectedRoute>
+                    <PersonalityProfile />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppInitializer>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
