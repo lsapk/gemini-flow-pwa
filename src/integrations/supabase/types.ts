@@ -2039,7 +2039,7 @@ export type Database = {
           sprints: number | null
           status: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           veo_url: string
           video_url: string | null
         }
@@ -2055,7 +2055,7 @@ export type Database = {
           sprints?: number | null
           status?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           veo_url: string
           video_url?: string | null
         }
@@ -2071,7 +2071,7 @@ export type Database = {
           sprints?: number | null
           status?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           veo_url?: string
           video_url?: string | null
         }
