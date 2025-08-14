@@ -1,71 +1,144 @@
 
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
-import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Journal from "./pages/Journal";
-import Analysis from "./pages/Analysis";
-import Settings from "./pages/Settings";
-import AIAssistant from "./pages/AIAssistant";
+import Goals from "./pages/Goals";
 import Badges from "./pages/Badges";
+import Analysis from "./pages/Analysis";
+import AIAssistant from "./pages/AIAssistant";
 import Reflection from "./pages/Reflection";
-import PersonalityProfile from "./pages/PersonalityProfile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error: any) => {
-        // Don't retry on auth errors
-        if (error?.status === 401 || error?.code === 'PGRST301') {
-          return false;
-        }
-        return failureCount < 3;
-      },
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
+const queryClient = new QueryClient();
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
           <Toaster />
-          <AuthProvider>
-            <BrowserRouter>
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-                <Route path="/tasks" element={<AppLayout><Tasks /></AppLayout>} />
-                <Route path="/habits" element={<AppLayout><Habits /></AppLayout>} />
-                <Route path="/goals" element={<AppLayout><Goals /></AppLayout>} />
-                <Route path="/focus" element={<AppLayout><Focus /></AppLayout>} />
-                <Route path="/journal" element={<AppLayout><Journal /></AppLayout>} />
-                <Route path="/analysis" element={<AppLayout><Analysis /></AppLayout>} />
-                <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
-                <Route path="/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
-                <Route path="/badges" element={<AppLayout><Badges /></AppLayout>} />
-                <Route path="/reflection" element={<AppLayout><Reflection /></AppLayout>} />
-                <Route path="/personality-profile" element={<AppLayout><PersonalityProfile /></AppLayout>} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Dashboard />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/tasks" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Tasks />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/habits" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Habits />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/focus" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Focus />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/journal" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Journal />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/goals" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Goals />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/badges" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Badges />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/analysis" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Analysis />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/ai-assistant" element={
+                  <ProtectedRoute>
+                    <AIAssistant />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reflection" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Reflection />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Settings />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
-          </AuthProvider>
+            </AuthProvider>
+          </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

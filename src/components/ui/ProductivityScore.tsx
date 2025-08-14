@@ -2,26 +2,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Star, Target, Zap, TrendingUp, TrendingDown } from "lucide-react";
-import { useRealisticProductivityScore } from "@/hooks/useRealisticProductivityScore";
+import { Trophy, Star, Target, Zap } from "lucide-react";
+import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
 import { motion } from "framer-motion";
 
 export function ProductivityScore() {
-  const { data: productivityData, isLoading } = useRealisticProductivityScore();
+  const { data: productivityData, isLoading } = useRealtimeProductivityScore();
 
   // Default values if data is not available
   const {
     score = 0,
     level = 'Débutant',
     badges = [],
-    components = {
-      taskEfficiency: 0,
-      habitConsistency: 0,
-      focusQuality: 0,
-      goalProgress: 0,
-      wellBeing: 0
-    },
-    weeklyTrend = 0
+    completionRate = 0,
+    focusTimeScore = 0,
+    consistencyScore = 0,
+    streakBonus = 0
   } = productivityData || {};
 
   const getScoreColor = (score: number) => {
@@ -33,18 +29,11 @@ export function ProductivityScore() {
 
   const getLevelIcon = (level: string) => {
     switch (level) {
-      case 'Maître': return <Trophy className="h-5 w-5 text-yellow-500" />;
-      case 'Expert': return <Star className="h-5 w-5 text-purple-500" />;
-      case 'Avancé': return <Target className="h-5 w-5 text-blue-500" />;
-      case 'Intermédiaire': return <Zap className="h-5 w-5 text-green-500" />;
-      default: return <Target className="h-5 w-5 text-gray-500" />;
+      case 'Expert': return <Trophy className="h-5 w-5 text-yellow-500" />;
+      case 'Avancé': return <Star className="h-5 w-5 text-blue-500" />;
+      case 'Intermédiaire': return <Target className="h-5 w-5 text-green-500" />;
+      default: return <Zap className="h-5 w-5 text-gray-500" />;
     }
-  };
-
-  const getTrendIcon = (trend: number) => {
-    if (trend > 10) return <TrendingUp className="h-4 w-4 text-green-500" />;
-    if (trend < -10) return <TrendingDown className="h-4 w-4 text-red-500" />;
-    return <div className="h-4 w-4" />; // Stable
   };
 
   if (isLoading) {
@@ -80,80 +69,45 @@ export function ProductivityScore() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Score principal avec tendance */}
+        {/* Score principal */}
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <motion.div 
-              className={`text-4xl font-bold ${getScoreColor(score)}`}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", duration: 0.6 }}
-              key={score}
-            >
-              {score}%
-            </motion.div>
-            {getTrendIcon(weeklyTrend)}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Niveau: {level}
-            {weeklyTrend !== 0 && (
-              <span className={`ml-2 ${weeklyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ({weeklyTrend > 0 ? '+' : ''}{weeklyTrend.toFixed(0)}% cette semaine)
-              </span>
-            )}
-          </div>
+          <motion.div 
+            className={`text-4xl font-bold ${getScoreColor(score)}`}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", duration: 0.6 }}
+            key={score} // Re-animer quand le score change
+          >
+            {score}/100
+          </motion.div>
+          <div className="text-sm text-muted-foreground">Niveau: {level}</div>
           <Progress value={score} className="mt-2" />
         </div>
 
-        {/* Analyse détaillée des composants */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Analyse détaillée :</h3>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span>Efficacité des Tâches</span>
-              <span className="font-bold">{components.taskEfficiency.toFixed(0)}%</span>
-            </div>
-            <Progress value={components.taskEfficiency} className="h-1" />
+        {/* Détails des scores */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <div className="font-medium">Tâches</div>
+            <div className="text-muted-foreground">{completionRate.toFixed(0)}%</div>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span>Consistance Habitudes</span>
-              <span className="font-bold">{components.habitConsistency.toFixed(0)}%</span>
-            </div>
-            <Progress value={components.habitConsistency} className="h-1" />
+          <div>
+            <div className="font-medium">Focus</div>
+            <div className="text-muted-foreground">{focusTimeScore.toFixed(0)}/25</div>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span>Qualité du Focus</span>
-              <span className="font-bold">{components.focusQuality.toFixed(0)}%</span>
-            </div>
-            <Progress value={components.focusQuality} className="h-1" />
+          <div>
+            <div className="font-medium">Consistance</div>
+            <div className="text-muted-foreground">{consistencyScore.toFixed(0)}/25</div>
           </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span>Progrès Objectifs</span>
-              <span className="font-bold">{components.goalProgress.toFixed(0)}%</span>
-            </div>
-            <Progress value={components.goalProgress} className="h-1" />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span>Bien-être Mental</span>
-              <span className="font-bold">{components.wellBeing.toFixed(0)}%</span>
-            </div>
-            <Progress value={components.wellBeing} className="h-1" />
+          <div>
+            <div className="font-medium">Bonus Série</div>
+            <div className="text-muted-foreground">{streakBonus.toFixed(0)}/20</div>
           </div>
         </div>
 
         {/* Badges */}
         {badges.length > 0 && (
           <div>
-            <div className="font-medium text-sm mb-2">Accomplissements :</div>
+            <div className="font-medium text-sm mb-2">Badges obtenus :</div>
             <div className="flex flex-wrap gap-1">
               {badges.map((badge, index) => (
                 <motion.div
