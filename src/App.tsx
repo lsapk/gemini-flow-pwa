@@ -20,6 +20,7 @@ import AIAssistant from "./pages/AIAssistant";
 import Reflection from "./pages/Reflection";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
 import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
@@ -118,7 +119,16 @@ function App() {
                 } />
                 <Route path="/ai-assistant" element={
                   <ProtectedRoute>
-                    <AIAssistant />
+                    <AppLayout>
+                      <AIAssistant />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Profile />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/reflection" element={

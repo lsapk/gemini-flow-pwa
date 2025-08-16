@@ -153,9 +153,15 @@ ANALYSE REQUISE:
       setProfile(profileData);
       toast.success('Profil de personnalité généré avec succès !');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur génération profil:', error);
-      toast.error('Erreur lors de la génération du profil');
+      
+      // Check if it's a quota error
+      if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+        toast.error('Limite d\'API atteinte - Quota journalier dépassé (50 requêtes/jour). Réessayez demain.');
+      } else {
+        toast.error('Erreur lors de la génération du profil');
+      }
     } finally {
       setIsLoading(false);
     }

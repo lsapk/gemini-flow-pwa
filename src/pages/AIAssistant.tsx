@@ -13,10 +13,6 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Send, Bot, User, Loader2, Settings, Sparkles, BarChart3 } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
-import Sidebar from "@/components/layout/Sidebar";
-import MobileHeader from "@/components/layout/MobileHeader";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useState as useReactState } from "react";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 
 interface Message {
@@ -48,7 +44,6 @@ export default function AIAssistant() {
   const [creationModeEnabled, setCreationModeEnabled] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
 
   const { 
     habitsData, 
@@ -240,16 +235,23 @@ export default function AIAssistant() {
       }
 
     } catch (error: any) {
-      console.error('Erreur complète:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Désolé, une erreur s'est produite. Veuillez réessayer.",
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      toast.error("Erreur lors de l'envoi du message");
-    } finally {
+        console.error('Erreur complète:', error);
+        let errorContent = "Désolé, une erreur s'est produite. Veuillez réessayer.";
+        
+        // Check if it's a quota error
+        if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+          errorContent = "🚫 **Limite d'API atteinte** - Le quota journalier de l'IA a été dépassé (50 requêtes/jour). Réessayez demain ou contactez l'admin pour augmenter le quota.";
+        }
+        
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: errorContent,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        toast.error("Erreur lors de l'envoi du message");
+      } finally {
       setIsLoading(false);
     }
   };
@@ -273,22 +275,8 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="md:hidden">
-        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetContent side="left" className="p-0 w-64">
-            <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
-          </SheetContent>
-        </Sheet>
-      </div>
-      
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-      
-      <div className="flex-1 w-full h-screen flex flex-col">
-        <Card className="flex-1 flex flex-col w-full h-[100dvh] rounded-none md:rounded-xl shadow-none md:shadow-lg bg-background md:my-4 md:w-[90%] md:mx-auto transition-all">
+    <div className="flex-1 w-full h-screen flex flex-col">
+      <Card className="flex-1 flex flex-col w-full h-[100dvh] rounded-none md:rounded-xl shadow-none md:shadow-lg bg-background md:my-4 md:w-[90%] md:mx-auto transition-all">
           <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
             <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">
               <div className="flex items-center gap-2">
@@ -446,8 +434,7 @@ export default function AIAssistant() {
               </Button>
             </div>
           </CardContent>
-        </Card>
-      </div>
+      </Card>
 
       <AISuggestionDialog
         suggestion={currentSuggestion}
