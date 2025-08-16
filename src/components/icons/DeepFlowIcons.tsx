@@ -182,3 +182,12 @@ export const Repeat = (props: LucideProps) => (
     <path d="M21 13v1a4 4 0 0 1-4 4H3" />
   </svg>
 );
+
+// Add the missing DeepFlowLogo
+export const DeepFlowLogo = (props: LucideProps) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 1v6m0 6v6" />
+    <path d="m21 12-6-6-6 6-6-6" />
+  </svg>
+);
