@@ -80,34 +80,32 @@ export default function HabitList({
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-          <CardContent className="p-2 sm:p-3 md:p-6">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                <div className="flex items-center justify-center flex-shrink-0">
+          <CardContent className="p-2 sm:p-3 md:p-4">
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Checkbox
                     checked={habit.is_completed_today || false}
                     onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
                     className="w-4 h-4 sm:w-5 sm:h-5 data-[state=checked]:bg-green-500 border-2"
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col gap-1 mb-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-xs sm:text-sm truncate flex-shrink-0">{habit.title}</h3>
-                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0`}>
-                        {getFrequencyLabel(habit.frequency)}
-                      </Badge>
-                    </div>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 mb-1">
+                    <h3 className="font-semibold text-xs sm:text-sm truncate">{habit.title}</h3>
+                    <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
+                      {getFrequencyLabel(habit.frequency)}
+                    </Badge>
                   </div>
                   
                   {habit.description && (
-                    <p className="text-muted-foreground mb-1 text-xs line-clamp-2">{habit.description}</p>
+                    <p className="text-muted-foreground mb-1 text-xs line-clamp-2 break-words">{habit.description}</p>
                   )}
                   
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <Target className="h-3 w-3" />
-                      <span>Objectif: {habit.target}</span>
+                      <span className="truncate">Objectif: {habit.target}</span>
                     </div>
                     
                     {habit.streak && habit.streak > 0 && (
