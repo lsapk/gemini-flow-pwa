@@ -1,51 +1,41 @@
 
-import React from 'react';
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Habits from "./pages/Habits";
-import Goals from "./pages/Goals";
 import Focus from "./pages/Focus";
 import Journal from "./pages/Journal";
-import Analysis from "./pages/Analysis";
-import Settings from "./pages/Settings";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import NotFound from "./pages/NotFound";
-import AIAssistant from "./pages/AIAssistant";
+import Goals from "./pages/Goals";
 import Badges from "./pages/Badges";
+import Analysis from "./pages/Analysis";
+import AIAssistant from "./pages/AIAssistant";
 import Reflection from "./pages/Reflection";
-import PersonalityProfile from "./pages/PersonalityProfile";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { AppInitializer } from "@/components/AppInitializer";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+import AppLayout from "./components/layout/AppLayout";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      retry: (failureCount, error: any) => {
-        if (error?.status === 401 || error?.status === 403) {
-          return false;
-        }
-        return failureCount < 2;
-      }
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -55,62 +45,75 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return <>{children}</>;
-};
+}
 
-function AppContent() {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
           <Toaster />
+          <Sonner />
           <BrowserRouter>
-            <AppInitializer>
+            <AuthProvider>
               <Routes>
+                <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } />
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <AppLayout>
+                      <Dashboard />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/tasks" element={
                   <ProtectedRoute>
-                    <Tasks />
+                    <AppLayout>
+                      <Tasks />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/habits" element={
                   <ProtectedRoute>
-                    <Habits />
-                  </ProtectedRoute>
-                } />
-                <Route path="/goals" element={
-                  <ProtectedRoute>
-                    <Goals />
+                    <AppLayout>
+                      <Habits />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/focus" element={
                   <ProtectedRoute>
-                    <Focus />
+                    <AppLayout>
+                      <Focus />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/journal" element={
                   <ProtectedRoute>
-                    <Journal />
+                    <AppLayout>
+                      <Journal />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/goals" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Goals />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/badges" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Badges />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/analysis" element={
                   <ProtectedRoute>
-                    <Analysis />
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
+                    <AppLayout>
+                      <Analysis />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="/ai-assistant" element={
@@ -118,36 +121,27 @@ function AppContent() {
                     <AIAssistant />
                   </ProtectedRoute>
                 } />
-                <Route path="/badges" element={
-                  <ProtectedRoute>
-                    <Badges />
-                  </ProtectedRoute>
-                } />
                 <Route path="/reflection" element={
                   <ProtectedRoute>
-                    <Reflection />
+                    <AppLayout>
+                      <Reflection />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
-                <Route path="/personality-profile" element={
+                <Route path="/settings" element={
                   <ProtectedRoute>
-                    <PersonalityProfile />
+                    <AppLayout>
+                      <Settings />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </AppInitializer>
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
-  );
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
   );
 }
 
