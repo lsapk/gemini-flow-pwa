@@ -275,7 +275,7 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="flex-1 w-full h-screen flex flex-col">
+    <div className="max-w-6xl mx-auto">
       <Card className="flex-1 flex flex-col w-full h-[100dvh] rounded-none md:rounded-xl shadow-none md:shadow-lg bg-background md:my-4 md:w-[90%] md:mx-auto transition-all">
           <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
             <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">

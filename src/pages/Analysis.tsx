@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { BarChart3, RefreshCw, TrendingUp, Target, Timer, BookOpen, Brain, Lightbulb } from "lucide-react";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { useRealtimeProductivityScore } from "@/hooks/useRealtimeProductivityScore";
+import { useRealProductivityAnalysis } from "@/hooks/useRealProductivityAnalysis";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { useAIProductivityInsights } from "@/hooks/useAIProductivityInsights";
 import { motion } from "framer-motion";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
-  const { data: productivityData, isLoading: productivityLoading } = useRealtimeProductivityScore();
+  const { data: productivityData, isLoading: productivityLoading } = useRealProductivityAnalysis();
 
   // Extract productivity scores from the data with defaults
   const {

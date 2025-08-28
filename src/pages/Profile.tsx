@@ -5,32 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Brain, Sparkles, AlertCircle } from "lucide-react";
 import { usePersonalityProfile } from "@/hooks/usePersonalityProfile";
 import PersonalityProfileCard from "@/components/PersonalityProfileCard";
-import Sidebar from "@/components/layout/Sidebar";
-import MobileHeader from "@/components/layout/MobileHeader";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-
 export default function Profile() {
   const { profile, isLoading, generateProfile } = usePersonalityProfile();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="md:hidden">
-            <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-64">
-                <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
-              </SheetContent>
-            </Sheet>
-          </div>
-          
-          <div className="pt-14 md:pt-6 px-3 md:px-6">
-            <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
               {!profile ? (
                 <div className="text-center space-y-6">
                   <div className="flex items-center justify-center gap-3 mb-6">
@@ -110,10 +89,6 @@ export default function Profile() {
                   isLoading={isLoading}
                 />
               )}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

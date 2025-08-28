@@ -122,18 +122,32 @@ export const useEnhancedProductivityScore = () => {
 
         if (error) throw error;
 
-        // Parse AI response
+        // Parse AI response with improved error handling
         let parsedData: EnhancedProductivityData;
         try {
-          if (typeof data?.response === 'string') {
-            const jsonMatch = data.response.match(/```json\s*([\s\S]*?)\s*```/) || data.response.match(/\{[\s\S]*\}/);
+          if (!data?.response) {
+            throw new Error('Aucune réponse de l\'IA reçue');
+          }
+
+          if (typeof data.response === 'string') {
+            // Remove any markdown formatting and extract JSON
+            let jsonContent = data.response.trim();
+            const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/) || jsonContent.match(/\{[\s\S]*\}/);
+            
             if (jsonMatch) {
-              parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-            } else {
-              parsedData = JSON.parse(data.response);
+              jsonContent = jsonMatch[1] || jsonMatch[0];
             }
+            
+            // Clean up any potential formatting issues
+            jsonContent = jsonContent.replace(/^\s*```json\s*/, '').replace(/\s*```\s*$/, '').trim();
+            
+            if (!jsonContent || jsonContent === '') {
+              throw new Error('Contenu JSON vide après nettoyage');
+            }
+            
+            parsedData = JSON.parse(jsonContent);
           } else {
-            parsedData = data?.response || data;
+            parsedData = data.response;
           }
         } catch (parseError) {
           console.error('Error parsing enhanced productivity JSON:', parseError);
