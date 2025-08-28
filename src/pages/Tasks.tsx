@@ -4,9 +4,6 @@ import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import Sidebar from "@/components/layout/Sidebar";
-import MobileHeader from "@/components/layout/MobileHeader";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useState as useReactState } from "react";
 import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
@@ -47,7 +44,7 @@ interface Subtask {
 export default function Tasks() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useReactState(false);
+  
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -186,61 +183,45 @@ export default function Tasks() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
-        <div className="flex-1">
-          <div className="md:hidden">
-            <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetContent side="left" className="p-0 w-64">
-                <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
-              </SheetContent>
-            </Sheet>
+    <div className="space-y-6">
+      <div className="pt-16 md:pt-6 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
+            <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle tâche
+            </Button>
           </div>
-          
-          <div className="pt-16 md:pt-6 px-4 md:px-6">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
-                <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle tâche
-                </Button>
-              </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-9">
-                  <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden xs:inline">En cours</span>
-                    <span className="xs:hidden">Cours</span>
-                    ({pendingTasks.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm">
-                    <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="hidden xs:inline">Terminées</span>
-                    <span className="xs:hidden">Fini</span>
-                    ({completedTasks.length})
-                  </TabsTrigger>
-                </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-9">
+              <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">En cours</span>
+                <span className="xs:hidden">Cours</span>
+                ({pendingTasks.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm">
+                <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Terminées</span>
+                <span className="xs:hidden">Fini</span>
+                ({completedTasks.length})
+              </TabsTrigger>
+            </TabsList>
 
-                <TabsContent value={activeTab} className="mt-4">
-                  <TaskList
-                    tasks={currentTasks}
-                    loading={isLoading}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onToggleComplete={handleToggleComplete}
-                    subtasks={subtasks}
-                    onRefreshSubtasks={handleRefreshSubtasks}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
+            <TabsContent value={activeTab} className="mt-4">
+              <TaskList
+                tasks={currentTasks}
+                loading={isLoading}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggleComplete={handleToggleComplete}
+                subtasks={subtasks}
+                onRefreshSubtasks={handleRefreshSubtasks}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 

@@ -1,11 +1,8 @@
 
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Sidebar from "@/components/layout/Sidebar";
-import MobileHeader from "@/components/layout/MobileHeader";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useState } from "react";
 import { SimpleLineChart } from "@/components/ui/charts/SimpleLineChart";
+import { useState } from "react";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
 import { 
   CheckCircle2, 
@@ -58,40 +55,19 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <div className="hidden md:block">
-          <Sidebar />
-        </div>
-        <div className="flex-1 p-4 md:p-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
+      <div className="animate-pulse space-y-6">
+        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded"></div>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="md:hidden">
-        <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetContent side="left" className="p-0 w-64">
-            <Sidebar className="border-0 static" onItemClick={() => setIsMobileMenuOpen(false)} />
-          </SheetContent>
-        </Sheet>
-      </div>
-      
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-      
-      <div className="flex-1 p-4 md:p-8 space-y-6 overflow-auto">
+    <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Tableau de Bord</h1>
@@ -233,7 +209,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 }

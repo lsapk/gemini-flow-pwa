@@ -43,8 +43,12 @@ export const usePersonalityProfile = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const generateProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('Pas d\'utilisateur connecté');
+      return;
+    }
 
+    console.log('Début de la génération du profil pour l\'utilisateur:', user.id);
     setIsLoading(true);
     try {
       // Récupérer toutes les données utilisateur
@@ -129,6 +133,8 @@ ANALYSE REQUISE:
           }
         }
       });
+
+      console.log('Réponse de l\'API:', { data, error });
 
       if (error) throw error;
 
