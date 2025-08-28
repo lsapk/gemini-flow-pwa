@@ -51,86 +51,62 @@ export const usePersonalityProfile = () => {
     console.log('Début de la génération du profil pour l\'utilisateur:', user.id);
     setIsLoading(true);
     try {
-      // Récupérer toutes les données utilisateur
-      const [reflections, journalEntries, habits, tasks, goals, focusSessions] = await Promise.all([
-        supabase.from('daily_reflections').select('*').eq('user_id', user.id),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id),
-        supabase.from('habits').select('*').eq('user_id', user.id),
-        supabase.from('tasks').select('*').eq('user_id', user.id),
-        supabase.from('goals').select('*').eq('user_id', user.id),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id)
+      // Récupérer données utilisateur limitées pour économiser tokens
+      const [habits, goals, tasks] = await Promise.all([
+        supabase.from('habits').select('title, description').eq('user_id', user.id).limit(10),
+        supabase.from('goals').select('title, description').eq('user_id', user.id).limit(5),
+        supabase.from('tasks').select('title, completed, priority').eq('user_id', user.id).limit(15)
       ]);
 
-      const userData = {
-        reflections: reflections.data || [],
-        journalEntries: journalEntries.data || [],
-        habits: habits.data || [],
-        tasks: tasks.data || [],
-        goals: goals.data || [],
-        focusSessions: focusSessions.data || []
+      // Créer résumé condensé pour éviter quota limits
+      const statsOnly = {
+        habitsCount: habits.data?.length || 0,
+        goalsCount: goals.data?.length || 0,
+        tasksCount: tasks.data?.length || 0,
+        completedTasks: tasks.data?.filter(t => t.completed).length || 0,
+        habitTitles: habits.data?.slice(0, 5).map(h => h.title) || [],
+        goalTitles: goals.data?.slice(0, 3).map(g => g.title) || []
       };
 
-      // Générer le profil avec l'IA
+      // Prompt ultra-court pour API gratuite
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: `Analyse approfondie de personnalité et profil psychologique complet.
+          message: `Analyse: ${statsOnly.habitsCount} habitudes, ${statsOnly.goalsCount} objectifs, ${statsOnly.completedTasks}/${statsOnly.tasksCount} tâches terminées.
 
-DONNÉES UTILISATEUR COMPLÈTES:
-- Réflexions personnelles: ${userData.reflections.length} entrées
-- Entrées de journal: ${userData.journalEntries.length} entrées  
-- Habitudes: ${userData.habits.length} habitudes
-- Tâches: ${userData.tasks.length} tâches
-- Objectifs: ${userData.goals.length} objectifs
-- Sessions de focus: ${userData.focusSessions.length} sessions
-
-MISSION: Créer un profil de personnalité détaillé et une analyse psychologique approfondie basée sur ces données comportementales réelles.
-
-Retourne UNIQUEMENT un objet JSON valide avec cette structure exacte:
+Retourne JSON uniquement:
 {
   "personality": {
-    "traits": ["array de traits de personnalité identifiés"],
-    "strengths": ["array de forces principales"],
-    "areas_to_improve": ["array de domaines d'amélioration"],
-    "motivations": ["array de motivations intrinsèques"],
-    "working_style": "description du style de travail"
+    "traits": ["3 traits"],
+    "strengths": ["2 forces"],
+    "areas_to_improve": ["2 améliorations"],
+    "motivations": ["2 motivations"],
+    "working_style": "style"
   },
   "psychological_insights": {
-    "behavioral_patterns": ["array de patterns comportementaux observés"],
-    "stress_management": "analyse de la gestion du stress",
-    "decision_making_style": "style de prise de décision",
-    "social_preferences": "préférences sociales et relationnelles"
+    "behavioral_patterns": ["2 patterns"],
+    "stress_management": "analyse courte",
+    "decision_making_style": "style court",
+    "social_preferences": "préférences courtes"
   },
   "productivity_analysis": {
-    "peak_performance_times": ["array des moments de pic de performance"],
-    "productivity_blockers": ["array des obstacles à la productivité"],
-    "optimal_work_environment": "environnement de travail optimal",
-    "goal_achievement_style": "style d'atteinte des objectifs"
+    "peak_performance_times": ["2 moments"],
+    "productivity_blockers": ["2 obstacles"],
+    "optimal_work_environment": "environnement",
+    "goal_achievement_style": "style"
   },
   "recommendations": {
-    "habits_to_develop": ["array d'habitudes à développer"],
-    "productivity_tips": ["array de conseils productivité personnalisés"],
-    "personal_growth": ["array de recommandations de croissance"],
-    "stress_management": ["array de techniques de gestion du stress"]
+    "habits_to_develop": ["3 habitudes"],
+    "productivity_tips": ["3 conseils"],
+    "personal_growth": ["2 recommandations"],
+    "stress_management": ["2 techniques"]
   },
   "growth_trajectory": {
-    "current_phase": "phase actuelle de développement",
-    "next_milestones": ["array des prochains jalons"],
-    "long_term_potential": "potentiel de développement à long terme"
+    "current_phase": "phase",
+    "next_milestones": ["2 jalons"],
+    "long_term_potential": "potentiel"
   }
-}
-
-ANALYSE REQUISE:
-- Patterns dans les réflexions et journaux pour identifier la personnalité
-- Corrélations entre habitudes et traits psychologiques
-- Analyse des objectifs pour comprendre les motivations profondes
-- Examen des tâches pour identifier les préférences de travail
-- Évaluation des sessions de focus pour optimiser la productivité
-- Insights psychologiques basés sur les comportements observés`,
-          user_id: user.id,
-          context: {
-            analysis_mode: true,
-            user_data: userData
-          }
+}`,
+          user_id: user.id
         }
       });
 
