@@ -27,7 +27,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   const navigate = useNavigate();
 
   const navItems = [
-    { icon: Home, label: "Tableau de bord", path: "/" },
+    { icon: Home, label: "Tableau de bord", path: "/dashboard" },
     { icon: CheckSquare, label: "Tâches", path: "/tasks" },
     { icon: Target, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },
