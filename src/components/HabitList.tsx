@@ -81,7 +81,7 @@ export default function HabitList({
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
           <CardContent className="p-2 sm:p-3 md:p-4">
-            <div className="flex items-start justify-between gap-2 min-w-0">
+            <div className="flex items-start gap-2 w-full">
               <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
                 <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Checkbox
@@ -122,10 +122,10 @@ export default function HabitList({
                       </div>
                     )}
                   </div>
+                  </div>
                 </div>
-              </div>
               
-              <div className="flex gap-0.5 flex-shrink-0">
+              <div className="flex flex-col gap-0.5 flex-shrink-0">
                 {onArchive && (
                   <Button
                     variant="ghost"
