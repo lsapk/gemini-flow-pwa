@@ -297,7 +297,206 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* ... keep existing code for other tabs */}
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Préférences d'Interface
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  <span>Notifications</span>
+                </div>
+                <Switch
+                  checked={formData.notifications_enabled}
+                  onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-5 w-5" />
+                  <span>Sons</span>
+                </div>
+                <Switch
+                  checked={formData.sound_enabled}
+                  onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
+                />
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Langue
+                </Label>
+                <Select value={formData.language} onValueChange={(value) => setFormData({...formData, language: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" />
+                  Thème
+                </Label>
+                <Select value={formData.theme} onValueChange={(value) => setFormData({...formData, theme: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">Système</SelectItem>
+                    <SelectItem value="light">Clair</SelectItem>
+                    <SelectItem value="dark">Sombre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Format Heure
+                </Label>
+                <Select value={formData.clock_format} onValueChange={(value) => setFormData({...formData, clock_format: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">24h</SelectItem>
+                    <SelectItem value="12h">12h</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  <span>Mode Focus</span>
+                </div>
+                <Switch
+                  checked={formData.focus_mode}
+                  onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Configuration API & IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Clé API Gemini (Optionnel)</Label>
+                <Input
+                  type="password"
+                  placeholder="Votre clé API Gemini pour des analyses personnalisées"
+                  value={formData.gemini_api_key}
+                  onChange={(e) => setFormData({...formData, gemini_api_key: e.target.value})}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ajoutez votre propre clé API Gemini pour débloquer des analyses IA illimitées
+                </p>
+              </div>
+              
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Fonctionnalités IA Disponibles
+                </h4>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Analyse de profil de personnalité</li>
+                  <li>• Recommandations personnalisées</li>
+                  <li>• Score de productivité intelligent</li>
+                  <li>• Insights comportementaux</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <div className="grid gap-4 md:gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Vos Statistiques
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">{stats.tasks_completed}</div>
+                    <div className="text-xs text-muted-foreground">Tâches Complétées</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{stats.habits_tracked}</div>
+                    <div className="text-xs text-muted-foreground">Habitudes Suivies</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">{stats.focus_sessions}</div>
+                    <div className="text-xs text-muted-foreground">Sessions Focus</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">{stats.streak_days}</div>
+                    <div className="text-xs text-muted-foreground">Meilleure Série</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Badges Débloqués</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3">
+                  {Object.entries(stats).map(([statName, value]) => {
+                    const badge = getBadgeForStat(statName, value);
+                    if (!badge) return null;
+                    
+                    return (
+                      <div key={statName} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <div className={`w-3 h-3 rounded-full ${badge.color}`}></div>
+                        <span className="font-medium">{badge.label}</span>
+                        <Badge variant="secondary" className="ml-auto">{value}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {Object.entries(stats).every(([statName, value]) => !getBadgeForStat(statName, value)) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Continuez vos efforts pour débloquer vos premiers badges !</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
       </Tabs>
 

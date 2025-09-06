@@ -68,44 +68,11 @@ export const usePersonalityProfile = () => {
         goalTitles: goals.data?.slice(0, 3).map(g => g.title) || []
       };
 
-      // Prompt ultra-court pour API gratuite
+      // Prompt minimal pour éviter quota
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: `Analyse: ${statsOnly.habitsCount} habitudes, ${statsOnly.goalsCount} objectifs, ${statsOnly.completedTasks}/${statsOnly.tasksCount} tâches terminées.
-
-Retourne JSON uniquement:
-{
-  "personality": {
-    "traits": ["3 traits"],
-    "strengths": ["2 forces"],
-    "areas_to_improve": ["2 améliorations"],
-    "motivations": ["2 motivations"],
-    "working_style": "style"
-  },
-  "psychological_insights": {
-    "behavioral_patterns": ["2 patterns"],
-    "stress_management": "analyse courte",
-    "decision_making_style": "style court",
-    "social_preferences": "préférences courtes"
-  },
-  "productivity_analysis": {
-    "peak_performance_times": ["2 moments"],
-    "productivity_blockers": ["2 obstacles"],
-    "optimal_work_environment": "environnement",
-    "goal_achievement_style": "style"
-  },
-  "recommendations": {
-    "habits_to_develop": ["3 habitudes"],
-    "productivity_tips": ["3 conseils"],
-    "personal_growth": ["2 recommandations"],
-    "stress_management": ["2 techniques"]
-  },
-  "growth_trajectory": {
-    "current_phase": "phase",
-    "next_milestones": ["2 jalons"],
-    "long_term_potential": "potentiel"
-  }
-}`,
+          message: `Stats: ${statsOnly.habitsCount}h ${statsOnly.goalsCount}o ${statsOnly.completedTasks}/${statsOnly.tasksCount}t. JSON:
+{"personality":{"traits":["organisé","motivé","persévérant"],"strengths":["discipline","focus"],"areas_to_improve":["équilibre","patience"],"motivations":["réussite","amélioration"],"working_style":"méthodique"},"psychological_insights":{"behavioral_patterns":["planification","exécution"],"stress_management":"organisation structure","decision_making_style":"analytique réfléchi","social_preferences":"indépendant concentré"},"productivity_analysis":{"peak_performance_times":["matin","début après-midi"],"productivity_blockers":["distractions","perfectionnisme"],"optimal_work_environment":"calme organisé","goal_achievement_style":"étapes progressives"},"recommendations":{"habits_to_develop":["pause régulière","exercice physique","méditation"],"productivity_tips":["timeboxing","priorités matrix","pauses actives"],"personal_growth":["lecture développement","réflexion quotidienne"],"stress_management":["respiration","organisation","temps libre"]},"growth_trajectory":{"current_phase":"développement actif","next_milestones":["optimisation routine","équilibre vie"],"long_term_potential":"expert productivité personnelle"}}`,
           user_id: user.id
         }
       });
