@@ -8,7 +8,7 @@ import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRigh
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React from "react";
-import SubtaskList from "./SubtaskList";
+import { SubtaskList } from "./SubtaskList";
 
 type Task = {
   id: string;

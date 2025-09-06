@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,7 +22,7 @@ interface SubtaskListProps {
   onRefresh: () => void;
 }
 
-export default function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskListProps) {
+export function SubtaskList({ taskId, subtasks, onRefresh }: SubtaskListProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSubtask, setEditingSubtask] = useState<Subtask | null>(null);
   const { user } = useAuth();
