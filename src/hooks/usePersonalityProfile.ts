@@ -153,8 +153,14 @@ Analyse approfondie requise basée sur les patterns réels de l'utilisateur.`,
       let analysisResult;
       try {
         // Essayer de parser la réponse JSON
-        const responseText = data?.choices?.[0]?.message?.content || data?.content || data;
+        let responseText = data?.choices?.[0]?.message?.content || data?.content || data;
         console.log('Réponse brute de l\'IA:', responseText);
+        
+        // Vérifier que responseText est bien une string
+        if (typeof responseText !== 'string') {
+          console.error('ResponseText n\'est pas une string:', typeof responseText, responseText);
+          throw new Error('Réponse IA invalide - format incorrect');
+        }
         
         // Nettoyer le JSON s'il contient des caractères parasites
         const cleanedResponse = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
