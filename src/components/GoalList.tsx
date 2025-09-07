@@ -72,9 +72,9 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
         </div>
       ) : (
         goals.map((goal) => (
-          <Card key={goal.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start gap-2 w-full">
-              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+           <Card key={goal.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
+             <div className="flex items-start gap-2 w-full min-w-0">
+               <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
                 <Checkbox
                   checked={goal.completed}
                   onCheckedChange={(checked) =>
