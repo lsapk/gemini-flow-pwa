@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit2 } from 'lucide-react';
@@ -72,65 +72,78 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
         </div>
       ) : (
         goals.map((goal) => (
-           <Card key={goal.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
-             <div className="flex items-start gap-2 w-full min-w-0">
-               <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
-                <Checkbox
-                  checked={goal.completed}
-                  onCheckedChange={(checked) =>
-                    updateGoalStatus(goal.id, checked as boolean)
-                  }
-                  className="mt-1 flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-                    <h3 className={`font-medium text-sm leading-tight truncate ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {goal.title}
-                    </h3>
-                    {goal.category && (
-                      <Badge variant="outline" className="text-xs w-fit flex-shrink-0">
-                        {goal.category}
-                      </Badge>
-                    )}
+          <Card key={goal.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="flex items-start gap-2 w-full min-w-0">
+                <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Checkbox
+                      checked={goal.completed}
+                      onCheckedChange={(checked) =>
+                        updateGoalStatus(goal.id, checked as boolean)
+                      }
+                      size="xl"
+                      className="data-[state=checked]:bg-green-500 border-2"
+                    />
                   </div>
-                  {goal.description && (
-                    <p className={`text-xs sm:text-sm mb-2 line-clamp-2 break-words ${goal.completed ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
-                      {goal.description}
-                    </p>
-                  )}
-                  {goal.target_date && (
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {format(parseISO(goal.target_date), 'dd/MM/yy', { locale: fr })}
-                    </p>
-                  )}
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-muted-foreground">{goal.progress}%</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col gap-1 mb-1">
+                      <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        {goal.title}
+                      </h3>
+                      {goal.category && (
+                        <Badge variant="outline" className="text-xs flex-shrink-0 w-fit">
+                          {goal.category}
+                        </Badge>
+                      )}
                     </div>
-                    <Progress value={goal.progress} className="h-2" />
+                    
+                    {goal.description && (
+                      <p className={`text-muted-foreground mb-1 text-xs line-clamp-2 break-words ${goal.completed ? 'line-through' : ''}`}>
+                        {goal.description}
+                      </p>
+                    )}
+                    
+                    {goal.target_date && (
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {format(parseISO(goal.target_date), 'dd/MM/yy', { locale: fr })}
+                      </p>
+                    )}
+                    
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">{goal.progress}%</span>
+                      </div>
+                      <Progress value={goal.progress} className="h-2" />
+                    </div>
+                    
+                    <SubobjectiveList goalId={goal.id} />
                   </div>
-                  <SubobjectiveList goalId={goal.id} />
+                </div>
+                
+                <div className="flex flex-col gap-0.5 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(goal)}
+                    aria-label="Modifier"
+                    className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                  >
+                    <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(goal.id)}
+                    aria-label="Supprimer"
+                    className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                  >
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex flex-col gap-1 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(goal)}
-                  className="h-6 w-6 sm:h-8 sm:w-8 p-0"
-                >
-                  <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(goal.id)}
-                  className="h-6 w-6 sm:h-8 sm:w-8 p-0"
-                >
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-              </div>
-            </div>
+            </CardContent>
           </Card>
         ))
       )}
