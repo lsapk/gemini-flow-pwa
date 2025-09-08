@@ -83,13 +83,14 @@ export default function HabitList({
            <CardContent className="p-2 sm:p-3 md:p-4">
              <div className="flex items-start gap-2 w-full min-w-0">
                <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
-                <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Checkbox
-                    checked={habit.is_completed_today || false}
-                    onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                    className="w-4 h-4 sm:w-5 sm:h-5 data-[state=checked]:bg-green-500 border-2"
-                  />
-                </div>
+                 <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                   <Checkbox
+                     checked={habit.is_completed_today || false}
+                     onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
+                     size="xl"
+                     className="data-[state=checked]:bg-green-500 border-2"
+                   />
+                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col gap-1 mb-1">
                     <h3 className="font-semibold text-xs sm:text-sm truncate leading-tight">{habit.title}</h3>
