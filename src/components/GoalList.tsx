@@ -73,55 +73,55 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
       ) : (
         goals.map((goal) => (
           <Card key={goal.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-2 sm:p-3 md:p-4">
-              <div className="flex items-start gap-2 w-full min-w-0">
-                <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Checkbox
-                      checked={goal.completed}
-                      onCheckedChange={(checked) =>
-                        updateGoalStatus(goal.id, checked as boolean)
-                      }
-                      size="xl"
-                      className="data-[state=checked]:bg-green-500 border-2"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-1 mb-1">
-                      <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
-                        {goal.title}
-                      </h3>
-                      {goal.category && (
-                        <Badge variant="outline" className="text-xs flex-shrink-0 w-fit">
-                          {goal.category}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {goal.description && (
-                      <p className={`text-muted-foreground mb-1 text-xs line-clamp-2 break-words ${goal.completed ? 'line-through' : ''}`}>
-                        {goal.description}
-                      </p>
-                    )}
-                    
-                    {goal.target_date && (
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {format(parseISO(goal.target_date), 'dd/MM/yy', { locale: fr })}
-                      </p>
-                    )}
-                    
-                    <div className="mb-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">{goal.progress}%</span>
-                      </div>
-                      <Progress value={goal.progress} className="h-2" />
-                    </div>
-                    
-                    <SubobjectiveList goalId={goal.id} />
-                  </div>
-                </div>
-                
-                <div className="flex flex-col gap-0.5 flex-shrink-0">
+             <CardContent className="p-2 sm:p-3 md:p-4">
+               <div className="flex items-start gap-2 w-full min-w-0">
+                 <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
+                   <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                     <Checkbox
+                       checked={goal.completed}
+                       onCheckedChange={(checked) =>
+                         updateGoalStatus(goal.id, checked as boolean)
+                       }
+                       size="xl"
+                       className="data-[state=checked]:bg-green-500 border-2"
+                     />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <div className="flex flex-col gap-1 mb-1">
+                       <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
+                         {goal.title}
+                       </h3>
+                       {goal.category && (
+                         <Badge variant="outline" className="text-xs flex-shrink-0 w-fit">
+                           {goal.category}
+                         </Badge>
+                       )}
+                     </div>
+                     
+                     {goal.description && (
+                       <p className={`text-muted-foreground mb-1 text-xs line-clamp-2 break-words ${goal.completed ? 'line-through' : ''}`}>
+                         {goal.description}
+                       </p>
+                     )}
+                     
+                     {goal.target_date && (
+                       <p className="text-xs text-muted-foreground mb-1">
+                         {format(parseISO(goal.target_date), 'dd/MM/yy', { locale: fr })}
+                       </p>
+                     )}
+                     
+                     <div className="mb-2">
+                       <div className="flex items-center gap-2 mb-1">
+                         <span className="text-xs text-muted-foreground">{goal.progress}%</span>
+                       </div>
+                       <Progress value={goal.progress} className="h-2" />
+                     </div>
+                     
+                     <SubobjectiveList goalId={goal.id} />
+                   </div>
+                 </div>
+                 
+                 <div className="flex flex-col gap-0.5 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
