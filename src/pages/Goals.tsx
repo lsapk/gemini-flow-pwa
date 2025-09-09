@@ -123,28 +123,33 @@ export default function Goals() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Objectifs</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel objectif
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+        <h1 className="text-lg md:text-2xl font-bold tracking-tight">Objectifs</h1>
+        <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="sm:hidden">Nouvel</span>
+          <span className="hidden sm:inline">Nouvel objectif</span>
         </Button>
       </div>
 
       {/* Tabs pour en cours/terminés */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="ongoing" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            En cours ({goals.length})
+        <TabsList className="grid w-full grid-cols-2 h-8 md:h-9">
+          <TabsTrigger value="ongoing" className="flex items-center gap-1 text-xs md:text-sm py-1">
+            <Target className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">En cours</span>
+            <span className="xs:hidden">En cours</span>
+            <span className="ml-1">({goals.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            Terminés ({completedGoals.length})
+          <TabsTrigger value="completed" className="flex items-center gap-1 text-xs md:text-sm py-1">
+            <Trophy className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">Terminés</span>
+            <span className="xs:hidden">Term.</span>
+            <span className="ml-1">({completedGoals.length})</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-4">
+        <TabsContent value={activeTab} className="mt-3 md:mt-4">
           {isLoading ? (
             <div className="grid gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (

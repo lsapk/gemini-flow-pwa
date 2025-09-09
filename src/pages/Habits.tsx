@@ -212,9 +212,8 @@ export default function Habits() {
   const currentHabits = activeTab === "active" ? habits : archivedHabits;
 
   return (
-    <div className="space-y-6">
-      <div className="pt-14 md:pt-6 px-3 md:px-6">
-        <div className="max-w-4xl mx-auto space-y-3 md:space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
+      <div className="space-y-3 md:space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
             <h1 className="text-lg md:text-2xl font-bold tracking-tight">Habitudes</h1>
             <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">
@@ -293,7 +292,6 @@ export default function Habits() {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
 
       {isCreateModalOpen && (
         <CreateModal 
