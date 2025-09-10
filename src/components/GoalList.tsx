@@ -88,9 +88,9 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
                    </div>
                    <div className="flex-1 min-w-0">
                      <div className="flex flex-col gap-1 mb-1">
-                       <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : ''}`}>
-                         {goal.title}
-                       </h3>
+                        <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>
+                          {goal.title}
+                        </h3>
                        {goal.category && (
                          <Badge variant="outline" className="text-xs flex-shrink-0 w-fit">
                            {goal.category}
@@ -110,12 +110,34 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
                        </p>
                      )}
                      
-                     <div className="mb-2">
-                       <div className="flex items-center gap-2 mb-1">
-                         <span className="text-xs text-muted-foreground">{goal.progress}%</span>
-                       </div>
-                       <Progress value={goal.progress} className="h-2" />
-                     </div>
+                      <div className="mb-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-muted-foreground">{goal.progress}%</span>
+                          {!goal.completed && goal.progress < 100 && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-5 px-1.5 text-xs"
+                              onClick={async () => {
+                                const newProgress = Math.min(100, goal.progress + 10);
+                                const { error } = await supabase
+                                  .from('goals')
+                                  .update({ progress: newProgress })
+                                  .eq('id', goal.id)
+                                  .eq('user_id', user?.id);
+                                
+                                if (!error) {
+                                  toast.success('Progrès mis à jour +10%');
+                                  window.location.reload();
+                                }
+                              }}
+                            >
+                              +10%
+                            </Button>
+                          )}
+                        </div>
+                        <Progress value={goal.progress} className="h-2" />
+                      </div>
                      
                      <SubobjectiveList goalId={goal.id} />
                    </div>

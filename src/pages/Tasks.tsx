@@ -66,10 +66,18 @@ export default function Tasks() {
         throw new Error(error.message);
       }
 
-      return (data || []).map(task => ({
+      const mappedTasks = (data || []).map(task => ({
         ...task,
         priority: task.priority as "low" | "medium" | "high" | null
       })) as Task[];
+
+      // Sort by priority: high -> medium -> low -> null
+      return mappedTasks.sort((a, b) => {
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+        return bPriority - aPriority;
+      });
     },
     enabled: !!user,
   });
