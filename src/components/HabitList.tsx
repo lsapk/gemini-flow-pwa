@@ -80,19 +80,19 @@ export default function HabitList({
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-           <CardContent className="p-3 sm:p-4 md:p-6">
-              <div className="flex items-start gap-3 w-full min-w-0">
-                <div className="flex items-start gap-3 flex-1 min-w-0 overflow-hidden">
+           <CardContent className="p-2 sm:p-3 md:p-4">
+              <div className="flex items-start gap-2 w-full min-w-0">
+                <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Checkbox
                       checked={habit.is_completed_today || false}
                       onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                      size="large"
+                      size="default"
                       className="data-[state=checked]:bg-green-500 border-2"
                     />
                   </div>
                  <div className="flex-1 min-w-0">
-                   <div className="flex flex-col gap-1 mb-1">
+                   <div className="flex flex-col gap-0.5 mb-1">
                      <h3 className="font-semibold text-xs sm:text-sm truncate leading-tight">{habit.title}</h3>
                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
                        {getFrequencyLabel(habit.frequency)}
@@ -100,24 +100,24 @@ export default function HabitList({
                    </div>
                    
                    {habit.description && (
-                     <p className="text-muted-foreground mb-1 text-xs line-clamp-2 break-words">{habit.description}</p>
+                     <p className="text-muted-foreground mb-0.5 text-xs line-clamp-2 break-words">{habit.description}</p>
                    )}
                    
                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                     <div className="flex items-center gap-1 min-w-0">
+                     <div className="flex items-center gap-0.5 min-w-0">
                        <Target className="h-3 w-3 flex-shrink-0" />
                        <span className="truncate">{habit.target}</span>
                      </div>
                      
                      {habit.streak && habit.streak > 0 && (
-                       <div className="flex items-center gap-1 flex-shrink-0">
+                       <div className="flex items-center gap-0.5 flex-shrink-0">
                          <span className="text-orange-600">🔥</span>
                          <span>{habit.streak}</span>
                        </div>
                      )}
                      
                      {habit.last_completed_at && (
-                       <div className="flex items-center gap-1 flex-shrink-0">
+                       <div className="flex items-center gap-0.5 flex-shrink-0">
                          <Calendar className="h-3 w-3 flex-shrink-0" />
                          <span>{format(new Date(habit.last_completed_at), 'dd/MM', { locale: fr })}</span>
                        </div>
@@ -133,12 +133,12 @@ export default function HabitList({
                     size="sm"
                     onClick={() => onArchive(habit.id, showArchived)}
                     aria-label={showArchived ? "Restaurer" : "Archiver"}
-                    className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                    className="h-5 w-5 sm:h-6 sm:w-6 p-0"
                   >
                     {showArchived ? (
-                      <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <RotateCcw className="h-3 w-3" />
                     ) : (
-                      <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Archive className="h-3 w-3" />
                     )}
                   </Button>
                 )}
@@ -148,9 +148,9 @@ export default function HabitList({
                   size="sm"
                   onClick={() => onEdit(habit)}
                   aria-label="Modifier"
-                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                  className="h-5 w-5 sm:h-6 sm:w-6 p-0"
                 >
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <Edit className="h-3 w-3" />
                 </Button>
                 
                 <Button
@@ -158,9 +158,9 @@ export default function HabitList({
                   size="sm"
                   onClick={() => onDelete(habit.id)}
                   aria-label="Supprimer"
-                  className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                  className="h-5 w-5 sm:h-6 sm:w-6 p-0"
                 >
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </div>
