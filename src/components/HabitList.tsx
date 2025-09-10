@@ -80,17 +80,17 @@ export default function HabitList({
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-           <CardContent className="p-2 sm:p-3 md:p-4">
-             <div className="flex items-start gap-2 w-full min-w-0">
-               <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
-                 <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
-                   <Checkbox
-                     checked={habit.is_completed_today || false}
-                     onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                     size="xl"
-                     className="data-[state=checked]:bg-green-500 border-2"
-                   />
-                 </div>
+           <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-start gap-3 w-full min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Checkbox
+                      checked={habit.is_completed_today || false}
+                      onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
+                      size="large"
+                      className="data-[state=checked]:bg-green-500 border-2"
+                    />
+                  </div>
                  <div className="flex-1 min-w-0">
                    <div className="flex flex-col gap-1 mb-1">
                      <h3 className="font-semibold text-xs sm:text-sm truncate leading-tight">{habit.title}</h3>
