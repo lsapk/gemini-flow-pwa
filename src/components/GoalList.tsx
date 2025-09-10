@@ -73,9 +73,9 @@ export const GoalList = ({ goals, loading, onEdit, onDelete }: GoalListProps) =>
       ) : (
         goals.map((goal) => (
           <Card key={goal.id} className="hover:shadow-md transition-shadow">
-             <CardContent className="p-2 sm:p-3 md:p-4">
-               <div className="flex items-start gap-2 w-full min-w-0">
-                 <div className="flex items-start gap-2 flex-1 min-w-0 overflow-hidden">
+             <CardContent className="p-1.5 sm:p-2 md:p-3">
+               <div className="flex items-start gap-1.5 w-full min-w-0">
+                 <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden">
                    <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
                      <Checkbox
                        checked={goal.completed}

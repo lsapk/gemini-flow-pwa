@@ -12,10 +12,12 @@ import {
   Timer,
   Award,
   Brain,
-  User
+  User,
+  LogOut
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DeepFlowLogo } from "@/components/icons/DeepFlowIcons";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   className?: string;
@@ -25,6 +27,7 @@ interface SidebarProps {
 export default function Sidebar({ className, onItemClick }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
@@ -74,6 +77,21 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
           );
         })}
       </nav>
+      
+      <div className="p-4 border-t border-border">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={async () => {
+            await signOut();
+            navigate('/login');
+            onItemClick?.();
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+          Déconnexion
+        </Button>
+      </div>
     </div>
   );
 }
