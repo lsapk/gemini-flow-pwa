@@ -227,8 +227,8 @@ export default function Analysis() {
                   </h3>
                   <div className="grid gap-2">
                     {insights.map((insight, index) => (
-                      <div key={index} className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                        <p className="text-sm">{insight}</p>
+                      <div key={index} className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-l-4 border-blue-400 dark:border-blue-600">
+                        <p className="text-sm text-blue-900 dark:text-blue-100">{insight}</p>
                       </div>
                     ))}
                   </div>
@@ -243,8 +243,8 @@ export default function Analysis() {
                   </h3>
                   <div className="grid gap-2">
                     {recommendations.map((recommendation, index) => (
-                      <div key={index} className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                        <p className="text-sm font-medium">{recommendation}</p>
+                      <div key={index} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-400 dark:border-green-600">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">{recommendation}</p>
                       </div>
                     ))}
                   </div>

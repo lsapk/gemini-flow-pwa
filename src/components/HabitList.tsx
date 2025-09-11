@@ -80,15 +80,15 @@ export default function HabitList({
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-           <CardContent className="p-1.5 sm:p-2 md:p-3">
-              <div className="flex items-start gap-1.5 w-full min-w-0">
-                <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden">
+           <CardContent className="p-1 sm:p-1.5 md:p-2">
+              <div className="flex items-start gap-1 w-full min-w-0">
+                <div className="flex items-start gap-1 flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
                      <Checkbox
                        checked={habit.is_completed_today || false}
                        onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
                        size="xl"
-                       className="data-[state=checked]:bg-green-500 border-2 h-8 w-8"
+                       className="data-[state=checked]:bg-green-500 border-2 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8"
                      />
                   </div>
                  <div className="flex-1 min-w-0">
@@ -126,43 +126,43 @@ export default function HabitList({
                  </div>
                </div>
                
-               <div className="flex flex-col gap-0.5 flex-shrink-0">
-                {onArchive && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onArchive(habit.id, showArchived)}
-                    aria-label={showArchived ? "Restaurer" : "Archiver"}
-                    className="h-5 w-5 sm:h-6 sm:w-6 p-0"
-                  >
-                    {showArchived ? (
-                      <RotateCcw className="h-3 w-3" />
-                    ) : (
-                      <Archive className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(habit)}
-                  aria-label="Modifier"
-                  className="h-5 w-5 sm:h-6 sm:w-6 p-0"
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(habit.id)}
-                  aria-label="Supprimer"
-                  className="h-5 w-5 sm:h-6 sm:w-6 p-0"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
+                <div className="flex flex-col gap-0.5 flex-shrink-0">
+                 {onArchive && (
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     onClick={() => onArchive(habit.id, showArchived)}
+                     aria-label={showArchived ? "Restaurer" : "Archiver"}
+                     className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                   >
+                     {showArchived ? (
+                       <RotateCcw className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                     ) : (
+                       <Archive className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                     )}
+                   </Button>
+                 )}
+                 
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => onEdit(habit)}
+                   aria-label="Modifier"
+                   className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                 >
+                   <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                 </Button>
+                 
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => onDelete(habit.id)}
+                   aria-label="Supprimer"
+                   className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                 >
+                   <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                 </Button>
+               </div>
             </div>
           </CardContent>
         </Card>
