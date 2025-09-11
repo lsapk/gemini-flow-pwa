@@ -91,38 +91,38 @@ export default function HabitList({
                        className="data-[state=checked]:bg-green-500 border-2 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8"
                      />
                   </div>
-                 <div className="flex-1 min-w-0">
-                   <div className="flex flex-col gap-0.5 mb-1">
-                     <h3 className="font-semibold text-xs sm:text-sm truncate leading-tight">{habit.title}</h3>
-                     <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
-                       {getFrequencyLabel(habit.frequency)}
-                     </Badge>
-                   </div>
-                   
-                   {habit.description && (
-                     <p className="text-muted-foreground mb-0.5 text-xs line-clamp-2 break-words">{habit.description}</p>
-                   )}
-                   
-                   <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                     <div className="flex items-center gap-0.5 min-w-0">
-                       <Target className="h-3 w-3 flex-shrink-0" />
-                       <span className="truncate">{habit.target}</span>
-                     </div>
-                     
-                     {habit.streak && habit.streak > 0 && (
-                       <div className="flex items-center gap-0.5 flex-shrink-0">
-                         <span className="text-orange-600">🔥</span>
-                         <span>{habit.streak}</span>
-                       </div>
-                     )}
-                     
-                     {habit.last_completed_at && (
-                       <div className="flex items-center gap-0.5 flex-shrink-0">
-                         <Calendar className="h-3 w-3 flex-shrink-0" />
-                         <span>{format(new Date(habit.last_completed_at), 'dd/MM', { locale: fr })}</span>
-                       </div>
-                     )}
-                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col gap-0.5 mb-0.5">
+                      <h3 className="font-semibold text-xs truncate leading-tight">{habit.title}</h3>
+                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
+                        {getFrequencyLabel(habit.frequency)}
+                      </Badge>
+                    </div>
+                    
+                    {habit.description && (
+                      <p className="text-muted-foreground mb-0.5 text-xs line-clamp-1 break-words">{habit.description}</p>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-0.5 min-w-0">
+                        <Target className="h-2.5 w-2.5 flex-shrink-0" />
+                        <span className="truncate text-xs">{habit.target}</span>
+                      </div>
+                      
+                      {habit.streak && habit.streak > 0 && (
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <span className="text-orange-600 text-xs">🔥</span>
+                          <span className="text-xs">{habit.streak}</span>
+                        </div>
+                      )}
+                      
+                      {habit.last_completed_at && (
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
+                          <span className="text-xs">{format(new Date(habit.last_completed_at), 'dd/MM', { locale: fr })}</span>
+                        </div>
+                      )}
+                    </div>
                  </div>
                </div>
                
