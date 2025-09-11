@@ -88,22 +88,22 @@ export default function HabitList({
                        checked={habit.is_completed_today || false}
                        onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
                        size="xl"
-                       className="data-[state=checked]:bg-green-500 border-2 h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8"
+                       className="data-[state=checked]:bg-green-500 border-2 h-5 w-5 sm:h-6 sm:w-6"
                      />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col gap-0.5 mb-0.5">
                       <h3 className="font-semibold text-xs truncate leading-tight">{habit.title}</h3>
-                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit`}>
+                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit px-1 py-0`}>
                         {getFrequencyLabel(habit.frequency)}
                       </Badge>
                     </div>
                     
                     {habit.description && (
-                      <p className="text-muted-foreground mb-0.5 text-xs line-clamp-1 break-words">{habit.description}</p>
+                      <p className="text-muted-foreground mb-0.5 text-xs line-clamp-1 break-words leading-tight">{habit.description}</p>
                     )}
                     
-                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-0.5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-0.5 min-w-0">
                         <Target className="h-2.5 w-2.5 flex-shrink-0" />
                         <span className="truncate text-xs">{habit.target}</span>
@@ -126,19 +126,19 @@ export default function HabitList({
                  </div>
                </div>
                
-                <div className="flex flex-col gap-0.5 flex-shrink-0">
+                <div className="flex flex-col gap-0.5 flex-shrink-0 ml-0.5">
                  {onArchive && (
                    <Button
                      variant="ghost"
                      size="sm"
                      onClick={() => onArchive(habit.id, showArchived)}
                      aria-label={showArchived ? "Restaurer" : "Archiver"}
-                     className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                     className="h-4 w-4 p-0"
                    >
                      {showArchived ? (
-                       <RotateCcw className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                       <RotateCcw className="h-2.5 w-2.5" />
                      ) : (
-                       <Archive className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                       <Archive className="h-2.5 w-2.5" />
                      )}
                    </Button>
                  )}
@@ -148,9 +148,9 @@ export default function HabitList({
                    size="sm"
                    onClick={() => onEdit(habit)}
                    aria-label="Modifier"
-                   className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                   className="h-4 w-4 p-0"
                  >
-                   <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                   <Edit className="h-2.5 w-2.5" />
                  </Button>
                  
                  <Button
@@ -158,9 +158,9 @@ export default function HabitList({
                    size="sm"
                    onClick={() => onDelete(habit.id)}
                    aria-label="Supprimer"
-                   className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 p-0"
+                   className="h-4 w-4 p-0"
                  >
-                   <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                   <Trash2 className="h-2.5 w-2.5" />
                  </Button>
                </div>
             </div>
