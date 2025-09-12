@@ -67,19 +67,25 @@ export default function Habits() {
             .eq('completed_date', today)
             .maybeSingle();
 
+          // Vérifier si l'habitude doit être faite aujourd'hui
+          const currentDay = new Date().getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+          const shouldShowToday = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(currentDay);
+
           return {
             ...habit,
             frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
-            is_completed_today: !!completion
-          } as Habit;
+            is_completed_today: !!completion,
+            should_show_today: shouldShowToday
+          } as Habit & { should_show_today: boolean };
         })
       );
 
-      const active = habitsWithCompletion.filter(h => !h.is_archived);
+      // Filtrer les habitudes actives pour ne montrer que celles qui doivent être faites aujourd'hui
+      const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
-      setHabits(active);
-      setArchivedHabits(archived);
+      setHabits(active as Habit[]);
+      setArchivedHabits(archived as Habit[]);
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast.error('Erreur lors du chargement des habitudes');
@@ -146,6 +152,16 @@ export default function Habits() {
 
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
+
+    // Vérifier d'abord si l'habitude doit être faite aujourd'hui
+    const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
+    if (habit?.days_of_week && habit.days_of_week.length > 0) {
+      const currentDay = new Date().getDay();
+      if (!habit.days_of_week.includes(currentDay)) {
+        toast.error("Cette habitude n'est pas prévue pour aujourd'hui");
+        return;
+      }
+    }
 
     try {
       if (isCompleted) {

@@ -109,6 +109,17 @@ export default function HabitList({
                         <span className="truncate text-xs">{habit.target}</span>
                       </div>
                       
+                      {habit.days_of_week && habit.days_of_week.length > 0 && (
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
+                          <span className="text-xs">
+                            {habit.days_of_week.map(day => 
+                              ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][day]
+                            ).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      
                       {habit.streak && habit.streak > 0 && (
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                           <span className="text-orange-600 text-xs">🔥</span>

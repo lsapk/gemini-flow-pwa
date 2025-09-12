@@ -830,6 +830,7 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
+          days_of_week: number[] | null
           description: string | null
           frequency: string
           id: string
@@ -846,6 +847,7 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string | null
+          days_of_week?: number[] | null
           description?: string | null
           frequency: string
           id?: string
@@ -862,6 +864,7 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string | null
+          days_of_week?: number[] | null
           description?: string | null
           frequency?: string
           id?: string
