@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +28,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
     frequency: 'daily',
     category: '',
     target: 1,
-    linked_goal_id: 'none'
+    linked_goal_id: 'none',
+    days_of_week: [] as number[]
   });
   const [loading, setLoading] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -43,7 +45,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: habit.frequency,
         category: habit.category || '',
         target: habit.target,
-        linked_goal_id: 'none'
+        linked_goal_id: 'none',
+        days_of_week: habit.days_of_week || []
       });
       
       // Charger la liaison avec l'objectif pour les habitudes existantes
@@ -55,7 +58,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         frequency: 'daily',
         category: '',
         target: 1,
-        linked_goal_id: 'none'
+        linked_goal_id: 'none',
+        days_of_week: []
       });
     }
 
@@ -126,7 +130,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         category: formData.category.trim() || null,
         target: formData.target,
         user_id: user.id,
-        linked_goal_id: formData.linked_goal_id === 'none' ? null : formData.linked_goal_id
+        linked_goal_id: formData.linked_goal_id === 'none' ? null : formData.linked_goal_id,
+        days_of_week: formData.days_of_week.length > 0 ? formData.days_of_week : null
       };
 
       if (habit) {
@@ -235,6 +240,43 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
           placeholder="1"
         />
       </div>
+
+      {formData.frequency !== 'daily' && (
+        <div>
+          <Label>Jours de la semaine</Label>
+          <div className="grid grid-cols-7 gap-2 mt-2">
+            {[
+              { label: 'Dim', value: 0 },
+              { label: 'Lun', value: 1 },
+              { label: 'Mar', value: 2 },
+              { label: 'Mer', value: 3 },
+              { label: 'Jeu', value: 4 },
+              { label: 'Ven', value: 5 },
+              { label: 'Sam', value: 6 }
+            ].map((day) => (
+              <div key={day.value} className="flex flex-col items-center space-y-1">
+                <span className="text-xs text-muted-foreground">{day.label}</span>
+                <Checkbox
+                  checked={formData.days_of_week.includes(day.value)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        days_of_week: [...prev.days_of_week, day.value].sort()
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        days_of_week: prev.days_of_week.filter(d => d !== day.value)
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="linked_goal">Lier à un objectif</Label>

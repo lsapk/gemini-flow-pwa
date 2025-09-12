@@ -12,6 +12,7 @@ export interface Habit {
   user_id: string;
   is_completed_today?: boolean;
   is_archived?: boolean;
+  days_of_week?: number[]; // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
 }
 
 export interface Goal {
