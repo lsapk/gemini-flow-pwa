@@ -80,100 +80,98 @@ export default function HabitList({
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
-           <CardContent className="p-1 sm:p-1.5 md:p-2">
-              <div className="flex items-start gap-1 w-full min-w-0">
-                <div className="flex items-start gap-1 flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
-                     <Checkbox
-                       checked={habit.is_completed_today || false}
-                       onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                       size="xl"
-                       className="data-[state=checked]:bg-green-500 border-2 h-5 w-5 sm:h-6 sm:w-6"
-                     />
-                  </div>
+          <CardContent className="p-2 sm:p-3 md:p-4">
+            <div className="flex items-start gap-2 w-full">
+              <Checkbox
+                checked={habit.is_completed_today || false}
+                onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
+                className="data-[state=checked]:bg-green-500 border-2 h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0"
+              />
+              
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-0.5 mb-0.5">
-                      <h3 className="font-semibold text-xs truncate leading-tight">{habit.title}</h3>
-                      <Badge className={`${getFrequencyColor(habit.frequency)} text-xs flex-shrink-0 w-fit px-1 py-0`}>
-                        {getFrequencyLabel(habit.frequency)}
-                      </Badge>
-                    </div>
-                    
-                    {habit.description && (
-                      <p className="text-muted-foreground mb-0.5 text-xs line-clamp-1 break-words leading-tight">{habit.description}</p>
+                    <h3 className="font-semibold text-sm leading-tight truncate">{habit.title}</h3>
+                    <Badge className={`${getFrequencyColor(habit.frequency)} text-[10px] mt-1 px-1.5 py-0`}>
+                      {getFrequencyLabel(habit.frequency)}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex gap-1 flex-shrink-0">
+                    {onArchive && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onArchive(habit.id, showArchived)}
+                        aria-label={showArchived ? "Restaurer" : "Archiver"}
+                        className="h-7 w-7 p-0"
+                      >
+                        {showArchived ? (
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        ) : (
+                          <Archive className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
                     )}
                     
-                    <div className="flex flex-wrap items-center gap-0.5 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-0.5 min-w-0">
-                        <Target className="h-2.5 w-2.5 flex-shrink-0" />
-                        <span className="truncate text-xs">{habit.target}</span>
-                      </div>
-                      
-                      {habit.days_of_week && habit.days_of_week.length > 0 && (
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
-                          <span className="text-xs">
-                            {habit.days_of_week.map(day => 
-                              ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][day]
-                            ).join(', ')}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {habit.streak && habit.streak > 0 && (
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <span className="text-orange-600 text-xs">🔥</span>
-                          <span className="text-xs">{habit.streak}</span>
-                        </div>
-                      )}
-                      
-                      {habit.last_completed_at && (
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
-                          <span className="text-xs">{format(new Date(habit.last_completed_at), 'dd/MM', { locale: fr })}</span>
-                        </div>
-                      )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(habit)}
+                      aria-label="Modifier"
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(habit.id)}
+                      aria-label="Supprimer"
+                      className="h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {habit.description && (
+                  <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">{habit.description}</p>
+                )}
+                
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Target className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{habit.target}</span>
+                  </div>
+                  
+                  {habit.days_of_week && habit.days_of_week.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">
+                        {habit.days_of_week.map(day => 
+                          ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][day]
+                        ).join(', ')}
+                      </span>
                     </div>
-                 </div>
-               </div>
-               
-                <div className="flex flex-col gap-0.5 flex-shrink-0 ml-0.5">
-                 {onArchive && (
-                   <Button
-                     variant="ghost"
-                     size="sm"
-                     onClick={() => onArchive(habit.id, showArchived)}
-                     aria-label={showArchived ? "Restaurer" : "Archiver"}
-                     className="h-4 w-4 p-0"
-                   >
-                     {showArchived ? (
-                       <RotateCcw className="h-2.5 w-2.5" />
-                     ) : (
-                       <Archive className="h-2.5 w-2.5" />
-                     )}
-                   </Button>
-                 )}
-                 
-                 <Button
-                   variant="ghost"
-                   size="sm"
-                   onClick={() => onEdit(habit)}
-                   aria-label="Modifier"
-                   className="h-4 w-4 p-0"
-                 >
-                   <Edit className="h-2.5 w-2.5" />
-                 </Button>
-                 
-                 <Button
-                   variant="ghost"
-                   size="sm"
-                   onClick={() => onDelete(habit.id)}
-                   aria-label="Supprimer"
-                   className="h-4 w-4 p-0"
-                 >
-                   <Trash2 className="h-2.5 w-2.5" />
-                 </Button>
-               </div>
+                  )}
+                  
+                  {habit.streak && habit.streak > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span>🔥</span>
+                      <span>{habit.streak}</span>
+                    </div>
+                  )}
+                  
+                  {habit.last_completed_at && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      <span>{format(new Date(habit.last_completed_at), 'dd/MM', { locale: fr })}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
