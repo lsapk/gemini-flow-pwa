@@ -241,42 +241,43 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         />
       </div>
 
-      {formData.frequency !== 'daily' && (
-        <div>
-          <Label>Jours de la semaine</Label>
-          <div className="grid grid-cols-7 gap-2 mt-2">
-            {[
-              { label: 'Dim', value: 0 },
-              { label: 'Lun', value: 1 },
-              { label: 'Mar', value: 2 },
-              { label: 'Mer', value: 3 },
-              { label: 'Jeu', value: 4 },
-              { label: 'Ven', value: 5 },
-              { label: 'Sam', value: 6 }
-            ].map((day) => (
-              <div key={day.value} className="flex flex-col items-center space-y-1">
-                <span className="text-xs text-muted-foreground">{day.label}</span>
-                <Checkbox
-                  checked={formData.days_of_week.includes(day.value)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setFormData(prev => ({
-                        ...prev,
-                        days_of_week: [...prev.days_of_week, day.value].sort()
-                      }));
-                    } else {
-                      setFormData(prev => ({
-                        ...prev,
-                        days_of_week: prev.days_of_week.filter(d => d !== day.value)
-                      }));
-                    }
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+      <div>
+        <Label>Jours de la semaine (optionnel)</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Laissez vide pour tous les jours, ou sélectionnez des jours spécifiques
+        </p>
+        <div className="grid grid-cols-7 gap-2 mt-2">
+          {[
+            { label: 'Dim', value: 0 },
+            { label: 'Lun', value: 1 },
+            { label: 'Mar', value: 2 },
+            { label: 'Mer', value: 3 },
+            { label: 'Jeu', value: 4 },
+            { label: 'Ven', value: 5 },
+            { label: 'Sam', value: 6 }
+          ].map((day) => (
+            <div key={day.value} className="flex flex-col items-center space-y-1">
+              <span className="text-xs text-muted-foreground">{day.label}</span>
+              <Checkbox
+                checked={formData.days_of_week.includes(day.value)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setFormData(prev => ({
+                      ...prev,
+                      days_of_week: [...prev.days_of_week, day.value].sort()
+                    }));
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      days_of_week: prev.days_of_week.filter(d => d !== day.value)
+                    }));
+                  }
+                }}
+              />
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       <div>
         <Label htmlFor="linked_goal">Lier à un objectif</Label>
