@@ -79,9 +79,9 @@ export default function HabitList({
   return (
     <div className="grid gap-2 md:gap-4">
       {habits.map((habit) => (
-        <Card key={habit.id} className={`hover:shadow-md transition-shadow ${showArchived ? 'opacity-75' : ''}`}>
+        <Card key={habit.id} className={`hover:shadow-md transition-shadow overflow-hidden ${showArchived ? 'opacity-75' : ''}`}>
           <CardContent className="p-2 sm:p-3 md:p-4">
-            <div className="flex items-start gap-2 w-full">
+            <div className="flex items-start gap-2 w-full overflow-hidden">
               <Checkbox
                 checked={habit.is_completed_today || false}
                 onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
