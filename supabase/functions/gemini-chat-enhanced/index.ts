@@ -123,7 +123,7 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     // Prepare recent messages for memory (last 10)
     const recentMessages = (context?.recent_messages || []).slice(-10).map((msg: any) => ({
