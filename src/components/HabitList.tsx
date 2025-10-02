@@ -76,8 +76,26 @@ export default function HabitList({
     );
   }
 
+  // Vérifier si toutes les habitudes sont complétées
+  const allCompleted = habits.length > 0 && habits.every(habit => habit.is_completed_today);
+
   return (
     <div className="grid gap-2 md:gap-4">
+      {allCompleted && !showArchived && (
+        <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+          <CardContent className="p-3 md:p-4 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-3xl md:text-4xl">🎉</span>
+              <h3 className="text-sm md:text-lg font-semibold text-green-800 dark:text-green-200">
+                Félicitations !
+              </h3>
+              <p className="text-xs md:text-sm text-green-700 dark:text-green-300">
+                Vous avez complété toutes vos habitudes du jour !
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {habits.map((habit) => (
         <Card key={habit.id} className={`hover:shadow-md transition-shadow overflow-hidden ${showArchived ? 'opacity-75' : ''}`}>
           <CardContent className="p-2 sm:p-3 md:p-4">
@@ -85,7 +103,8 @@ export default function HabitList({
               <Checkbox
                 checked={habit.is_completed_today || false}
                 onCheckedChange={() => onComplete(habit.id, habit.is_completed_today || false)}
-                className="data-[state=checked]:bg-green-500 border-2 h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0"
+                size="large"
+                className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 mt-0.5 flex-shrink-0"
               />
               
               <div className="flex-1 min-w-0 space-y-1">
