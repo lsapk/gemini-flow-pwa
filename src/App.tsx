@@ -21,6 +21,7 @@ import Reflection from "./pages/Reflection";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Calendar from "./pages/Calendar";
 import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
@@ -143,6 +144,13 @@ function App() {
                   <ProtectedRoute>
                     <AppLayout>
                       <Settings />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Calendar />
                     </AppLayout>
                   </ProtectedRoute>
                 } />

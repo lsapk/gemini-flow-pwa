@@ -13,7 +13,8 @@ import {
   Award,
   Brain,
   User,
-  LogOut
+  LogOut,
+  Calendar
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DeepFlowLogo } from "@/components/icons/DeepFlowIcons";
@@ -35,6 +36,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Target, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },
     { icon: Timer, label: "Focus", path: "/focus" },
+    { icon: Calendar, label: "Calendrier", path: "/calendar" },
     { icon: BookOpen, label: "Journal", path: "/journal" },
     { icon: Brain, label: "Réflexion", path: "/reflection" },
     { icon: User, label: "Profil IA", path: "/profile" },
