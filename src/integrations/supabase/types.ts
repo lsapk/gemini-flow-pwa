@@ -799,6 +799,7 @@ export type Database = {
           access_token: string
           created_at: string | null
           id: string
+          last_rotated_at: string | null
           refresh_token: string | null
           token_expiry: string
           updated_at: string | null
@@ -808,6 +809,7 @@ export type Database = {
           access_token: string
           created_at?: string | null
           id?: string
+          last_rotated_at?: string | null
           refresh_token?: string | null
           token_expiry: string
           updated_at?: string | null
@@ -817,6 +819,7 @@ export type Database = {
           access_token?: string
           created_at?: string | null
           id?: string
+          last_rotated_at?: string | null
           refresh_token?: string | null
           token_expiry?: string
           updated_at?: string | null
@@ -2308,6 +2311,14 @@ export type Database = {
     Functions: {
       auth_user_is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      encrypt_token: {
+        Args: { token: string }
+        Returns: string
+      }
+      has_role: {
+        Args: { _role: string; _user_id: string }
         Returns: boolean
       }
       is_admin: {
