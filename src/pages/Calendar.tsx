@@ -58,23 +58,24 @@ export default function CalendarPage() {
     setIsConnected(!!data);
   };
 
-  const connectGoogle = () => {
+  const connectGoogle = async () => {
     if (!user) return;
+    
+    setIsConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
+        body: { action: "get_auth_url", user_id: user.id },
+      });
 
-    const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-    const REDIRECT_URI = `${window.location.origin}/calendar`;
-    const SCOPE = "https://www.googleapis.com/auth/calendar";
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-      `response_type=code&` +
-      `scope=${encodeURIComponent(SCOPE)}&` +
-      `access_type=offline&` +
-      `prompt=consent&` +
-      `state=${user.id}`;
-
-    window.location.href = authUrl;
+      if (error) throw error;
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error("Error getting auth URL:", error);
+      toast.error("Erreur lors de la connexion");
+      setIsConnecting(false);
+    }
   };
 
   useEffect(() => {

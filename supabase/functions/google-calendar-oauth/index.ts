@@ -11,8 +11,38 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { code, user_id, action } = await req.json();
+
+    const CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
+    const CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+      throw new Error('Google OAuth credentials not configured');
+    }
+
+    // Generate auth URL
+    if (action === 'get_auth_url') {
+      const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
+      const SCOPE = 'https://www.googleapis.com/auth/calendar';
+      
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${CLIENT_ID}&` +
+        `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent(SCOPE)}&` +
+        `access_type=offline&` +
+        `prompt=consent&` +
+        `state=${user_id}`;
+
+      return new Response(
+        JSON.stringify({ authUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { code, user_id } = await req.json();
 
+    // Exchange code for tokens
     if (!code || !user_id) {
       return new Response(
         JSON.stringify({ error: 'Missing code or user_id' }),
@@ -20,13 +50,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
-    const CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
-
-    if (!CLIENT_ID || !CLIENT_SECRET) {
-      throw new Error('Google OAuth credentials not configured');
-    }
 
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
