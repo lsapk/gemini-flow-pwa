@@ -20,15 +20,39 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Veuillez entrer une adresse e-mail valide.",
-  }),
-  password: z.string().min(8, {
-    message: "Le mot de passe doit contenir au moins 8 caractères.",
-  }),
-  displayName: z.string().min(2, {
-    message: "Le nom d'utilisateur doit contenir au moins 2 caractères.",
-  }),
+  email: z.string()
+    .email({
+      message: "Veuillez entrer une adresse e-mail valide.",
+    })
+    .max(255, {
+      message: "L'adresse e-mail est trop longue.",
+    }),
+  password: z.string()
+    .min(8, {
+      message: "Le mot de passe doit contenir au moins 8 caractères.",
+    })
+    .max(100, {
+      message: "Le mot de passe est trop long.",
+    })
+    .regex(/[A-Z]/, {
+      message: "Le mot de passe doit contenir au moins une majuscule.",
+    })
+    .regex(/[a-z]/, {
+      message: "Le mot de passe doit contenir au moins une minuscule.",
+    })
+    .regex(/[0-9]/, {
+      message: "Le mot de passe doit contenir au moins un chiffre.",
+    }),
+  displayName: z.string()
+    .min(2, {
+      message: "Le nom d'utilisateur doit contenir au moins 2 caractères.",
+    })
+    .max(50, {
+      message: "Le nom d'utilisateur est trop long.",
+    })
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, {
+      message: "Le nom d'utilisateur ne peut contenir que des lettres, chiffres, espaces, tirets et underscores.",
+    }),
 });
 
 export default function Register() {

@@ -44,6 +44,27 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      // Basic client-side validation
+      if (!email || !email.includes('@')) {
+        toast({
+          title: "Email invalide",
+          description: "Veuillez entrer une adresse email valide.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (password.length < 8) {
+        toast({
+          title: "Mot de passe trop court",
+          description: "Le mot de passe doit contenir au moins 8 caractères.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Stocker la préférence "Se souvenir de moi"
       if (rememberMe) {
         localStorage.setItem('deepflow_remember_me', 'true');

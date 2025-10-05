@@ -34,16 +34,28 @@ serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-    // Parse request body
-    const { message, chatHistory, userId } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const { message, chatHistory, userId } = body;
     
-    if (!message) {
-      throw new Error("Message is required");
+    // Input validation
+    if (!message || typeof message !== 'string') {
+      throw new Error("Message is required and must be a string");
     }
     
-    if (!userId) {
-      throw new Error("User ID is required");
+    if (message.length > 5000) {
+      throw new Error("Message is too long (max 5000 characters)");
     }
+    
+    if (!userId || typeof userId !== 'string') {
+      throw new Error("User ID is required and must be a string");
+    }
+    
+    // Sanitize message - remove potential harmful content
+    const sanitizedMessage = message
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .trim();
 
     // Initialize Supabase client with service role for admin access
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -137,7 +149,7 @@ serve(async (req) => {
     // Create simple prompt with system instructions at the beginning
     const systemPrompt = `Tu es DeepFlow, un assistant IA spécialisé dans la productivité, le bien-être et le développement personnel. Tu réponds uniquement et clairement à ce qu'on te demande. Utilise du markdown riche avec des emojis pertinents pour structurer tes réponses. Sois concis mais complet, en utilisant des listes et des titres pour organiser l'information. Propose toujours des conseils pratiques et applicables immédiatement. Adapte ton ton pour être encourageant et positif.`;
     
-    const fullPrompt = `${systemPrompt}\n\nQuestion de l'utilisateur: ${message}`;
+    const fullPrompt = `${systemPrompt}\n\nQuestion de l'utilisateur: ${sanitizedMessage}`;
 
     // Send message and get response
     const result = await model.generateContent(fullPrompt);
