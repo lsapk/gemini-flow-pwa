@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { code, user_id, action } = await req.json();
+    const requestBody = await req.json();
+    const { action } = requestBody;
 
     const CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
     const CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
@@ -22,6 +23,7 @@ Deno.serve(async (req) => {
 
     // Generate auth URL
     if (action === 'get_auth_url') {
+      const { user_id } = requestBody;
       const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
       const SCOPE = 'https://www.googleapis.com/auth/calendar';
       
@@ -40,9 +42,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { code, user_id } = await req.json();
-
     // Exchange code for tokens
+    const { code, user_id } = requestBody;
+    
     if (!code || !user_id) {
       return new Response(
         JSON.stringify({ error: 'Missing code or user_id' }),
@@ -52,7 +54,6 @@ Deno.serve(async (req) => {
 
     const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
 
-    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
