@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Pause, Square } from "lucide-react";
+import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
+import { Progress } from "@/components/ui/progress";
+import { Task } from "@/types";
 
 interface ActiveFocusSession {
   id: string;
@@ -27,6 +31,10 @@ export default function Focus() {
   const [completedSessionsToday, setCompletedSessionsToday] = useState(0);
   const [minutesToday, setMinutesToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionsHistory, setSessionsHistory] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<{ name: string; minutes: number }[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -41,6 +49,9 @@ export default function Focus() {
     if (user) {
       loadSessionsToday();
       checkActiveSession();
+      loadSessionsHistory();
+      loadWeeklyData();
+      loadTasks();
     }
   }, [user]);
 
@@ -259,154 +270,380 @@ export default function Focus() {
     setCurrentSessionId(null);
     setTimeLeft(duration * 60);
     setSessionTitle("");
+    setLinkedTaskId(null);
+  };
+
+  const loadSessionsHistory = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setSessionsHistory(data || []);
+    } catch (error) {
+      console.error('Error loading sessions history:', error);
+    }
+  };
+
+  const loadWeeklyData = async () => {
+    if (!user) return;
+
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .select('duration, started_at')
+        .eq('user_id', user.id)
+        .gte('started_at', sevenDaysAgo.toISOString())
+        .not('completed_at', 'is', null);
+
+      if (error) throw error;
+
+      // Group by day
+      const dayData: { [key: string]: number } = {};
+      const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+      
+      data?.forEach((session) => {
+        const date = new Date(session.started_at);
+        const dayName = days[date.getDay()];
+        dayData[dayName] = (dayData[dayName] || 0) + (session.duration || 0);
+      });
+
+      const chartData = days.map(day => ({
+        name: day,
+        minutes: dayData[day] || 0
+      }));
+
+      setWeeklyData(chartData);
+    } catch (error) {
+      console.error('Error loading weekly data:', error);
+    }
+  };
+
+  const loadTasks = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('completed', false)
+        .order('priority', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setTasks((data || []).map(task => ({
+        ...task,
+        priority: task.priority as 'high' | 'medium' | 'low'
+      })));
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    }
+  };
+
+  const completeLinkedTask = async () => {
+    if (!linkedTaskId || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: true })
+        .eq('id', linkedTaskId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Tâche complétée !",
+        description: "La tâche liée a été marquée comme terminée.",
+      });
+
+      loadTasks();
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Mode Focus</h1>
-        <span className="text-muted-foreground">
-          Concentrez-vous sur ce qui compte vraiment.
-        </span>
+    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Mode Focus</h1>
+          <p className="text-muted-foreground mt-1">
+            Concentrez-vous sur ce qui compte vraiment.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3">
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-green-50 border-green-200">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-green-100">
-              <span className="text-2xl">🎯</span>
+        <Card className="transition-shadow hover:shadow-md">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10">
+              <Target className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-green-800">
-                Sessions aujourd'hui
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {completedSessionsToday}
-              </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Sessions</p>
+              <p className="text-2xl font-bold">{completedSessionsToday}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-blue-50 border-blue-200">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-blue-100">
-              <span className="text-2xl">⏱️</span>
+        
+        <Card className="transition-shadow hover:shadow-md">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500/10">
+              <TrendingUp className="h-5 w-5 text-blue-500" />
             </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-blue-800">
-                Statut
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {currentSessionId ? (isActive ? "EN COURS" : "EN PAUSE") : "ARRÊTÉ"}
-              </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Minutes</p>
+              <p className="text-2xl font-bold">{minutesToday}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="flex h-auto sm:h-[110px] px-2 py-2 sm:p-4 items-center transition-shadow bg-purple-50 border-purple-200">
-          <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center bg-purple-100">
-              <span className="text-2xl">🔥</span>
+        
+        <Card className="transition-shadow hover:shadow-md">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-500/10">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
             </div>
-            <div className="flex flex-col gap-0.5 sm:gap-1">
-              <div className="font-semibold text-xs sm:text-base text-purple-800">
-                Minutes aujourd'hui
-              </div>
-              <div className="text-[10px] sm:text-sm text-muted-foreground">
-                {minutesToday}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <div></div>{/* Aligner pour 4 colonnes */}
-      </div>
-
-      {/* Timer Card */}
-      <Card className="text-center">
-        <CardHeader>
-          <CardTitle className="text-2xl">
-            {currentSessionId ? sessionTitle : "Nouvelle session"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {!currentSessionId && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="session-title">Titre de la session</Label>
-                <Input
-                  id="session-title"
-                  value={sessionTitle}
-                  onChange={(e) => setSessionTitle(e.target.value)}
-                  placeholder="Ex: Étude de mathématiques, Lecture..."
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="duration">Durée (minutes)</Label>
-                <Select 
-                  value={duration.toString()} 
-                  onValueChange={(value) => {
-                    const newDuration = parseInt(value);
-                    setDuration(newDuration);
-                  }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="25">25 minutes (Pomodoro)</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                    <SelectItem value="90">90 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          <div className="text-8xl font-mono font-bold text-primary">
-            {formatTime(timeLeft)}
-          </div>
-
-          <div className="flex gap-2 justify-center">
-            {!currentSessionId ? (
-              <Button onClick={startTimer} size="lg" className="px-8">
-                <Play className="mr-2 h-5 w-5" />
-                Démarrer
-              </Button>
-            ) : (
-              <>
-                <Button onClick={pauseTimer} variant="outline" size="lg">
-                  {isActive ? (
-                    <>
-                      <Pause className="mr-2 h-4 w-4" />
-                      Pause
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Reprendre
-                    </>
-                  )}
-                </Button>
-                <Button onClick={stopTimer} variant="destructive" size="lg">
-                  <Square className="mr-2 h-4 w-4" />
-                  Arrêter
-                </Button>
-              </>
-            )}
-          </div>
-
-          {currentSessionId && (
-            <div className="text-center mt-4">
-              <p className="text-sm text-muted-foreground">
-                Session en cours...
+            <div>
+              <p className="text-xs text-muted-foreground">Statut</p>
+              <p className="text-sm font-semibold">
+                {currentSessionId ? (isActive ? "EN COURS" : "PAUSE") : "PRÊT"}
               </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="transition-shadow hover:shadow-md">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-500/10">
+              <History className="h-5 w-5 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Moyenne/jour</p>
+              <p className="text-2xl font-bold">
+                {weeklyData.length > 0 
+                  ? Math.round(weeklyData.reduce((sum, d) => sum + d.minutes, 0) / 7) 
+                  : 0}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Timer Card - Main */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              {currentSessionId ? sessionTitle : "Nouvelle session"}
+            </CardTitle>
+            <CardDescription>
+              {currentSessionId 
+                ? `Session de ${duration} minutes en cours`
+                : "Démarrez une session de concentration profonde"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {!currentSessionId && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="session-title">Titre de la session</Label>
+                  <Input
+                    id="session-title"
+                    value={sessionTitle}
+                    onChange={(e) => setSessionTitle(e.target.value)}
+                    placeholder="Ex: Étude de mathématiques, Rédaction..."
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="duration">Durée (minutes)</Label>
+                  <Select 
+                    value={duration.toString()} 
+                    onValueChange={(value) => {
+                      const newDuration = parseInt(value);
+                      setDuration(newDuration);
+                    }}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="25">25 minutes (Pomodoro)</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                      <SelectItem value="90">90 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {tasks.length > 0 && (
+                  <div>
+                    <Label htmlFor="linked-task">Lier à une tâche (optionnel)</Label>
+                    <Select 
+                      value={linkedTaskId || "none"} 
+                      onValueChange={(value) => setLinkedTaskId(value === "none" ? null : value)}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Sélectionner une tâche" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucune tâche</SelectItem>
+                        {tasks.map(task => (
+                          <SelectItem key={task.id} value={task.id}>
+                            {task.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="text-center">
+              <div className="text-7xl sm:text-8xl font-mono font-bold text-primary mb-4">
+                {formatTime(timeLeft)}
+              </div>
+              
+              {currentSessionId && (
+                <Progress 
+                  value={((duration * 60 - timeLeft) / (duration * 60)) * 100} 
+                  className="h-2 mb-4"
+                />
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-center">
+              {!currentSessionId ? (
+                <Button onClick={startTimer} size="lg" className="px-8">
+                  <Play className="mr-2 h-5 w-5" />
+                  Démarrer
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={pauseTimer} variant="outline" size="lg">
+                    {isActive ? (
+                      <>
+                        <Pause className="mr-2 h-4 w-4" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Reprendre
+                      </>
+                    )}
+                  </Button>
+                  <Button onClick={stopTimer} variant="destructive" size="lg">
+                    <Square className="mr-2 h-4 w-4" />
+                    Arrêter
+                  </Button>
+                  {linkedTaskId && (
+                    <Button onClick={completeLinkedTask} variant="default" size="lg">
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Terminer tâche
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Side Panel */}
+        <Card className="lg:col-span-1">
+          <Tabs defaultValue="stats" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="stats">Stats</TabsTrigger>
+              <TabsTrigger value="history">Historique</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="stats" className="space-y-4 p-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Focus cette semaine</h3>
+                {weeklyData.length > 0 ? (
+                  <SimpleBarChart
+                    data={weeklyData.map(d => ({ name: d.name, value: d.minutes }))}
+                    xAxisKey="name"
+                    barKey="value"
+                    color="hsl(var(--primary))"
+                    className="h-48"
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Aucune donnée disponible
+                  </p>
+                )}
+              </div>
+
+              {tasks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <ListTodo className="h-4 w-4" />
+                    Tâches en attente
+                  </h3>
+                  <div className="space-y-2">
+                    {tasks.slice(0, 3).map(task => (
+                      <div 
+                        key={task.id} 
+                        className="text-xs p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                        onClick={() => setLinkedTaskId(task.id)}
+                      >
+                        <p className="font-medium truncate">{task.title}</p>
+                        <p className="text-muted-foreground capitalize">{task.priority}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="history" className="space-y-2 p-4">
+              <h3 className="text-sm font-semibold mb-3">Sessions récentes</h3>
+              {sessionsHistory.length > 0 ? (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {sessionsHistory.map((session) => (
+                    <div 
+                      key={session.id} 
+                      className="text-xs p-3 rounded-lg bg-muted/50 space-y-1"
+                    >
+                      <p className="font-medium truncate">{session.title}</p>
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span>{session.duration} min</span>
+                        <span>
+                          {new Date(session.started_at).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Aucune session enregistrée
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </Card>
+      </div>
     </div>
   );
 }
