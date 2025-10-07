@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,6 +40,25 @@ export const usePersonalityProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PersonalityProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load saved profile on mount
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadSavedProfile = async () => {
+      const { data } = await supabase
+        .from('ai_personality_profiles')
+        .select('profile_data')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data?.profile_data) {
+        setProfile(data.profile_data as unknown as PersonalityProfile);
+      }
+    };
+
+    loadSavedProfile();
+  }, [user]);
 
   const generateProfile = async () => {
     if (!user) {
@@ -123,7 +141,16 @@ export const usePersonalityProfile = () => {
             
             if (analysisResult.personality) {
               setProfile(analysisResult);
-              toast.success('Profil de personnalité généré avec l\'IA !');
+              
+              // Save to database
+              await supabase
+                .from('ai_personality_profiles')
+                .upsert({
+                  user_id: user.id,
+                  profile_data: analysisResult as any
+                });
+              
+              toast.success('Profil de personnalité généré et sauvegardé !');
               return;
             }
           }
@@ -169,7 +196,16 @@ export const usePersonalityProfile = () => {
       };
 
       setProfile(analysisResult);
-      toast.success('Profil de personnalité généré avec succès !');
+      
+      // Save to database
+      await supabase
+        .from('ai_personality_profiles')
+        .upsert({
+          user_id: user.id,
+          profile_data: analysisResult as any
+        });
+      
+      toast.success('Profil de personnalité généré et sauvegardé !');
       
     } catch (error: any) {
       console.error('Erreur génération profil:', error);
