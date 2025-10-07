@@ -41,6 +41,78 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_personality_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          profile_data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_data: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_productivity_analysis: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_data: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_productivity_insights: {
+        Row: {
+          created_at: string
+          id: string
+          insights_data: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insights_data: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insights_data?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_requests: {
         Row: {
           created_at: string | null
