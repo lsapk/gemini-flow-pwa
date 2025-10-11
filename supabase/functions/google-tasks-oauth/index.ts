@@ -16,7 +16,7 @@ serve(async (req) => {
 
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
-    const redirectUri = `${req.headers.get('origin')}/calendar`;
+    const redirectUri = `${req.headers.get('origin')}/tasks`;
 
     if (action === 'get_auth_url') {
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +

@@ -80,3 +80,9 @@ verify_jwt = true
 
 [functions.gemini-chat-enhanced]
 verify_jwt = true
+
+[functions.google-tasks-oauth]
+verify_jwt = false
+
+[functions.google-tasks-api]
+verify_jwt = true
