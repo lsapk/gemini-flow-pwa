@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useState as useReactState } from "react";
 import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
@@ -16,6 +15,17 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { CheckSquare, Clock } from "lucide-react";
+import { useGoogleTasks } from "@/hooks/useGoogleTasks";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Task {
   id: string;
@@ -50,6 +60,19 @@ export default function Tasks() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  
+  const googleTasks = useGoogleTasks();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    
+    if (code && !googleTasks.isConnected) {
+      googleTasks.handleOAuthCallback(code);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const { data: tasks = [], isLoading, refetch } = useQuery({
     queryKey: ['tasks', user?.id],
@@ -190,16 +213,113 @@ export default function Tasks() {
     fetchSubtasks();
   };
 
+  const handleSyncWithGoogle = async () => {
+    if (!googleTasks.isConnected) {
+      toast({
+        title: "Non connecté",
+        description: "Veuillez d'abord vous connecter à Google Tasks",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Load Google Tasks
+      await googleTasks.loadTasks();
+
+      // Sync DeepFlow tasks to Google Tasks
+      for (const task of pendingTasks) {
+        const existingGoogleTask = googleTasks.tasks.find(
+          gt => gt.title === task.title
+        );
+
+        if (!existingGoogleTask) {
+          await googleTasks.createTask({
+            title: task.title,
+            notes: task.description || undefined,
+            due: task.due_date || undefined,
+          });
+        }
+      }
+
+      // Sync Google Tasks to DeepFlow
+      for (const googleTask of googleTasks.tasks) {
+        if (googleTask.status === 'completed') continue;
+
+        const existingDeepFlowTask = tasks.find(
+          t => t.title === googleTask.title
+        );
+
+        if (!existingDeepFlowTask && user) {
+          await supabase.from('tasks').insert({
+            user_id: user.id,
+            title: googleTask.title,
+            description: googleTask.notes || null,
+            due_date: googleTask.due || null,
+            completed: false,
+          });
+        }
+      }
+
+      await refetch();
+      await googleTasks.loadTasks();
+
+      toast({
+        title: "Synchronisation réussie",
+        description: "Vos tâches ont été synchronisées avec Google Tasks",
+      });
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la synchronisation",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="pt-16 md:pt-6 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
-            <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle tâche
-            </Button>
+            <div className="flex gap-2">
+              {googleTasks.isConnected ? (
+                <>
+                  <Button 
+                    onClick={() => setShowSyncDialog(true)} 
+                    size="sm" 
+                    variant="outline"
+                    disabled={googleTasks.isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
+                    Synchroniser
+                  </Button>
+                  <Button 
+                    onClick={googleTasks.disconnect} 
+                    size="sm" 
+                    variant="outline"
+                  >
+                    <CloudOff className="h-4 w-4 mr-2" />
+                    Déconnecter
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  onClick={googleTasks.connectToGoogle} 
+                  size="sm" 
+                  variant="outline"
+                >
+                  <Cloud className="h-4 w-4 mr-2" />
+                  Google Tasks
+                </Button>
+              )}
+              <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle tâche
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -248,6 +368,28 @@ export default function Tasks() {
           onSuccess={handleTaskEdited}
         />
       )}
+
+      <AlertDialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Synchroniser avec Google Tasks</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action va synchroniser vos tâches DeepFlow avec Google Tasks dans les deux sens :
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Les tâches DeepFlow seront ajoutées à Google Tasks</li>
+                <li>Les tâches Google Tasks seront importées dans DeepFlow</li>
+              </ul>
+              Voulez-vous continuer ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSyncWithGoogle}>
+              Synchroniser
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
