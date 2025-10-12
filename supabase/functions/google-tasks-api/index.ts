@@ -46,7 +46,8 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenData) {
-      throw new Error('No Google Tasks connection found');
+      console.error('Token error:', tokenError);
+      throw new Error('Veuillez d\'abord vous connecter à Google Tasks');
     }
 
     let accessToken = tokenData.access_token;
