@@ -10,6 +10,8 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
 
+  console.log('Attempting to refresh token...');
+  
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -22,6 +24,12 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   });
 
   const data = await response.json();
+  
+  if (!response.ok || !data.access_token) {
+    console.error('Token refresh failed:', data);
+    throw new Error(data.error_description || 'Failed to refresh token');
+  }
+  
   return data.access_token;
 }
 
@@ -33,13 +41,20 @@ serve(async (req) => {
   try {
     const { action, user_id, task_data, task_id, task_list_id } = await req.json();
 
-    const supabaseClient = createClient(
+    // Use admin client to access tokens
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     );
 
     // Get user's tokens
-    const { data: tokenData, error: tokenError } = await supabaseClient
+    const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from('google_tasks_tokens')
       .select('*')
       .eq('user_id', user_id)
@@ -47,7 +62,7 @@ serve(async (req) => {
 
     if (tokenError || !tokenData) {
       console.error('Token error:', tokenError);
-      throw new Error('Veuillez d\'abord vous connecter à Google Tasks');
+      throw new Error('Veuillez vous reconnecter à Google Tasks');
     }
 
     let accessToken = tokenData.access_token;
@@ -56,16 +71,31 @@ serve(async (req) => {
     const tokenExpiry = new Date(tokenData.token_expiry);
     if (tokenExpiry <= new Date()) {
       console.log('Token expired, refreshing...');
-      accessToken = await refreshAccessToken(tokenData.refresh_token);
+      
+      try {
+        accessToken = await refreshAccessToken(tokenData.refresh_token);
 
-      const newExpiry = new Date(Date.now() + 3600 * 1000);
-      await supabaseClient
-        .from('google_tasks_tokens')
-        .update({
-          access_token: accessToken,
-          token_expiry: newExpiry.toISOString(),
-        })
-        .eq('user_id', user_id);
+        const newExpiry = new Date(Date.now() + 3600 * 1000);
+        await supabaseAdmin
+          .from('google_tasks_tokens')
+          .update({
+            access_token: accessToken,
+            token_expiry: newExpiry.toISOString(),
+            last_rotated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user_id);
+        
+        console.log('Token refreshed successfully');
+      } catch (refreshError) {
+        console.error('Failed to refresh token:', refreshError);
+        // Delete the invalid token
+        await supabaseAdmin
+          .from('google_tasks_tokens')
+          .delete()
+          .eq('user_id', user_id);
+        
+        throw new Error('Votre connexion Google Tasks a expiré. Veuillez vous reconnecter.');
+      }
     }
 
     let apiUrl = '';
