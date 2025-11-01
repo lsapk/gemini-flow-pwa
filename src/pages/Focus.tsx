@@ -25,6 +25,8 @@ interface ActiveFocusSession {
 
 export default function Focus() {
   const [duration, setDuration] = useState(25);
+  const [customDuration, setCustomDuration] = useState("");
+  const [isCustomDuration, setIsCustomDuration] = useState(false);
   const [timeLeft, setTimeLeft] = useState(duration * 60);
   const [isActive, setIsActive] = useState(false);
   const [sessionTitle, setSessionTitle] = useState("");
@@ -112,6 +114,7 @@ export default function Focus() {
       interval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
+            setIsActive(false); // Arrêter immédiatement
             handleTimerComplete();
             return 0;
           }
@@ -471,10 +474,15 @@ export default function Focus() {
                 <div>
                   <Label htmlFor="duration">Durée (minutes)</Label>
                   <Select 
-                    value={duration.toString()} 
+                    value={isCustomDuration ? "custom" : duration.toString()} 
                     onValueChange={(value) => {
-                      const newDuration = parseInt(value);
-                      setDuration(newDuration);
+                      if (value === "custom") {
+                        setIsCustomDuration(true);
+                      } else {
+                        setIsCustomDuration(false);
+                        const newDuration = parseInt(value);
+                        setDuration(newDuration);
+                      }
                     }}
                   >
                     <SelectTrigger className="mt-1">
@@ -487,9 +495,32 @@ export default function Focus() {
                       <SelectItem value="45">45 minutes</SelectItem>
                       <SelectItem value="60">60 minutes</SelectItem>
                       <SelectItem value="90">90 minutes</SelectItem>
+                      <SelectItem value="custom">Personnalisé</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isCustomDuration && (
+                  <div>
+                    <Label htmlFor="custom-duration">Durée personnalisée (minutes)</Label>
+                    <Input
+                      id="custom-duration"
+                      type="number"
+                      min="1"
+                      max="240"
+                      value={customDuration}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomDuration(value);
+                        if (value && parseInt(value) > 0) {
+                          setDuration(parseInt(value));
+                        }
+                      }}
+                      placeholder="Ex: 20, 40, 120..."
+                      className="mt-1"
+                    />
+                  </div>
+                )}
 
                 {tasks.length > 0 && (
                   <div>
