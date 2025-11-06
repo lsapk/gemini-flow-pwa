@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Target, Archive, RotateCcw } from "lucide-react";
+import { Plus, Target, Archive, RotateCcw, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { 
   Dialog, 
   DialogContent, 
@@ -43,6 +48,7 @@ export default function Habits() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("active");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
 
   const fetchHabits = async () => {
@@ -57,30 +63,30 @@ export default function Habits() {
 
       if (error) throw error;
 
+      const targetDate = selectedDate.toISOString().split('T')[0];
       const habitsWithCompletion = await Promise.all(
         (data || []).map(async (habit) => {
-          const today = new Date().toISOString().split('T')[0];
           const { data: completion } = await supabase
             .from('habit_completions')
             .select('*')
             .eq('habit_id', habit.id)
-            .eq('completed_date', today)
+            .eq('completed_date', targetDate)
             .maybeSingle();
 
-          // Vérifier si l'habitude doit être faite aujourd'hui
-          const currentDay = new Date().getDay(); // 0 = Dimanche, 1 = Lundi, etc.
-          const shouldShowToday = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(currentDay);
+          // Vérifier si l'habitude doit être faite pour la date sélectionnée
+          const selectedDay = selectedDate.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+          const shouldShowForDate = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(selectedDay);
 
           return {
             ...habit,
             frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
             is_completed_today: !!completion,
-            should_show_today: shouldShowToday
+            should_show_today: shouldShowForDate
           } as Habit & { should_show_today: boolean };
         })
       );
 
-      // Filtrer les habitudes actives pour ne montrer que celles qui doivent être faites aujourd'hui
+      // Filtrer les habitudes actives pour ne montrer que celles qui doivent être faites pour la date sélectionnée
       const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
@@ -96,7 +102,7 @@ export default function Habits() {
 
   useEffect(() => {
     fetchHabits();
-  }, [user]);
+  }, [user, selectedDate]);
 
   const handleEdit = (habit: Habit) => {
     setEditingHabit(habit);
@@ -153,25 +159,26 @@ export default function Habits() {
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
 
-    // Vérifier d'abord si l'habitude doit être faite aujourd'hui
+    // Vérifier d'abord si l'habitude doit être faite pour la date sélectionnée
     const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
     if (habit?.days_of_week && habit.days_of_week.length > 0) {
-      const currentDay = new Date().getDay();
-      if (!habit.days_of_week.includes(currentDay)) {
-        toast.error("Cette habitude n'est pas prévue pour aujourd'hui");
+      const selectedDay = selectedDate.getDay();
+      if (!habit.days_of_week.includes(selectedDay)) {
+        toast.error("Cette habitude n'est pas prévue pour cette date");
         return;
       }
     }
 
+    const targetDate = selectedDate.toISOString().split('T')[0];
+
     try {
       if (isCompleted) {
-        const today = new Date().toISOString().split('T')[0];
         const { error: deleteError } = await supabase
           .from('habit_completions')
           .delete()
           .eq('habit_id', habitId)
           .eq('user_id', user.id)
-          .eq('completed_date', today);
+          .eq('completed_date', targetDate);
 
         if (deleteError) throw deleteError;
         
@@ -182,14 +189,12 @@ export default function Habits() {
         
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        const today = new Date().toISOString().split('T')[0];
-        
         const { error } = await supabase
           .from('habit_completions')
           .insert({
             habit_id: habitId,
             user_id: user.id,
-            completed_date: today
+            completed_date: targetDate
           });
 
         if (error) throw error;
@@ -200,7 +205,7 @@ export default function Habits() {
         await supabase
           .from('habits')
           .update({
-            last_completed_at: new Date().toISOString(),
+            last_completed_at: selectedDate.toISOString(),
             streak: newStreak
           })
           .eq('id', habitId);
@@ -232,11 +237,37 @@ export default function Habits() {
       <div className="space-y-3 md:space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
             <h1 className="text-lg md:text-2xl font-bold tracking-tight">Habitudes</h1>
-            <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="sm:hidden">Nouvelle</span>
-              <span className="hidden sm:inline">Nouvelle habitude</span>
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal text-xs sm:text-sm flex-1 sm:flex-initial",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: fr }) : "Sélectionner"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    locale={fr}
+                    disabled={(date) => date > new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="text-sm">
+                <Plus className="h-4 w-4 mr-1" />
+                <span className="sm:hidden">Nouvelle</span>
+                <span className="hidden sm:inline">Nouvelle habitude</span>
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
