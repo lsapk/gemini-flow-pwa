@@ -16,7 +16,7 @@ interface UserBadge {
   criteria: string;
   earned: boolean;
   earnedAt?: string;
-  category: 'productivity' | 'social' | 'consistency' | 'achievement';
+  category: 'productivity' | 'focus' | 'consistency' | 'achievement';
 }
 
 type CategoryMeta = {
@@ -27,7 +27,7 @@ type CategoryMeta = {
 
 const categoryMeta: Record<UserBadge['category'], CategoryMeta> = {
   productivity: { label: "Productivité", icon: <Zap className="text-blue-400" />, color: 'blue' },
-  social: { label: "Social", icon: <Users className="text-purple-400" />, color: 'purple' },
+  focus: { label: "Concentration", icon: <Award className="text-purple-400" />, color: 'purple' },
   consistency: { label: "Régularité", icon: <Flame className="text-green-400"/>, color: 'green' },
   achievement: { label: "Succès", icon: <Trophy className="text-yellow-400"/>, color: 'yellow' },
 };
@@ -36,13 +36,14 @@ export default function Badges() {
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [userStats, setUserStats] = useState({
     tasksCompleted: 0,
+    tasksCreated: 0,
     habitsCreated: 0,
+    habitsCompleted: 0,
+    goalsCreated: 0,
     goalsAchieved: 0,
     journalEntries: 0,
     focusSessions: 0,
-    goodActionsCreated: 0,
-    likesReceived: 0,
-    commentsGiven: 0,
+    totalFocusMinutes: 0,
     loginStreak: 0
   });
   const [karmaPoints, setKarmaPoints] = useState(0);
@@ -50,125 +51,78 @@ export default function Badges() {
   const { toast } = useToast();
 
   const allBadges: Omit<UserBadge, 'earned' | 'earnedAt'>[] = [
-    // Productivity Badges
-    {
-      id: "first_task",
-      name: "Premier Pas",
-      description: "Créez votre première tâche",
-      icon: "✅",
-      criteria: "Create 1 task",
-      category: "productivity"
-    },
-    {
-      id: "task_master",
-      name: "Maître des Tâches",
-      description: "Complétez 50 tâches",
-      icon: "📝",
-      criteria: "Complete 50 tasks",
-      category: "productivity"
-    },
-    {
-      id: "habit_builder",
-      name: "Bâtisseur d'Habitudes",
-      description: "Créez 10 habitudes",
-      icon: "🔄",
-      criteria: "Create 10 habits",
-      category: "productivity"
-    },
-    {
-      id: "goal_setter",
-      name: "Visionnaire",
-      description: "Créez 5 objectifs",
-      icon: "🎯",
-      criteria: "Create 5 goals",
-      category: "productivity"
-    },
-    {
-      id: "focus_champion",
-      name: "Champion du Focus",
-      description: "Complétez 25 sessions de focus",
-      icon: "⏰",
-      criteria: "Complete 25 focus sessions",
-      category: "productivity"
-    },
+    // ==================== PRODUCTIVITY BADGES ====================
+    // Tasks
+    { id: "first_task", name: "Premier Pas", description: "Créez votre première tâche", icon: "✅", criteria: "Create 1 task", category: "productivity" },
+    { id: "task_starter", name: "Débutant", description: "Créez 5 tâches", icon: "📝", criteria: "Create 5 tasks", category: "productivity" },
+    { id: "task_creator", name: "Créateur", description: "Créez 25 tâches", icon: "📋", criteria: "Create 25 tasks", category: "productivity" },
+    { id: "task_organizer", name: "Organisateur", description: "Créez 50 tâches", icon: "📊", criteria: "Create 50 tasks", category: "productivity" },
+    { id: "task_architect", name: "Architecte", description: "Créez 100 tâches", icon: "🏗️", criteria: "Create 100 tasks", category: "productivity" },
     
-    // Consistency Badges
-    {
-      id: "journal_keeper",
-      name: "Gardien du Journal",
-      description: "Écrivez 20 entrées de journal",
-      icon: "📒",
-      criteria: "Write 20 journal entries",
-      category: "consistency"
-    },
-    {
-      id: "early_bird",
-      name: "Lève-Tôt",
-      description: "Connectez-vous 7 jours de suite",
-      icon: "☀️",
-      criteria: "Login 7 days straight",
-      category: "consistency"
-    },
-    {
-      id: "streak_master",
-      name: "Maître des Séries",
-      description: "Maintenez une série de 30 jours",
-      icon: "🔥",
-      criteria: "Maintain a 30-day streak",
-      category: "consistency"
-    },
+    { id: "task_completer", name: "Finisseur", description: "Complétez 10 tâches", icon: "✔️", criteria: "Complete 10 tasks", category: "productivity" },
+    { id: "task_achiever", name: "Accomplisseur", description: "Complétez 25 tâches", icon: "🎯", criteria: "Complete 25 tasks", category: "productivity" },
+    { id: "task_master", name: "Maître des Tâches", description: "Complétez 50 tâches", icon: "🏅", criteria: "Complete 50 tasks", category: "productivity" },
+    { id: "task_legend", name: "Légende", description: "Complétez 100 tâches", icon: "👑", criteria: "Complete 100 tasks", category: "productivity" },
+    { id: "task_unstoppable", name: "Inarrêtable", description: "Complétez 250 tâches", icon: "⚡", criteria: "Complete 250 tasks", category: "productivity" },
     
-    // Social Badges
-    {
-      id: "social_butterfly",
-      name: "Papillon Social",
-      description: "Créez 10 bonnes actions publiques",
-      icon: "📢",
-      criteria: "Create 10 public good actions",
-      category: "social"
-    },
-    {
-      id: "kind_heart",
-      name: "Cœur Bienveillant",
-      description: "Recevez 25 likes sur vos bonnes actions",
-      icon: "❤️",
-      criteria: "Receive 25 likes on good actions",
-      category: "social"
-    },
-    {
-      id: "helpful_soul",
-      name: "Âme Serviable",
-      description: "Donnez 50 commentaires encourageants",
-      icon: "💬",
-      criteria: "Give 50 comments",
-      category: "social"
-    },
+    // Habits
+    { id: "habit_starter", name: "Initié", description: "Créez votre première habitude", icon: "🌱", criteria: "Create 1 habit", category: "productivity" },
+    { id: "habit_builder", name: "Bâtisseur", description: "Créez 5 habitudes", icon: "🔄", criteria: "Create 5 habits", category: "productivity" },
+    { id: "habit_architect", name: "Architecte d'Habitudes", description: "Créez 10 habitudes", icon: "🏛️", criteria: "Create 10 habits", category: "productivity" },
+    { id: "habit_master", name: "Maître des Habitudes", description: "Créez 20 habitudes", icon: "🎓", criteria: "Create 20 habits", category: "productivity" },
     
-    // Achievement Badges
-    {
-      id: "productivity_pro",
-      name: "Pro de la Productivité",
-      description: "Atteignez un score de productivité de 90%",
-      icon: "🏆",
-      criteria: "Reach 90% productivity score",
-      category: "achievement"
-    },
-    {
-      id: "explorer",
-      name: "Explorateur",
-      description: "Utilisez toutes les fonctionnalités de l'app",
-      icon: "🗺️",
-      criteria: "Use all app features",
-      category: "achievement"
-    },
-    {
-      id: "zen_master",
-      name: "Maître Zen",
-      description: "Maintenez un équilibre parfait pendant une semaine",
-      icon: "🧘",
-      criteria: "Perfect balance for a week",
-      category: "achievement"
-    }
+    { id: "habit_keeper", name: "Gardien", description: "Complétez 25 habitudes", icon: "🛡️", criteria: "Complete 25 habits", category: "productivity" },
+    { id: "habit_champion", name: "Champion", description: "Complétez 50 habitudes", icon: "🏆", criteria: "Complete 50 habits", category: "productivity" },
+    { id: "habit_legend", name: "Légende Vivante", description: "Complétez 100 habitudes", icon: "💫", criteria: "Complete 100 habits", category: "productivity" },
+    
+    // Goals
+    { id: "goal_dreamer", name: "Rêveur", description: "Créez votre premier objectif", icon: "💭", criteria: "Create 1 goal", category: "productivity" },
+    { id: "goal_setter", name: "Visionnaire", description: "Créez 5 objectifs", icon: "🎯", criteria: "Create 5 goals", category: "productivity" },
+    { id: "goal_planner", name: "Planificateur", description: "Créez 10 objectifs", icon: "📈", criteria: "Create 10 goals", category: "productivity" },
+    
+    { id: "goal_achiever", name: "Réalisateur", description: "Atteignez votre premier objectif", icon: "🌟", criteria: "Achieve 1 goal", category: "productivity" },
+    { id: "goal_winner", name: "Gagnant", description: "Atteignez 3 objectifs", icon: "🏅", criteria: "Achieve 3 goals", category: "productivity" },
+    { id: "goal_champion", name: "Champion des Objectifs", description: "Atteignez 5 objectifs", icon: "👑", criteria: "Achieve 5 goals", category: "productivity" },
+    { id: "goal_master", name: "Maître des Objectifs", description: "Atteignez 10 objectifs", icon: "💎", criteria: "Achieve 10 goals", category: "productivity" },
+    
+    // ==================== FOCUS BADGES ====================
+    { id: "focus_beginner", name: "Concentré", description: "Complétez votre première session", icon: "🧘", criteria: "Complete 1 focus session", category: "focus" },
+    { id: "focus_starter", name: "Méditant", description: "Complétez 5 sessions de focus", icon: "🎯", criteria: "Complete 5 focus sessions", category: "focus" },
+    { id: "focus_dedicated", name: "Dévoué", description: "Complétez 10 sessions de focus", icon: "⏰", criteria: "Complete 10 focus sessions", category: "focus" },
+    { id: "focus_committed", name: "Engagé", description: "Complétez 25 sessions de focus", icon: "🔥", criteria: "Complete 25 focus sessions", category: "focus" },
+    { id: "focus_champion", name: "Champion du Focus", description: "Complétez 50 sessions de focus", icon: "🏆", criteria: "Complete 50 focus sessions", category: "focus" },
+    { id: "focus_master", name: "Maître du Focus", description: "Complétez 100 sessions de focus", icon: "🧠", criteria: "Complete 100 focus sessions", category: "focus" },
+    
+    { id: "focus_time_1h", name: "Une Heure de Focus", description: "Accumulez 1h de focus", icon: "⏱️", criteria: "60 minutes focus", category: "focus" },
+    { id: "focus_time_5h", name: "Marathonien", description: "Accumulez 5h de focus", icon: "🏃", criteria: "300 minutes focus", category: "focus" },
+    { id: "focus_time_10h", name: "Expert en Concentration", description: "Accumulez 10h de focus", icon: "💪", criteria: "600 minutes focus", category: "focus" },
+    { id: "focus_time_25h", name: "Moine du Focus", description: "Accumulez 25h de focus", icon: "🕉️", criteria: "1500 minutes focus", category: "focus" },
+    { id: "focus_time_50h", name: "Légende du Focus", description: "Accumulez 50h de focus", icon: "👑", criteria: "3000 minutes focus", category: "focus" },
+    
+    // ==================== CONSISTENCY BADGES ====================
+    { id: "journal_starter", name: "Écrivain Novice", description: "Écrivez votre première entrée", icon: "📖", criteria: "Write 1 journal entry", category: "consistency" },
+    { id: "journal_writer", name: "Écrivain", description: "Écrivez 5 entrées de journal", icon: "✍️", criteria: "Write 5 journal entries", category: "consistency" },
+    { id: "journal_committed", name: "Journaliste Engagé", description: "Écrivez 10 entrées de journal", icon: "📝", criteria: "Write 10 journal entries", category: "consistency" },
+    { id: "journal_keeper", name: "Gardien du Journal", description: "Écrivez 20 entrées de journal", icon: "📒", criteria: "Write 20 journal entries", category: "consistency" },
+    { id: "journal_master", name: "Maître du Journal", description: "Écrivez 50 entrées de journal", icon: "📚", criteria: "Write 50 journal entries", category: "consistency" },
+    { id: "journal_legend", name: "Chroniqueur Légendaire", description: "Écrivez 100 entrées de journal", icon: "📜", criteria: "Write 100 journal entries", category: "consistency" },
+    
+    { id: "streak_3", name: "Trois Jours", description: "Connectez-vous 3 jours de suite", icon: "🔥", criteria: "3 day streak", category: "consistency" },
+    { id: "early_bird", name: "Lève-Tôt", description: "Connectez-vous 7 jours de suite", icon: "☀️", criteria: "7 day streak", category: "consistency" },
+    { id: "streak_14", name: "Deux Semaines", description: "Maintenez une série de 14 jours", icon: "⚡", criteria: "14 day streak", category: "consistency" },
+    { id: "streak_master", name: "Maître des Séries", description: "Maintenez une série de 30 jours", icon: "💪", criteria: "30 day streak", category: "consistency" },
+    { id: "streak_legend", name: "Légende de la Constance", description: "Maintenez une série de 60 jours", icon: "👑", criteria: "60 day streak", category: "consistency" },
+    { id: "streak_unstoppable", name: "Force Irrésistible", description: "Maintenez une série de 100 jours", icon: "💎", criteria: "100 day streak", category: "consistency" },
+    
+    // ==================== ACHIEVEMENT BADGES ====================
+    { id: "explorer", name: "Explorateur", description: "Utilisez toutes les fonctionnalités principales", icon: "🗺️", criteria: "Use all main features", category: "achievement" },
+    { id: "organized", name: "Organisé", description: "Ayez 10 tâches actives", icon: "📊", criteria: "10 active tasks", category: "achievement" },
+    { id: "balanced", name: "Équilibré", description: "Ayez des tâches, habitudes et objectifs actifs", icon: "⚖️", criteria: "All types active", category: "achievement" },
+    { id: "dedicated", name: "Dévoué", description: "Utilisez l'app 30 jours au total", icon: "💖", criteria: "30 days usage", category: "achievement" },
+    { id: "veteran", name: "Vétéran", description: "Utilisez l'app 100 jours au total", icon: "🎖️", criteria: "100 days usage", category: "achievement" },
+    { id: "productivity_pro", name: "Pro de la Productivité", description: "Complétez 100 tâches et 50 habitudes", icon: "🏆", criteria: "100 tasks + 50 habits", category: "achievement" },
+    { id: "zen_master", name: "Maître Zen", description: "50h de focus et 50 entrées journal", icon: "🧘‍♂️", criteria: "50h focus + 50 journal", category: "achievement" },
+    { id: "completionist", name: "Perfectionniste", description: "Débloquez 30 badges", icon: "🌟", criteria: "30 badges", category: "achievement" },
   ];
 
   useEffect(() => {
@@ -185,41 +139,48 @@ export default function Badges() {
     if (!user) return;
 
     try {
-      // Get user statistics from various tables
-      const [tasks, habits, goals, journal, focus, goodActions, likes, comments] = await Promise.all([
+      const [
+        allTasks,
+        completedTasks,
+        allHabits,
+        habitCompletions,
+        allGoals,
+        completedGoals,
+        journal,
+        focus
+      ] = await Promise.all([
+        supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id).eq('completed', true),
         supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('habit_completions').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id).eq('completed', true),
         supabase.from('journal_entries').select('*').eq('user_id', user.id),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id),
-        supabase.from('good_actions').select('*').eq('user_id', user.id),
-        supabase.from('good_action_likes').select('good_action_id').eq('user_id', user.id),
-        supabase.from('good_action_comments').select('*').eq('user_id', user.id)
+        supabase.from('focus_sessions').select('duration').eq('user_id', user.id)
       ]);
 
+      const totalFocusMinutes = focus.data?.reduce((sum, session) => sum + (session.duration || 0), 0) || 0;
+
       const stats = {
-        tasksCompleted: tasks.data?.length || 0,
-        habitsCreated: habits.data?.length || 0,
-        goalsAchieved: goals.data?.length || 0,
+        tasksCreated: allTasks.data?.length || 0,
+        tasksCompleted: completedTasks.data?.length || 0,
+        habitsCreated: allHabits.data?.length || 0,
+        habitsCompleted: habitCompletions.data?.length || 0,
+        goalsCreated: allGoals.data?.length || 0,
+        goalsAchieved: completedGoals.data?.length || 0,
         journalEntries: journal.data?.length || 0,
         focusSessions: focus.data?.length || 0,
-        goodActionsCreated: goodActions.data?.length || 0,
-        likesReceived: likes.data?.length || 0,
-        commentsGiven: comments.data?.length || 0,
-        loginStreak: 7 // Placeholder for login streak calculation
+        totalFocusMinutes,
+        loginStreak: 0 // TODO: Calculate actual streak
       };
 
       setUserStats(stats);
       
-      // Calculate karma points
       const karma = stats.tasksCompleted * 2 + 
-                   stats.habitsCreated * 5 + 
+                   stats.habitsCompleted * 3 + 
                    stats.goalsAchieved * 10 + 
-                   stats.journalEntries * 3 + 
-                   stats.focusSessions * 4 + 
-                   stats.goodActionsCreated * 8 + 
-                   stats.likesReceived * 2 + 
-                   stats.commentsGiven * 1;
+                   stats.journalEntries * 5 + 
+                   stats.focusSessions * 4;
       
       setKarmaPoints(karma);
     } catch (error) {
@@ -231,52 +192,79 @@ export default function Badges() {
     const earnedBadges: UserBadge[] = allBadges.map(badge => {
       let earned = false;
       
-      switch (badge.id) {
-        case "first_task":
-          earned = userStats.tasksCompleted >= 1;
-          break;
-        case "task_master":
-          earned = userStats.tasksCompleted >= 50;
-          break;
-        case "habit_builder":
-          earned = userStats.habitsCreated >= 10;
-          break;
-        case "goal_setter":
-          earned = userStats.goalsAchieved >= 5;
-          break;
-        case "focus_champion":
-          earned = userStats.focusSessions >= 25;
-          break;
-        case "journal_keeper":
-          earned = userStats.journalEntries >= 20;
-          break;
-        case "early_bird":
-          earned = userStats.loginStreak >= 7;
-          break;
-        case "streak_master":
-          earned = userStats.loginStreak >= 30;
-          break;
-        case "social_butterfly":
-          earned = userStats.goodActionsCreated >= 10;
-          break;
-        case "kind_heart":
-          earned = userStats.likesReceived >= 25;
-          break;
-        case "helpful_soul":
-          earned = userStats.commentsGiven >= 50;
-          break;
-        case "productivity_pro":
-          earned = false; // Would need productivity score calculation
-          break;
-        case "explorer":
-          earned = userStats.tasksCompleted > 0 && userStats.habitsCreated > 0 && userStats.goalsAchieved > 0;
-          break;
-        case "zen_master":
-          earned = false; // Would need balance calculation
-          break;
-        default:
-          earned = false;
-      }
+      // Tasks
+      if (badge.id === "first_task") earned = userStats.tasksCreated >= 1;
+      if (badge.id === "task_starter") earned = userStats.tasksCreated >= 5;
+      if (badge.id === "task_creator") earned = userStats.tasksCreated >= 25;
+      if (badge.id === "task_organizer") earned = userStats.tasksCreated >= 50;
+      if (badge.id === "task_architect") earned = userStats.tasksCreated >= 100;
+      
+      if (badge.id === "task_completer") earned = userStats.tasksCompleted >= 10;
+      if (badge.id === "task_achiever") earned = userStats.tasksCompleted >= 25;
+      if (badge.id === "task_master") earned = userStats.tasksCompleted >= 50;
+      if (badge.id === "task_legend") earned = userStats.tasksCompleted >= 100;
+      if (badge.id === "task_unstoppable") earned = userStats.tasksCompleted >= 250;
+      
+      // Habits
+      if (badge.id === "habit_starter") earned = userStats.habitsCreated >= 1;
+      if (badge.id === "habit_builder") earned = userStats.habitsCreated >= 5;
+      if (badge.id === "habit_architect") earned = userStats.habitsCreated >= 10;
+      if (badge.id === "habit_master") earned = userStats.habitsCreated >= 20;
+      
+      if (badge.id === "habit_keeper") earned = userStats.habitsCompleted >= 25;
+      if (badge.id === "habit_champion") earned = userStats.habitsCompleted >= 50;
+      if (badge.id === "habit_legend") earned = userStats.habitsCompleted >= 100;
+      
+      // Goals
+      if (badge.id === "goal_dreamer") earned = userStats.goalsCreated >= 1;
+      if (badge.id === "goal_setter") earned = userStats.goalsCreated >= 5;
+      if (badge.id === "goal_planner") earned = userStats.goalsCreated >= 10;
+      
+      if (badge.id === "goal_achiever") earned = userStats.goalsAchieved >= 1;
+      if (badge.id === "goal_winner") earned = userStats.goalsAchieved >= 3;
+      if (badge.id === "goal_champion") earned = userStats.goalsAchieved >= 5;
+      if (badge.id === "goal_master") earned = userStats.goalsAchieved >= 10;
+      
+      // Focus Sessions
+      if (badge.id === "focus_beginner") earned = userStats.focusSessions >= 1;
+      if (badge.id === "focus_starter") earned = userStats.focusSessions >= 5;
+      if (badge.id === "focus_dedicated") earned = userStats.focusSessions >= 10;
+      if (badge.id === "focus_committed") earned = userStats.focusSessions >= 25;
+      if (badge.id === "focus_champion") earned = userStats.focusSessions >= 50;
+      if (badge.id === "focus_master") earned = userStats.focusSessions >= 100;
+      
+      // Focus Time
+      if (badge.id === "focus_time_1h") earned = userStats.totalFocusMinutes >= 60;
+      if (badge.id === "focus_time_5h") earned = userStats.totalFocusMinutes >= 300;
+      if (badge.id === "focus_time_10h") earned = userStats.totalFocusMinutes >= 600;
+      if (badge.id === "focus_time_25h") earned = userStats.totalFocusMinutes >= 1500;
+      if (badge.id === "focus_time_50h") earned = userStats.totalFocusMinutes >= 3000;
+      
+      // Journal
+      if (badge.id === "journal_starter") earned = userStats.journalEntries >= 1;
+      if (badge.id === "journal_writer") earned = userStats.journalEntries >= 5;
+      if (badge.id === "journal_committed") earned = userStats.journalEntries >= 10;
+      if (badge.id === "journal_keeper") earned = userStats.journalEntries >= 20;
+      if (badge.id === "journal_master") earned = userStats.journalEntries >= 50;
+      if (badge.id === "journal_legend") earned = userStats.journalEntries >= 100;
+      
+      // Streaks
+      if (badge.id === "streak_3") earned = userStats.loginStreak >= 3;
+      if (badge.id === "early_bird") earned = userStats.loginStreak >= 7;
+      if (badge.id === "streak_14") earned = userStats.loginStreak >= 14;
+      if (badge.id === "streak_master") earned = userStats.loginStreak >= 30;
+      if (badge.id === "streak_legend") earned = userStats.loginStreak >= 60;
+      if (badge.id === "streak_unstoppable") earned = userStats.loginStreak >= 100;
+      
+      // Achievements
+      if (badge.id === "explorer") earned = userStats.tasksCreated > 0 && userStats.habitsCreated > 0 && userStats.goalsCreated > 0 && userStats.journalEntries > 0 && userStats.focusSessions > 0;
+      if (badge.id === "organized") earned = (userStats.tasksCreated - userStats.tasksCompleted) >= 10;
+      if (badge.id === "balanced") earned = userStats.tasksCreated > 0 && userStats.habitsCreated > 0 && userStats.goalsCreated > 0;
+      if (badge.id === "dedicated") earned = false; // TODO: Track total usage days
+      if (badge.id === "veteran") earned = false; // TODO: Track total usage days
+      if (badge.id === "productivity_pro") earned = userStats.tasksCompleted >= 100 && userStats.habitsCompleted >= 50;
+      if (badge.id === "zen_master") earned = userStats.totalFocusMinutes >= 3000 && userStats.journalEntries >= 50;
+      if (badge.id === "completionist") earned = badges.filter(b => b.earned).length >= 30;
       
       return {
         ...badge,
@@ -306,7 +294,7 @@ export default function Badges() {
   const categoryCounts = useMemo(() => {
     const counts: Record<UserBadge['category'], {earned: number, total: number}> = {
       productivity: {earned: 0, total: 0},
-      social: {earned: 0, total: 0},
+      focus: {earned: 0, total: 0},
       consistency: {earned: 0, total: 0},
       achievement: {earned: 0, total: 0},
     };
