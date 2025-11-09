@@ -54,7 +54,10 @@ export default function Habits() {
   const fetchHabits = async () => {
     if (!user) return;
 
+    setIsLoading(true);
     try {
+      const targetDate = selectedDate.toISOString().split('T')[0];
+      
       const { data, error } = await supabase
         .from('habits')
         .select('*')
@@ -63,7 +66,6 @@ export default function Habits() {
 
       if (error) throw error;
 
-      const targetDate = selectedDate.toISOString().split('T')[0];
       const habitsWithCompletion = await Promise.all(
         (data || []).map(async (habit) => {
           const { data: completion } = await supabase
@@ -82,7 +84,7 @@ export default function Habits() {
             frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
             is_completed_today: !!completion,
             should_show_today: shouldShowForDate
-          } as Habit & { should_show_today: boolean };
+          };
         })
       );
 
@@ -90,8 +92,8 @@ export default function Habits() {
       const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
-      setHabits(active as Habit[]);
-      setArchivedHabits(archived as Habit[]);
+      setHabits(active.map(({ should_show_today, ...habit }) => habit as Habit));
+      setArchivedHabits(archived.map(({ should_show_today, ...habit }) => habit as Habit));
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast.error('Erreur lors du chargement des habitudes');
@@ -170,6 +172,7 @@ export default function Habits() {
     }
 
     const targetDate = selectedDate.toISOString().split('T')[0];
+    const isToday = targetDate === new Date().toISOString().split('T')[0];
 
     try {
       if (isCompleted) {
@@ -182,10 +185,13 @@ export default function Habits() {
 
         if (deleteError) throw deleteError;
         
-        const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
-        const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
-        
-        await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        // Ne mettre à jour le streak que si c'est aujourd'hui
+        if (isToday) {
+          const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
+          const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
+          
+          await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        }
         
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
@@ -199,20 +205,25 @@ export default function Habits() {
 
         if (error) throw error;
 
-        const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
-        const newStreak = (currentHabit?.streak || 0) + 1;
+        // Ne mettre à jour le streak et last_completed_at que si c'est aujourd'hui
+        if (isToday) {
+          const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
+          const newStreak = (currentHabit?.streak || 0) + 1;
 
-        await supabase
-          .from('habits')
-          .update({
-            last_completed_at: selectedDate.toISOString(),
-            streak: newStreak
-          })
-          .eq('id', habitId);
+          await supabase
+            .from('habits')
+            .update({
+              last_completed_at: selectedDate.toISOString(),
+              streak: newStreak
+            })
+            .eq('id', habitId);
+        }
 
         toast.success('Habitude complétée !');
       }
-      fetchHabits();
+      
+      // Recharger les habitudes pour la date sélectionnée
+      await fetchHabits();
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast.error("Erreur lors de la mise à jour de l'habitude");
