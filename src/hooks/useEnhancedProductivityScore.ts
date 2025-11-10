@@ -231,5 +231,7 @@ export const useEnhancedProductivityScore = () => {
     enabled: !!user,
     staleTime: 60 * 60 * 1000, // 1 hour - increased to reduce API calls
     gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    retry: false, // Disable automatic retries to prevent rate limiting
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 };

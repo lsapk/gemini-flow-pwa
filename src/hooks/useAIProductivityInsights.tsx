@@ -33,13 +33,18 @@ export function useAIProductivityInsights() {
   useEffect(() => {
     if (!user) return;
     
+    // Prevent multiple simultaneous calls
+    let cancelled = false;
+    
     // Load saved insights first
     const loadSavedInsights = async () => {
+      if (cancelled) return true;
+      
       const { data } = await supabase
         .from('ai_productivity_insights')
         .select('insights_data, updated_at')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (data?.insights_data) {
         const savedInsights = data.insights_data as { insights: AIInsight[], generatedAt: string };
@@ -56,8 +61,10 @@ export function useAIProductivityInsights() {
 
     // Générer la requête de contexte pour l'IA
     async function fetchAIInsights() {
+      if (cancelled) return;
+      
       const hasCachedData = await loadSavedInsights();
-      if (hasCachedData) return;
+      if (hasCachedData || cancelled) return;
 
       setIsLoading(true);
       try {
@@ -95,8 +102,16 @@ Uniquement la liste JSON, aucune explication extérieure.`,
           })
         );
 
-        // Vérifie la réponse de l'IA
+        if (cancelled) return;
+
+        // Handle rate limit errors gracefully
         if (error) {
+          console.error('AI request error:', error);
+          // Keep existing insights if rate limited
+          if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
+            console.log('Rate limited - keeping existing insights');
+            return;
+          }
           setInsights([]);
           return;
         }
@@ -109,6 +124,8 @@ Uniquement la liste JSON, aucune explication extérieure.`,
             insightsList = JSON.parse(jsonMatch[0]);
           }
         }
+
+        if (cancelled) return;
 
         if (Array.isArray(insightsList) && insightsList.length > 0) {
           setInsights(insightsList);
@@ -129,15 +146,24 @@ Uniquement la liste JSON, aucune explication extérieure.`,
           setInsights([]);
         }
       } catch (err) {
-        setInsights([]);
+        if (!cancelled) {
+          setInsights([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
 
     fetchAIInsights();
-    // eslint-disable-next-line
-  }, [user, taskCompletionRate, totalFocusTime, streakCount, habitsData, focusData, activityData]);
+    
+    return () => {
+      cancelled = true;
+    };
+    // Only depend on user - analytics data is captured when the effect runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   return { insights, isLoading };
 }
