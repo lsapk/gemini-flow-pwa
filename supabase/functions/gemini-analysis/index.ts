@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.24.1?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.2?target=deno";
 
 // Define CORS headers for browser requests
@@ -195,9 +194,9 @@ serve(async (req) => {
 
   try {
     // Get API key from environment variable
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not set in environment variables");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not set in environment variables");
     }
 
     // Get Supabase credentials from environment
@@ -312,18 +311,38 @@ serve(async (req) => {
       // Continue execution even if tracking fails
     }
 
-    // Initialize the Google Generative AI
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
-    // Create a generative model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
     // Create the custom prompt based on user's language and data
     const customPrompt = createCustomPrompt(prompt, userData, userLanguage);
     
-    // Generate content
-    const result = await model.generateContent(customPrompt);
-    const responseText = result.response.text();
+    // Call Lovable AI gateway
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'user', content: customPrompt }
+        ],
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      if (aiResponse.status === 402) {
+        throw new Error('AI credits exhausted. Please add credits to your Lovable workspace.');
+      }
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      throw new Error(`AI gateway error: ${errorText}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const responseText = aiData.choices?.[0]?.message?.content || '';
     
     // Process the response to extract chart data if present
     let content = responseText;

@@ -1,7 +1,4 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.24.1';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -116,36 +113,62 @@ DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
 Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans suggestions de création.`;
     }
 
-    // Initialize Gemini with proper API key check
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+    // Initialize Lovable AI gateway
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     // Prepare recent messages for memory (last 10)
     const recentMessages = (context?.recent_messages || []).slice(-10).map((msg: any) => ({
-      role: msg.role,
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: msg.content
     }));
 
-    const conversationContext = recentMessages.length > 0 
-      ? `\n\nCONVERSATION RÉCENTE:\n${recentMessages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}`
-      : '';
-
-    console.log('Making request to Gemini API with mode:', messageContext);
+    console.log('Making request to Lovable AI with mode:', messageContext);
     
-    const result = await model.generateContent([
-      systemPrompt,
-      `Context: ${messageContext}\nMessage utilisateur: ${message}${conversationContext}`
-    ]);
+    // Build messages array for OpenAI-compatible API
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages,
+      { role: 'user', content: message }
+    ];
 
-    const response = result.response;
-    let responseText = response.text();
+    // Call Lovable AI gateway
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: messages,
+      }),
+    });
 
-    console.log('Gemini response received:', responseText);
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your Lovable workspace.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 402 }
+        );
+      }
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      throw new Error(`AI gateway error: ${errorText}`);
+    }
+
+    const aiData = await aiResponse.json();
+    let responseText = aiData.choices?.[0]?.message?.content || '';
+
+    console.log('Lovable AI response received:', responseText);
 
     // Try to parse JSON response for suggestions (only in creation mode)
     let suggestion = null;
