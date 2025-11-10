@@ -30,18 +30,16 @@ serve(async (req) => {
     // Define admin email (hardcoded for security)
     const adminEmail = "deepflow.ia@gmail.com";
 
-    // Check if user exists
-    const { data: userData, error: userError } = await adminClient
-      .from('auth.users')
-      .select('id')
-      .eq('email', adminEmail)
-      .maybeSingle();
+    // Check if user exists using auth admin API
+    const { data: { users }, error: userError } = await adminClient.auth.admin.listUsers();
 
     if (userError) {
       throw new Error(`Error checking admin user: ${userError.message}`);
     }
 
-    if (!userData || !userData.id) {
+    const adminUser = users.find(u => u.email === adminEmail);
+
+    if (!adminUser) {
       return new Response(
         JSON.stringify({ success: false, error: "Admin user not found" }),
         { 
@@ -51,7 +49,7 @@ serve(async (req) => {
       );
     }
 
-    const userId = userData.id;
+    const userId = adminUser.id;
 
     // Check if the admin role already exists
     const { data: existingRoleData, error: roleCheckError } = await adminClient
