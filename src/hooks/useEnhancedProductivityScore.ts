@@ -2,6 +2,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { aiRequestQueue } from "@/utils/aiRequestQueue";
 
 interface EnhancedProductivityData {
   score: number;
@@ -78,47 +79,49 @@ export const useEnhancedProductivityScore = () => {
           habit_completions: completionsResult.status === 'fulfilled' ? (completionsResult.value.data || []) : []
         };
 
-        const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
-          body: {
-            message: `Analyse approfondie et détaillée de productivité. Retourne UNIQUEMENT un objet JSON complet avec toutes ces propriétés:
-            {
-              "score": nombre_0_à_100,
-              "level": "Débutant|Intermédiaire|Avancé|Expert|Maître",
-              "badges": ["array_de_badges_français_pertinents_max_8"],
-              "streakBonus": nombre_0_à_20,
-              "completionRate": pourcentage_completion_tasks,
-              "focusTimeScore": nombre_0_à_25,
-              "consistencyScore": nombre_0_à_25,
-              "qualityScore": nombre_0_à_25,
-              "timeManagementScore": nombre_0_à_25,
-              "journalScore": nombre_0_à_15,
-              "goalScore": nombre_0_à_15,
-              "insights": ["array_d_observations_perspicaces_max_5"],
-              "recommendations": ["array_de_conseils_actionables_max_5"],
-              "weeklyTrend": nombre_-100_à_100_evolution_semaine,
-              "strongPoints": ["array_points_forts_max_3"],
-              "improvementAreas": ["array_axes_amelioration_max_3"],
-              "nextMilestone": "string_objectif_suivant"
+        const { data, error } = await aiRequestQueue.add(() =>
+          supabase.functions.invoke('gemini-chat-enhanced', {
+            body: {
+              message: `Analyse approfondie et détaillée de productivité. Retourne UNIQUEMENT un objet JSON complet avec toutes ces propriétés:
+              {
+                "score": nombre_0_à_100,
+                "level": "Débutant|Intermédiaire|Avancé|Expert|Maître",
+                "badges": ["array_de_badges_français_pertinents_max_8"],
+                "streakBonus": nombre_0_à_20,
+                "completionRate": pourcentage_completion_tasks,
+                "focusTimeScore": nombre_0_à_25,
+                "consistencyScore": nombre_0_à_25,
+                "qualityScore": nombre_0_à_25,
+                "timeManagementScore": nombre_0_à_25,
+                "journalScore": nombre_0_à_15,
+                "goalScore": nombre_0_à_15,
+                "insights": ["array_d_observations_perspicaces_max_5"],
+                "recommendations": ["array_de_conseils_actionables_max_5"],
+                "weeklyTrend": nombre_-100_à_100_evolution_semaine,
+                "strongPoints": ["array_points_forts_max_3"],
+                "improvementAreas": ["array_axes_amelioration_max_3"],
+                "nextMilestone": "string_objectif_suivant"
+              }
+              
+              ANALYSE APPROFONDIE REQUISE:
+              - Calculer le score avec une méthode pondérée sophistiquée
+              - Analyser les tendances temporelles et patterns
+              - Identifier les forces et faiblesses spécifiques
+              - Proposer des insights personnalisés et perspicaces
+              - Donner des recommandations concrètes et réalisables
+              - Calculer l'évolution sur la semaine passée
+              - Identifier le prochain objectif logique à atteindre
+              - Badges basés sur les vraies performances de l'utilisateur
+              
+              Données complètes: ${JSON.stringify(completeUserData)}`,
+              user_id: user.id,
+              context: {
+                analysis_mode: true,
+                user_data: completeUserData
+              }
             }
-            
-            ANALYSE APPROFONDIE REQUISE:
-            - Calculer le score avec une méthode pondérée sophistiquée
-            - Analyser les tendances temporelles et patterns
-            - Identifier les forces et faiblesses spécifiques
-            - Proposer des insights personnalisés et perspicaces
-            - Donner des recommandations concrètes et réalisables
-            - Calculer l'évolution sur la semaine passée
-            - Identifier le prochain objectif logique à atteindre
-            - Badges basés sur les vraies performances de l'utilisateur
-            
-            Données complètes: ${JSON.stringify(completeUserData)}`,
-            user_id: user.id,
-            context: {
-              analysis_mode: true,
-              user_data: completeUserData
-            }
-          }
-        });
+          })
+        );
 
         if (error) throw error;
 
@@ -226,7 +229,7 @@ export const useEnhancedProductivityScore = () => {
       }
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 60 * 1000, // 1 hour - increased to reduce API calls
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 };

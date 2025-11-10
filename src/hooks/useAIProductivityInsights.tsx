@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAnalyticsData } from "./useAnalyticsData";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { aiRequestQueue } from "@/utils/aiRequestQueue";
 
 // Typage minimal pour IA insight
 export type AIInsight = {
@@ -71,9 +72,11 @@ export function useAIProductivityInsights() {
         };
 
         // Prompt IA : donner des conseils personnalisés et catégorisés
-        const { data, error } = await supabase.functions.invoke("gemini-chat-enhanced", {
-          body: {
-            message: `Analyse ces données utilisateur et génère 5 à 8 conseils personnalisés pour améliorer sa productivité, ses habitudes ou son focus. Chaque conseil doit suivre cet objet JSON, en français uniquement:
+        // Queue the AI request to prevent rate limiting
+        const { data, error } = await aiRequestQueue.add(() =>
+          supabase.functions.invoke("gemini-chat-enhanced", {
+            body: {
+              message: `Analyse ces données utilisateur et génère 5 à 8 conseils personnalisés pour améliorer sa productivité, ses habitudes ou son focus. Chaque conseil doit suivre cet objet JSON, en français uniquement:
 [
   {
     "id": "unique_id",
@@ -86,10 +89,11 @@ export function useAIProductivityInsights() {
   }
 ]
 Uniquement la liste JSON, aucune explication extérieure.`,
-            user_id: user.id,
-            context: { user_data: userData, recent_messages: [] }
-          }
-        });
+              user_id: user.id,
+              context: { user_data: userData, recent_messages: [] }
+            }
+          })
+        );
 
         // Vérifie la réponse de l'IA
         if (error) {
