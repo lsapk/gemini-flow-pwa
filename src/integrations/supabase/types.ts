@@ -1684,6 +1684,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string | null
+          google_task_id: string | null
           id: string
           linked_goal_id: string | null
           parent_task_id: string | null
@@ -1698,6 +1699,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          google_task_id?: string | null
           id?: string
           linked_goal_id?: string | null
           parent_task_id?: string | null
@@ -1712,6 +1714,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          google_task_id?: string | null
           id?: string
           linked_goal_id?: string | null
           parent_task_id?: string | null
@@ -2414,26 +2417,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auth_user_is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      encrypt_token: {
-        Args: { token: string }
-        Returns: string
-      }
-      has_role: {
-        Args: { _role: string; _user_id: string }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_authenticated: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      auth_user_is_admin: { Args: never; Returns: boolean }
+      encrypt_token: { Args: { token: string }; Returns: string }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_admin: { Args: never; Returns: boolean }
+      is_authenticated: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

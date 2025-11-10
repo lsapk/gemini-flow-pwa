@@ -127,11 +127,11 @@ export function useGoogleTasks() {
   };
 
   const createTask = async (taskData: { title: string; notes?: string; due?: string }) => {
-    if (!user) return false;
+    if (!user) return null;
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("google-tasks-api", {
+      const { data, error } = await supabase.functions.invoke("google-tasks-api", {
         body: {
           action: "create",
           user_id: user.id,
@@ -143,11 +143,11 @@ export function useGoogleTasks() {
       if (error) throw error;
       toast.success("Tâche créée dans Google Tasks !");
       await loadTasks();
-      return true;
+      return data?.id || null;
     } catch (error) {
       console.error("Error creating task:", error);
       toast.error("Erreur de création de la tâche");
-      return false;
+      return null;
     } finally {
       setIsLoading(false);
     }

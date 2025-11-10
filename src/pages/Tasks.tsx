@@ -39,6 +39,7 @@ interface Task {
   user_id: string;
   parent_task_id?: string | null;
   sort_order?: number;
+  google_task_id?: string | null;
 }
 
 interface Subtask {
@@ -227,46 +228,55 @@ export default function Tasks() {
       // Load Google Tasks
       await googleTasks.loadTasks();
 
-      // Sync DeepFlow tasks to Google Tasks
-      for (const task of pendingTasks) {
-        const existingGoogleTask = googleTasks.tasks.find(
-          gt => gt.title === task.title
-        );
+      let syncedToGoogle = 0;
+      let syncedFromGoogle = 0;
 
-        if (!existingGoogleTask) {
-          await googleTasks.createTask({
-            title: task.title,
-            notes: task.description || undefined,
-            due: task.due_date || undefined,
-          });
+      // Sync DeepFlow tasks to Google Tasks (only if not already synced)
+      for (const task of pendingTasks) {
+        // Skip if already synchronized (has google_task_id)
+        if (task.google_task_id) continue;
+
+        const googleTaskId = await googleTasks.createTask({
+          title: task.title,
+          notes: task.description || undefined,
+          due: task.due_date || undefined,
+        });
+
+        // Update DeepFlow task with google_task_id
+        if (googleTaskId) {
+          await supabase
+            .from('tasks')
+            .update({ google_task_id: googleTaskId })
+            .eq('id', task.id);
+          syncedToGoogle++;
         }
       }
 
-      // Sync Google Tasks to DeepFlow
+      // Sync Google Tasks to DeepFlow (only if not already imported)
       for (const googleTask of googleTasks.tasks) {
         if (googleTask.status === 'completed') continue;
 
-        const existingDeepFlowTask = tasks.find(
-          t => t.title === googleTask.title
-        );
+        // Check if this Google Task is already in DeepFlow
+        const existingTask = tasks.find(t => t.google_task_id === googleTask.id);
 
-        if (!existingDeepFlowTask && user) {
+        if (!existingTask && user) {
           await supabase.from('tasks').insert({
             user_id: user.id,
             title: googleTask.title,
             description: googleTask.notes || null,
             due_date: googleTask.due || null,
             completed: false,
+            google_task_id: googleTask.id,
           });
+          syncedFromGoogle++;
         }
       }
 
       await refetch();
-      await googleTasks.loadTasks();
 
       toast({
         title: "Synchronisation réussie",
-        description: "Vos tâches ont été synchronisées avec Google Tasks",
+        description: `${syncedToGoogle} tâche(s) envoyée(s) vers Google, ${syncedFromGoogle} tâche(s) importée(s) depuis Google`,
       });
     } catch (error) {
       console.error('Sync error:', error);
