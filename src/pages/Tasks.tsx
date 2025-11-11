@@ -333,18 +333,14 @@ export default function Tasks() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-9">
-              <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm">
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">En cours</span>
-                <span className="xs:hidden">Cours</span>
-                ({pendingTasks.length})
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="pending" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                En cours ({pendingTasks.length})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm">
-                <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Terminées</span>
-                <span className="xs:hidden">Fini</span>
-                ({completedTasks.length})
+              <TabsTrigger value="completed" className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4" />
+                Terminées ({completedTasks.length})
               </TabsTrigger>
             </TabsList>
 

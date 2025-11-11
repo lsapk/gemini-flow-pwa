@@ -250,7 +250,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profil
@@ -258,10 +258,6 @@ export default function Settings() {
           <TabsTrigger value="preferences" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             Préférences
-          </TabsTrigger>
-          <TabsTrigger value="api" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            API & IA
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <Trophy className="h-4 w-4" />
@@ -398,43 +394,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="api">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                Configuration API & IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Clé API Gemini (Optionnel)</Label>
-                <Input
-                  type="password"
-                  placeholder="Votre clé API Gemini pour des analyses personnalisées"
-                  value={formData.gemini_api_key}
-                  onChange={(e) => setFormData({...formData, gemini_api_key: e.target.value})}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Ajoutez votre propre clé API Gemini pour débloquer des analyses IA illimitées
-                </p>
-              </div>
-              
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  Fonctionnalités IA Disponibles
-                </h4>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Analyse de profil de personnalité</li>
-                  <li>• Recommandations personnalisées</li>
-                  <li>• Score de productivité intelligent</li>
-                  <li>• Insights comportementaux</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="stats">
           <div className="grid gap-4 md:gap-6">
