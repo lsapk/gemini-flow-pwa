@@ -57,6 +57,21 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))',
+					muted: 'hsl(var(--success-muted))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))',
+					muted: 'hsl(var(--warning-muted))'
+				},
+				info: {
+					DEFAULT: 'hsl(var(--info))',
+					foreground: 'hsl(var(--info-foreground))',
+					muted: 'hsl(var(--info-muted))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -66,19 +81,6 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				},
-				deepflow: {
-					50: '#f0f4ff',
-					100: '#e0e9ff',
-					200: '#c7d7fe',
-					300: '#a5bffd',
-					400: '#819dfa',
-					500: '#6077f5',
-					600: '#4554e9',
-					700: '#3541d0',
-					800: '#2e38a8',
-					900: '#2c3485',
-					950: '#1a1d4a',
 				}
 			},
 			borderRadius: {

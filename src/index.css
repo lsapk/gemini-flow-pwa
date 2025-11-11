@@ -37,6 +37,21 @@
     --ring: 240 5.9% 10%;
     
     --radius: 0.75rem;
+    
+    /* Success colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --success-muted: 142 76% 96%;
+    
+    /* Warning colors */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --warning-muted: 48 96% 96%;
+    
+    /* Info colors */
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+    --info-muted: 214 95% 96%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -77,6 +92,21 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
+    
+    /* Success colors */
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 98%;
+    --success-muted: 142 70% 15%;
+    
+    /* Warning colors */
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 98%;
+    --warning-muted: 38 92% 15%;
+    
+    /* Info colors */
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 98%;
+    --info-muted: 217 91% 15%;
 
     --sidebar-background: 240 10% 3.9%;
     --sidebar-foreground: 0 0% 98%;

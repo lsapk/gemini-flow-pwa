@@ -105,43 +105,43 @@ export default function Dashboard() {
       </div>
 
       {/* Métriques principales améliorées */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-success">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground">Tâches Complétées</CardTitle>
-            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-full">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="p-2.5 bg-success-muted rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-green-600">
-                {completedTasks}<span className="text-lg text-muted-foreground">/{totalTasks}</span>
+            <div className="space-y-3">
+              <div className="text-3xl font-bold text-success">
+                {completedTasks}<span className="text-lg text-muted-foreground font-normal">/{totalTasks}</span>
               </div>
               <Progress value={taskCompletionRate} className="h-2" />
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5" />
                 {taskCompletionRate.toFixed(0)}% de réussite
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
+        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground">Temps de Focus</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-              <Brain className="h-5 w-5 text-purple-600" />
+            <div className="p-2.5 bg-primary/10 rounded-lg">
+              <Brain className="h-5 w-5 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-purple-600">
-                {Math.round(totalFocusTime / 60)}<span className="text-lg text-muted-foreground">h</span>
+            <div className="space-y-3">
+              <div className="text-3xl font-bold text-primary">
+                {Math.round(totalFocusTime / 60)}<span className="text-lg text-muted-foreground font-normal">h</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm items-center">
                 <span className="text-muted-foreground">Moyenne:</span>
-                <Badge variant="secondary">{avgFocusTime}min</Badge>
+                <Badge variant="secondary" className="font-medium">{avgFocusTime}min</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 {Math.round(totalFocusTime)} minutes au total
@@ -150,21 +150,21 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
+        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-warning">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground">Série Actuelle</CardTitle>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-full">
-              <Zap className="h-5 w-5 text-orange-600" />
+            <div className="p-2.5 bg-warning-muted rounded-lg">
+              <Zap className="h-5 w-5 text-warning" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-orange-600">
-                {streakCount}<span className="text-lg text-muted-foreground">j</span>
+            <div className="space-y-3">
+              <div className="text-3xl font-bold text-warning">
+                {streakCount}<span className="text-lg text-muted-foreground font-normal">j</span>
               </div>
-              <div className="flex items-center gap-2">
-                {streakCount >= 7 && <Badge className="bg-orange-100 text-orange-700">🔥 En feu!</Badge>}
-                {streakCount >= 30 && <Badge className="bg-yellow-100 text-yellow-700">🏆 Champion!</Badge>}
+              <div className="flex items-center gap-2 flex-wrap">
+                {streakCount >= 7 && <Badge className="bg-warning-muted text-warning border-warning/20">🔥 En feu!</Badge>}
+                {streakCount >= 30 && <Badge className="bg-success-muted text-success border-success/20">🏆 Champion!</Badge>}
               </div>
               <p className="text-sm text-muted-foreground">
                 jours consécutifs
@@ -173,23 +173,23 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
+        <Card className="relative overflow-hidden group hover:shadow-lg transition-all duration-300 border-l-4 border-l-info">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground">Habitudes Actives</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-              <Target className="h-5 w-5 text-blue-600" />
+            <div className="p-2.5 bg-info-muted rounded-lg">
+              <Target className="h-5 w-5 text-info" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-blue-600">
+            <div className="space-y-3">
+              <div className="text-3xl font-bold text-info">
                 {activeHabits}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">en cours</span>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/habits" className="text-blue-600 hover:text-blue-700">
-                    <ArrowUpRight className="h-3 w-3" />
+                <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                  <Link to="/habits" className="text-info hover:text-info/80">
+                    <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>
@@ -207,28 +207,28 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2.5">
                 <Activity className="h-5 w-5 text-primary" />
                 Tendances d'Activité
               </CardTitle>
-              <Badge variant="outline">7 derniers jours</Badge>
+              <Badge variant="outline" className="font-medium">7 derniers jours</Badge>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-info" />
                   Activité Générale
                 </h4>
                 <SimpleLineChart 
                   data={activityChartData}
-                  lines={[{ dataKey: "value", name: "Activité", color: "#3b82f6" }]}
+                  lines={[{ dataKey: "value", name: "Activité", color: "hsl(var(--info))" }]}
                 />
               </div>
               <div>
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-purple-500" />
+                <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
                   Sessions de Focus
                 </h4>
                 <SimpleBarChart 
@@ -240,9 +240,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Widget d'insights IA */}
-        <Card>
-          <SmartInsightsWidget />
-        </Card>
+        <SmartInsightsWidget />
       </div>
 
       {/* Résumé des habitudes amélioré */}
