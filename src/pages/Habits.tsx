@@ -51,12 +51,12 @@ export default function Habits() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
 
-  const fetchHabits = async () => {
+  const fetchHabits = async (dateToUse: Date = selectedDate) => {
     if (!user) return;
 
     setIsLoading(true);
     try {
-      const targetDate = selectedDate.toISOString().split('T')[0];
+      const targetDate = dateToUse.toISOString().split('T')[0];
       
       const { data, error } = await supabase
         .from('habits')
@@ -76,7 +76,7 @@ export default function Habits() {
             .maybeSingle();
 
           // Vérifier si l'habitude doit être faite pour la date sélectionnée
-          const selectedDay = selectedDate.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+          const selectedDay = dateToUse.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
           const shouldShowForDate = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(selectedDay);
 
           return {
@@ -161,17 +161,19 @@ export default function Habits() {
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
 
-    // Vérifier d'abord si l'habitude doit être faite pour la date sélectionnée
+    // Capturer la date exacte au moment du clic pour éviter les problèmes de race condition
+    const currentSelectedDate = new Date(selectedDate);
+    const targetDate = currentSelectedDate.toISOString().split('T')[0];
+
+    // Vérifier d'abord si l'habitude doit être faite pour la date capturée
     const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
     if (habit?.days_of_week && habit.days_of_week.length > 0) {
-      const selectedDay = selectedDate.getDay();
+      const selectedDay = currentSelectedDate.getDay();
       if (!habit.days_of_week.includes(selectedDay)) {
         toast.error("Cette habitude n'est pas prévue pour cette date");
         return;
       }
     }
-
-    const targetDate = selectedDate.toISOString().split('T')[0];
     const isToday = targetDate === new Date().toISOString().split('T')[0];
 
     try {
@@ -222,8 +224,8 @@ export default function Habits() {
         toast.success('Habitude complétée !');
       }
       
-      // Recharger les habitudes pour la date actuelle sélectionnée
-      await fetchHabits();
+      // Recharger les habitudes pour la date capturée (pas selectedDate qui peut avoir changé)
+      await fetchHabits(currentSelectedDate);
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast.error("Erreur lors de la mise à jour de l'habitude");
