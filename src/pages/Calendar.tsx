@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Plus, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useCalendarData } from "@/hooks/useCalendarData";
+import { CalendarDayView } from "@/components/CalendarDayView";
 
 interface CalendarEvent {
   id: string;
@@ -28,6 +30,10 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string>("");
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  
+  const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate || new Date());
   
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -135,6 +141,28 @@ export default function CalendarPage() {
     }
   };
 
+  const getAISuggestions = async () => {
+    if (!user || !selectedDate) return;
+
+    setIsLoadingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("calendar-ai-suggestions", {
+        body: {
+          userId: user.id,
+          date: selectedDate.toISOString(),
+        },
+      });
+
+      if (error) throw error;
+      setAiSuggestion(data.suggestion);
+    } catch (error) {
+      console.error("Error getting AI suggestions:", error);
+      toast.error("Erreur lors de la génération des suggestions");
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
   const createEvent = async () => {
     if (!user || !selectedDate) return;
 
@@ -214,18 +242,47 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Calendrier</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvel événement
-        </Button>
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <CalendarIcon className="h-8 w-8" />
+          Calendrier
+        </h1>
+        <div className="flex gap-2">
+          <Button onClick={getAISuggestions} disabled={isLoadingAI} variant="outline">
+            {isLoadingAI ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyse...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Suggestions IA
+              </>
+            )}
+          </Button>
+          {!isConnected && (
+            <Button onClick={connectGoogle} disabled={isConnecting}>
+              {isConnecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                "Connecter Google Calendar"
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardContent className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Calendrier</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -235,41 +292,81 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {selectedDate ? format(selectedDate, "d MMMM yyyy") : "Sélectionnez une date"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : dayEvents.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Aucun événement pour cette date
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {dayEvents.map((event) => (
-                  <div key={event.id} className="border rounded-lg p-4">
-                    <h4 className="font-semibold">{event.summary}</h4>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+        <div className="lg:col-span-2 space-y-6">
+          {selectedDate && (
+            <>
+              <CalendarDayView 
+                items={calendarItems}
+                date={selectedDate}
+              />
+
+              {isConnected && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Événements Google Calendar</CardTitle>
+                      <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                      </div>
+                    ) : dayEvents.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        Aucun événement Google Calendar
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {dayEvents.map((event) => (
+                          <div
+                            key={event.id}
+                            className="p-3 border rounded-lg hover:bg-accent transition-colors"
+                          >
+                            <h3 className="font-medium">{event.summary}</h3>
+                            {event.description && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {event.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {event.start.dateTime
+                                ? new Date(event.start.dateTime).toLocaleTimeString('fr-FR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : "Toute la journée"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {event.start.dateTime
-                        ? format(new Date(event.start.dateTime), "HH:mm")
-                        : "Toute la journée"}
-                      {event.end.dateTime && ` - ${format(new Date(event.end.dateTime), "HH:mm")}`}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              )}
+
+              {aiSuggestion && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      Suggestions IA
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="whitespace-pre-wrap text-sm">{aiSuggestion}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
