@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { WeekCalendarView } from "@/components/WeekCalendarView";
+import { marked } from "marked";
 
 interface CalendarEvent {
   id: string;
@@ -284,72 +285,22 @@ export default function CalendarPage() {
           onDateChange={setSelectedDate}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {aiSuggestion && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
-                  Suggestions IA pour optimiser votre semaine
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none">
-                  <p className="whitespace-pre-wrap text-sm">{aiSuggestion}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {isConnected && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Événements Google Calendar</CardTitle>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                ) : dayEvents.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    Aucun événement Google Calendar
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {dayEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className="p-3 border rounded-lg hover:bg-accent transition-colors"
-                      >
-                        <h3 className="font-medium">{event.summary}</h3>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {event.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {event.start.dateTime
-                            ? new Date(event.start.dateTime).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : "Toute la journée"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {aiSuggestion && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                Suggestions IA pour optimiser votre semaine
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div 
+                className="prose prose-sm max-w-none dark:prose-invert"
+                dangerouslySetInnerHTML={{ __html: marked(aiSuggestion) }}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

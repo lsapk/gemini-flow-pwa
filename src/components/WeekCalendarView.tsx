@@ -129,6 +129,7 @@ export function WeekCalendarView({ items, selectedDate, onDateChange }: WeekCale
                               "text-xs p-1 mb-1 rounded border-l-2 bg-card hover:shadow-sm transition-shadow cursor-pointer",
                               item.type === 'task' && "border-l-blue-500 bg-blue-500/10",
                               item.type === 'goal' && "border-l-purple-500 bg-purple-500/10",
+                              item.type === 'google_event' && "border-l-green-500 bg-green-500/10",
                               item.completed && "opacity-60"
                             )}
                           >
@@ -141,6 +142,11 @@ export function WeekCalendarView({ items, selectedDate, onDateChange }: WeekCale
                             {item.priority && (
                               <div className="text-[10px] text-muted-foreground mt-0.5">
                                 {item.priority}
+                              </div>
+                            )}
+                            {item.source === 'google' && (
+                              <div className="text-[10px] text-green-600 mt-0.5">
+                                📅 Google
                               </div>
                             )}
                           </div>

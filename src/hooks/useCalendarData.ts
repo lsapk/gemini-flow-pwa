@@ -12,6 +12,7 @@ export interface CalendarItem {
   completed?: boolean;
   priority?: string;
   category?: string;
+  source?: 'local' | 'google';
 }
 
 export function useCalendarData(selectedDate: Date) {
@@ -30,24 +31,33 @@ export function useCalendarData(selectedDate: Date) {
 
     setIsLoading(true);
     try {
-      const targetDate = selectedDate.toISOString().split('T')[0];
-      const selectedDay = selectedDate.getDay();
+      // Calculate week range
+      const startOfWeek = new Date(selectedDate);
+      startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1); // Monday
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+      endOfWeek.setHours(23, 59, 59, 999);
 
-      // Charger les tâches avec date d'échéance
+      // Charger les tâches pour toute la semaine
       const { data: tasks } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
-        .gte('due_date', targetDate)
-        .lte('due_date', targetDate + 'T23:59:59');
+        .gte('due_date', startOfWeek.toISOString())
+        .lte('due_date', endOfWeek.toISOString());
 
-      // Charger les objectifs avec date cible
+      // Charger les objectifs pour toute la semaine
       const { data: goals } = await supabase
         .from('goals')
         .select('*')
         .eq('user_id', user.id)
-        .gte('target_date', targetDate)
-        .lte('target_date', targetDate + 'T23:59:59');
+        .gte('target_date', startOfWeek.toISOString())
+        .lte('target_date', endOfWeek.toISOString());
+
+      // Charger les événements Google Calendar
+      const googleEvents = await loadGoogleEvents(startOfWeek, endOfWeek);
 
       const calendarItems: CalendarItem[] = [];
 
@@ -57,10 +67,11 @@ export function useCalendarData(selectedDate: Date) {
           id: task.id,
           title: task.title,
           description: task.description || undefined,
-          date: task.due_date || targetDate,
+          date: task.due_date,
           type: 'task',
           completed: task.completed,
           priority: task.priority || undefined,
+          source: 'local'
         });
       });
 
@@ -70,18 +81,64 @@ export function useCalendarData(selectedDate: Date) {
           id: goal.id,
           title: goal.title,
           description: goal.description || undefined,
-          date: goal.target_date || targetDate,
+          date: goal.target_date,
           type: 'goal',
           completed: goal.completed,
           category: goal.category,
+          source: 'local'
         });
       });
+
+      // Ajouter les événements Google
+      calendarItems.push(...googleEvents);
 
       setItems(calendarItems);
     } catch (error) {
       console.error('Error loading calendar data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadGoogleEvents = async (startDate: Date, endDate: Date): Promise<CalendarItem[]> => {
+    if (!user) return [];
+    
+    try {
+      // Vérifier si Google Calendar est connecté
+      const { data: tokenData } = await supabase
+        .from("google_calendar_tokens")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!tokenData) return [];
+
+      const { data: eventsData, error } = await supabase.functions.invoke("google-calendar-api", {
+        body: {
+          action: "list",
+          user_id: user.id,
+          time_min: startDate.toISOString(),
+          time_max: endDate.toISOString(),
+        },
+      });
+
+      if (error) {
+        console.error("Error fetching Google events:", error);
+        return [];
+      }
+
+      return (eventsData?.items || []).map((event: any) => ({
+        id: event.id,
+        title: event.summary || 'Sans titre',
+        date: event.start?.dateTime || event.start?.date,
+        type: 'google_event' as const,
+        completed: false,
+        description: event.description,
+        source: 'google' as const
+      }));
+    } catch (error) {
+      console.error("Error loading Google events:", error);
+      return [];
     }
   };
 

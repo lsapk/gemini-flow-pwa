@@ -40,24 +40,27 @@ serve(async (req) => {
     ) || [];
     const goals = goalsRes.data || [];
 
-    const prompt = `Tu es un assistant de productivité. Analyse les données suivantes et suggère une planification optimale pour le ${targetDate}.
+    const prompt = `Tu es un assistant de productivité expert. Analyse les données suivantes de l'utilisateur et fournis des suggestions personnalisées pour optimiser sa journée du ${targetDate}.
 
-Tâches en cours (${tasks.length}):
-${tasks.map((t: any) => `- ${t.title} (priorité: ${t.priority || 'medium'})`).join('\n')}
+Données de l'utilisateur:
+- Tâches en cours (${tasks.length}): ${tasks.map((t: any) => `"${t.title}" (priorité: ${t.priority || 'medium'}, échéance: ${t.due_date || 'non définie'})`).join(', ')}
+- Habitudes du jour (${habits.length}): ${habits.map((h: any) => `"${h.title}" (fréquence: ${h.frequency})`).join(', ')}
+- Objectifs en cours (${goals.length}): ${goals.map((g: any) => `"${g.title}" (progression: ${g.progress || 0}%, échéance: ${g.target_date || 'non définie'})`).join(', ')}
 
-Habitudes du jour (${habits.length}):
-${habits.map((h: any) => `- ${h.title}`).join('\n')}
+Fournis des suggestions concrètes et actionnables dans les catégories suivantes:
+1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés
+2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes à faire aujourd'hui
+3. 💪 **Habitudes**: Suggère le meilleur moment pour pratiquer les habitudes du jour
+4. 🚀 **Avancement des objectifs**: Propose des actions concrètes pour faire progresser les objectifs
 
-Objectifs en cours (${goals.length}):
-${goals.map((g: any) => `- ${g.title} (progression: ${g.progress || 0}%)`).join('\n')}
+**IMPORTANT**: Ta réponse DOIT être formatée en Markdown avec des emojis pour rendre le contenu plus engageant et visuel. Utilise:
+- Des titres avec ## et ###
+- Des listes à puces avec -
+- Des emojis pertinents et variés (🎯, ✅, 📝, 🔥, 💡, ⏰, 🌟, 💪, 🚀, etc.)
+- Du texte en **gras** pour les points importants
+- Des séparateurs avec ---
 
-Fournis:
-1. Une suggestion de planning pour la journée (horaires recommandés)
-2. Les tâches prioritaires à accomplir
-3. Des conseils pour maintenir les habitudes
-4. Comment avancer sur les objectifs
-
-Sois concis et pratique.`;
+Sois concis, motivant et pratique. Limite ta réponse à 300 mots maximum.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
