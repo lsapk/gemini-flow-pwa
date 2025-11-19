@@ -28,10 +28,12 @@ serve(async (req) => {
     const targetDate = new Date(date).toISOString().split('T')[0];
     const selectedDay = new Date(date).getDay();
 
-    const [tasksRes, habitsRes, goalsRes] = await Promise.all([
+    // Récupérer aussi les événements Google Calendar
+    const [tasksRes, habitsRes, goalsRes, calendarTokenRes] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId).eq('completed', false),
       supabase.from('habits').select('*').eq('user_id', userId).eq('is_archived', false),
-      supabase.from('goals').select('*').eq('user_id', userId).eq('completed', false)
+      supabase.from('goals').select('*').eq('user_id', userId).eq('completed', false),
+      supabase.from('google_calendar_tokens').select('*').eq('user_id', userId).single()
     ]);
 
     const tasks = tasksRes.data || [];
@@ -39,6 +41,32 @@ serve(async (req) => {
       !h.days_of_week || h.days_of_week.length === 0 || h.days_of_week.includes(selectedDay)
     ) || [];
     const goals = goalsRes.data || [];
+    
+    // Charger les événements Google Calendar pour la semaine
+    let calendarEvents: any[] = [];
+    if (calendarTokenRes.data) {
+      try {
+        const weekStart = new Date(date);
+        weekStart.setHours(0, 0, 0, 0);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+        
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        
+        const { data: eventsData } = await supabase.functions.invoke('google-calendar-api', {
+          body: {
+            action: 'list',
+            user_id: userId,
+            timeMin: weekStart.toISOString(),
+            timeMax: weekEnd.toISOString()
+          }
+        });
+        
+        calendarEvents = eventsData?.items || [];
+      } catch (e) {
+        console.log('Could not load calendar events:', e);
+      }
+    }
 
     const prompt = `Tu es un assistant de productivité expert. Analyse les données suivantes de l'utilisateur et fournis des suggestions personnalisées pour optimiser sa journée du ${targetDate}.
 
@@ -46,12 +74,26 @@ Données de l'utilisateur:
 - Tâches en cours (${tasks.length}): ${tasks.map((t: any) => `"${t.title}" (priorité: ${t.priority || 'medium'}, échéance: ${t.due_date || 'non définie'})`).join(', ')}
 - Habitudes du jour (${habits.length}): ${habits.map((h: any) => `"${h.title}" (fréquence: ${h.frequency})`).join(', ')}
 - Objectifs en cours (${goals.length}): ${goals.map((g: any) => `"${g.title}" (progression: ${g.progress || 0}%, échéance: ${g.target_date || 'non définie'})`).join(', ')}
+- Événements Google Calendar (${calendarEvents.length}): ${calendarEvents.map((e: any) => `"${e.summary}" (${e.start?.dateTime || e.start?.date} - ${e.end?.dateTime || e.end?.date})`).join(', ')}
 
 Fournis des suggestions concrètes et actionnables dans les catégories suivantes:
-1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés
+1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés en tenant compte des événements du calendrier
 2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes à faire aujourd'hui
-3. 💪 **Habitudes**: Suggère le meilleur moment pour pratiquer les habitudes du jour
+3. 💪 **Habitudes**: Suggère le meilleur moment pour pratiquer les habitudes du jour en évitant les conflits avec les événements
 4. 🚀 **Avancement des objectifs**: Propose des actions concrètes pour faire progresser les objectifs
+5. ➕ **Événements à créer**: Si tu identifies des besoins (rendez-vous, blocs de temps pour les tâches, etc.), suggère des événements à créer au format JSON dans un bloc de code avec la structure suivante:
+\`\`\`json
+{
+  "suggestedEvents": [
+    {
+      "title": "Titre de l'événement",
+      "description": "Description",
+      "startDateTime": "2025-03-19T09:00:00",
+      "endDateTime": "2025-03-19T10:00:00"
+    }
+  ]
+}
+\`\`\`
 
 **IMPORTANT**: Ta réponse DOIT être formatée en Markdown avec des emojis pour rendre le contenu plus engageant et visuel. Utilise:
 - Des titres avec ## et ###
@@ -60,7 +102,7 @@ Fournis des suggestions concrètes et actionnables dans les catégories suivante
 - Du texte en **gras** pour les points importants
 - Des séparateurs avec ---
 
-Sois concis, motivant et pratique. Limite ta réponse à 300 mots maximum.`;
+Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -96,13 +138,27 @@ Sois concis, motivant et pratique. Limite ta réponse à 300 mots maximum.`;
     const aiData = await aiResponse.json();
     const suggestion = aiData.choices[0]?.message?.content || "Aucune suggestion disponible";
 
+    // Extraire les événements suggérés du JSON dans la réponse
+    let suggestedEvents = [];
+    const jsonMatch = suggestion.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[1]);
+        suggestedEvents = parsed.suggestedEvents || [];
+      } catch (e) {
+        console.log('Could not parse suggested events');
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         suggestion,
+        suggestedEvents,
         stats: {
           tasks: tasks.length,
           habits: habits.length,
-          goals: goals.length
+          goals: goals.length,
+          calendarEvents: calendarEvents.length
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
