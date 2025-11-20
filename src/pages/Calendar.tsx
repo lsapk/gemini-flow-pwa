@@ -118,8 +118,8 @@ export default function CalendarPage() {
         body: {
           action: "list",
           user_id: user.id,
-          timeMin: startDate.toISOString(),
-          timeMax: endDate.toISOString(),
+          time_min: startDate.toISOString(),
+          time_max: endDate.toISOString(),
         },
       });
 
@@ -171,17 +171,28 @@ export default function CalendarPage() {
         ? eventData.endDate
         : `${eventData.endDate}T${eventData.endTime}:00`;
 
+      const googleEventData: any = {
+        summary: eventData.title,
+        description: eventData.description,
+      };
+
+      if (eventData.allDay) {
+        googleEventData.start = { date: eventData.startDate };
+        googleEventData.end = { date: eventData.endDate };
+      } else {
+        googleEventData.start = { dateTime: startDateTime, timeZone: eventData.timezone };
+        googleEventData.end = { dateTime: endDateTime, timeZone: eventData.timezone };
+      }
+
+      if (eventData.location) {
+        googleEventData.location = eventData.location;
+      }
+
       const { error } = await supabase.functions.invoke("google-calendar-api", {
         body: {
           action: "create",
           user_id: user.id,
-          eventData: {
-            title: eventData.title,
-            description: eventData.description,
-            startDateTime,
-            endDateTime,
-            allDay: eventData.allDay,
-          },
+          event_data: googleEventData,
         },
       });
 
