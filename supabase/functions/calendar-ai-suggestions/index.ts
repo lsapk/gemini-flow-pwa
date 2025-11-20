@@ -57,8 +57,8 @@ serve(async (req) => {
           body: {
             action: 'list',
             user_id: userId,
-            timeMin: weekStart.toISOString(),
-            timeMax: weekEnd.toISOString()
+            time_min: weekStart.toISOString(),
+            time_max: weekEnd.toISOString()
           }
         });
         
