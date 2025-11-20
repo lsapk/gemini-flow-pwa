@@ -109,7 +109,7 @@ export function GoogleCalendarView({
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px]">
                     ✓
                   </span>
-                  <span>{dayEvents.length} tâc</span>
+                  <span>{dayEvents.length} événement{dayEvents.length > 1 ? 's' : ''}</span>
                 </div>
               )}
             </div>

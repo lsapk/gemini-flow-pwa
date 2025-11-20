@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'list': {
+        console.log('Fetching events from', time_min, 'to', time_max);
         const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
         if (time_min) url.searchParams.set('timeMin', time_min);
         if (time_max) url.searchParams.set('timeMax', time_max);
@@ -88,11 +89,20 @@ Deno.serve(async (req) => {
         const response = await fetch(url.toString(), {
           headers: { 'Authorization': `Bearer ${accessToken}` },
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Google Calendar list error:', response.status, errorText);
+          throw new Error(`Failed to fetch events: ${response.status}`);
+        }
+        
         result = await response.json();
+        console.log('Fetched', result.items?.length || 0, 'events');
         break;
       }
 
       case 'create': {
+        console.log('Creating event with data:', JSON.stringify(event_data));
         const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
           method: 'POST',
           headers: {
@@ -101,7 +111,15 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify(event_data),
         });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Google Calendar API error:', response.status, errorText);
+          throw new Error(`Google Calendar API error: ${response.status} - ${errorText}`);
+        }
+        
         result = await response.json();
+        console.log('Event created successfully:', result.id);
         break;
       }
 

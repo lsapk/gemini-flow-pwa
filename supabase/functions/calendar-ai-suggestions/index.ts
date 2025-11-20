@@ -140,15 +140,35 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
 
     // Extraire les événements suggérés du JSON dans la réponse
     let suggestedEvents = [];
-    const jsonMatch = suggestion.match(/```json\n([\s\S]*?)\n```/);
-    if (jsonMatch) {
+    
+    // Chercher du JSON dans la réponse (avec ou sans code blocks)
+    const codeBlockMatch = suggestion.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonText = codeBlockMatch ? codeBlockMatch[1] : suggestion;
+    
+    // Essayer de trouver un tableau ou un objet JSON
+    const arrayMatch = jsonText.match(/\[([\s\S]*?)\]/);
+    const objectMatch = jsonText.match(/\{[\s\S]*?"suggestedEvents"[\s\S]*?\}/);
+    
+    if (arrayMatch) {
       try {
-        const parsed = JSON.parse(jsonMatch[1]);
-        suggestedEvents = parsed.suggestedEvents || [];
+        // Si on trouve un tableau directement
+        suggestedEvents = JSON.parse(arrayMatch[0]);
+        console.log('Extracted events from array:', suggestedEvents.length);
       } catch (e) {
-        console.log('Could not parse suggested events');
+        console.log('Could not parse array format:', e);
+      }
+    } else if (objectMatch) {
+      try {
+        // Si on trouve un objet avec suggestedEvents
+        const parsed = JSON.parse(objectMatch[0]);
+        suggestedEvents = parsed.suggestedEvents || [];
+        console.log('Extracted events from object:', suggestedEvents.length);
+      } catch (e) {
+        console.log('Could not parse object format:', e);
       }
     }
+    
+    console.log('Final suggested events:', suggestedEvents);
 
     return new Response(
       JSON.stringify({ 
