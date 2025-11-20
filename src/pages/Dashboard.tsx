@@ -1,26 +1,18 @@
 
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SimpleLineChart } from "@/components/ui/charts/SimpleLineChart";
-import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { 
   CheckCircle2, 
   Target, 
   Clock, 
-  TrendingUp,
-  Calendar,
   Brain,
   Zap,
-  Trophy,
-  ArrowUpRight,
-  Activity,
-  Users,
-  BookOpen
+  BookOpen,
+  ListTodo,
+  Flame
 } from "lucide-react";
-import { EnhancedProductivityDashboard } from "@/components/EnhancedProductivityDashboard";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
 
@@ -72,6 +64,31 @@ export default function Dashboard() {
     );
   }
 
+  // Calcul du score de productivité réaliste
+  const productivityScore = Math.round(
+    (taskCompletionRate * 0.4) + // 40% basé sur la complétion des tâches
+    (Math.min((totalFocusTime / 300) * 100, 100) * 0.3) + // 30% basé sur 5h de focus
+    (Math.min(streakCount * 10, 100) * 0.2) + // 20% basé sur la série
+    (Math.min(activeHabits * 10, 100) * 0.1) // 10% basé sur les habitudes
+  );
+
+  const getScoreLevel = (score: number) => {
+    if (score >= 80) return { label: "Excellent", color: "text-success" };
+    if (score >= 60) return { label: "Bon", color: "text-primary" };
+    if (score >= 40) return { label: "Moyen", color: "text-warning" };
+    return { label: "À améliorer", color: "text-muted-foreground" };
+  };
+
+  const scoreLevel = getScoreLevel(productivityScore);
+
+  const quickLinks = [
+    { icon: ListTodo, label: "Tâches", path: "/tasks", color: "bg-success/10 text-success" },
+    { icon: Target, label: "Objectifs", path: "/goals", color: "bg-primary/10 text-primary" },
+    { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
+    { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
+    { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
+  ];
+
   return (
     <div className="space-y-8">
       {/* En-tête */}
@@ -82,69 +99,81 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1">Vue d'ensemble de votre productivité</p>
       </div>
 
-      {/* Métriques principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-success hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tâches</CardTitle>
-            <CheckCircle2 className="h-5 w-5 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">
-              {completedTasks}/{totalTasks}
-            </div>
-            <Progress value={taskCompletionRate} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Temps Focus</CardTitle>
-            <Brain className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {Math.round(totalFocusTime / 60)}h
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Moyenne: {avgFocusTime}min
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-warning hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Série</CardTitle>
-            <Zap className="h-5 w-5 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">
-              {streakCount} jours
-            </div>
-            {streakCount >= 7 && (
-              <Badge variant="secondary" className="mt-2 bg-warning/10 text-warning">
-                🔥 En feu!
-              </Badge>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-info hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Habitudes</CardTitle>
-            <Target className="h-5 w-5 text-info" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-info">
-              {activeHabits}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">actives</p>
-          </CardContent>
-        </Card>
+      {/* Raccourcis rapides */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Accès rapide</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {quickLinks.map((link) => (
+            <Link key={link.path} to={link.path}>
+              <Card className="hover:shadow-md transition-all hover:scale-105 cursor-pointer">
+                <CardContent className="p-4 flex flex-col items-center gap-2">
+                  <div className={`p-3 rounded-lg ${link.color}`}>
+                    <link.icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-sm font-medium">{link.label}</span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Score de productivité */}
-      <EnhancedProductivityDashboard />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-warning" />
+            Score de Productivité
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-4xl font-bold">{productivityScore}</div>
+              <p className={`text-sm font-medium ${scoreLevel.color}`}>{scoreLevel.label}</p>
+            </div>
+            <Badge variant="secondary" className="text-lg px-4 py-2">
+              {streakCount} jours 🔥
+            </Badge>
+          </div>
+          
+          <Progress value={productivityScore} className="h-3" />
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                Tâches
+              </div>
+              <div className="text-xl font-semibold">{Math.round(taskCompletionRate)}%</div>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 text-primary" />
+                Focus
+              </div>
+              <div className="text-xl font-semibold">{Math.round(totalFocusTime / 60)}h</div>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Zap className="h-4 w-4 text-warning" />
+                Série
+              </div>
+              <div className="text-xl font-semibold">{streakCount}j</div>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Target className="h-4 w-4 text-info" />
+                Habitudes
+              </div>
+              <div className="text-xl font-semibold">{activeHabits}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Insights IA */}
       <SmartInsightsWidget />
