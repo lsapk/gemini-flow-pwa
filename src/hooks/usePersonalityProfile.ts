@@ -397,33 +397,36 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
 // Fonctions d'analyse basées sur les données réelles
 const generatePersonalityTraits = (data: any) => {
   const traits = [];
-  if (data.taches.terminees > data.taches.total * 0.7) traits.push("déterminé");
-  if (data.habitudes.total > 3) traits.push("discipliné");
-  if (data.focus.sessions > 5) traits.push("concentré");
-  if (data.objectifs.termines > 0) traits.push("ambitieux");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate > 70) traits.push("déterminé");
+  if (data.vue_generale?.total_habitudes > 3) traits.push("discipliné");
+  if (data.analyse_focus?.sessions_30j > 5) traits.push("concentré");
+  if (data.analyse_objectifs?.objectifs_completes > 0) traits.push("ambitieux");
   return traits.length > 0 ? traits : ["motivé", "organisé"];
 };
 
 const generateStrengths = (data: any) => {
   const strengths = [];
-  if (data.habitudes.streak_moyen > 5) strengths.push("constance dans les habitudes");
-  if (data.taches.terminees / Math.max(data.taches.total, 1) > 0.6) strengths.push("efficacité dans l'exécution");
-  if (data.focus.duree_totale > 120) strengths.push("capacité de concentration");
+  if (data.analyse_habitudes?.streak_moyen > 5) strengths.push("constance dans les habitudes");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate > 60) strengths.push("efficacité dans l'exécution");
+  if (data.analyse_focus?.temps_total_minutes > 120) strengths.push("capacité de concentration");
   return strengths.length > 0 ? strengths : ["motivation", "persévérance"];
 };
 
 const generateImprovementAreas = (data: any) => {
   const areas = [];
-  if (data.focus.duree_totale < 60) areas.push("temps de concentration");
-  if (data.taches.terminees / Math.max(data.taches.total, 1) < 0.5) areas.push("gestion des tâches");
-  if (data.habitudes.completions_recentes < 3) areas.push("régularité des habitudes");
+  if (data.analyse_focus?.temps_total_minutes < 60) areas.push("temps de concentration");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate < 50) areas.push("gestion des tâches");
+  if (data.analyse_habitudes?.completions_30_derniers_jours < 3) areas.push("régularité des habitudes");
   return areas.length > 0 ? areas : ["équilibre vie-travail", "gestion du stress"];
 };
 
 const generateMotivations = (data: any) => {
   const motivations = [];
-  if (data.objectifs.total > 2) motivations.push("accomplissement d'objectifs");
-  if (data.habitudes.total > 2) motivations.push("amélioration continue");
+  if (data.vue_generale?.total_objectifs > 2) motivations.push("accomplissement d'objectifs");
+  if (data.vue_generale?.total_habitudes > 2) motivations.push("amélioration continue");
   motivations.push("développement personnel");
   return motivations;
 };
@@ -461,48 +464,50 @@ const generateSocialPreferences = (data: any) => {
 
 const generatePeakTimes = (data: any) => {
   const times = [];
-  if (data.focus.sessions > 0) times.push("périodes de focus planifiées");
+  if (data.analyse_focus?.sessions_30j > 0) times.push("périodes de focus planifiées");
   times.push("matinée");
   return times;
 };
 
 const generateBlockers = (data: any) => {
   const blockers = [];
-  if (data.taches.terminees / Math.max(data.taches.total, 1) < 0.5) blockers.push("procrastination");
-  if (data.focus.duree_totale < 60) blockers.push("difficultés de concentration");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate < 50) blockers.push("procrastination");
+  if (data.analyse_focus?.temps_total_minutes < 60) blockers.push("difficultés de concentration");
   return blockers.length > 0 ? blockers : ["distractions", "surcharge de tâches"];
 };
 
 const generateOptimalEnvironment = (data: any) => {
-  if (data.focus.sessions > 3) return "environnement calme et organisé";
+  if (data.analyse_focus?.sessions_30j > 3) return "environnement calme et organisé";
   return "espace flexible et adaptatif";
 };
 
 const generateGoalStyle = (data: any) => {
-  if (data.objectifs.progress_moyen > 60) return "approche progressive et mesurée";
-  if (data.objectifs.total > 2) return "objectifs multiples et ambitieux";
+  if (data.metriques_performance?.progression_objectifs_moyenne > 60) return "approche progressive et mesurée";
+  if (data.vue_generale?.total_objectifs > 2) return "objectifs multiples et ambitieux";
   return "approche étape par étape";
 };
 
 const generateHabitRecommendations = (data: any) => {
   const recommendations = [];
-  if (data.focus.duree_totale < 60) recommendations.push("sessions de concentration quotidiennes");
-  if (data.habitudes.total < 3) recommendations.push("routine matinale structurée");
+  if (data.analyse_focus?.temps_total_minutes < 60) recommendations.push("sessions de concentration quotidiennes");
+  if (data.vue_generale?.total_habitudes < 3) recommendations.push("routine matinale structurée");
   recommendations.push("pause active régulière");
   return recommendations;
 };
 
 const generateProductivityTips = (data: any) => {
   const tips = [];
-  if (data.taches.terminees / Math.max(data.taches.total, 1) < 0.6) tips.push("technique Pomodoro");
-  if (data.objectifs.progress_moyen < 50) tips.push("décomposition d'objectifs");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate < 60) tips.push("technique Pomodoro");
+  if (data.metriques_performance?.progression_objectifs_moyenne < 50) tips.push("décomposition d'objectifs");
   tips.push("planification hebdomadaire");
   return tips;
 };
 
 const generateGrowthRecommendations = (data: any) => {
   const growth = [];
-  if (data.journal.entrees < 3) growth.push("tenue de journal régulière");
+  if (data.vue_generale?.total_entrees_journal < 3) growth.push("tenue de journal régulière");
   growth.push("auto-évaluation mensuelle");
   growth.push("lecture de développement personnel");
   return growth;
@@ -510,28 +515,29 @@ const generateGrowthRecommendations = (data: any) => {
 
 const generateStressRecommendations = (data: any) => {
   const stress = [];
-  if (data.focus.duree_moyenne < 25) stress.push("techniques de respiration");
+  if (data.metriques_performance?.duree_moyenne_focus < 25) stress.push("techniques de respiration");
   stress.push("pauses régulières");
   stress.push("activité physique");
   return stress;
 };
 
 const generateCurrentPhase = (data: any) => {
-  if (data.habitudes.total > 3 && data.objectifs.progress_moyen > 50) return "phase d'optimisation";
-  if (data.taches.total > 5) return "phase de développement actif";
+  if (data.vue_generale?.total_habitudes > 3 && data.metriques_performance?.progression_objectifs_moyenne > 50) return "phase d'optimisation";
+  if (data.vue_generale?.total_taches > 5) return "phase de développement actif";
   return "phase d'établissement des bases";
 };
 
 const generateMilestones = (data: any) => {
   const milestones = [];
-  if (data.habitudes.streak_moyen < 7) milestones.push("maintenir 7 jours d'habitudes");
-  if (data.taches.terminees / Math.max(data.taches.total, 1) < 0.8) milestones.push("atteindre 80% de tâches complétées");
+  if (data.analyse_habitudes?.streak_moyen < 7) milestones.push("maintenir 7 jours d'habitudes");
+  const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
+  if (taskCompletionRate < 80) milestones.push("atteindre 80% de tâches complétées");
   milestones.push("développer une routine optimale");
   return milestones;
 };
 
 const generateLongTermPotential = (data: any) => {
-  if (data.objectifs.total > 2 && data.habitudes.total > 3) return "expert en productivité personnelle";
-  if (data.focus.sessions > 3) return "maître de la concentration";
+  if (data.vue_generale?.total_objectifs > 2 && data.vue_generale?.total_habitudes > 3) return "expert en productivité personnelle";
+  if (data.analyse_focus?.sessions_30j > 3) return "maître de la concentration";
   return "développeur de systèmes personnels efficaces";
 };
