@@ -1,19 +1,15 @@
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { useCalendarData } from "@/hooks/useCalendarData";
-import { ProfessionalWeekCalendar } from "@/components/ProfessionalWeekCalendar";
+import { GoogleCalendarHeader } from "@/components/GoogleCalendarHeader";
+import { GoogleCalendarView } from "@/components/GoogleCalendarView";
+import { GoogleCalendarEventModal, EventFormData } from "@/components/GoogleCalendarEventModal";
 import { AISuggestedEvents } from "@/components/AISuggestedEvents";
-import { marked } from "marked";
 
 interface CalendarEvent {
   id: string;
@@ -28,21 +24,13 @@ export default function CalendarPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<string>("");
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [suggestedEvents, setSuggestedEvents] = useState<any[]>([]);
+  const [initialEventData, setInitialEventData] = useState<any>(null);
   
-  const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate || new Date());
-  
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    description: "",
-    startTime: "",
-    endTime: "",
-  });
+  const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
 
   useEffect(() => {
     checkConnection();
@@ -122,9 +110,9 @@ export default function CalendarPage() {
     setIsLoading(true);
     try {
       const startDate = new Date(selectedDate);
-      startDate.setDate(1);
+      startDate.setDate(startDate.getDate() - 7); // Start from a week before
       const endDate = new Date(selectedDate);
-      endDate.setMonth(endDate.getMonth() + 1);
+      endDate.setDate(endDate.getDate() + 7); // End a week after
 
       const { data, error } = await supabase.functions.invoke("google-calendar-api", {
         body: {
@@ -149,7 +137,7 @@ export default function CalendarPage() {
   const getAISuggestions = async () => {
     if (!user || !selectedDate) return;
 
-    setIsLoadingAI(true);
+    setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("calendar-ai-suggestions", {
         body: {
@@ -160,38 +148,40 @@ export default function CalendarPage() {
 
       if (error) throw error;
       
-      setAiSuggestion(data.suggestion || "");
       setSuggestedEvents(data.suggestedEvents || []);
+      toast.success("Suggestions générées avec succès");
     } catch (error) {
       console.error("Error getting AI suggestions:", error);
       toast.error("Erreur lors de la récupération des suggestions");
     } finally {
-      setIsLoadingAI(false);
+      setIsLoading(false);
     }
   };
 
-  const createEvent = async (eventData?: {
-    title: string;
-    description?: string;
-    startDateTime: string;
-    endDateTime: string;
-  }) => {
+  const createEvent = async (eventData: EventFormData) => {
     if (!user) return;
 
     setIsLoading(true);
     try {
-      const finalEventData = eventData || {
-        title: newEvent.title,
-        description: newEvent.description,
-        startDateTime: `${format(selectedDate!, 'yyyy-MM-dd')}T${newEvent.startTime}:00`,
-        endDateTime: `${format(selectedDate!, 'yyyy-MM-dd')}T${newEvent.endTime}:00`,
-      };
+      const startDateTime = eventData.allDay 
+        ? eventData.startDate
+        : `${eventData.startDate}T${eventData.startTime}:00`;
+      
+      const endDateTime = eventData.allDay
+        ? eventData.endDate
+        : `${eventData.endDate}T${eventData.endTime}:00`;
 
       const { error } = await supabase.functions.invoke("google-calendar-api", {
         body: {
           action: "create",
           user_id: user.id,
-          eventData: finalEventData,
+          eventData: {
+            title: eventData.title,
+            description: eventData.description,
+            startDateTime,
+            endDateTime,
+            allDay: eventData.allDay,
+          },
         },
       });
 
@@ -199,7 +189,6 @@ export default function CalendarPage() {
 
       toast.success("Événement créé !");
       setIsCreateDialogOpen(false);
-      setNewEvent({ title: "", description: "", startTime: "", endTime: "" });
       loadEvents();
     } catch (error) {
       console.error("Error creating event:", error);
@@ -210,13 +199,20 @@ export default function CalendarPage() {
   };
 
   const handleCreateEventFromCalendar = (date: Date, hour: number) => {
-    setSelectedDate(date);
     const hourStr = hour.toString().padStart(2, '0');
-    setNewEvent({
-      title: "",
-      description: "",
+    setInitialEventData({
+      date,
       startTime: `${hourStr}:00`,
       endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleAddClick = () => {
+    setInitialEventData({
+      date: selectedDate,
+      startTime: "13:00",
+      endTime: "14:00",
     });
     setIsCreateDialogOpen(true);
   };
@@ -228,7 +224,6 @@ export default function CalendarPage() {
           <Card className="max-w-md w-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-6 w-6" />
                 Calendrier Google
               </CardTitle>
             </CardHeader>
@@ -240,151 +235,95 @@ export default function CalendarPage() {
                 onClick={connectGoogle} 
                 disabled={isConnecting}
                 className="w-full"
-                size="lg"
               >
                 {isConnecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion en cours...
+                    Connexion...
                   </>
                 ) : (
-                  <>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    Connecter Google Calendar
-                  </>
+                  "Connecter Google Calendar"
                 )}
               </Button>
             </CardContent>
           </Card>
         </div>
       ) : (
-        <div className="flex-1 flex gap-4 p-4 overflow-hidden">
-          {/* Main Calendar */}
+        <div className="flex flex-col h-full">
+          <GoogleCalendarHeader
+            currentDate={selectedDate}
+            onDateChange={(date) => {
+              setSelectedDate(date);
+            }}
+            userEmail={user?.email}
+          />
+
           <div className="flex-1 overflow-hidden">
-            <ProfessionalWeekCalendar
-              items={calendarItems}
-              selectedDate={selectedDate || new Date()}
-              onDateChange={setSelectedDate}
+            <GoogleCalendarView
+              currentDate={selectedDate}
+              events={events}
               onCreateEvent={handleCreateEventFromCalendar}
+              onAddClick={handleAddClick}
             />
           </div>
 
-          {/* AI Sidebar */}
-          <div className="w-80 space-y-4 overflow-y-auto">
-            {/* AI Suggestions Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Suggestions IA
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingAI ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : aiSuggestion ? (
-                  <div 
-                    className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: marked(aiSuggestion) }}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Cliquez sur "Obtenir des suggestions" pour recevoir des recommandations personnalisées.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Suggested Events */}
-            {suggestedEvents.length > 0 && (
-              <AISuggestedEvents
-                events={suggestedEvents}
-                onCreateEvent={createEvent}
-              />
-            )}
-
-            <Button 
-              onClick={getAISuggestions} 
-              disabled={isLoadingAI}
-              className="w-full"
-              variant="outline"
-            >
-              {isLoadingAI ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyse en cours...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Obtenir des suggestions
-                </>
+          {/* AI Suggestions below calendar */}
+          <div className="border-t bg-background p-4 overflow-y-auto max-h-[300px]">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Suggestions IA</h3>
+                <Button
+                  onClick={getAISuggestions}
+                  disabled={isLoading}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    "Générer des suggestions"
+                  )}
+                </Button>
+              </div>
+              
+              {suggestedEvents.length > 0 && (
+                <AISuggestedEvents
+                  events={suggestedEvents}
+                  onCreateEvent={async (event) => {
+                    const eventData: EventFormData = {
+                      title: event.title,
+                      type: "event",
+                      description: event.description || "",
+                      calendar: "mon-agenda",
+                      allDay: false,
+                      startDate: event.startDateTime.split('T')[0],
+                      startTime: event.startDateTime.split('T')[1]?.slice(0, 5) || "13:00",
+                      endDate: event.endDateTime.split('T')[0],
+                      endTime: event.endDateTime.split('T')[1]?.slice(0, 5) || "14:00",
+                      timezone: "Europe/Paris",
+                      repeat: "none",
+                      guests: [],
+                      location: "",
+                      videoConference: false,
+                    };
+                    await createEvent(eventData);
+                  }}
+                />
               )}
-            </Button>
+            </div>
           </div>
+
+          <GoogleCalendarEventModal
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onSave={createEvent}
+            initialData={initialEventData}
+          />
         </div>
       )}
-
-      {/* Create Event Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Créer un événement</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Titre</Label>
-              <Input
-                id="title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                placeholder="Titre de l'événement"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                placeholder="Description (optionnel)"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">Heure de début</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={newEvent.startTime}
-                  onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="endTime">Heure de fin</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={newEvent.endTime}
-                  onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                />
-              </div>
-            </div>
-            <Button onClick={() => createEvent()} disabled={isLoading || !newEvent.title} className="w-full">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Création...
-                </>
-              ) : (
-                "Créer l'événement"
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
