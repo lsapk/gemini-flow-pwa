@@ -170,30 +170,52 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
 
     console.log('Lovable AI response received:', responseText);
 
-    // Try to parse JSON response for suggestions (only in creation mode)
+    // Try to parse JSON response
     let suggestion = null;
-    if (creationMode) {
-      try {
-        // Look for JSON in the response
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.suggestion) {
-            suggestion = parsed.suggestion;
-            responseText = parsed.response || responseText;
-          }
-        }
-      } catch (e) {
-        // No valid JSON found, continue with normal response
-        console.log('No JSON suggestion found in response');
+    let isJsonResponse = false;
+    
+    // Check if response is pure JSON (for insights, etc.)
+    try {
+      // Extract JSON from markdown code blocks if present
+      const jsonBlockMatch = responseText.match(/```json\s*([\s\S]*?)```/);
+      if (jsonBlockMatch) {
+        const jsonContent = jsonBlockMatch[1].trim();
+        // Try to parse it
+        JSON.parse(jsonContent);
+        // If successful, this is a pure JSON response
+        responseText = jsonContent;
+        isJsonResponse = true;
       }
+    } catch (e) {
+      // Not a pure JSON response, continue with normal parsing
     }
 
-    // Clean up response for better readability
-    responseText = responseText
-      .replace(/```json[\s\S]*?```/g, "")
-      .replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "")
-      .trim();
+    // Only clean up if it's not a pure JSON response
+    if (!isJsonResponse) {
+      // Try to parse JSON response for suggestions (only in creation mode)
+      if (creationMode) {
+        try {
+          // Look for JSON in the response
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.suggestion) {
+              suggestion = parsed.suggestion;
+              responseText = parsed.response || responseText;
+            }
+          }
+        } catch (e) {
+          // No valid JSON found, continue with normal response
+          console.log('No JSON suggestion found in response');
+        }
+      }
+
+      // Clean up response for better readability
+      responseText = responseText
+        .replace(/```json[\s\S]*?```/g, "")
+        .replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "")
+        .trim();
+    }
 
     // Log AI request
     await supabaseClient.from('ai_requests').insert({
