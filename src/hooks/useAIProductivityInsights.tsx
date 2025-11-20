@@ -50,8 +50,9 @@ export function useAIProductivityInsights() {
         const savedInsights = data.insights_data as { insights: AIInsight[], generatedAt: string };
         const hoursSinceGeneration = (Date.now() - new Date(savedInsights.generatedAt).getTime()) / (1000 * 60 * 60);
         
-        // Use cached insights if less than 24 hours old
-        if (hoursSinceGeneration < 24) {
+        // Use cached insights if less than 6 hours old (instead of 24)
+        // This ensures more frequent updates when user is active
+        if (hoursSinceGeneration < 6) {
           setInsights(savedInsights.insights);
           return true;
         }
