@@ -40,16 +40,16 @@ export function SmartInsightsWidget() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-blue-500" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
             Insights IA
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Analyse en cours...</span>
+          <div className="flex items-center justify-center py-6 sm:py-8">
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
+            <span className="ml-2 text-sm sm:text-base">Analyse en cours...</span>
           </div>
         </CardContent>
       </Card>
@@ -59,16 +59,16 @@ export function SmartInsightsWidget() {
   if (!insights || insights.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-blue-500" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
             Insights IA
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Utilisez l'app davantage pour recevoir des insights personnalisés !</p>
+          <div className="text-center py-6 sm:py-8 text-muted-foreground">
+            <Brain className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+            <p className="text-sm sm:text-base">Utilisez l'app davantage pour recevoir des insights personnalisés !</p>
           </div>
         </CardContent>
       </Card>
@@ -80,23 +80,23 @@ export function SmartInsightsWidget() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+      <CardHeader className="pb-3 sm:pb-6">
+        <CardTitle className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-blue-500" />
-            Insights IA ({insights.length})
+            <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+            <span className="text-base sm:text-lg">Insights IA ({insights.length})</span>
           </div>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs sm:text-sm">
             Personnalisé
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Insights prioritaires */}
         {highPriorityInsights.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+          <div className="space-y-2 sm:space-y-3">
+            <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
               Priorité Haute
             </h4>
             {highPriorityInsights.slice(0, 2).map((insight) => {
@@ -104,22 +104,23 @@ export function SmartInsightsWidget() {
               return (
                 <div
                   key={insight.id}
-                  className={`p-4 rounded-lg border ${priorityColors[insight.priority]}`}
+                  className={`p-3 sm:p-4 rounded-lg border ${priorityColors[insight.priority]}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <IconComponent className={`h-5 w-5 mt-0.5 flex-shrink-0 ${priorityTextColors[insight.priority]}`} />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h5 className={`font-medium text-sm ${priorityTextColors[insight.priority]}`}>{insight.title}</h5>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <IconComponent className={`h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0 ${priorityTextColors[insight.priority]}`} />
+                    <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <h5 className={`font-medium text-xs sm:text-sm ${priorityTextColors[insight.priority]}`}>{insight.title}</h5>
                         {insight.metric && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs shrink-0">
                             {insight.metric}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-foreground/90">{insight.insight}</p>
-                      <div className="bg-muted/60 p-3 rounded-md text-xs border border-border/50">
-                        <strong className="text-foreground">Action:</strong> <span className="text-muted-foreground">{insight.recommendation}</span>
+                      <p className="text-xs sm:text-sm text-foreground/80">{insight.insight}</p>
+                      <div className="flex items-start gap-1.5 sm:gap-2 pt-1">
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success mt-0.5 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm text-muted-foreground">{insight.recommendation}</p>
                       </div>
                     </div>
                   </div>
@@ -131,11 +132,11 @@ export function SmartInsightsWidget() {
 
         {/* Autres insights */}
         {otherInsights.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {highPriorityInsights.length > 0 && (
-              <h4 className="font-semibold text-sm flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-success" />
-                Autres Insights
+              <h4 className="font-semibold text-xs sm:text-sm flex items-center gap-2 pt-2">
+                <Brain className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                Autres recommandations
               </h4>
             )}
             {otherInsights.slice(0, 3).map((insight) => {
@@ -143,27 +144,24 @@ export function SmartInsightsWidget() {
               return (
                 <div
                   key={insight.id}
-                  className="p-3 bg-muted/50 rounded-lg border border-border/50 hover:border-border transition-colors"
+                  className={`p-3 sm:p-4 rounded-lg border ${priorityColors[insight.priority]}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <IconComponent className="h-4 w-4 mt-1 flex-shrink-0 text-muted-foreground" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <h5 className="font-medium text-sm text-foreground">{insight.title}</h5>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs whitespace-nowrap ${
-                            insight.priority === 'medium' ? 'border-warning/30 text-warning bg-warning/5' : 
-                            'border-success/30 text-success bg-success/5'
-                          }`}
-                        >
-                          {insight.priority === 'medium' ? 'Moyen' : 'Faible'}
-                        </Badge>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <IconComponent className={`h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0 ${priorityTextColors[insight.priority]}`} />
+                    <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <h5 className={`font-medium text-xs sm:text-sm ${priorityTextColors[insight.priority]}`}>{insight.title}</h5>
+                        {insight.metric && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {insight.metric}
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{insight.insight}</p>
-                      <p className="text-xs text-muted-foreground/80 bg-muted/30 p-2 rounded-md">
-                        <strong className="text-foreground">💡 </strong>{insight.recommendation}
-                      </p>
+                      <p className="text-xs sm:text-sm text-foreground/80">{insight.insight}</p>
+                      <div className="flex items-start gap-1.5 sm:gap-2 pt-1">
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-success mt-0.5 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm text-muted-foreground">{insight.recommendation}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -172,11 +170,18 @@ export function SmartInsightsWidget() {
           </div>
         )}
 
-        {/* Bouton pour voir plus */}
+        {/* Button pour voir tous les insights */}
         {insights.length > 5 && (
-          <Button variant="outline" size="sm" className="w-full">
+          <Button 
+            variant="outline" 
+            className="w-full mt-2 sm:mt-4 text-xs sm:text-sm"
+            onClick={() => {
+              // À implémenter: naviguer vers une page dédiée aux insights
+              console.log("Voir tous les insights");
+            }}
+          >
             Voir tous les insights ({insights.length})
-            <ArrowRight className="h-4 w-4 ml-2" />
+            <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         )}
       </CardContent>
