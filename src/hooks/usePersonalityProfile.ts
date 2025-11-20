@@ -69,14 +69,15 @@ export const usePersonalityProfile = () => {
     console.log('Début de la génération du profil pour l\'utilisateur:', user.id);
     setIsLoading(true);
     try {
-      // Récupérer toutes les données utilisateur importantes
-      const [habitsResult, goalsResult, tasksResult, journalResult, focusResult, habitCompletionsResult] = await Promise.allSettled([
-        supabase.from('habits').select('title, description, frequency, streak, category').eq('user_id', user.id).limit(8),
-        supabase.from('goals').select('title, description, progress, completed, category').eq('user_id', user.id).limit(6),
-        supabase.from('tasks').select('title, completed, priority, created_at').eq('user_id', user.id).limit(12),
-        supabase.from('journal_entries').select('mood, tags').eq('user_id', user.id).order('created_at', { ascending: false }).limit(8),
-        supabase.from('focus_sessions').select('duration, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-        supabase.from('habit_completions').select('completed_date').eq('user_id', user.id).order('completed_date', { ascending: false }).limit(15)
+      // Récupérer TOUTES les données utilisateur sans limites strictes
+      const [habitsResult, goalsResult, tasksResult, journalResult, focusResult, habitCompletionsResult, reflectionsResult] = await Promise.allSettled([
+        supabase.from('habits').select('*').eq('user_id', user.id),
+        supabase.from('goals').select('*').eq('user_id', user.id),
+        supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(100),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+        supabase.from('habit_completions').select('*').eq('user_id', user.id).order('completed_date', { ascending: false }).limit(100),
+        supabase.from('daily_reflections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30)
       ]);
 
       // Extraire les données de manière sécurisée
@@ -86,43 +87,206 @@ export const usePersonalityProfile = () => {
       const journal = journalResult.status === 'fulfilled' ? journalResult.value.data || [] : [];
       const focus = focusResult.status === 'fulfilled' ? focusResult.value.data || [] : [];
       const habitCompletions = habitCompletionsResult.status === 'fulfilled' ? habitCompletionsResult.value.data || [] : [];
+      const reflections = reflectionsResult.status === 'fulfilled' ? reflectionsResult.value.data || [] : [];
 
-      // Créer un résumé compact pour l'IA
+      console.log('Données récupérées:', { habits: habits.length, goals: goals.length, tasks: tasks.length, journal: journal.length, focus: focus.length });
+
+      // Calculer des métriques avancées
+      const now = new Date();
+      const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Analyse temporelle des habitudes
+      const recentHabitCompletions = habitCompletions.filter(hc => new Date(hc.completed_date) > last30Days);
+      const habitConsistencyRate = habits.length > 0 ? (recentHabitCompletions.length / (habits.length * 30)) * 100 : 0;
+
+      // Analyse des tâches
+      const completedTasks = tasks.filter(t => t.completed);
+      const taskCompletionRate = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+      const recentTasks = tasks.filter(t => new Date(t.created_at) > last7Days);
+      const highPriorityTasks = tasks.filter(t => t.priority === 'high');
+      const highPriorityCompleted = highPriorityTasks.filter(t => t.completed);
+
+      // Analyse des objectifs
+      const activeGoals = goals.filter(g => !g.completed && !g.is_archived);
+      const completedGoals = goals.filter(g => g.completed);
+      const avgGoalProgress = activeGoals.length > 0 ? activeGoals.reduce((acc, g) => acc + (g.progress || 0), 0) / activeGoals.length : 0;
+
+      // Analyse du focus
+      const recentFocus = focus.filter(f => new Date(f.created_at) > last30Days);
+      const totalFocusTime = recentFocus.reduce((acc, f) => acc + (f.duration || 0), 0);
+      const avgFocusSession = recentFocus.length > 0 ? totalFocusTime / recentFocus.length : 0;
+      const focusFrequency = recentFocus.length / 30;
+
+      // Analyse du journal
+      const recentJournals = journal.filter(j => new Date(j.created_at) > last30Days);
+      const moodDistribution = recentJournals.reduce((acc, j) => {
+        const mood = j.mood || 'unknown';
+        acc[mood] = (acc[mood] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const dominantMood = Object.entries(moodDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
+
+      // Patterns temporels
+      const tasksByDayOfWeek = tasks.reduce((acc, t) => {
+        const day = new Date(t.created_at).getDay();
+        acc[day] = (acc[day] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+      const mostProductiveDay = Object.entries(tasksByDayOfWeek).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+      const focusByHour = focus.reduce((acc, f) => {
+        const hour = new Date(f.created_at).getHours();
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+      const peakFocusHour = Object.entries(focusByHour).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+      // Créer un résumé détaillé pour une analyse psychologique approfondie
       const userSummary = {
-        habitudes: {
-          total: habits.length,
-          categories: [...new Set(habits.map(h => h.category).filter(Boolean))],
+        vue_generale: {
+          total_habitudes: habits.length,
+          total_objectifs: goals.length,
+          total_taches: tasks.length,
+          total_sessions_focus: focus.length,
+          total_entrees_journal: journal.length,
+          total_reflexions: reflections.length
+        },
+        metriques_performance: {
+          taux_completion_taches: Math.round(taskCompletionRate),
+          taux_completion_objectifs: goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0,
+          consistance_habitudes: Math.round(habitConsistencyRate),
+          progression_objectifs_moyenne: Math.round(avgGoalProgress),
+          temps_focus_total_30j: Math.round(totalFocusTime),
+          duree_moyenne_focus: Math.round(avgFocusSession),
+          frequence_focus_quotidienne: focusFrequency.toFixed(1)
+        },
+        analyse_habitudes: {
+          habitudes_actives: habits.filter(h => !h.is_archived).length,
+          meilleur_streak: Math.max(...habits.map(h => h.streak || 0), 0),
           streak_moyen: Math.round(habits.reduce((acc, h) => acc + (h.streak || 0), 0) / Math.max(habits.length, 1)),
-          completions_recentes: habitCompletions.length
+          categories: [...new Set(habits.map(h => h.category).filter(Boolean))],
+          frequences: habits.map(h => ({ titre: h.title, freq: h.frequency, streak: h.streak })),
+          completions_30_derniers_jours: recentHabitCompletions.length
         },
-        objectifs: {
-          total: goals.length,
-          termines: goals.filter(g => g.completed).length,
-          progress_moyen: Math.round(goals.reduce((acc, g) => acc + (g.progress || 0), 0) / Math.max(goals.length, 1)),
-          categories: [...new Set(goals.map(g => g.category).filter(Boolean))]
+        analyse_objectifs: {
+          objectifs_actifs: activeGoals.length,
+          objectifs_completes: completedGoals.length,
+          objectifs_archives: goals.filter(g => g.is_archived).length,
+          categories: [...new Set(goals.map(g => g.category).filter(Boolean))],
+          details: goals.map(g => ({
+            titre: g.title,
+            progression: g.progress,
+            complete: g.completed,
+            categorie: g.category,
+            description: g.description?.substring(0, 100)
+          }))
         },
-        taches: {
-          total: tasks.length,
-          terminees: tasks.filter(t => t.completed).length,
-          priorites: tasks.map(t => t.priority).filter(Boolean)
+        analyse_taches: {
+          taches_completees: completedTasks.length,
+          taches_en_cours: tasks.length - completedTasks.length,
+          taches_haute_priorite: highPriorityTasks.length,
+          taux_completion_haute_priorite: highPriorityTasks.length > 0 ? Math.round((highPriorityCompleted.length / highPriorityTasks.length) * 100) : 0,
+          taches_recentes_7j: recentTasks.length,
+          repartition_priorites: {
+            high: tasks.filter(t => t.priority === 'high').length,
+            medium: tasks.filter(t => t.priority === 'medium').length,
+            low: tasks.filter(t => t.priority === 'low').length
+          },
+          objectifs_lies: tasks.filter(t => t.linked_goal_id).length
         },
-        journal: {
-          entrees: journal.length,
-          humeurs: journal.map(j => j.mood).filter(Boolean),
-          tags_frequents: journal.flatMap(j => j.tags || []).slice(0, 6)
+        analyse_focus: {
+          sessions_30j: recentFocus.length,
+          temps_total_minutes: Math.round(totalFocusTime),
+          temps_moyen_session: Math.round(avgFocusSession),
+          sessions_par_jour: focusFrequency.toFixed(1),
+          heure_pic_concentration: peakFocusHour || 'non défini',
+          sessions_recentes: recentFocus.slice(0, 10).map(f => ({
+            duree: f.duration,
+            date: f.created_at,
+            titre: f.title
+          }))
         },
-        focus: {
-          sessions: focus.length,
-          duree_totale: focus.reduce((acc, f) => acc + (f.duration || 0), 0),
-          duree_moyenne: focus.length > 0 ? Math.round(focus.reduce((acc, f) => acc + (f.duration || 0), 0) / focus.length) : 0
+        analyse_emotionnelle: {
+          entrees_journal_30j: recentJournals.length,
+          humeur_dominante: dominantMood,
+          distribution_humeurs: moodDistribution,
+          frequence_journaling: (recentJournals.length / 30).toFixed(1),
+          reflexions_recentes: reflections.length,
+          themes_journal: recentJournals.flatMap(j => j.tags || []).filter(Boolean)
+        },
+        patterns_comportementaux: {
+          jour_plus_productif: mostProductiveDay ? ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][parseInt(mostProductiveDay)] : 'non défini',
+          heure_pic_focus: peakFocusHour || 'non défini',
+          regularite_hebdomadaire: Object.values(tasksByDayOfWeek).length,
+          style_travail: avgFocusSession > 45 ? 'sessions longues' : avgFocusSession > 25 ? 'sessions moyennes' : 'sessions courtes'
+        },
+        contexte_psychologique: {
+          niveau_engagement: habitConsistencyRate > 70 ? 'élevé' : habitConsistencyRate > 40 ? 'moyen' : 'faible',
+          orientation_objectifs: activeGoals.length > completedGoals.length ? 'ambitieux' : 'pragmatique',
+          gestion_priorites: highPriorityTasks.length > tasks.length * 0.3 ? 'orienté urgence' : 'équilibré',
+          pratique_reflexive: recentJournals.length > 15 ? 'très régulière' : recentJournals.length > 5 ? 'régulière' : 'occasionnelle'
         }
       };
 
-      // Tenter d'abord l'API Gemini, puis fallback sur analyse locale
+      console.log('Résumé utilisateur créé avec métriques avancées');
+
+      // Tenter d'abord l'API Gemini avec analyse approfondie
       try {
+        console.log('Invocation de l\'IA pour analyse psychologique approfondie...');
         const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
           body: {
-            message: `Génère un profil de personnalité JSON basé sur ces données: ${JSON.stringify(userSummary)}`,
+            message: `ANALYSE PSYCHOLOGIQUE APPROFONDIE - Profil de Personnalité
+
+Tu dois analyser en profondeur toutes ces données et créer un profil psychologique vraiment personnalisé et utile.
+
+DONNÉES COMPLÈTES DE L'UTILISATEUR:
+${JSON.stringify(userSummary, null, 2)}
+
+INSTRUCTIONS CRITIQUES:
+1. Analyse RÉELLEMENT toutes les métriques et patterns fournis
+2. Identifie des traits psychologiques spécifiques basés sur les comportements observés
+3. Fais des connexions entre les différentes données (ex: lien entre humeur et productivité)
+4. Sois PRÉCIS et PERSONNALISÉ - évite les généralités
+5. Utilise les chiffres et patterns réels pour justifier tes insights
+6. Identifie des blocages psychologiques potentiels basés sur les patterns
+7. Propose des recommandations vraiment adaptées au profil comportemental observé
+
+FORMAT DE RÉPONSE (JSON strict, sans texte avant/après):
+{
+  "personality": {
+    "traits": ["3-5 traits psychologiques SPÉCIFIQUES déduits des patterns comportementaux"],
+    "strengths": ["3-5 forces RÉELLES identifiées dans les données"],
+    "areas_to_improve": ["2-4 zones d'amélioration CONCRÈTES basées sur les métriques"],
+    "motivations": ["2-4 motivations DÉDUITES du type d'objectifs et habitudes"],
+    "working_style": "Description DÉTAILLÉE du style de travail basée sur les patterns de focus et tâches"
+  },
+  "psychological_insights": {
+    "behavioral_patterns": ["3-5 patterns comportementaux OBSERVÉS dans les données"],
+    "stress_management": "Analyse du stress basée sur humeurs, focus et régularité",
+    "decision_making_style": "Style de décision déduit des priorités et choix d'objectifs",
+    "social_preferences": "Préférences déduites du type d'objectifs et réflexions"
+  },
+  "productivity_analysis": {
+    "peak_performance_times": ["Moments identifiés dans les données de focus et tâches"],
+    "productivity_blockers": ["Blocages RÉELS identifiés dans les patterns"],
+    "optimal_work_environment": "Environnement optimal basé sur les sessions de focus réussies",
+    "goal_achievement_style": "Style basé sur la progression réelle des objectifs"
+  },
+  "recommendations": {
+    "habits_to_develop": ["3-5 habitudes SPÉCIFIQUES pour combler les gaps identifiés"],
+    "productivity_tips": ["3-5 tips PERSONNALISÉS basés sur le profil"],
+    "personal_growth": ["3-5 conseils de croissance ADAPTÉS aux zones d'amélioration"],
+    "stress_management": ["3-5 techniques APPROPRIÉES au profil de stress observé"]
+  },
+  "growth_trajectory": {
+    "current_phase": "Phase actuelle déduite des métriques de progression",
+    "next_milestones": ["3-4 jalons LOGIQUES basés sur les objectifs et progression actuels"],
+    "long_term_potential": "Potentiel basé sur les tendances et la consistance observées"
+  }
+}
+
+Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
             user_id: user.id,
             context: {
               analysis_mode: true,
