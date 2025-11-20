@@ -432,33 +432,33 @@ const generateMotivations = (data: any) => {
 };
 
 const generateWorkingStyle = (data: any) => {
-  if (data.focus.sessions > 5) return "focalisé sur la concentration";
-  if (data.taches.total > 10) return "orienté tâches";
+  if (data.analyse_focus?.sessions_30j > 5) return "focalisé sur la concentration";
+  if (data.vue_generale?.total_taches > 10) return "orienté tâches";
   return "équilibré et adaptable";
 };
 
 const generateBehavioralPatterns = (data: any) => {
   const patterns = [];
-  if (data.habitudes.total > 0) patterns.push("formation d'habitudes");
-  if (data.focus.sessions > 0) patterns.push("sessions de travail focalisé");
+  if (data.analyse_habitudes?.habitudes_actives > 0) patterns.push("formation d'habitudes");
+  if (data.analyse_focus?.sessions_30j > 0) patterns.push("sessions de travail focalisé");
   patterns.push("planification d'objectifs");
   return patterns;
 };
 
 const generateStressManagement = (data: any) => {
-  if (data.focus.duree_moyenne > 30) return "gestion par la concentration";
-  if (data.habitudes.total > 3) return "gestion par les routines";
+  if (data.analyse_focus?.temps_moyen_session > 30) return "gestion par la concentration";
+  if (data.analyse_habitudes?.habitudes_actives > 3) return "gestion par les routines";
   return "approche équilibrée";
 };
 
 const generateDecisionStyle = (data: any) => {
-  if (data.objectifs.progress_moyen > 50) return "orienté résultats";
-  if (data.taches.priorites.includes("high")) return "priorise l'urgence";
+  if (data.metriques_performance?.progression_objectifs_moyenne > 50) return "orienté résultats";
+  if (data.analyse_taches?.taches_haute_priorite > 0) return "priorise l'urgence";
   return "réfléchi et méthodique";
 };
 
 const generateSocialPreferences = (data: any) => {
-  if (data.focus.sessions > 3) return "préfère le travail concentré";
+  if (data.analyse_focus?.sessions_30j > 3) return "préfère le travail concentré";
   return "équilibre social et travail";
 };
 
