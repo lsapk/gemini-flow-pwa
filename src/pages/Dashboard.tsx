@@ -87,30 +87,31 @@ export default function Dashboard() {
     { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
     { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
     { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
+    { icon: Clock, label: "Réflexion", path: "/reflection", color: "bg-blue-500/10 text-blue-500" },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-2 sm:p-0">
       {/* En-tête */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           Tableau de Bord
         </h1>
-        <p className="text-muted-foreground mt-1">Vue d'ensemble de votre productivité</p>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Vue d'ensemble de votre productivité</p>
       </div>
 
       {/* Raccourcis rapides */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Accès rapide</h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <h2 className="text-lg font-semibold mb-3">Accès rapide</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
           {quickLinks.map((link) => (
             <Link key={link.path} to={link.path}>
               <Card className="hover:shadow-md transition-all hover:scale-105 cursor-pointer">
-                <CardContent className="p-4 flex flex-col items-center gap-2">
-                  <div className={`p-3 rounded-lg ${link.color}`}>
-                    <link.icon className="h-6 w-6" />
+                <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-1.5 sm:gap-2">
+                  <div className={`p-2 sm:p-3 rounded-lg ${link.color}`}>
+                    <link.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
-                  <span className="text-sm font-medium">{link.label}</span>
+                  <span className="text-xs sm:text-sm font-medium text-center">{link.label}</span>
                 </CardContent>
               </Card>
             </Link>
@@ -120,56 +121,56 @@ export default function Dashboard() {
 
       {/* Score de productivité */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-warning" />
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
             Score de Productivité
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-4xl font-bold">{productivityScore}</div>
-              <p className={`text-sm font-medium ${scoreLevel.color}`}>{scoreLevel.label}</p>
+              <div className="text-3xl sm:text-4xl font-bold">{productivityScore}</div>
+              <p className={`text-xs sm:text-sm font-medium ${scoreLevel.color}`}>{scoreLevel.label}</p>
             </div>
-            <Badge variant="secondary" className="text-lg px-4 py-2">
+            <Badge variant="secondary" className="text-sm sm:text-lg px-2 py-1 sm:px-4 sm:py-2">
               {streakCount} jours 🔥
             </Badge>
           </div>
           
-          <Progress value={productivityScore} className="h-3" />
+          <Progress value={productivityScore} className="h-2 sm:h-3" />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                Tâches
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2 sm:pt-4">
+            <div className="space-y-0.5 sm:space-y-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+                <span>Tâches</span>
               </div>
-              <div className="text-xl font-semibold">{Math.round(taskCompletionRate)}%</div>
+              <div className="text-lg sm:text-xl font-semibold">{Math.round(taskCompletionRate)}%</div>
             </div>
             
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4 text-primary" />
-                Focus
+            <div className="space-y-0.5 sm:space-y-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                <span>Focus</span>
               </div>
-              <div className="text-xl font-semibold">{Math.round(totalFocusTime / 60)}h</div>
+              <div className="text-lg sm:text-xl font-semibold">{Math.round(totalFocusTime / 60)}h</div>
             </div>
             
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Zap className="h-4 w-4 text-warning" />
-                Série
+            <div className="space-y-0.5 sm:space-y-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
+                <span>Série</span>
               </div>
-              <div className="text-xl font-semibold">{streakCount}j</div>
+              <div className="text-lg sm:text-xl font-semibold">{streakCount}j</div>
             </div>
             
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Target className="h-4 w-4 text-info" />
-                Habitudes
+            <div className="space-y-0.5 sm:space-y-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                <Target className="h-3 w-3 sm:h-4 sm:w-4 text-info" />
+                <span>Habitudes</span>
               </div>
-              <div className="text-xl font-semibold">{activeHabits}</div>
+              <div className="text-lg sm:text-xl font-semibold">{activeHabits}</div>
             </div>
           </div>
         </CardContent>
