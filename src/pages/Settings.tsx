@@ -84,9 +84,9 @@ export default function Settings() {
     if (!user) return;
     
     try {
-      // Requête directe vers la table profiles avec type casting
-      const { data: profileData, error: profileError } = await (supabase as any)
-        .from('profiles')
+      // Requête directe vers la table user_settings
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_settings')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
@@ -143,8 +143,8 @@ export default function Settings() {
         karma_points: 0
       };
 
-      const { data, error } = await (supabase as any)
-        .from('profiles')
+      const { data, error } = await supabase
+        .from('user_settings')
         .insert(defaultProfile)
         .select()
         .single();
@@ -193,8 +193,8 @@ export default function Settings() {
     setLoading(true);
     try {
       // Utilisation d'upsert pour créer ou mettre à jour le profil
-      const { error } = await (supabase as any)
-        .from('profiles')
+      const { error } = await supabase
+        .from('user_settings')
         .upsert({
           id: user.id,
           ...formData,
