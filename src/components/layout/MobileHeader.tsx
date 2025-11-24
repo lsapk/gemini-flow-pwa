@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import deepflowLogo from "@/assets/deepflow-logo.jpg";
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -21,6 +22,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
             <Menu className="h-4 w-4" />
             <span className="sr-only">Ouvrir le menu</span>
           </Button>
+          <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-full object-cover" />
           <h1 className="text-lg font-semibold">DeepFlow</h1>
         </div>
         

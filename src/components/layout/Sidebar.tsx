@@ -17,8 +17,8 @@ import {
   Calendar
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { DeepFlowLogo } from "@/components/icons/DeepFlowIcons";
 import { useAuth } from "@/hooks/useAuth";
+import deepflowLogo from "@/assets/deepflow-logo.jpg";
 
 interface SidebarProps {
   className?: string;
@@ -55,7 +55,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     <div className={cn("w-64 h-screen bg-card border-r border-border sticky top-0 flex flex-col shadow-sm", className)}>
       <div className="p-5 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <DeepFlowLogo className="h-9 w-9" />
+          <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-full object-cover" />
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">DeepFlow</h1>
         </div>
       </div>
