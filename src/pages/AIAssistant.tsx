@@ -238,8 +238,12 @@ export default function AIAssistant() {
         console.error('Erreur complète:', error);
         let errorContent = "Désolé, une erreur s'est produite. Veuillez réessayer.";
         
-        // Check if it's a quota error
-        if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+        // Check if it's a credits exhausted error (402)
+        if (error?.message?.includes('402') || error?.message?.includes('credits exhausted') || error?.message?.includes('Payment Required')) {
+          errorContent = "💳 **Crédits IA épuisés** - Vos crédits Lovable AI sont épuisés. Ajoutez des crédits dans Settings → Cloud → Usage pour continuer à utiliser l'IA.";
+        }
+        // Check if it's a rate limit error (429)
+        else if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
           errorContent = "🚫 **Limite d'API atteinte** - Le quota journalier de l'IA a été dépassé (50 requêtes/jour). Réessayez demain ou contactez l'admin pour augmenter le quota.";
         }
         

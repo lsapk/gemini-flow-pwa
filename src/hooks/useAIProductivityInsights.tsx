@@ -4,6 +4,7 @@ import { useAnalyticsData } from "./useAnalyticsData";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiRequestQueue } from "@/utils/aiRequestQueue";
+import { toast } from "sonner";
 
 // Typage minimal pour IA insight
 export type AIInsight = {
@@ -105,14 +106,24 @@ Uniquement la liste JSON, aucune explication extérieure.`,
 
         if (cancelled) return;
 
-        // Handle rate limit errors gracefully
+        // Handle errors gracefully
         if (error) {
           console.error('AI request error:', error);
-          // Keep existing insights if rate limited
-          if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
-            console.log('Rate limited - keeping existing insights');
+          
+          // Handle credits exhausted (402)
+          if (error.message?.includes('402') || error.message?.includes('credits exhausted') || error.message?.includes('Payment Required')) {
+            console.log('AI credits exhausted - keeping existing insights');
+            toast.error('💳 Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage.');
             return;
           }
+          
+          // Keep existing insights if rate limited (429)
+          if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
+            console.log('Rate limited - keeping existing insights');
+            toast.error('🚫 Limite d\'API atteinte. Réessayez plus tard.');
+            return;
+          }
+          
           setInsights([]);
           return;
         }
