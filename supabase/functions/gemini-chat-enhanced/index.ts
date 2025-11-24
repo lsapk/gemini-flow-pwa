@@ -123,12 +123,6 @@ DONNÉES UTILISATEUR: ${JSON.stringify(context?.user_data || {})}
 Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans suggestions de création.`;
     }
 
-    // Initialize Lovable AI gateway
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
     // Prepare recent messages for memory (last 10)
     const recentMessages = (context?.recent_messages || []).slice(-10).map((msg: any) => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',

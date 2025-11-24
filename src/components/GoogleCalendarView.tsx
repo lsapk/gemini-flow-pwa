@@ -2,8 +2,9 @@ import { useState } from "react";
 import { format, addDays, startOfWeek, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
 
 interface CalendarEvent {
   id: string;
@@ -41,6 +42,7 @@ export function GoogleCalendarView({
   onAddClick
 }: GoogleCalendarViewProps) {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1); // 0.5 = zoom out, 1 = normal, 2 = zoom in
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -79,8 +81,45 @@ export function GoogleCalendarView({
     }
   };
 
+  const cellHeight = 64 * zoomLevel; // Base height 64px (h-16)
+
   return (
     <div className="flex flex-col h-full bg-background">
+      {/* Zoom controls */}
+      <div className="flex items-center gap-4 px-4 py-2 border-b bg-background">
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
+            disabled={zoomLevel <= 0.5}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-[200px]">
+            <Slider
+              value={[zoomLevel]}
+              onValueChange={(value) => setZoomLevel(value[0])}
+              min={0.5}
+              max={2}
+              step={0.25}
+              className="flex-1"
+            />
+            <span className="text-sm text-muted-foreground min-w-[50px] text-right">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+          </div>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.25))}
+            disabled={zoomLevel >= 2}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       {/* Week header */}
       <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b sticky top-0 bg-background z-10">
         <div className="border-r"></div>
@@ -125,7 +164,8 @@ export function GoogleCalendarView({
             {hours.map(hour => (
               <div
                 key={hour}
-                className="h-16 border-b text-xs text-muted-foreground pr-2 text-right pt-1"
+                className="border-b text-xs text-muted-foreground pr-2 text-right pt-1"
+                style={{ height: `${cellHeight}px` }}
               >
                 {hour.toString().padStart(2, '0')}:00
               </div>
@@ -142,9 +182,10 @@ export function GoogleCalendarView({
                   <div
                     key={hour}
                     className={cn(
-                      "h-16 border-b relative group cursor-pointer transition-colors",
+                      "border-b relative group cursor-pointer transition-colors",
                       hoveredCell === cellKey && "bg-accent/30"
                     )}
+                    style={{ height: `${cellHeight}px` }}
                     onMouseEnter={() => setHoveredCell(cellKey)}
                     onMouseLeave={() => setHoveredCell(null)}
                     onClick={() => handleCellClick(day, hour)}
