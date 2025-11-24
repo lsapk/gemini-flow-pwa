@@ -22,9 +22,9 @@ Deno.serve(async (req) => {
     }
 
     // Get API keys
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not found');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not found');
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -129,27 +129,49 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
       content: msg.content
     }));
 
-    console.log('Making request to Lovable AI with mode:', messageContext);
+    console.log('Making request to Google Gemini API with mode:', messageContext);
     
-    // Build messages array for Lovable AI
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...recentMessages,
-      { role: 'user', content: message }
-    ];
+    // Build contents for Gemini API format
+    const contents = [];
+    
+    // Add system instruction as first user message
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemPrompt }]
+    });
+    
+    // Add model response acknowledging the system instruction
+    contents.push({
+      role: 'model',
+      parts: [{ text: 'Je comprends mes instructions. Comment puis-je vous aider ?' }]
+    });
+    
+    // Add recent messages
+    recentMessages.forEach((msg: any) => {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      });
+    });
+    
+    // Add current message
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }]
+    });
 
-    // Call Lovable AI Gateway
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call Google Gemini API (using gemini-2.5-flash)
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048,
+        contents: contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        }
       }),
     });
 
@@ -160,21 +182,15 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
         );
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'Payment required. Please add credits to your Lovable AI workspace.' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 402 }
-        );
-      }
       const errorText = await aiResponse.text();
-      console.error('Lovable AI error:', aiResponse.status, errorText);
-      throw new Error(`AI API error: ${errorText}`);
+      console.error('Google Gemini API error:', aiResponse.status, errorText);
+      throw new Error(`Gemini API error: ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    let responseText = aiData.choices?.[0]?.message?.content || '';
+    let responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    console.log('Lovable AI response received:', responseText);
+    console.log('Google Gemini API response received:', responseText);
 
     // Try to parse JSON response
     let suggestion = null;
