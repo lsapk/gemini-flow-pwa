@@ -142,8 +142,8 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
     // Add current message
     fullPrompt += `User: ${message}\n\nAssistant:`;
 
-    // Call Google Gemini API directly (using gemini-1.5-flash-latest model)
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
+    // Call Google Gemini API directly (using gemini-1.5-flash model)
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
