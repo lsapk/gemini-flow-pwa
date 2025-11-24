@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAnalyticsData } from './useAnalyticsData';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface ProductivityMetrics {
   score: number;
@@ -135,6 +136,23 @@ export const useProductivityScore = (): ProductivityMetrics => {
 
       if (error) {
         console.error('Error calling AI function:', error);
+        
+        // Handle credits exhausted (402)
+        if (error.message?.includes('402') || error.message?.includes('credits exhausted') || error.message?.includes('Payment Required')) {
+          console.log('AI credits exhausted - using fallback calculation');
+          toast.error('💳 Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage.');
+          calculateFallbackMetrics();
+          return;
+        }
+        
+        // Handle rate limit (429)
+        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
+          console.log('Rate limited - using fallback calculation');
+          toast.error('🚫 Limite d\'API atteinte. Réessayez plus tard.');
+          calculateFallbackMetrics();
+          return;
+        }
+        
         throw error;
       }
 
