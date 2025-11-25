@@ -17,15 +17,25 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not configured');
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
-    console.log('API keys validated');
-
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Récupérer la clé API Gemini de l'utilisateur
+    const { data: userSettings, error: settingsError } = await supabase
+      .from('user_settings')
+      .select('gemini_api_key')
+      .eq('id', userId)
+      .single();
+
+    if (settingsError || !userSettings?.gemini_api_key) {
+      console.error('No Gemini API key found for user:', userId);
+      return new Response(
+        JSON.stringify({ error: "Clé API Gemini non configurée. Veuillez configurer votre clé dans les paramètres." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const geminiApiKey = userSettings.gemini_api_key;
+    console.log('Gemini API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur
     const targetDate = new Date(date).toISOString().split('T')[0];
@@ -107,27 +117,33 @@ Fournis des suggestions concrètes et actionnables dans les catégories suivante
 
 Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
 
-    console.log('Calling Lovable AI API...');
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "Tu es un assistant de productivité bienveillant et efficace." },
-          { role: "user", content: prompt }
-        ],
-      }),
-    });
+    console.log('Calling Gemini API...');
+    const aiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          }
+        }),
+      }
+    );
 
-    console.log('AI API response status:', aiResponse.status);
+    console.log('Gemini API response status:', aiResponse.status);
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API error response:', { status: aiResponse.status, body: errorText });
+      console.error('Gemini API error response:', { status: aiResponse.status, body: errorText });
       
       if (aiResponse.status === 429) {
         return new Response(
@@ -135,17 +151,11 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crédits insuffisants. Veuillez ajouter des crédits à votre compte Lovable." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
+      throw new Error(`Gemini API error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    const suggestion = aiData.choices[0]?.message?.content || "Aucune suggestion disponible";
+    const suggestion = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Aucune suggestion disponible";
 
     // Extraire les événements suggérés du JSON dans la réponse
     let suggestedEvents = [];
