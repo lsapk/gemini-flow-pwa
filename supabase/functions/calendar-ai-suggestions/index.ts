@@ -13,14 +13,17 @@ serve(async (req) => {
 
   try {
     const { userId, date } = await req.json();
+    console.log('Request received:', { userId, date });
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
     if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not configured');
       throw new Error("LOVABLE_API_KEY not configured");
     }
+    console.log('API keys validated');
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -104,6 +107,7 @@ Fournis des suggestions concrètes et actionnables dans les catégories suivante
 
 Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
 
+    console.log('Calling Lovable AI API...');
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -119,20 +123,25 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
       }),
     });
 
+    console.log('AI API response status:', aiResponse.status);
+
     if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI API error response:', { status: aiResponse.status, body: errorText });
+      
       if (aiResponse.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded" }),
+          JSON.stringify({ error: "Limite de requêtes dépassée. Veuillez réessayer dans quelques instants." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (aiResponse.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Payment required" }),
+          JSON.stringify({ error: "Crédits insuffisants. Veuillez ajouter des crédits à votre compte Lovable." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      throw new Error(`AI API error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
@@ -184,9 +193,11 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in calendar-ai-suggestions:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error details:", errorMessage);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
