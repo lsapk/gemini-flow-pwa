@@ -146,13 +146,23 @@ export default function CalendarPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw error;
+      }
+
+      if (data?.error) {
+        console.error("Edge function returned error:", data.error);
+        toast.error(data.error);
+        return;
+      }
       
       setSuggestedEvents(data.suggestedEvents || []);
       toast.success("Suggestions générées avec succès");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error getting AI suggestions:", error);
-      toast.error("Erreur lors de la récupération des suggestions");
+      const errorMessage = error?.message || "Erreur lors de la récupération des suggestions";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
