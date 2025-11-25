@@ -148,6 +148,18 @@ export default function CalendarPage() {
 
       if (error) {
         console.error("Supabase function error:", error);
+        // Extract error message from the error object
+        if (error.context?.body) {
+          try {
+            const errorBody = JSON.parse(error.context.body);
+            if (errorBody.error) {
+              toast.error(errorBody.error);
+              return;
+            }
+          } catch (e) {
+            // If we can't parse the error body, continue with default error handling
+          }
+        }
         throw error;
       }
 
@@ -161,7 +173,21 @@ export default function CalendarPage() {
       toast.success("Suggestions générées avec succès");
     } catch (error: any) {
       console.error("Error getting AI suggestions:", error);
-      const errorMessage = error?.message || "Erreur lors de la récupération des suggestions";
+      
+      // Try to extract a meaningful error message
+      let errorMessage = "Erreur lors de la récupération des suggestions";
+      
+      if (error?.context?.body) {
+        try {
+          const errorBody = JSON.parse(error.context.body);
+          errorMessage = errorBody.error || errorMessage;
+        } catch (e) {
+          // Keep default message
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
