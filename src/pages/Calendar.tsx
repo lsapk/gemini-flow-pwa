@@ -10,6 +10,7 @@ import { GoogleCalendarHeader } from "@/components/GoogleCalendarHeader";
 import { GoogleCalendarView } from "@/components/GoogleCalendarView";
 import { GoogleCalendarEventModal, EventFormData } from "@/components/GoogleCalendarEventModal";
 import { AISuggestedEvents } from "@/components/AISuggestedEvents";
+import { Markdown } from "@/components/Markdown";
 
 interface CalendarEvent {
   id: string;
@@ -28,6 +29,7 @@ export default function CalendarPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestedEvents, setSuggestedEvents] = useState<any[]>([]);
+  const [suggestionText, setSuggestionText] = useState<string>("");
   const [initialEventData, setInitialEventData] = useState<any>(null);
   
   const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
@@ -169,6 +171,8 @@ export default function CalendarPage() {
         return;
       }
       
+      console.log("AI Response:", data);
+      setSuggestionText(data.suggestion || "");
       setSuggestedEvents(data.suggestedEvents || []);
       toast.success("Suggestions générées avec succès");
     } catch (error: any) {
@@ -315,7 +319,7 @@ export default function CalendarPage() {
           </div>
 
           {/* AI Suggestions below calendar */}
-          <div className="border-t bg-background p-4 overflow-y-auto max-h-[300px]">
+          <div className="border-t bg-background p-4 overflow-y-auto max-h-[400px]">
             <div className="max-w-4xl mx-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Suggestions IA</h3>
@@ -335,6 +339,14 @@ export default function CalendarPage() {
                   )}
                 </Button>
               </div>
+              
+              {suggestionText && (
+                <Card className="mb-4">
+                  <CardContent className="pt-6">
+                    <Markdown content={suggestionText} />
+                  </CardContent>
+                </Card>
+              )}
               
               {suggestedEvents.length > 0 && (
                 <AISuggestedEvents
