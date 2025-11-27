@@ -83,34 +83,16 @@ Données de l'utilisateur:
 - Événements Google Calendar (${calendarEvents.length}): ${calendarEvents.map((e: any) => `"${e.summary}" (${e.start?.dateTime || e.start?.date} - ${e.end?.dateTime || e.end?.date})`).join(', ')}
 
 Fournis des suggestions concrètes et actionnables dans les catégories suivantes:
-1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés en tenant compte des événements du calendrier
-2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes à faire aujourd'hui
-3. 💪 **Habitudes**: Suggère le meilleur moment pour pratiquer les habitudes du jour en évitant les conflits avec les événements
-4. 🚀 **Avancement des objectifs**: Propose des actions concrètes pour faire progresser les objectifs
-5. ➕ **Événements à créer**: Si tu identifies des besoins (rendez-vous, blocs de temps pour les tâches, etc.), suggère des événements à créer au format JSON dans un bloc de code avec la structure suivante:
-\`\`\`json
-{
-  "suggestedEvents": [
-    {
-      "title": "Titre de l'événement",
-      "description": "Description",
-      "startDateTime": "2025-03-19T09:00:00",
-      "endDateTime": "2025-03-19T10:00:00"
-    }
-  ]
-}
-\`\`\`
+1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés
+2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes
+3. 💪 **Habitudes**: Suggère le meilleur moment pour les habitudes
+4. 🚀 **Avancement des objectifs**: Propose des actions concrètes
+5. ➕ **Événements à créer**: Utilise la fonction suggest_events pour proposer des événements
 
-**IMPORTANT**: Ta réponse DOIT être formatée en Markdown avec des emojis pour rendre le contenu plus engageant et visuel. Utilise:
-- Des titres avec ## et ###
-- Des listes à puces avec -
-- Des emojis pertinents et variés (🎯, ✅, 📝, 🔥, 💡, ⏰, 🌟, 💪, 🚀, etc.)
-- Du texte en **gras** pour les points importants
-- Des séparateurs avec ---
-
+**IMPORTANT**: Ta réponse DOIT être formatée en Markdown avec des emojis pour rendre le contenu engageant.
 Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
 
-    console.log('Calling Gemini API...');
+    console.log('Calling Gemini API with function calling...');
     const aiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
       {
@@ -122,6 +104,44 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
           contents: [{
             parts: [{
               text: prompt
+            }]
+          }],
+          tools: [{
+            functionDeclarations: [{
+              name: "suggest_events",
+              description: "Suggère des événements de calendrier à créer pour aider l'utilisateur à organiser sa journée",
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  events: {
+                    type: "ARRAY",
+                    description: "Liste des événements suggérés",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        title: {
+                          type: "STRING",
+                          description: "Titre de l'événement"
+                        },
+                        description: {
+                          type: "STRING",
+                          description: "Description de l'événement"
+                        },
+                        startDateTime: {
+                          type: "STRING",
+                          description: "Date et heure de début au format ISO (ex: 2025-03-19T09:00:00)"
+                        },
+                        endDateTime: {
+                          type: "STRING",
+                          description: "Date et heure de fin au format ISO (ex: 2025-03-19T10:00:00)"
+                        }
+                      },
+                      required: ["title", "startDateTime", "endDateTime"]
+                    }
+                  }
+                },
+                required: ["events"]
+              }
             }]
           }],
           generationConfig: {
@@ -150,34 +170,14 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
     const aiData = await aiResponse.json();
     const suggestion = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Aucune suggestion disponible";
 
-    // Extraire les événements suggérés du JSON dans la réponse
-    let suggestedEvents = [];
+    // Extraire les événements suggérés via function calling
+    let suggestedEvents: any[] = [];
     
-    // Chercher du JSON dans la réponse (avec ou sans code blocks)
-    const codeBlockMatch = suggestion.match(/```json\s*([\s\S]*?)\s*```/);
-    const jsonText = codeBlockMatch ? codeBlockMatch[1] : suggestion;
-    
-    // Essayer de trouver un tableau ou un objet JSON
-    const arrayMatch = jsonText.match(/\[([\s\S]*?)\]/);
-    const objectMatch = jsonText.match(/\{[\s\S]*?"suggestedEvents"[\s\S]*?\}/);
-    
-    if (arrayMatch) {
-      try {
-        // Si on trouve un tableau directement
-        suggestedEvents = JSON.parse(arrayMatch[0]);
-        console.log('Extracted events from array:', suggestedEvents.length);
-      } catch (e) {
-        console.log('Could not parse array format:', e);
-      }
-    } else if (objectMatch) {
-      try {
-        // Si on trouve un objet avec suggestedEvents
-        const parsed = JSON.parse(objectMatch[0]);
-        suggestedEvents = parsed.suggestedEvents || [];
-        console.log('Extracted events from object:', suggestedEvents.length);
-      } catch (e) {
-        console.log('Could not parse object format:', e);
-      }
+    const functionCall = aiData.candidates?.[0]?.content?.parts?.find((part: any) => part.functionCall);
+    if (functionCall?.functionCall?.name === "suggest_events") {
+      const args = functionCall.functionCall.args;
+      suggestedEvents = args?.events || [];
+      console.log('Extracted events from function call:', suggestedEvents.length);
     }
     
     console.log('Final suggested events:', suggestedEvents);

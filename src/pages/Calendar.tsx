@@ -369,6 +369,7 @@ export default function CalendarPage() {
                       videoConference: false,
                     };
                     await createEvent(eventData);
+                    loadEvents(); // Recharger les événements après création
                   }}
                 />
               )}
