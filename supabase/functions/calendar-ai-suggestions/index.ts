@@ -17,24 +17,17 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Récupérer la clé API Gemini de l'utilisateur
-    const { data: userSettings, error: settingsError } = await supabase
-      .from('user_settings')
-      .select('gemini_api_key')
-      .eq('id', userId)
-      .single();
-
-    if (settingsError || !userSettings?.gemini_api_key) {
-      console.error('No Gemini API key found for user:', userId);
+    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+    
+    if (!geminiApiKey) {
+      console.error('GEMINI_API_KEY not configured');
       return new Response(
-        JSON.stringify({ error: "Clé API Gemini non configurée. Veuillez configurer votre clé dans les paramètres." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Service IA non configuré" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const geminiApiKey = userSettings.gemini_api_key;
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Gemini API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur
