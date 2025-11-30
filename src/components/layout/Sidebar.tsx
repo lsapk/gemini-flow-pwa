@@ -14,7 +14,8 @@ import {
   Brain,
   User,
   LogOut,
-  Calendar
+  Calendar,
+  Gamepad2
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
+    { icon: Gamepad2, label: "Cyber Arena", path: "/gamification" },
     { icon: CheckSquare, label: "Tâches", path: "/tasks" },
     { icon: Target, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },
