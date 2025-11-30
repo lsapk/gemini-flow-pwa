@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_powerups: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          multiplier: number
+          powerup_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          multiplier?: number
+          powerup_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          multiplier?: number
+          powerup_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_pending_actions: {
         Row: {
           action_data: Json
@@ -1195,6 +1222,45 @@ export type Database = {
         }
         Relationships: []
       }
+      player_profiles: {
+        Row: {
+          avatar_customization: Json | null
+          avatar_type: string
+          created_at: string
+          credits: number
+          experience_points: number
+          id: string
+          level: number
+          total_quests_completed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_customization?: Json | null
+          avatar_type?: string
+          created_at?: string
+          credits?: number
+          experience_points?: number
+          id?: string
+          level?: number
+          total_quests_completed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_customization?: Json | null
+          avatar_type?: string
+          created_at?: string
+          credits?: number
+          experience_points?: number
+          id?: string
+          level?: number
+          total_quests_completed?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_data: {
         Row: {
           context: string
@@ -1292,6 +1358,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quests: {
+        Row: {
+          category: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_progress: number
+          description: string
+          expires_at: string | null
+          id: string
+          quest_type: string
+          reward_credits: number
+          reward_xp: number
+          target_value: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_progress?: number
+          description: string
+          expires_at?: string | null
+          id?: string
+          quest_type: string
+          reward_credits?: number
+          reward_xp: number
+          target_value: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_progress?: number
+          description?: string
+          expires_at?: string | null
+          id?: string
+          quest_type?: string
+          reward_credits?: number
+          reward_xp?: number
+          target_value?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       role: {
         Row: {
@@ -1964,6 +2084,27 @@ export type Database = {
           },
         ]
       }
+      unlocked_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user: {
         Row: {
           createdAt: string
@@ -2418,6 +2559,10 @@ export type Database = {
     }
     Functions: {
       auth_user_is_admin: { Args: never; Returns: boolean }
+      calculate_xp_for_level: {
+        Args: { current_level: number }
+        Returns: number
+      }
       encrypt_token: { Args: { token: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
