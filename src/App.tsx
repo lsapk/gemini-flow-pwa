@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
+import Gamification from "./pages/Gamification";
 import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 
@@ -152,6 +153,11 @@ function App() {
                     <AppLayout>
                       <Calendar />
                     </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/gamification" element={
+                  <ProtectedRoute>
+                    <Gamification />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
