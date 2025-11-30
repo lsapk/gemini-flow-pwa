@@ -29,28 +29,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Add viewport meta tag prevention for zoom */}
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <div className="min-h-screen bg-background relative">
+      {/* Gradient de fond animé */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 animate-pulse" style={{ animationDuration: '8s' }}></div>
+      </div>
       
       {/* Mobile Header */}
       <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
       
       {/* Mobile Navigation Sheet */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-64">
-          <Sidebar className="border-0 static" onItemClick={closeMobileMenu} />
+        <SheetContent side="left" className="p-0 w-64 bg-card/95 backdrop-blur-xl border-border/50">
+          <Sidebar className="border-0 static bg-transparent" onItemClick={closeMobileMenu} />
         </SheetContent>
       </Sheet>
 
-      <div className="flex">
+      <div className="flex relative z-10">
         {/* Desktop Sidebar - Fixed position */}
         <div className="hidden md:block">
           <Sidebar className="fixed top-0 left-0 h-full z-40" />
         </div>
 
-        {/* Main Content - Reduced left margin */}
-        <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-4">
+        {/* Main Content */}
+        <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-6 md:pr-6 min-h-screen">
           {children}
         </main>
       </div>

@@ -52,15 +52,18 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   };
 
   return (
-    <div className={cn("w-64 h-screen bg-card border-r border-border sticky top-0 flex flex-col shadow-sm", className)}>
-      <div className="p-5 border-b border-border/50">
+    <div className={cn("w-64 h-screen bg-card/80 backdrop-blur-xl border-r border-border/50 sticky top-0 flex flex-col shadow-lg", className)}>
+      <div className="p-5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
-          <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-full object-cover" />
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">DeepFlow</h1>
+          <div className="relative">
+            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-10 w-10 rounded-xl object-cover ring-2 ring-primary/20" />
+            <div className="absolute inset-0 rounded-xl bg-primary/20 blur-md -z-10"></div>
+          </div>
+          <h1 className="text-xl font-heading font-bold gradient-text tracking-tight">DeepFlow</h1>
         </div>
       </div>
       
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-hidden">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-hidden">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -68,29 +71,35 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
               key={item.path}
               variant={isActive ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 h-11 font-medium transition-all",
-                isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary shadow-sm"
+                "w-full justify-start gap-3 h-12 font-medium transition-all duration-300 rounded-xl group",
+                isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary shadow-md border border-primary/20 glow-effect"
               )}
               onClick={() => handleItemClick(item.path)}
             >
-              <item.icon className="h-4 w-4 flex-shrink-0" />
+              <item.icon className={cn(
+                "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
+                isActive && "text-primary"
+              )} />
               <span className="truncate">{item.label}</span>
+              {isActive && (
+                <div className="ml-auto h-2 w-2 rounded-full bg-primary animate-glow-pulse"></div>
+              )}
             </Button>
           );
         })}
       </nav>
       
-      <div className="p-3 border-t border-border/50 bg-muted/20">
+      <div className="p-3 border-t border-border/30 bg-gradient-to-br from-muted/30 to-transparent">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10 font-medium"
+          className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive hover:bg-destructive/10 font-medium rounded-xl transition-all duration-300 hover:scale-105"
           onClick={async () => {
             await signOut();
             navigate('/login');
             onItemClick?.();
           }}
         >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
+          <LogOut className="h-5 w-5 flex-shrink-0" />
           Déconnexion
         </Button>
       </div>
