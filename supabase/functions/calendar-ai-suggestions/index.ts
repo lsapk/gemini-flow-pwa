@@ -74,26 +74,27 @@ serve(async (req) => {
       }
     }
 
-    const prompt = `Tu es un assistant de productivité expert. Analyse les données suivantes de l'utilisateur et fournis des suggestions personnalisées pour optimiser sa journée du ${targetDate}.
+    const targetDateStr = new Date(date).toISOString().split('T')[0];
+    
+    const prompt = `Tu es un assistant de productivité expert. Analyse les données suivantes et fournis des suggestions pour la journée du ${targetDate}.
 
 Données de l'utilisateur:
-- Tâches en cours (${tasks.length}): ${tasks.map((t: any) => `"${t.title}" (priorité: ${t.priority || 'medium'}, échéance: ${t.due_date || 'non définie'})`).join(', ')}
-- Habitudes du jour (${habits.length}): ${habits.map((h: any) => `"${h.title}" (fréquence: ${h.frequency})`).join(', ')}
-- Objectifs en cours (${goals.length}): ${goals.map((g: any) => `"${g.title}" (progression: ${g.progress || 0}%, échéance: ${g.target_date || 'non définie'})`).join(', ')}
-- Événements Google Calendar (${calendarEvents.length}): ${calendarEvents.map((e: any) => `"${e.summary}" (${e.start?.dateTime || e.start?.date} - ${e.end?.dateTime || e.end?.date})`).join(', ')}
+- Tâches: ${tasks.length > 0 ? tasks.map((t: any) => `"${t.title}" (${t.priority || 'medium'})`).join(', ') : 'aucune'}
+- Habitudes: ${habits.length > 0 ? habits.map((h: any) => `"${h.title}"`).join(', ') : 'aucune'}
+- Objectifs: ${goals.length > 0 ? goals.map((g: any) => `"${g.title}" (${g.progress || 0}%)`).join(', ') : 'aucun'}
+- Événements Google Calendar: ${calendarEvents.length > 0 ? calendarEvents.map((e: any) => `"${e.summary}"`).join(', ') : 'aucun'}
 
-Fournis des suggestions concrètes et actionnables dans les catégories suivantes:
-1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés (format: 09h00 - 10h00)
-2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes
-3. 💪 **Habitudes**: Suggère le meilleur moment pour les habitudes (format: 09h00 - 10h00)
-4. 🚀 **Avancement des objectifs**: Propose des actions concrètes avec horaires (format: 09h00 - 10h00)
-5. ➕ **Événements à créer**: Utilise la fonction suggest_events pour proposer des événements avec des horaires précis
+INSTRUCTIONS CRITIQUES:
+1. Fournis des suggestions en Markdown avec emojis (📅, 🎯, 💪, 🚀)
+2. Pour chaque activité suggérée, INCLUS TOUJOURS un horaire au format "09h00 - 10h00"
+3. APPELLE OBLIGATOIREMENT la fonction suggest_events avec 3-5 événements concrets basés sur les données
+4. Chaque événement doit avoir un titre clair et des horaires précis pour le ${targetDateStr}
+5. Limite ta réponse à 300 mots maximum
 
-**IMPORTANT**: 
-- Ta réponse DOIT être formatée en Markdown avec des emojis
-- Pour chaque activité suggérée, INDIQUE TOUJOURS un créneau horaire au format "09h00 - 10h00"
-- Sois concis, motivant et pratique
-- Limite ta réponse à 400 mots maximum`;
+Format attendu pour les événements suggérés (via suggest_events):
+- Titre descriptif et actionnable
+- Horaires réalistes et espacés (ex: 09:00, 11:00, 14:00, 16:00)
+- Durée adaptée à l'activité (30min à 2h)`;
 
     console.log('Calling Gemini API with function calling...');
     const aiResponse = await fetch(
@@ -186,32 +187,72 @@ Fournis des suggestions concrètes et actionnables dans les catégories suivante
       suggestedEvents = args?.events || [];
       console.log('Extracted events from function call:', suggestedEvents.length);
     } else {
-      // Si pas de function call, essayer d'extraire du texte
+      // Si pas de function call, extraire du texte avec patterns multiples
       console.log('No function call, parsing text for events');
-      const eventMatches = suggestion.match(/\*\*([^*]+)\*\*.*?(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/g);
-      if (eventMatches) {
-        suggestedEvents = eventMatches.map((match: string) => {
-          const titleMatch = match.match(/\*\*([^*]+)\*\*/);
-          const timeMatch = match.match(/(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/);
-          
-          if (titleMatch && timeMatch) {
-            const title = titleMatch[1];
-            const startTime = timeMatch[1].replace('h', ':');
-            const endTime = timeMatch[2].replace('h', ':');
-            
-            const targetDateStr = new Date(date).toISOString().split('T')[0];
-            
-            return {
-              title,
-              description: '',
-              startDateTime: `${targetDateStr}T${startTime}:00`,
-              endDateTime: `${targetDateStr}T${endTime}:00`
-            };
-          }
-          return null;
-        }).filter(Boolean);
+      
+      // Pattern 1: **Titre** suivi de horaires
+      const pattern1 = /\*\*([^*]+)\*\*.*?(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/g;
+      // Pattern 2: - Titre (horaire)
+      const pattern2 = /-\s*([^(]+)\s*\((\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})\)/g;
+      // Pattern 3: Horaire: Titre
+      const pattern3 = /(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})\s*:\s*([^\n]+)/g;
+      
+      const parseMatch = (title: string, startTime: string, endTime: string) => {
+        const cleanTitle = title.trim().replace(/[*-]/g, '').trim();
+        const start = startTime.replace('h', ':');
+        const end = endTime.replace('h', ':');
+        return {
+          title: cleanTitle,
+          description: '',
+          startDateTime: `${targetDateStr}T${start}:00`,
+          endDateTime: `${targetDateStr}T${end}:00`
+        };
+      };
+      
+      // Essayer tous les patterns
+      let match;
+      while ((match = pattern1.exec(suggestion)) !== null) {
+        suggestedEvents.push(parseMatch(match[1], match[2], match[3]));
+      }
+      while ((match = pattern2.exec(suggestion)) !== null) {
+        suggestedEvents.push(parseMatch(match[1], match[2], match[3]));
+      }
+      while ((match = pattern3.exec(suggestion)) !== null) {
+        suggestedEvents.push(parseMatch(match[3], match[1], match[2]));
+      }
+      
+      console.log('Extracted events from text patterns:', suggestedEvents.length);
+      
+      // Si toujours aucun événement, créer des suggestions par défaut basées sur les données
+      if (suggestedEvents.length === 0 && (tasks.length > 0 || habits.length > 0)) {
+        console.log('Creating default event suggestions from user data');
         
-        console.log('Extracted events from text:', suggestedEvents.length);
+        let hour = 9;
+        
+        // Ajouter les tâches prioritaires
+        const priorityTasks = tasks.filter((t: any) => t.priority === 'high').slice(0, 2);
+        priorityTasks.forEach((task: any) => {
+          suggestedEvents.push({
+            title: `Tâche: ${task.title}`,
+            description: task.description || '',
+            startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
+            endDateTime: `${targetDateStr}T${(hour + 1).toString().padStart(2, '0')}:00:00`
+          });
+          hour += 2;
+        });
+        
+        // Ajouter les habitudes
+        habits.slice(0, 2).forEach((habit: any) => {
+          suggestedEvents.push({
+            title: `Habitude: ${habit.title}`,
+            description: `Fréquence: ${habit.frequency}`,
+            startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
+            endDateTime: `${targetDateStr}T${(hour).toString().padStart(2, '0')}:30:00`
+          });
+          hour += 1;
+        });
+        
+        console.log('Created default events:', suggestedEvents.length);
       }
     }
     
