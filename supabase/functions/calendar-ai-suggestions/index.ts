@@ -83,14 +83,17 @@ Données de l'utilisateur:
 - Événements Google Calendar (${calendarEvents.length}): ${calendarEvents.map((e: any) => `"${e.summary}" (${e.start?.dateTime || e.start?.date} - ${e.end?.dateTime || e.end?.date})`).join(', ')}
 
 Fournis des suggestions concrètes et actionnables dans les catégories suivantes:
-1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés
+1. 📅 **Planning de la journée**: Propose un ordre optimal pour accomplir les tâches avec des horaires suggérés (format: 09h00 - 10h00)
 2. 🎯 **Tâches prioritaires**: Identifie les 3 tâches les plus importantes
-3. 💪 **Habitudes**: Suggère le meilleur moment pour les habitudes
-4. 🚀 **Avancement des objectifs**: Propose des actions concrètes
-5. ➕ **Événements à créer**: Utilise la fonction suggest_events pour proposer des événements
+3. 💪 **Habitudes**: Suggère le meilleur moment pour les habitudes (format: 09h00 - 10h00)
+4. 🚀 **Avancement des objectifs**: Propose des actions concrètes avec horaires (format: 09h00 - 10h00)
+5. ➕ **Événements à créer**: Utilise la fonction suggest_events pour proposer des événements avec des horaires précis
 
-**IMPORTANT**: Ta réponse DOIT être formatée en Markdown avec des emojis pour rendre le contenu engageant.
-Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
+**IMPORTANT**: 
+- Ta réponse DOIT être formatée en Markdown avec des emojis
+- Pour chaque activité suggérée, INDIQUE TOUJOURS un créneau horaire au format "09h00 - 10h00"
+- Sois concis, motivant et pratique
+- Limite ta réponse à 400 mots maximum`;
 
     console.log('Calling Gemini API with function calling...');
     const aiResponse = await fetch(
@@ -168,16 +171,48 @@ Sois concis, motivant et pratique. Limite ta réponse à 400 mots maximum.`;
     }
 
     const aiData = await aiResponse.json();
+    console.log('Full Gemini response:', JSON.stringify(aiData, null, 2));
+    
     const suggestion = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Aucune suggestion disponible";
 
     // Extraire les événements suggérés via function calling
     let suggestedEvents: any[] = [];
     
     const functionCall = aiData.candidates?.[0]?.content?.parts?.find((part: any) => part.functionCall);
+    console.log('Function call found:', !!functionCall);
+    
     if (functionCall?.functionCall?.name === "suggest_events") {
       const args = functionCall.functionCall.args;
       suggestedEvents = args?.events || [];
       console.log('Extracted events from function call:', suggestedEvents.length);
+    } else {
+      // Si pas de function call, essayer d'extraire du texte
+      console.log('No function call, parsing text for events');
+      const eventMatches = suggestion.match(/\*\*([^*]+)\*\*.*?(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/g);
+      if (eventMatches) {
+        suggestedEvents = eventMatches.map((match: string) => {
+          const titleMatch = match.match(/\*\*([^*]+)\*\*/);
+          const timeMatch = match.match(/(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/);
+          
+          if (titleMatch && timeMatch) {
+            const title = titleMatch[1];
+            const startTime = timeMatch[1].replace('h', ':');
+            const endTime = timeMatch[2].replace('h', ':');
+            
+            const targetDateStr = new Date(date).toISOString().split('T')[0];
+            
+            return {
+              title,
+              description: '',
+              startDateTime: `${targetDateStr}T${startTime}:00`,
+              endDateTime: `${targetDateStr}T${endTime}:00`
+            };
+          }
+          return null;
+        }).filter(Boolean);
+        
+        console.log('Extracted events from text:', suggestedEvents.length);
+      }
     }
     
     console.log('Final suggested events:', suggestedEvents);
