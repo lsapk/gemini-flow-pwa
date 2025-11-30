@@ -91,27 +91,27 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-2 sm:p-0">
-      {/* En-tête */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-2 sm:p-4 md:p-6">
+      {/* En-tête avec gradient moderne */}
+      <div className="mb-6">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold gradient-text mb-2 animate-fade-in">
           Tableau de Bord
         </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">Vue d'ensemble de votre productivité</p>
+        <p className="text-sm sm:text-base text-muted-foreground">Vue d'ensemble de votre productivité</p>
       </div>
 
-      {/* Raccourcis rapides */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Accès rapide</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+      {/* Raccourcis rapides avec design moderne */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-heading font-semibold">Accès rapide</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {quickLinks.map((link) => (
-            <Link key={link.path} to={link.path}>
-              <Card className="hover:shadow-md transition-all hover:scale-105 cursor-pointer">
-                <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-1.5 sm:gap-2">
-                  <div className={`p-2 sm:p-3 rounded-lg ${link.color}`}>
-                    <link.icon className="h-5 w-5 sm:h-6 sm:w-6" />
+            <Link key={link.path} to={link.path} className="group">
+              <Card className="dashboard-card border-border/30 hover:border-primary/30 cursor-pointer">
+                <CardContent className="p-4 flex flex-col items-center gap-3">
+                  <div className={`p-3 rounded-xl ${link.color} transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg`}>
+                    <link.icon className="h-6 w-6" />
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-center">{link.label}</span>
+                  <span className="text-sm font-medium text-center group-hover:text-primary transition-colors">{link.label}</span>
                 </CardContent>
               </Card>
             </Link>
@@ -119,58 +119,61 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Score de productivité */}
-      <Card>
-        <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+      {/* Score de productivité moderne avec glassmorphism */}
+      <Card className="dashboard-card border-primary/20 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <CardHeader className="pb-3 relative z-10">
+          <CardTitle className="flex items-center gap-2 text-xl font-heading">
+            <div className="p-2 rounded-lg bg-primary/10 animate-glow-pulse">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
             Score de Productivité
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4">
+        <CardContent className="space-y-4 relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-3xl sm:text-4xl font-bold">{productivityScore}</div>
-              <p className={`text-xs sm:text-sm font-medium ${scoreLevel.color}`}>{scoreLevel.label}</p>
+              <div className="text-5xl font-heading font-extrabold gradient-text">{productivityScore}</div>
+              <p className={`text-sm font-medium mt-1 ${scoreLevel.color}`}>{scoreLevel.label}</p>
             </div>
-            <Badge variant="secondary" className="text-sm sm:text-lg px-2 py-1 sm:px-4 sm:py-2">
+            <Badge variant="secondary" className="text-lg px-4 py-2 rounded-xl bg-gradient-to-br from-warning/20 to-warning/10 border-warning/30 animate-float">
               {streakCount} jours 🔥
             </Badge>
           </div>
           
-          <Progress value={productivityScore} className="h-2 sm:h-3" />
+          <Progress value={productivityScore} className="h-3 rounded-full" />
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2 sm:pt-4">
-            <div className="space-y-0.5 sm:space-y-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+          <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="space-y-1 p-3 rounded-xl bg-success/5 hover:bg-success/10 transition-colors border border-success/20">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 <span>Tâches</span>
               </div>
-              <div className="text-lg sm:text-xl font-semibold">{Math.round(taskCompletionRate)}%</div>
+              <div className="text-2xl font-bold text-success">{Math.round(taskCompletionRate)}%</div>
             </div>
             
-            <div className="space-y-0.5 sm:space-y-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+            <div className="space-y-1 p-3 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 text-primary" />
                 <span>Focus</span>
               </div>
-              <div className="text-lg sm:text-xl font-semibold">{Math.round(totalFocusTime / 60)}h</div>
+              <div className="text-2xl font-bold text-primary">{Math.round(totalFocusTime / 60)}h</div>
             </div>
             
-            <div className="space-y-0.5 sm:space-y-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
+            <div className="space-y-1 p-3 rounded-xl bg-warning/5 hover:bg-warning/10 transition-colors border border-warning/20">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Zap className="h-4 w-4 text-warning" />
                 <span>Série</span>
               </div>
-              <div className="text-lg sm:text-xl font-semibold">{streakCount}j</div>
+              <div className="text-2xl font-bold text-warning">{streakCount}j</div>
             </div>
             
-            <div className="space-y-0.5 sm:space-y-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Target className="h-3 w-3 sm:h-4 sm:w-4 text-info" />
+            <div className="space-y-1 p-3 rounded-xl bg-info/5 hover:bg-info/10 transition-colors border border-info/20">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Target className="h-4 w-4 text-info" />
                 <span>Habitudes</span>
               </div>
-              <div className="text-lg sm:text-xl font-semibold">{activeHabits}</div>
+              <div className="text-2xl font-bold text-info">{activeHabits}</div>
             </div>
           </div>
         </CardContent>
