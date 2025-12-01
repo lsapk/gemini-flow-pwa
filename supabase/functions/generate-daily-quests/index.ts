@@ -12,18 +12,31 @@ serve(async (req) => {
   }
 
   try {
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    console.log("Service role key exists:", !!serviceRoleKey);
+    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      serviceRoleKey ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     );
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from the request token to know who to generate quests for
     const { data: { user } } = await supabase.auth.getUser(token);
 
     if (!user) {
       throw new Error("Not authenticated");
     }
+    
+    console.log("Generating quests for user:", user.id);
 
     // Get user's activity data
     const { data: tasks } = await supabase
