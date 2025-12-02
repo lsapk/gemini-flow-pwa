@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAchievementTracking } from "@/hooks/useAchievementTracking";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -50,6 +51,7 @@ export default function Habits() {
   const [activeTab, setActiveTab] = useState("active");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
+  useAchievementTracking(); // Suivre les achievements automatiquement
 
   const fetchHabits = async (dateToUse: Date = selectedDate) => {
     if (!user) return;
