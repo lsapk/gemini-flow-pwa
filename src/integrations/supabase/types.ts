@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_id: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          title: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          title: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          title?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       active_powerups: {
         Row: {
           created_at: string
@@ -37,6 +70,30 @@ export type Database = {
           id?: string
           multiplier?: number
           powerup_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_credits: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          last_updated: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          id?: string
+          last_updated?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          last_updated?: string
           user_id?: string
         }
         Relationships: []
@@ -2083,6 +2140,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unlockables: {
+        Row: {
+          created_at: string
+          id: string
+          unlockable_id: string
+          unlockable_type: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          unlockable_id: string
+          unlockable_type: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          unlockable_id?: string
+          unlockable_type?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       unlocked_achievements: {
         Row: {
