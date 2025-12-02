@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useAchievementTracking } from "@/hooks/useAchievementTracking";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
@@ -40,6 +41,7 @@ export default function Focus() {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  useAchievementTracking(); // Suivre les achievements automatiquement
 
   useEffect(() => {
     if (!currentSessionId) {

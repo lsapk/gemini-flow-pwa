@@ -5,12 +5,34 @@ import { Badge } from "@/components/ui/badge";
 import { Target, CheckCircle2, Clock, TrendingUp, RefreshCw } from "lucide-react";
 import { useQuests } from "@/hooks/useQuests";
 import { useGenerateDailyQuests } from "@/hooks/useGenerateDailyQuests";
+import { useAchievements } from "@/hooks/useAchievements";
+import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useEffect } from "react";
 
 export const QuestBoard = () => {
   const { quests, completedQuests, isLoading, completeQuest } = useQuests();
   const { generateQuests, isGenerating } = useGenerateDailyQuests();
+  const { unlockAchievement } = useAchievements();
+  const { profile } = usePlayerProfile();
+
+  // Débloquer des achievements basés sur les quêtes complétées
+  useEffect(() => {
+    if (completedQuests.length >= 1) {
+      unlockAchievement("first_quest");
+    }
+    if (completedQuests.length >= 10) {
+      unlockAchievement("quest_master");
+    }
+  }, [completedQuests.length, unlockAchievement]);
+
+  // Débloquer l'achievement niveau 10
+  useEffect(() => {
+    if (profile && profile.level >= 10) {
+      unlockAchievement("level_10");
+    }
+  }, [profile?.level, unlockAchievement]);
 
   if (isLoading) {
     return (

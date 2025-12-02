@@ -3,8 +3,9 @@ import { CyberAvatar } from "@/components/gamification/CyberAvatar";
 import { XPBar } from "@/components/gamification/XPBar";
 import { QuestBoard } from "@/components/gamification/QuestBoard";
 import { PowerUpShop } from "@/components/gamification/PowerUpShop";
+import { AchievementsList } from "@/components/gamification/AchievementsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Gamepad2, Target, ShoppingBag } from "lucide-react";
+import { Gamepad2, Target, ShoppingBag, Trophy } from "lucide-react";
 
 export default function Gamification() {
   return (
@@ -36,12 +37,16 @@ export default function Gamification() {
           <XPBar />
         </div>
 
-        {/* Tabs pour Quêtes et Shop */}
+        {/* Tabs pour Quêtes, Achievements et Shop */}
         <Tabs defaultValue="quests" className="space-y-6">
           <TabsList className="glass-morphism">
             <TabsTrigger value="quests" className="gap-2">
               <Target className="w-4 h-4" />
               Quêtes
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="gap-2">
+              <Trophy className="w-4 h-4" />
+              Achievements
             </TabsTrigger>
             <TabsTrigger value="shop" className="gap-2">
               <ShoppingBag className="w-4 h-4" />
@@ -51,6 +56,10 @@ export default function Gamification() {
 
           <TabsContent value="quests">
             <QuestBoard />
+          </TabsContent>
+
+          <TabsContent value="achievements">
+            <AchievementsList />
           </TabsContent>
 
           <TabsContent value="shop">
