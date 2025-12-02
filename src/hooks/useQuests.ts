@@ -65,6 +65,11 @@ export const useQuests = () => {
       const quest = quests?.find(q => q.id === questId);
       if (!quest) throw new Error("Quest not found");
 
+      // Vérifier que la progression est suffisante
+      if (quest.current_progress < quest.target_value) {
+        throw new Error("Quest not yet completed");
+      }
+
       // Mark quest as completed
       const { error: questError } = await supabase
         .from("quests")
@@ -84,7 +89,7 @@ export const useQuests = () => {
         .from("player_profiles")
         .select("experience_points, credits, total_quests_completed")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         const { error: profileError } = await supabase
@@ -108,6 +113,13 @@ export const useQuests = () => {
       toast({
         title: "🎯 Quête Terminée !",
         description: `+${quest.reward_xp} XP | +${quest.reward_credits} Crédits`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
