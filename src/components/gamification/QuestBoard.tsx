@@ -7,6 +7,7 @@ import { useQuests } from "@/hooks/useQuests";
 import { useGenerateDailyQuests } from "@/hooks/useGenerateDailyQuests";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
+import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEffect } from "react";
@@ -16,6 +17,7 @@ export const QuestBoard = () => {
   const { generateQuests, isGenerating } = useGenerateDailyQuests();
   const { unlockAchievement } = useAchievements();
   const { profile } = usePlayerProfile();
+  const { updateQuestProgress } = useQuestProgressTracking();
 
   // Débloquer des achievements basés sur les quêtes complétées
   useEffect(() => {
@@ -84,6 +86,15 @@ export const QuestBoard = () => {
           </div>
 
           <div className="flex gap-2">
+            <Button
+              onClick={() => updateQuestProgress()}
+              variant="ghost"
+              size="sm"
+              className="border-primary/30"
+              title="Rafraîchir la progression"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
             <Button
               onClick={() => generateQuests()}
               disabled={isGenerating}

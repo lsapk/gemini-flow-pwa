@@ -4,10 +4,16 @@ import { XPBar } from "@/components/gamification/XPBar";
 import { QuestBoard } from "@/components/gamification/QuestBoard";
 import { PowerUpShop } from "@/components/gamification/PowerUpShop";
 import { AchievementsList } from "@/components/gamification/AchievementsList";
+import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
+import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Gamepad2, Target, ShoppingBag, Trophy } from "lucide-react";
 
 export default function Gamification() {
+  // S'assurer que le profil joueur existe
+  useEnsurePlayerProfile();
+  // Suivre automatiquement la progression des quêtes
+  useQuestProgressTracking();
   return (
     <AppLayout>
       <div className="space-y-6">
