@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Target, CheckCircle2, Clock, TrendingUp, RefreshCw } from "lucide-react";
-import { useQuests } from "@/hooks/useQuests";
+import { useQuests, Quest } from "@/hooks/useQuests";
 import { useGenerateDailyQuests } from "@/hooks/useGenerateDailyQuests";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
@@ -12,6 +12,92 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEffect } from "react";
 
+interface QuestCardProps {
+  quest: Quest;
+  getCategoryColor: (category: string) => string;
+  getQuestTypeIcon: (type: string) => string;
+  getQuestTypeBadgeColor: (type: string) => string;
+  completeQuest: (id: string) => void;
+}
+
+const QuestCard = ({ quest, getCategoryColor, getQuestTypeIcon, getQuestTypeBadgeColor, completeQuest }: QuestCardProps) => {
+  const progress = (quest.current_progress / quest.target_value) * 100;
+  const isCompleted = progress >= 100;
+
+  return (
+    <div
+      className={`p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+        isCompleted 
+          ? "bg-success/10 border-success/30 glow-effect-success" 
+          : "bg-background/50 border-border/30 backdrop-blur"
+      }`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start gap-3 flex-1">
+          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getCategoryColor(quest.category)} flex items-center justify-center text-xl`}>
+            {getQuestTypeIcon(quest.quest_type)}
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="font-heading text-foreground">
+                {quest.title}
+              </h3>
+              <Badge variant="outline" className={`text-xs ${getQuestTypeBadgeColor(quest.quest_type)}`}>
+                {quest.quest_type}
+              </Badge>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-2">
+              {quest.description}
+            </p>
+
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                +{quest.reward_xp} XP
+              </span>
+              <span>
+                💰 +{quest.reward_credits} crédits
+              </span>
+              {quest.expires_at && (
+                <span className="flex items-center gap-1 text-warning">
+                  <Clock className="w-3 h-3" />
+                  {formatDistanceToNow(new Date(quest.expires_at), { 
+                    addSuffix: true, 
+                    locale: fr 
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {isCompleted && (
+          <Button
+            onClick={() => completeQuest(quest.id)}
+            className="bg-gradient-to-r from-success to-success-glow hover:scale-105 transition-transform shrink-0"
+            size="sm"
+          >
+            <CheckCircle2 className="w-4 h-4 mr-1" />
+            Réclamer
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Progression</span>
+          <span className="font-heading text-primary">
+            {quest.current_progress} / {quest.target_value}
+          </span>
+        </div>
+        <Progress value={Math.min(progress, 100)} className="h-2" />
+      </div>
+    </div>
+  );
+};
+
 export const QuestBoard = () => {
   const { quests, completedQuests, isLoading, completeQuest } = useQuests();
   const { generateQuests, isGenerating } = useGenerateDailyQuests();
@@ -19,7 +105,6 @@ export const QuestBoard = () => {
   const { profile } = usePlayerProfile();
   const { updateQuestProgress } = useQuestProgressTracking();
 
-  // Débloquer des achievements basés sur les quêtes complétées
   useEffect(() => {
     if (completedQuests.length >= 1) {
       unlockAchievement("first_quest");
@@ -29,24 +114,11 @@ export const QuestBoard = () => {
     }
   }, [completedQuests.length, unlockAchievement]);
 
-  // Débloquer l'achievement niveau 10
   useEffect(() => {
     if (profile && profile.level >= 10) {
       unlockAchievement("level_10");
     }
   }, [profile?.level, unlockAchievement]);
-
-  if (isLoading) {
-    return (
-      <Card className="glass-morphism p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-primary/20 rounded" />
-          <div className="h-20 bg-primary/10 rounded" />
-          <div className="h-20 bg-primary/10 rounded" />
-        </div>
-      </Card>
-    );
-  }
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -67,30 +139,50 @@ export const QuestBoard = () => {
     return icons[type as keyof typeof icons] || "🎯";
   };
 
+  const getQuestTypeBadgeColor = (type: string) => {
+    switch (type) {
+      case "daily": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "weekly": return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+      case "achievement": return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      default: return "";
+    }
+  };
+
+  const dailyQuests = quests.filter(q => q.quest_type === "daily");
+  const weeklyQuests = quests.filter(q => q.quest_type === "weekly");
+  const achievementQuests = quests.filter(q => q.quest_type === "achievement");
+
+  if (isLoading) {
+    return (
+      <Card className="glass-morphism p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-primary/20 rounded" />
+          <div className="h-20 bg-primary/10 rounded" />
+          <div className="h-20 bg-primary/10 rounded" />
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card className="glass-morphism p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center glow-effect-primary">
               <Target className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-heading gradient-text">
-                Quêtes Actives
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {quests.length} quêtes en cours
-              </p>
+              <h2 className="text-2xl font-heading gradient-text">Quêtes Actives</h2>
+              <p className="text-sm text-muted-foreground">{quests.length} quêtes en cours</p>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               onClick={() => updateQuestProgress()}
               variant="ghost"
               size="sm"
-              className="border-primary/30"
               title="Rafraîchir la progression"
             >
               <RefreshCw className="w-4 h-4" />
@@ -103,7 +195,7 @@ export const QuestBoard = () => {
               className="border-primary/30"
             >
               <RefreshCw className={`w-4 h-4 mr-1 ${isGenerating ? "animate-spin" : ""}`} />
-              Générer Quêtes
+              Générer
             </Button>
             <Badge variant="outline" className="border-success/50">
               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -115,104 +207,76 @@ export const QuestBoard = () => {
         {quests.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🎯</div>
-            <p className="text-muted-foreground mb-2">
-              Aucune quête active pour le moment
-            </p>
-            <p className="text-sm text-muted-foreground/70">
-              Complétez des tâches et habitudes pour débloquer de nouvelles quêtes
-            </p>
+            <p className="text-muted-foreground mb-2">Aucune quête active pour le moment</p>
+            <Button onClick={() => generateQuests()} disabled={isGenerating} className="mt-4">
+              Générer des quêtes
+            </Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {quests.map((quest) => {
-              const progress = (quest.current_progress / quest.target_value) * 100;
-              const isCompleted = progress >= 100;
-
-              return (
-                <div
-                  key={quest.id}
-                  className={`p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
-                    isCompleted 
-                      ? "bg-success/10 border-success/30 glow-effect-success" 
-                      : "bg-background/50 border-border/30 backdrop-blur"
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getCategoryColor(quest.category)} flex items-center justify-center text-xl`}>
-                        {getQuestTypeIcon(quest.quest_type)}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-heading text-foreground">
-                            {quest.title}
-                          </h3>
-                          <Badge variant="outline" className="text-xs">
-                            {quest.quest_type}
-                          </Badge>
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {quest.description}
-                        </p>
-
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" />
-                            +{quest.reward_xp} XP
-                          </span>
-                          <span>
-                            💰 +{quest.reward_credits} crédits
-                          </span>
-                          {quest.expires_at && (
-                            <span className="flex items-center gap-1 text-warning">
-                              <Clock className="w-3 h-3" />
-                              {formatDistanceToNow(new Date(quest.expires_at), { 
-                                addSuffix: true, 
-                                locale: fr 
-                              })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isCompleted && (
-                      <Button
-                        onClick={() => completeQuest(quest.id)}
-                        className="bg-gradient-to-r from-success to-success-glow hover:scale-105 transition-transform"
-                        size="sm"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Réclamer
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        Progression
-                      </span>
-                      <span className="font-heading text-primary">
-                        {quest.current_progress} / {quest.target_value}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={progress} 
-                      className="h-2"
+          <div className="space-y-6">
+            {dailyQuests.length > 0 && (
+              <div>
+                <h3 className="text-sm font-heading text-muted-foreground mb-3 flex items-center gap-2">
+                  🌅 Quêtes Quotidiennes ({dailyQuests.length})
+                </h3>
+                <div className="space-y-3">
+                  {dailyQuests.map((quest) => (
+                    <QuestCard 
+                      key={quest.id} 
+                      quest={quest} 
+                      getCategoryColor={getCategoryColor}
+                      getQuestTypeIcon={getQuestTypeIcon}
+                      getQuestTypeBadgeColor={getQuestTypeBadgeColor}
+                      completeQuest={completeQuest}
                     />
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {weeklyQuests.length > 0 && (
+              <div>
+                <h3 className="text-sm font-heading text-muted-foreground mb-3 flex items-center gap-2">
+                  📅 Quêtes Hebdomadaires ({weeklyQuests.length})
+                </h3>
+                <div className="space-y-3">
+                  {weeklyQuests.map((quest) => (
+                    <QuestCard 
+                      key={quest.id} 
+                      quest={quest} 
+                      getCategoryColor={getCategoryColor}
+                      getQuestTypeIcon={getQuestTypeIcon}
+                      getQuestTypeBadgeColor={getQuestTypeBadgeColor}
+                      completeQuest={completeQuest}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {achievementQuests.length > 0 && (
+              <div>
+                <h3 className="text-sm font-heading text-muted-foreground mb-3 flex items-center gap-2">
+                  🏆 Accomplissements ({achievementQuests.length})
+                </h3>
+                <div className="space-y-3">
+                  {achievementQuests.map((quest) => (
+                    <QuestCard 
+                      key={quest.id} 
+                      quest={quest} 
+                      getCategoryColor={getCategoryColor}
+                      getQuestTypeIcon={getQuestTypeIcon}
+                      getQuestTypeBadgeColor={getQuestTypeBadgeColor}
+                      completeQuest={completeQuest}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
 
-      {/* Recently Completed */}
       {completedQuests.length > 0 && (
         <Card className="glass-morphism p-4">
           <h3 className="text-sm font-heading text-muted-foreground mb-3 flex items-center gap-2">
@@ -220,14 +284,12 @@ export const QuestBoard = () => {
             Récemment terminées
           </h3>
           <div className="space-y-2">
-            {completedQuests.slice(0, 3).map((quest) => (
+            {completedQuests.slice(0, 5).map((quest) => (
               <div
                 key={quest.id}
                 className="flex items-center justify-between p-2 rounded-lg bg-success/5 border border-success/20"
               >
-                <span className="text-sm text-muted-foreground">
-                  {quest.title}
-                </span>
+                <span className="text-sm text-muted-foreground">{quest.title}</span>
                 <Badge variant="outline" className="text-xs border-success/50 text-success">
                   +{quest.reward_xp} XP
                 </Badge>
