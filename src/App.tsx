@@ -25,6 +25,7 @@ import Calendar from "./pages/Calendar";
 import Gamification from "./pages/Gamification";
 import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
+import { XPNotificationProvider } from "./components/gamification/XPNotification";
 
 const queryClient = new QueryClient();
 
@@ -55,10 +56,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
+          <XPNotificationProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AuthProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />
@@ -162,8 +164,9 @@ function App() {
                 } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </AuthProvider>
-          </BrowserRouter>
+              </AuthProvider>
+            </BrowserRouter>
+          </XPNotificationProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

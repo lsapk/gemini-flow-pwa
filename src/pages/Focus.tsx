@@ -8,6 +8,7 @@ import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, Histor
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useAchievementTracking } from "@/hooks/useAchievementTracking";
+import { useGamificationRewards } from "@/hooks/useGamificationRewards";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
@@ -41,6 +42,7 @@ export default function Focus() {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { awardXP } = useGamificationRewards();
   useAchievementTracking(); // Suivre les achievements automatiquement
 
   useEffect(() => {
@@ -249,6 +251,15 @@ export default function Focus() {
           completed_at: new Date().toISOString()
         });
       
+      // Award XP based on session duration
+      if (sessionData.duration >= 45) {
+        awardXP('focus_session_long');
+      } else if (sessionData.duration >= 25) {
+        awardXP('focus_session_pomodoro');
+      } else {
+        awardXP('focus_session_mini');
+      }
+
       toast({
         title: "🎉 Session terminée !",
         description: `Félicitations ! Vous avez complété une session de ${duration} minutes.`,

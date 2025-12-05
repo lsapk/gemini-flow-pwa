@@ -13,6 +13,7 @@ import JournalEntryCard from "@/components/JournalEntryCard";
 import { JournalStats } from "@/components/ui/JournalStats";
 import { Plus, BookOpen } from "lucide-react";
 import { JournalEntry } from "@/types";
+import { useGamificationRewards } from "@/hooks/useGamificationRewards";
 
 const moods = [
   { value: "excellent", label: "Excellent", color: "bg-green-100 text-green-800" },
@@ -85,6 +86,7 @@ const moods = [
 
 export default function Journal() {
   const { user } = useAuth();
+  const { awardXP } = useGamificationRewards();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
