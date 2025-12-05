@@ -1,4 +1,3 @@
-
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,12 +10,20 @@ import {
   Zap,
   BookOpen,
   ListTodo,
-  Flame
+  Flame,
+  Trophy
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
-
+import { GamificationWidget } from "@/components/gamification/GamificationWidget";
+import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
+import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 export default function Dashboard() {
+  // Ensure player profile exists
+  useEnsurePlayerProfile();
+  // Track quest progress
+  useQuestProgressTracking();
+
   const { 
     taskCompletionRate, 
     totalFocusTime, 
@@ -87,7 +94,7 @@ export default function Dashboard() {
     { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
     { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
     { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
-    { icon: Clock, label: "Réflexion", path: "/reflection", color: "bg-blue-500/10 text-blue-500" },
+    { icon: Trophy, label: "Arène", path: "/gamification", color: "bg-warning/10 text-warning" },
   ];
 
   return (
@@ -178,6 +185,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Gamification Widget */}
+      <GamificationWidget />
 
       {/* Insights IA */}
       <SmartInsightsWidget />

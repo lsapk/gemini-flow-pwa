@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAchievementTracking } from "@/hooks/useAchievementTracking";
+import { useGamificationRewards } from "@/hooks/useGamificationRewards";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -51,6 +52,7 @@ export default function Habits() {
   const [activeTab, setActiveTab] = useState("active");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
+  const { awardXP, checkAndRewardStreak } = useGamificationRewards();
   useAchievementTracking(); // Suivre les achievements automatiquement
 
   const fetchHabits = async (dateToUse: Date = selectedDate) => {
@@ -221,6 +223,12 @@ export default function Habits() {
               streak: newStreak
             })
             .eq('id', habitId);
+
+          // Award XP for habit completion
+          awardXP('habit_completed');
+          
+          // Check for streak milestones
+          checkAndRewardStreak(newStreak);
         }
 
         toast.success('Habitude complétée !');

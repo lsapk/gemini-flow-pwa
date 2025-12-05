@@ -8,6 +8,7 @@ import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
 import EditTaskModal from "@/components/modals/EditTaskModal";
+import { useGamificationRewards } from "@/hooks/useGamificationRewards";
 import {
   Tabs,
   TabsContent,
@@ -55,6 +56,7 @@ interface Subtask {
 export default function Tasks() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { awardXP } = useGamificationRewards();
   
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -174,6 +176,8 @@ export default function Tasks() {
 
   const handleToggleComplete = async (id: string, completed: boolean) => {
     try {
+      const task = tasks.find(t => t.id === id);
+      
       const { error } = await supabase
         .from('tasks')
         .update({ completed: !completed })
@@ -181,6 +185,12 @@ export default function Tasks() {
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      // Award XP when completing a task (not uncompleting)
+      if (!completed && task) {
+        const isHighPriority = task.priority === 'high';
+        awardXP(isHighPriority ? 'task_high_priority' : 'task_completed');
       }
 
       toast({
