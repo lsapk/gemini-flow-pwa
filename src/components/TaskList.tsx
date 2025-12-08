@@ -1,14 +1,30 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Edit, Trash2, AlertCircle, CheckSquare, Clock, ChevronDown, ChevronRight, Plus, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import React from "react";
 import { SubtaskList } from "./SubtaskList";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type Task = {
   id: string;
@@ -28,6 +44,7 @@ interface TaskListProps {
   onToggleComplete: (id: string, completed: boolean) => void;
   subtasks?: { [taskId: string]: any[] };
   onRefreshSubtasks?: () => void;
+  onReorder?: (tasks: Task[]) => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -48,6 +65,167 @@ const getPriorityIcon = (priority: string) => {
   }
 };
 
+interface SortableTaskCardProps {
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+  onToggleComplete: (id: string, completed: boolean) => void;
+  taskSubtasks: any[];
+  isExpanded: boolean;
+  onToggleExpanded: (taskId: string) => void;
+  onRefreshSubtasks: () => void;
+}
+
+function SortableTaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onToggleComplete,
+  taskSubtasks,
+  isExpanded,
+  onToggleExpanded,
+  onRefreshSubtasks,
+}: SortableTaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card
+        className={`
+          flex flex-col justify-between
+          hover:shadow-md transition-shadow
+          border
+          ${task.completed ? "bg-muted/60 opacity-80" : ""}
+        `}
+      >
+        <CardContent className="p-4 flex flex-col gap-2">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-2 flex-1">
+              <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors flex-shrink-0 mt-0.5"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+              
+              <Checkbox
+                checked={task.completed}
+                onCheckedChange={() => onToggleComplete(task.id, task.completed)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
+                    {task.title}
+                  </h3>
+                </div>
+                {task.description && (
+                  <p className="text-xs text-muted-foreground break-words mb-2">
+                    {task.description}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(task)}
+                aria-label="Modifier"
+                className="h-7 w-7 p-0"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(task.id)}
+                aria-label="Supprimer"
+                className="h-7 w-7 p-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
+              {getPriorityIcon(task.priority)} {task.priority}
+            </Badge>
+            {task.due_date && (
+              <Badge variant="outline" className="text-xs">
+                Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
+              </Badge>
+            )}
+            {task.created_at && (
+              <span className="text-xs text-muted-foreground ml-auto">
+                création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-muted/50">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleExpanded(task.id)}
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              title={isExpanded ? "Masquer les sous-tâches" : "Afficher les sous-tâches"}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {taskSubtasks.length} sous-tâche{taskSubtasks.length !== 1 ? 's' : ''}
+            </span>
+            <div className="ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (!isExpanded) {
+                    onToggleExpanded(task.id);
+                  }
+                }}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                title="Ajouter une sous-tâche"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {isExpanded && (
+            <SubtaskList
+              taskId={task.id}
+              subtasks={taskSubtasks}
+              onRefresh={onRefreshSubtasks}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function TaskList({
   tasks,
   loading,
@@ -55,9 +233,21 @@ export default function TaskList({
   onDelete,
   onToggleComplete,
   subtasks = {},
-  onRefreshSubtasks = () => {}
+  onRefreshSubtasks = () => {},
+  onReorder
 }: TaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const toggleExpanded = (taskId: string) => {
     const newExpanded = new Set(expandedTasks);
@@ -67,6 +257,17 @@ export default function TaskList({
       newExpanded.add(taskId);
     }
     setExpandedTasks(newExpanded);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      const newIndex = tasks.findIndex((t) => t.id === over.id);
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      onReorder?.(newTasks);
+    }
   };
 
   if (loading) {
@@ -104,126 +305,28 @@ export default function TaskList({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-      {tasks.map(task => {
-        const taskSubtasks = subtasks[task.id] || [];
-        const isExpanded = expandedTasks.has(task.id);
-        
-        return (
-          <Card 
-            key={task.id}
-            className={`
-              flex flex-col justify-between
-              hover:shadow-md transition-shadow
-              border
-              ${task.completed ? "bg-muted/60 opacity-80" : ""}
-            `}
-          >
-            <CardContent className="p-4 flex flex-col gap-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={() => onToggleComplete(task.id, task.completed)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className={`font-semibold ${task.completed ? "line-through text-muted-foreground" : ""} text-base`}>
-                        {task.title}
-                      </h3>
-                    </div>
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground break-words mb-2">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEdit(task)}
-                    aria-label="Modifier"
-                    className="h-7 w-7 p-0"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(task.id)}
-                    aria-label="Supprimer"
-                    className="h-7 w-7 p-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className={`${getPriorityColor(task.priority)} flex items-center gap-1 text-xs`}>
-                  {getPriorityIcon(task.priority)} {task.priority}
-                </Badge>
-                {task.due_date && (
-                  <Badge variant="outline" className="text-xs">
-                    Échéance : {format(new Date(task.due_date), "dd MMM yyyy", { locale: fr })}
-                  </Badge>
-                )}
-                {task.created_at && (
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    création : {format(new Date(task.created_at), "dd MMM", { locale: fr })}
-                  </span>
-                )}
-              </div>
-
-              {/* Contrôles des sous-tâches - toujours visibles */}
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-muted/50">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleExpanded(task.id)}
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                  title={isExpanded ? "Masquer les sous-tâches" : "Afficher les sous-tâches"}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {taskSubtasks.length} sous-tâche{taskSubtasks.length !== 1 ? 's' : ''}
-                </span>
-                <div className="ml-auto">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (!isExpanded) {
-                        setExpandedTasks(prev => new Set([...prev, task.id]));
-                      }
-                    }}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                    title="Ajouter une sous-tâche"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-
-              {isExpanded && (
-                <SubtaskList
-                  taskId={task.id}
-                  subtasks={taskSubtasks}
-                  onRefresh={onRefreshSubtasks}
-                />
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={tasks.map(t => t.id)} strategy={rectSortingStrategy}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+          {tasks.map(task => (
+            <SortableTaskCard
+              key={task.id}
+              task={task}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onToggleComplete={onToggleComplete}
+              taskSubtasks={subtasks[task.id] || []}
+              isExpanded={expandedTasks.has(task.id)}
+              onToggleExpanded={toggleExpanded}
+              onRefreshSubtasks={onRefreshSubtasks}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

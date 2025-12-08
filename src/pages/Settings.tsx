@@ -1,67 +1,63 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/theme-provider";
+import { usePlayerProfile } from "@/hooks/usePlayerProfile";
+import { useAICredits } from "@/hooks/useAICredits";
+import { Link } from "react-router-dom";
 
 import { 
   Settings as SettingsIcon, 
   User, 
   Bell, 
   Palette, 
-  Key, 
-  Shield,
-  Smartphone,
   Moon,
   Sun,
-  Globe,
-  Clock,
   Volume2,
-  VolumeX,
-  Crown,
   Zap,
   Brain,
+  Trophy,
+  Gamepad2,
+  Sparkles,
+  Shield,
+  LogOut,
+  ExternalLink,
+  RefreshCw,
+  Timer,
   Target,
-  Trophy
+  CheckSquare,
+  Flame,
+  Award
 } from "lucide-react";
 
-// Interface pour les données de profil utilisateur
-interface UserProfile {
+interface UserSettings {
   id: string;
-  gemini_api_key?: string;
   notifications_enabled?: boolean;
   sound_enabled?: boolean;
-  dark_mode?: boolean;
-  language?: string;
-  theme?: string;
-  clock_format?: string;
   focus_mode?: boolean;
   karma_points?: number;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export default function Settings() {
+  const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { profile: playerProfile, isLoading: profileLoading } = usePlayerProfile();
+  const { credits: aiCredits } = useAICredits();
   
-  const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [formData, setFormData] = useState({
-    gemini_api_key: "",
     notifications_enabled: true,
     sound_enabled: true,
-    dark_mode: false,
-    language: "fr",
-    theme: "system",
-    clock_format: "24h",
     focus_mode: false
   });
 
@@ -69,121 +65,79 @@ export default function Settings() {
     tasks_completed: 0,
     habits_tracked: 0,
     focus_sessions: 0,
-    streak_days: 0,
-    karma_points: 0
+    focus_minutes: 0,
+    streak_max: 0,
+    goals_completed: 0,
+    journal_entries: 0
   });
 
   useEffect(() => {
     if (user) {
-      fetchUserProfile();
-      fetchUserStats();
+      fetchSettings();
+      fetchStats();
     }
   }, [user]);
 
-  const fetchUserProfile = async () => {
+  const fetchSettings = async () => {
     if (!user) return;
     
     try {
-      // Requête directe vers la table user_settings
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('user_settings')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        // Si le profil n'existe pas, on le crée avec des valeurs par défaut
-        if (profileError.code === 'PGRST116') {
-          await createDefaultProfile();
-        }
+      if (error && error.code !== 'PGRST116') {
+        console.error('Settings fetch error:', error);
         return;
       }
 
-      if (profileData) {
-        // Cast explicite pour éviter les problèmes TypeScript
-        const profile = profileData as any;
-        setUserProfile(profile);
+      if (data) {
+        setSettings(data as UserSettings);
         setFormData({
-          gemini_api_key: profile.gemini_api_key || "",
-          notifications_enabled: profile.notifications_enabled ?? true,
-          sound_enabled: profile.sound_enabled ?? true,
-          dark_mode: profile.dark_mode ?? false,
-          language: profile.language || "fr",
-          theme: profile.theme || "system",
-          clock_format: profile.clock_format || "24h",
-          focus_mode: profile.focus_mode ?? false
+          notifications_enabled: data.notifications_enabled ?? true,
+          sound_enabled: data.sound_enabled ?? true,
+          focus_mode: data.focus_mode ?? false
         });
-        setStats(prev => ({
-          ...prev,
-          karma_points: profile.karma_points || 0
-        }));
       }
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-      // En cas d'erreur, créer un profil par défaut
-      await createDefaultProfile();
+      console.error('Error fetching settings:', error);
     }
   };
 
-  const createDefaultProfile = async () => {
-    if (!user) return;
-    
-    try {
-      const defaultProfile = {
-        id: user.id,
-        gemini_api_key: "",
-        notifications_enabled: true,
-        sound_enabled: true,
-        dark_mode: false,
-        language: "fr",
-        theme: "system",
-        clock_format: "24h",
-        focus_mode: false,
-        karma_points: 0
-      };
-
-      const { data, error } = await supabase
-        .from('user_settings')
-        .insert(defaultProfile)
-        .select()
-        .single();
-
-      if (!error && data) {
-        setUserProfile(data as any);
-      }
-    } catch (error) {
-      console.error('Error creating default profile:', error);
-    }
-  };
-
-  const fetchUserStats = async () => {
+  const fetchStats = async () => {
     if (!user) return;
 
     try {
-      // Récupérer les statistiques utilisateur
-      const [tasksResult, habitsResult, focusResult] = await Promise.allSettled([
+      const [tasksRes, habitsRes, focusRes, goalsRes, journalRes] = await Promise.allSettled([
         supabase.from('tasks').select('id').eq('user_id', user.id).eq('completed', true),
         supabase.from('habits').select('id, streak').eq('user_id', user.id),
-        supabase.from('focus_sessions').select('id').eq('user_id', user.id)
+        supabase.from('focus_sessions').select('duration').eq('user_id', user.id),
+        supabase.from('goals').select('id').eq('user_id', user.id).eq('completed', true),
+        supabase.from('journal_entries').select('id').eq('user_id', user.id)
       ]);
 
-      const tasksCount = tasksResult.status === 'fulfilled' ? (tasksResult.value.data?.length || 0) : 0;
-      const habitsCount = habitsResult.status === 'fulfilled' ? (habitsResult.value.data?.length || 0) : 0;
-      const focusCount = focusResult.status === 'fulfilled' ? (focusResult.value.data?.length || 0) : 0;
-      const maxStreak = habitsResult.status === 'fulfilled' 
-        ? Math.max(...(habitsResult.value.data?.map(h => h.streak || 0) || [0]))
-        : 0;
+      const tasks = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.length || 0) : 0;
+      const habits = habitsRes.status === 'fulfilled' ? (habitsRes.value.data || []) : [];
+      const focusSessions = focusRes.status === 'fulfilled' ? (focusRes.value.data || []) : [];
+      const goals = goalsRes.status === 'fulfilled' ? (goalsRes.value.data?.length || 0) : 0;
+      const journal = journalRes.status === 'fulfilled' ? (journalRes.value.data?.length || 0) : 0;
+
+      const maxStreak = Math.max(...habits.map(h => h.streak || 0), 0);
+      const totalMinutes = focusSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
 
       setStats({
-        tasks_completed: tasksCount,
-        habits_tracked: habitsCount,
-        focus_sessions: focusCount,
-        streak_days: maxStreak,
-        karma_points: userProfile?.karma_points || 0
+        tasks_completed: tasks,
+        habits_tracked: habits.length,
+        focus_sessions: focusSessions.length,
+        focus_minutes: totalMinutes,
+        streak_max: maxStreak,
+        goals_completed: goals,
+        journal_entries: journal
       });
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('Error fetching stats:', error);
     }
   };
 
@@ -192,7 +146,6 @@ export default function Settings() {
     
     setLoading(true);
     try {
-      // Utilisation d'upsert pour créer ou mettre à jour le profil
       const { error } = await supabase
         .from('user_settings')
         .upsert({
@@ -203,266 +156,311 @@ export default function Settings() {
 
       if (error) throw error;
       
-      toast.success("Paramètres sauvegardés avec succès!");
-      fetchUserProfile();
+      toast.success("Paramètres sauvegardés !");
+      fetchSettings();
     } catch (error: any) {
-      toast.error("Erreur lors de la sauvegarde: " + error.message);
+      toast.error("Erreur: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const getBadgeForStat = (statName: string, value: number) => {
-    const badges = {
-      tasks_completed: [
-        { min: 100, label: "🏆 Maître des Tâches", color: "bg-yellow-500" },
-        { min: 50, label: "⭐ Expert Productif", color: "bg-blue-500" },
-        { min: 20, label: "🎯 Organisé", color: "bg-green-500" },
-        { min: 5, label: "🚀 Débutant Motivé", color: "bg-purple-500" }
-      ],
-      habits_tracked: [
-        { min: 10, label: "🧘 Gourou des Habitudes", color: "bg-orange-500" },
-        { min: 5, label: "💪 Discipliné", color: "bg-red-500" },
-        { min: 2, label: "🌱 En Croissance", color: "bg-teal-500" }
-      ],
-      focus_sessions: [
-        { min: 100, label: "🧠 Maître du Focus", color: "bg-indigo-500" },
-        { min: 50, label: "🎯 Concentré", color: "bg-purple-500" },
-        { min: 10, label: "⚡ Focalisé", color: "bg-blue-500" }
-      ],
-      streak_days: [
-        { min: 30, label: "🔥 Série Légendaire", color: "bg-red-600" },
-        { min: 14, label: "💎 Constance Diamant", color: "bg-blue-600" },
-        { min: 7, label: "⚡ Une Semaine Parfaite", color: "bg-green-600" }
-      ]
-    };
-
-    const statBadges = badges[statName as keyof typeof badges] || [];
-    const earnedBadge = statBadges.find(badge => value >= badge.min);
-    return earnedBadge || null;
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Déconnexion réussie");
+    } catch (error) {
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
+  const xpForNextLevel = playerProfile ? (playerProfile.level * 100) : 100;
+  const currentXPProgress = playerProfile ? ((playerProfile.experience_points % 100) / 100) * 100 : 0;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <SettingsIcon className="h-6 w-6" />
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center gap-3">
+        <SettingsIcon className="h-7 w-7 text-primary" />
         <h1 className="text-2xl md:text-3xl font-bold">Paramètres</h1>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Profil
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Préférences
-          </TabsTrigger>
-          <TabsTrigger value="stats" className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            Statistiques
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Informations du Profil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Email</Label>
-                <Input value={user?.email || ""} disabled />
+      {/* Profil rapide */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-2xl font-bold">
+                {user?.email?.charAt(0).toUpperCase() || "U"}
               </div>
               <div>
-                <Label>ID Utilisateur</Label>
-                <Input value={user?.id || ""} disabled className="font-mono text-xs" />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-yellow-500" />
-                  <span>Points Karma</span>
+                <h2 className="font-semibold text-lg">{user?.email}</h2>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Gamepad2 className="h-4 w-4" />
+                  <span>Niveau {playerProfile?.level || 1}</span>
+                  <span>•</span>
+                  <Sparkles className="h-4 w-4" />
+                  <span>{playerProfile?.experience_points || 0} XP</span>
                 </div>
-                <Badge variant="secondary">{stats.karma_points}</Badge>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="preferences">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                Préférences d'Interface
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  <span>Notifications</span>
-                </div>
-                <Switch
-                  checked={formData.notifications_enabled}
-                  onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
-                />
-              </div>
-              
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="h-5 w-5" />
-                  <span>Sons</span>
-                </div>
-                <Switch
-                  checked={formData.sound_enabled}
-                  onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
-                />
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  Langue
-                </Label>
-                <Select value={formData.language} onValueChange={(value) => setFormData({...formData, language: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Moon className="h-4 w-4" />
-                  Thème
-                </Label>
-                <Select value={formData.theme} onValueChange={(value) => setFormData({...formData, theme: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system">Système</SelectItem>
-                    <SelectItem value="light">Clair</SelectItem>
-                    <SelectItem value="dark">Sombre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Format Heure
-                </Label>
-                <Select value={formData.clock_format} onValueChange={(value) => setFormData({...formData, clock_format: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24h">24h</SelectItem>
-                    <SelectItem value="12h">12h</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  <span>Mode Focus</span>
-                </div>
-                <Switch
-                  checked={formData.focus_mode}
-                  onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-
-        <TabsContent value="stats">
-          <div className="grid gap-4 md:gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Vos Statistiques
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{stats.tasks_completed}</div>
-                    <div className="text-xs text-muted-foreground">Tâches Complétées</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{stats.habits_tracked}</div>
-                    <div className="text-xs text-muted-foreground">Habitudes Suivies</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">{stats.focus_sessions}</div>
-                    <div className="text-xs text-muted-foreground">Sessions Focus</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">{stats.streak_days}</div>
-                    <div className="text-xs text-muted-foreground">Meilleure Série</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Badges Débloqués</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3">
-                  {Object.entries(stats).map(([statName, value]) => {
-                    const badge = getBadgeForStat(statName, value);
-                    if (!badge) return null;
-                    
-                    return (
-                      <div key={statName} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                        <div className={`w-3 h-3 rounded-full ${badge.color}`}></div>
-                        <span className="font-medium">{badge.label}</span>
-                        <Badge variant="secondary" className="ml-auto">{value}</Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {Object.entries(stats).every(([statName, value]) => !getBadgeForStat(statName, value)) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Continuez vos efforts pour débloquer vos premiers badges !</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/gamification">
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Arène
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/badges">
+                  <Award className="h-4 w-4 mr-2" />
+                  Badges
+                </Link>
+              </Button>
+            </div>
           </div>
-        </TabsContent>
+          
+          {playerProfile && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Progression niveau {playerProfile.level}</span>
+                <span>{playerProfile.experience_points % 100} / 100 XP</span>
+              </div>
+              <Progress value={currentXPProgress} className="h-2" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      </Tabs>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Apparence */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Palette className="h-5 w-5" />
+              Apparence
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Thème</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={theme === 'light' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTheme('light')}
+                  className="flex-1"
+                >
+                  <Sun className="h-4 w-4 mr-2" />
+                  Clair
+                </Button>
+                <Button
+                  variant={theme === 'dark' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTheme('dark')}
+                  className="flex-1"
+                >
+                  <Moon className="h-4 w-4 mr-2" />
+                  Sombre
+                </Button>
+                <Button
+                  variant={theme === 'system' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTheme('system')}
+                  className="flex-1"
+                >
+                  Auto
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={loading}>
-          {loading ? "Sauvegarde..." : "Sauvegarder les Paramètres"}
+        {/* Notifications */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Notifications push</span>
+              </div>
+              <Switch
+                checked={formData.notifications_enabled}
+                onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Sons</span>
+              </div>
+              <Switch
+                checked={formData.sound_enabled}
+                onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Focus */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Brain className="h-5 w-5" />
+              Productivité
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Mode Focus</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Réduit les distractions pendant les sessions
+                </p>
+              </div>
+              <Switch
+                checked={formData.focus_mode}
+                onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Crédits IA */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5" />
+              Crédits IA
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <div className="text-2xl font-bold text-primary">{aiCredits}</div>
+                <p className="text-xs text-muted-foreground">crédits disponibles</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/gamification">
+                  <Gamepad2 className="h-4 w-4 mr-2" />
+                  Boutique
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Statistiques */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            Statistiques
+          </CardTitle>
+          <CardDescription>Votre activité sur DeepFlow</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-muted/30 rounded-xl">
+              <CheckSquare className="h-6 w-6 mx-auto mb-2 text-green-500" />
+              <div className="text-2xl font-bold">{stats.tasks_completed}</div>
+              <div className="text-xs text-muted-foreground">Tâches</div>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-xl">
+              <Target className="h-6 w-6 mx-auto mb-2 text-blue-500" />
+              <div className="text-2xl font-bold">{stats.habits_tracked}</div>
+              <div className="text-xs text-muted-foreground">Habitudes</div>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-xl">
+              <Timer className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+              <div className="text-2xl font-bold">{Math.round(stats.focus_minutes / 60)}h</div>
+              <div className="text-xs text-muted-foreground">Focus</div>
+            </div>
+            <div className="text-center p-4 bg-muted/30 rounded-xl">
+              <Flame className="h-6 w-6 mx-auto mb-2 text-orange-500" />
+              <div className="text-2xl font-bold">{stats.streak_max}</div>
+              <div className="text-xs text-muted-foreground">Max Streak</div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="text-center p-3 bg-muted/20 rounded-lg">
+              <div className="text-lg font-semibold">{stats.goals_completed}</div>
+              <div className="text-xs text-muted-foreground">Objectifs atteints</div>
+            </div>
+            <div className="text-center p-3 bg-muted/20 rounded-lg">
+              <div className="text-lg font-semibold">{stats.journal_entries}</div>
+              <div className="text-xs text-muted-foreground">Entrées journal</div>
+            </div>
+            <div className="text-center p-3 bg-muted/20 rounded-lg">
+              <div className="text-lg font-semibold">{stats.focus_sessions}</div>
+              <div className="text-xs text-muted-foreground">Sessions focus</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gamification */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gamepad2 className="h-5 w-5" />
+            Progression Gamification
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+              <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
+              <div className="text-2xl font-bold">{playerProfile?.level || 1}</div>
+              <div className="text-xs text-muted-foreground">Niveau</div>
+            </div>
+            <div className="text-center p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
+              <Sparkles className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+              <div className="text-2xl font-bold">{playerProfile?.experience_points || 0}</div>
+              <div className="text-xs text-muted-foreground">XP Total</div>
+            </div>
+            <div className="text-center p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/20">
+              <Zap className="h-6 w-6 mx-auto mb-2 text-cyan-500" />
+              <div className="text-2xl font-bold">{playerProfile?.credits || 0}</div>
+              <div className="text-xs text-muted-foreground">Crédits</div>
+            </div>
+            <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
+              <Award className="h-6 w-6 mx-auto mb-2 text-green-500" />
+              <div className="text-2xl font-bold">{playerProfile?.total_quests_completed || 0}</div>
+              <div className="text-xs text-muted-foreground">Quêtes</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 justify-between">
+        <Button variant="destructive" onClick={handleLogout}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Déconnexion
         </Button>
+        
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchStats}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualiser
+          </Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Sauvegarde..." : "Sauvegarder"}
+          </Button>
+        </div>
       </div>
     </div>
   );
