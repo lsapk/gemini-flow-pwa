@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History } from "lucide-react";
+import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History, Plus, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useAchievementTracking } from "@/hooks/useAchievementTracking";
@@ -39,6 +39,13 @@ export default function Focus() {
   const [weeklyData, setWeeklyData] = useState<{ name: string; minutes: number }[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
+  
+  // Manual session form state
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualDuration, setManualDuration] = useState("");
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState("09:00");
+  const [isAddingManual, setIsAddingManual] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -389,6 +396,80 @@ export default function Focus() {
     }
   };
 
+  const addManualSession = async () => {
+    if (!user) return;
+    if (!manualTitle.trim()) {
+      toast({
+        title: "Titre requis",
+        description: "Veuillez entrer un titre pour la session.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!manualDuration || parseInt(manualDuration) <= 0) {
+      toast({
+        title: "Durée invalide",
+        description: "Veuillez entrer une durée valide en minutes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingManual(true);
+
+    try {
+      const startDateTime = new Date(`${manualDate}T${manualTime}`);
+      const durationMinutes = parseInt(manualDuration);
+      const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60 * 1000);
+
+      const { error } = await supabase
+        .from('focus_sessions')
+        .insert({
+          user_id: user.id,
+          title: manualTitle.trim(),
+          duration: durationMinutes,
+          started_at: startDateTime.toISOString(),
+          completed_at: endDateTime.toISOString()
+        });
+
+      if (error) throw error;
+
+      // Award XP based on duration
+      if (durationMinutes >= 45) {
+        awardXP('focus_session_long');
+      } else if (durationMinutes >= 25) {
+        awardXP('focus_session_pomodoro');
+      } else {
+        awardXP('focus_session_mini');
+      }
+
+      toast({
+        title: "Session ajoutée !",
+        description: `Session de ${durationMinutes} minutes enregistrée.`,
+      });
+
+      // Reset form
+      setManualTitle("");
+      setManualDuration("");
+      setManualDate(new Date().toISOString().split('T')[0]);
+      setManualTime("09:00");
+
+      // Reload data
+      loadSessionsToday();
+      loadSessionsHistory();
+      loadWeeklyData();
+    } catch (error) {
+      console.error('Error adding manual session:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible d'ajouter la session.",
+      });
+    } finally {
+      setIsAddingManual(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -612,9 +693,12 @@ export default function Focus() {
         {/* Side Panel */}
         <Card className="lg:col-span-1">
           <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="stats">Stats</TabsTrigger>
               <TabsTrigger value="history">Historique</TabsTrigger>
+              <TabsTrigger value="manual">
+                <Plus className="h-4 w-4" />
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="stats" className="space-y-4 p-4">
@@ -684,6 +768,84 @@ export default function Focus() {
                   Aucune session enregistrée
                 </p>
               )}
+            </TabsContent>
+
+            <TabsContent value="manual" className="space-y-4 p-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Ajouter une session manuellement
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Vous avez oublié de lancer le timer ? Ajoutez votre session ici.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="manual-title" className="text-xs">Titre</Label>
+                  <Input
+                    id="manual-title"
+                    value={manualTitle}
+                    onChange={(e) => setManualTitle(e.target.value)}
+                    placeholder="Ex: Travail sur projet..."
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="manual-duration" className="text-xs">Durée (minutes)</Label>
+                  <Input
+                    id="manual-duration"
+                    type="number"
+                    min="1"
+                    max="480"
+                    value={manualDuration}
+                    onChange={(e) => setManualDuration(e.target.value)}
+                    placeholder="Ex: 45"
+                    className="mt-1 h-9 text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="manual-date" className="text-xs">Date</Label>
+                    <Input
+                      id="manual-date"
+                      type="date"
+                      value={manualDate}
+                      onChange={(e) => setManualDate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="mt-1 h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual-time" className="text-xs">Heure</Label>
+                    <Input
+                      id="manual-time"
+                      type="time"
+                      value={manualTime}
+                      onChange={(e) => setManualTime(e.target.value)}
+                      className="mt-1 h-9 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={addManualSession} 
+                  className="w-full mt-2"
+                  disabled={isAddingManual}
+                >
+                  {isAddingManual ? (
+                    "Ajout en cours..."
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Ajouter la session
+                    </>
+                  )}
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </Card>
