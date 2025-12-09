@@ -86,6 +86,7 @@ export default function Tasks() {
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -222,6 +223,29 @@ export default function Tasks() {
     setEditingTask(null);
     refetch();
     fetchSubtasks();
+  };
+
+  const handleReorder = async (reorderedTasks: Task[]) => {
+    // Save to database
+    try {
+      const updates = reorderedTasks.map((task, index) => 
+        supabase
+          .from('tasks')
+          .update({ sort_order: index })
+          .eq('id', task.id)
+          .eq('user_id', user?.id)
+      );
+      
+      await Promise.all(updates);
+      refetch();
+    } catch (error) {
+      console.error('Error saving task order:', error);
+      toast({
+        title: 'Erreur',
+        description: "Erreur lors de la sauvegarde de l'ordre",
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSyncWithGoogle = async () => {
@@ -363,6 +387,7 @@ export default function Tasks() {
                 onToggleComplete={handleToggleComplete}
                 subtasks={subtasks}
                 onRefreshSubtasks={handleRefreshSubtasks}
+                onReorder={handleReorder}
               />
             </TabsContent>
           </Tabs>

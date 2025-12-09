@@ -53,6 +53,7 @@ export default function Goals() {
         .from('goals')
         .select('*')
         .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -117,6 +118,32 @@ export default function Goals() {
     setIsEditModalOpen(false);
     setEditingGoal(null);
     fetchGoals();
+  };
+
+  const handleReorder = async (reorderedGoals: Goal[]) => {
+    // Update local state immediately
+    if (activeTab === "ongoing") {
+      setGoals(reorderedGoals);
+    } else {
+      setCompletedGoals(reorderedGoals);
+    }
+
+    // Save to database
+    try {
+      const updates = reorderedGoals.map((goal, index) => 
+        supabase
+          .from('goals')
+          .update({ sort_order: index })
+          .eq('id', goal.id)
+          .eq('user_id', user?.id)
+      );
+      
+      await Promise.all(updates);
+    } catch (error) {
+      console.error('Error saving goal order:', error);
+      toast.error("Erreur lors de la sauvegarde de l'ordre");
+      fetchGoals();
+    }
   };
 
   const currentGoals = activeTab === "ongoing" ? goals : completedGoals;
@@ -193,6 +220,7 @@ export default function Goals() {
               loading={false}
               onEdit={handleEdit}
               onDelete={requestDelete}
+              onReorder={handleReorder}
             />
           )}
         </TabsContent>
