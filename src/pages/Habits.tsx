@@ -66,6 +66,7 @@ export default function Habits() {
         .from('habits')
         .select('*')
         .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -253,6 +254,32 @@ export default function Habits() {
     fetchHabits();
   };
 
+  const handleReorder = async (reorderedHabits: Habit[]) => {
+    // Update local state immediately for smooth UX
+    if (activeTab === "active") {
+      setHabits(reorderedHabits);
+    } else {
+      setArchivedHabits(reorderedHabits);
+    }
+
+    // Save to database
+    try {
+      const updates = reorderedHabits.map((habit, index) => 
+        supabase
+          .from('habits')
+          .update({ sort_order: index })
+          .eq('id', habit.id)
+          .eq('user_id', user?.id)
+      );
+      
+      await Promise.all(updates);
+    } catch (error) {
+      console.error('Error saving habit order:', error);
+      toast.error("Erreur lors de la sauvegarde de l'ordre");
+      fetchHabits(); // Revert on error
+    }
+  };
+
   const currentHabits = activeTab === "active" ? habits : archivedHabits;
 
   return (
@@ -356,6 +383,7 @@ export default function Habits() {
                   onComplete={toggleHabitCompletion}
                   onRefresh={fetchHabits}
                   onArchive={toggleArchive}
+                  onReorder={handleReorder}
                   showArchived={activeTab === "archived"}
                 />
               )}
