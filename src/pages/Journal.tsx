@@ -14,6 +14,8 @@ import { JournalStats } from "@/components/ui/JournalStats";
 import { Plus, BookOpen } from "lucide-react";
 import { JournalEntry } from "@/types";
 import { useGamificationRewards } from "@/hooks/useGamificationRewards";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const moods = [
   { value: "excellent", label: "Excellent", color: "bg-green-100 text-green-800" },
@@ -92,8 +94,10 @@ export default function Journal() {
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
 
-  // Form state
-  const [title, setTitle] = useState("");
+  // Form state - default title is today's date
+  const getDefaultTitle = () => format(new Date(), "dd MMMM yyyy", { locale: fr });
+  
+  const [title, setTitle] = useState(getDefaultTitle());
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
   const [tags, setTags] = useState("");
@@ -131,7 +135,7 @@ export default function Journal() {
   }, [user]);
 
   const resetForm = () => {
-    setTitle("");
+    setTitle(getDefaultTitle());
     setContent("");
     setMood("");
     setTags("");

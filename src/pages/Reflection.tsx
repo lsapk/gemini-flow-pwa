@@ -39,7 +39,7 @@ const REFLECTION_QUESTIONS = [
   "Comment prenez-vous vos décisions importantes ?",
   "Qu'est-ce qui vous pousse à sortir de votre zone de confort ?",
   "Quels sont vos rituels ou habitudes préférés ?",
-  // Nouvelles questions développement personnel
+  // Questions développement personnel
   "Quelle version de vous-même voulez-vous devenir dans 5 ans ?",
   "Quelle habitude transformerait le plus votre vie si vous la maîtrisiez ?",
   "Quel aspect de votre vie mérite plus d'attention aujourd'hui ?",
@@ -107,7 +107,28 @@ const REFLECTION_QUESTIONS = [
   "Comment vos choix d'aujourd'hui façonnent-ils votre futur ?",
   "Quel héritage personnel voulez-vous laisser derrière vous ?",
   "Comment pouvez-vous simplifier votre vie pour plus de clarté ?",
-  "Quelle question devriez-vous vous poser plus souvent pour rester aligné(e) ?"
+  "Quelle question devriez-vous vous poser plus souvent pour rester aligné(e) ?",
+  // 20 nouvelles questions profondes pour se connaître
+  "Qui êtes-vous vraiment quand personne ne vous regarde ?",
+  "Quel événement de votre enfance a le plus façonné qui vous êtes aujourd'hui ?",
+  "Quelle partie de vous-même avez-vous du mal à accepter ?",
+  "Si vous pouviez revivre un moment de votre vie, lequel choisiriez-vous et pourquoi ?",
+  "Qu'est-ce que vous n'avez jamais dit à quelqu'un mais que vous auriez dû ?",
+  "Quelle relation passée vous a le plus appris sur vous-même ?",
+  "Quel masque portez-vous le plus souvent face aux autres ?",
+  "Quelle émotion avez-vous le plus de mal à exprimer et pourquoi ?",
+  "Qu'est-ce qui vous fait pleurer, même quand vous êtes seul(e) ?",
+  "Si vous pouviez pardonner une personne (y compris vous-même), qui serait-ce ?",
+  "Quel rêve avez-vous abandonné et le regrettez-vous ?",
+  "Comment réagissez-vous face à la solitude profonde ?",
+  "Quelle vérité difficile sur vous-même avez-vous récemment acceptée ?",
+  "Qu'est-ce que l'amour signifie vraiment pour vous, au-delà des mots ?",
+  "Quel souvenir douloureux portez-vous encore avec vous ?",
+  "Comment votre peur de l'échec influence-t-elle vos choix de vie ?",
+  "Quelle partie de votre passé aimeriez-vous pouvoir changer ?",
+  "Qu'est-ce que la mort vous a appris sur la façon de vivre ?",
+  "Quel secret gardez-vous qui vous pèse le plus ?",
+  "Si vous deviez vous décrire en une seule phrase honnête, que diriez-vous ?"
 ];
 
 export default function Reflection() {
