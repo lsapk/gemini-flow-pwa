@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface AICredits {
   id: string;
@@ -13,6 +14,7 @@ export interface AICredits {
 export const useAICredits = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
 
   const { data: aiCredits, isLoading } = useQuery({
     queryKey: ["ai-credits"],
@@ -65,6 +67,11 @@ export const useAICredits = () => {
 
   const useCredits = useMutation({
     mutationFn: async (amount: number) => {
+      // Admins have unlimited credits - skip the check
+      if (isAdmin) {
+        return Infinity;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -83,15 +90,21 @@ export const useAICredits = () => {
       return newCredits;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-credits"] });
+      if (!isAdmin) {
+        queryClient.invalidateQueries({ queryKey: ["ai-credits"] });
+      }
     },
   });
 
+  // Admins get unlimited credits displayed as Infinity
+  const effectiveCredits = isAdmin ? Infinity : (aiCredits?.credits || 0);
+
   return {
-    credits: aiCredits?.credits || 0,
+    credits: effectiveCredits,
     isLoading,
     addCredits: addCredits.mutate,
     useCredits: useCredits.mutate,
-    hasCredits: (amount: number) => (aiCredits?.credits || 0) >= amount,
+    hasCredits: (amount: number) => isAdmin || (aiCredits?.credits || 0) >= amount,
+    isAdmin,
   };
 };
