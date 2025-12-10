@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
 import Gamification from "./pages/Gamification";
+import Admin from "./pages/Admin";
 import AppLayout from "./components/layout/AppLayout";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { XPNotificationProvider } from "./components/gamification/XPNotification";
@@ -160,6 +161,13 @@ function App() {
                 <Route path="/gamification" element={
                   <ProtectedRoute>
                     <Gamification />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Admin />
+                    </AppLayout>
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />

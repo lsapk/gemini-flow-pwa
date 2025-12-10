@@ -15,7 +15,8 @@ import {
   User,
   LogOut,
   Calendar,
-  Gamepad2
+  Gamepad2,
+  Shield
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,7 +30,7 @@ interface SidebarProps {
 export default function Sidebar({ className, onItemClick }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
@@ -47,6 +48,11 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Award, label: "Badges", path: "/badges" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
+
+  // Add admin link if user is admin
+  const allNavItems = isAdmin 
+    ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
+    : navItems;
 
   const handleItemClick = (path: string) => {
     navigate(path);
@@ -66,21 +72,24 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
       </div>
       
       <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-hidden">
-        {navItems.map((item) => {
+        {allNavItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const isAdminItem = item.path === "/admin";
           return (
             <Button
               key={item.path}
               variant={isActive ? "secondary" : "ghost"}
               className={cn(
                 "w-full justify-start gap-3 h-12 font-medium transition-all duration-300 rounded-xl group",
-                isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary shadow-md border border-primary/20 glow-effect"
+                isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary shadow-md border border-primary/20 glow-effect",
+                isAdminItem && !isActive && "text-red-500 hover:text-red-600 hover:bg-red-500/10"
               )}
               onClick={() => handleItemClick(item.path)}
             >
               <item.icon className={cn(
                 "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
-                isActive && "text-primary"
+                isActive && "text-primary",
+                isAdminItem && !isActive && "text-red-500"
               )} />
               <span className="truncate">{item.label}</span>
               {isActive && (

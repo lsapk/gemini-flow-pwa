@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface PlayerProfile {
   id: string;
@@ -22,6 +23,7 @@ export interface PlayerProfile {
 export const usePlayerProfile = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["player-profile"],
@@ -97,12 +99,18 @@ export const usePlayerProfile = () => {
     ? (profile.experience_points / calculateXPForLevel(profile.level)) * 100
     : 0;
 
+  // Admins get unlimited credits
+  const effectiveProfile = profile && isAdmin 
+    ? { ...profile, credits: Infinity }
+    : profile;
+
   return {
-    profile,
+    profile: effectiveProfile,
     isLoading,
     addXP: addXP.mutate,
     updateAvatar: updateAvatar.mutate,
     xpProgress,
     xpNeeded: profile ? calculateXPForLevel(profile.level) : 100,
+    isAdmin,
   };
 };
