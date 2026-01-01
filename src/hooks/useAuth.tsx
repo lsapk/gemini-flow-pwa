@@ -41,26 +41,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Configure session persistence to be more reliable
-    supabase.auth.onAuthStateChange((event, newSession) => {
+    // Set up auth state listener FIRST (before checking existing session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log("Auth state changed:", event);
+      
+      // Update session and user state synchronously
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
       if (event === 'SIGNED_OUT') {
         setIsAdmin(false);
-      } else if (newSession?.user) {
-        // Utiliser setTimeout pour éviter les blocages potentiels
-        setTimeout(() => {
-          checkAdminRole(newSession.user.id);
-        }, 0);
+        setIsLoading(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        if (newSession?.user) {
+          // Use setTimeout to avoid potential deadlocks with Supabase calls
+          setTimeout(() => {
+            checkAdminRole(newSession.user.id);
+          }, 0);
+        }
+        setIsLoading(false);
       }
     });
 
-    // Initial session check
+    // THEN check for existing session
     const initSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error);
+          setIsLoading(false);
+          return;
+        }
+        
         console.log("Initial session check:", session ? "Session found" : "No session");
         
         setSession(session);
@@ -78,6 +91,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     initSession();
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Function to check admin role

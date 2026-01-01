@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface Quest {
   id: string;
@@ -23,12 +24,12 @@ export interface Quest {
 export const useQuests = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: quests, isLoading } = useQuery({
-    queryKey: ["quests"],
+    queryKey: ["quests", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return [];
 
       const { data, error } = await supabase
         .from("quests")
@@ -39,6 +40,7 @@ export const useQuests = () => {
       if (error) throw error;
       return data as Quest[];
     },
+    enabled: !!user,
   });
 
   const updateProgress = useMutation({
@@ -55,13 +57,15 @@ export const useQuests = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quests"] });
-      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["quests", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile", user?.id] });
     },
   });
 
   const completeQuest = useMutation({
     mutationFn: async (questId: string) => {
+      if (!user) throw new Error("Not authenticated");
+      
       const quest = quests?.find(q => q.id === questId);
       if (!quest) throw new Error("Quest not found");
 
@@ -82,9 +86,6 @@ export const useQuests = () => {
       if (questError) throw questError;
 
       // Add XP and credits to player profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
       const { data: profile } = await supabase
         .from("player_profiles")
         .select("experience_points, credits, total_quests_completed")
@@ -107,8 +108,8 @@ export const useQuests = () => {
       return quest;
     },
     onSuccess: (quest) => {
-      queryClient.invalidateQueries({ queryKey: ["quests"] });
-      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["quests", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile", user?.id] });
       
       toast({
         title: "🎯 Quête Terminée !",

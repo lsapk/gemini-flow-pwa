@@ -23,13 +23,12 @@ export interface PlayerProfile {
 export const usePlayerProfile = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["player-profile"],
+  const { data: profile, isLoading, error } = useQuery({
+    queryKey: ["player-profile", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return null;
 
       const { data, error } = await supabase
         .from("player_profiles")
@@ -37,15 +36,20 @@ export const usePlayerProfile = () => {
         .eq("user_id", user.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If no profile exists, return null instead of throwing
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
       return data as PlayerProfile;
     },
+    enabled: !!user, // Only run query if user is authenticated
+    retry: 1,
   });
 
   const addXP = useMutation({
     mutationFn: async (xpAmount: number) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !profile) throw new Error("Not authenticated");
+      if (!user || !profile) throw new Error("Not authenticated or no profile");
 
       const newXP = profile.experience_points + xpAmount;
       const { error } = await supabase
@@ -57,7 +61,7 @@ export const usePlayerProfile = () => {
       return newXP;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile", user?.id] });
       toast({
         title: "⚡ XP Gagné !",
         description: "Vous progressez vers le niveau supérieur !",
@@ -67,8 +71,7 @@ export const usePlayerProfile = () => {
 
   const updateAvatar = useMutation({
     mutationFn: async (customization: Partial<PlayerProfile["avatar_customization"]>) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !profile) throw new Error("Not authenticated");
+      if (!user || !profile) throw new Error("Not authenticated or no profile");
 
       const newCustomization = {
         ...profile.avatar_customization,
@@ -83,7 +86,7 @@ export const usePlayerProfile = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile", user?.id] });
       toast({
         title: "🎨 Avatar Mis à Jour",
         description: "Votre personnage a été personnalisé !",
