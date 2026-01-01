@@ -2670,6 +2670,17 @@ export type Database = {
     }
     Functions: {
       auth_user_is_admin: { Args: never; Returns: boolean }
+      batch_sync_offline_data: {
+        Args: {
+          p_focus?: Json
+          p_goals?: Json
+          p_habits?: Json
+          p_journal?: Json
+          p_tasks?: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
       calculate_xp_for_level: {
         Args: { current_level: number }
         Returns: number
@@ -2678,6 +2689,15 @@ export type Database = {
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_authenticated: { Args: never; Returns: boolean }
+      sync_offline_item: {
+        Args: {
+          p_item: Json
+          p_offline_id: string
+          p_table_name: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
