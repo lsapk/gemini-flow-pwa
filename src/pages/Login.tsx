@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, Navigate } from "react-router-dom";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Loader2, Zap, Shield, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,6 +18,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user, signIn } = useAuth();
+  const navigate = useNavigate();
 
   // Charger l'email sauvegardé au chargement de la page
   useEffect(() => {
@@ -29,15 +31,12 @@ export default function Login() {
     }
   }, []);
 
-  // Rediriger si déjà connecté ET remember me est actif
-  // Ça évite d'afficher le login si rememberMe = true ET user déjà connecté
-  // (mobile-friendly)
+  // Rediriger si déjà connecté
   useEffect(() => {
-    const shouldRemember = localStorage.getItem('deepflow_remember_me') === 'true';
-    if (shouldRemember && user) {
-      window.location.replace("/dashboard");
+    if (user) {
+      navigate("/dashboard", { replace: true });
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +100,7 @@ export default function Login() {
           title: "Connexion réussie",
           description: "Bienvenue sur DeepFlow !",
         });
+        navigate("/dashboard", { replace: true });
       }
     } catch (error) {
       toast({
@@ -114,99 +114,189 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
-          <CardDescription>
-            Connectez-vous à votre compte DeepFlow
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.com"
-                required
-                disabled={isLoading}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-info/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                disabled={isLoading}
-              />
-              <Label
-                htmlFor="remember"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Se souvenir de moi sur cet appareil
-              </Label>
-            </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
+      {/* Grid pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.02]"
+        style={{
+          backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px),
+                           linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-md p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Logo and branding */}
+          <div className="text-center mb-8">
+            <motion.div 
+              className="flex justify-center mb-4"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connexion...
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </Button>
-          </form>
-          
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              Pas encore de compte ?{" "}
-            </span>
-            <Link to="/register" className="text-primary hover:underline">
-              S'inscrire
-            </Link>
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-primary-glow rotate-6 glow-effect-primary" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-info flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-primary-foreground" />
+                </div>
+              </div>
+            </motion.div>
+            <motion.h1 
+              className="text-3xl font-bold gradient-text font-heading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              DeepFlow
+            </motion.h1>
+            <motion.p 
+              className="text-muted-foreground mt-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              Productivité augmentée par l'IA
+            </motion.p>
           </div>
-        </CardContent>
-      </Card>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Card className="glass-morphism border-border/50 shadow-2xl">
+              <CardHeader className="space-y-1 text-center pb-4">
+                <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
+                <CardDescription>
+                  Accédez à votre espace personnel
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="votre@email.com"
+                      required
+                      disabled={isLoading}
+                      className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">Mot de passe</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        disabled={isLoading}
+                        className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                      disabled={isLoading}
+                      className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor="remember"
+                      className="text-sm text-muted-foreground leading-none cursor-pointer"
+                    >
+                      Se souvenir de moi sur cet appareil
+                    </Label>
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-opacity glow-effect text-primary-foreground font-medium" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connexion...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Se connecter
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+              <CardFooter className="flex flex-col items-center gap-4 pt-2">
+                <div className="text-sm text-muted-foreground">
+                  Pas encore de compte ?{" "}
+                  <Link to="/register" className="text-primary hover:text-primary-glow transition-colors font-medium">
+                    S'inscrire gratuitement
+                  </Link>
+                </div>
+              </CardFooter>
+            </Card>
+          </motion.div>
+
+          {/* Features hint */}
+          <motion.div 
+            className="mt-8 flex justify-center gap-6 text-xs text-muted-foreground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            <div className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span>IA intégrée</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Shield className="w-3 h-3 text-success" />
+              <span>Sécurisé</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Zap className="w-3 h-3 text-warning" />
+              <span>Rapide</span>
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
