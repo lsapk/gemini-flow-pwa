@@ -60,7 +60,7 @@ interface UserStats {
 }
 
 export default function Admin() {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin: clientIsAdmin, isLoading } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,12 +71,50 @@ export default function Admin() {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [userToBan, setUserToBan] = useState<UserData | null>(null);
   const [banReason, setBanReason] = useState("");
+  
+  // SECURITY: Server-side admin verification
+  const [serverVerifiedAdmin, setServerVerifiedAdmin] = useState<boolean | null>(null);
+  const [verifyingAdmin, setVerifyingAdmin] = useState(true);
+
+  // Verify admin status server-side on mount
+  useEffect(() => {
+    const verifyAdminServerSide = async () => {
+      if (!user) {
+        setServerVerifiedAdmin(false);
+        setVerifyingAdmin(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-admin');
+        
+        if (error) {
+          console.error('Server admin verification failed:', error);
+          setServerVerifiedAdmin(false);
+        } else {
+          setServerVerifiedAdmin(data?.isAdmin === true);
+        }
+      } catch (error) {
+        console.error('Admin verification error:', error);
+        setServerVerifiedAdmin(false);
+      } finally {
+        setVerifyingAdmin(false);
+      }
+    };
+
+    if (!isLoading) {
+      verifyAdminServerSide();
+    }
+  }, [user, isLoading]);
+
+  // Use server-verified admin status, fall back to client check during verification
+  const isAdmin = serverVerifiedAdmin ?? clientIsAdmin;
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !verifyingAdmin) {
       fetchUsers();
     }
-  }, [isAdmin]);
+  }, [isAdmin, verifyingAdmin]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -218,7 +256,8 @@ export default function Admin() {
     setBanDialogOpen(true);
   };
 
-  if (isLoading) {
+  // Show loading during initial auth check and server verification
+  if (isLoading || verifyingAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -226,7 +265,9 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) {
+  // SECURITY: Only allow access if server-verified admin
+  // This prevents client-side manipulation of admin status
+  if (serverVerifiedAdmin !== true) {
     return <Navigate to="/dashboard" replace />;
   }
 
