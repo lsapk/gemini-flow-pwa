@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface Achievement {
   id: string;
@@ -193,12 +194,12 @@ export const ACHIEVEMENT_DEFINITIONS = {
 export const useAchievements = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: achievements, isLoading } = useQuery({
-    queryKey: ["achievements"],
+    queryKey: ["achievements", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return [];
 
       const { data, error } = await supabase
         .from("achievements")
@@ -209,11 +210,11 @@ export const useAchievements = () => {
       if (error) throw error;
       return data as Achievement[];
     },
+    enabled: !!user,
   });
 
   const unlockAchievement = useMutation({
     mutationFn: async (achievementId: keyof typeof ACHIEVEMENT_DEFINITIONS) => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const achievement = ACHIEVEMENT_DEFINITIONS[achievementId];
@@ -229,7 +230,7 @@ export const useAchievements = () => {
         });
 
       if (error) {
-        if (error.code === "23505") return null;
+        if (error.code === "23505") return null; // Already exists
         throw error;
       }
 
@@ -237,8 +238,8 @@ export const useAchievements = () => {
     },
     onSuccess: (achievement) => {
       if (achievement) {
-        queryClient.invalidateQueries({ queryKey: ["achievements"] });
-        queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+        queryClient.invalidateQueries({ queryKey: ["achievements", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["player-profile", user?.id] });
         toast({
           title: `${achievement.icon} Achievement Débloqué !`,
           description: `${achievement.title} - +${achievement.xp} XP`,

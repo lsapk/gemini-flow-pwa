@@ -14,13 +14,12 @@ export interface AICredits {
 export const useAICredits = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   const { data: aiCredits, isLoading } = useQuery({
-    queryKey: ["ai-credits"],
+    queryKey: ["ai-credits", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return null;
 
       const { data, error } = await supabase
         .from("ai_credits")
@@ -31,11 +30,11 @@ export const useAICredits = () => {
       if (error) throw error;
       return data as AICredits | null;
     },
+    enabled: !!user,
   });
 
   const addCredits = useMutation({
     mutationFn: async (amount: number) => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const currentCredits = aiCredits?.credits || 0;
@@ -57,7 +56,7 @@ export const useAICredits = () => {
       return newCredits;
     },
     onSuccess: (newCredits) => {
-      queryClient.invalidateQueries({ queryKey: ["ai-credits"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-credits", user?.id] });
       toast({
         title: "🤖 Crédits IA Ajoutés !",
         description: `Vous avez maintenant ${newCredits} crédits IA`,
@@ -72,7 +71,6 @@ export const useAICredits = () => {
         return Infinity;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const currentCredits = aiCredits?.credits || 0;
@@ -91,7 +89,7 @@ export const useAICredits = () => {
     },
     onSuccess: () => {
       if (!isAdmin) {
-        queryClient.invalidateQueries({ queryKey: ["ai-credits"] });
+        queryClient.invalidateQueries({ queryKey: ["ai-credits", user?.id] });
       }
     },
   });

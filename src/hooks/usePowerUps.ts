@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface PowerUp {
   id: string;
@@ -173,12 +174,12 @@ export const POWERUP_DEFINITIONS: Record<PowerUpType, {
 export const usePowerUps = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: activePowerUps, isLoading } = useQuery({
-    queryKey: ["active-powerups"],
+    queryKey: ["active-powerups", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return [];
 
       const { data, error } = await supabase
         .from("active_powerups")
@@ -189,14 +190,14 @@ export const usePowerUps = () => {
       if (error) throw error;
       return data as PowerUp[];
     },
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
   const { data: unlockedItems } = useQuery({
-    queryKey: ["unlocked-items"],
+    queryKey: ["unlocked-items", user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) return [];
 
       const { data, error } = await supabase
         .from("unlockables")
@@ -206,6 +207,7 @@ export const usePowerUps = () => {
       if (error) throw error;
       return data;
     },
+    enabled: !!user,
   });
 
   const activatePowerUp = useMutation({

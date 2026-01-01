@@ -1,12 +1,13 @@
 import { useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useQuestProgressTracking = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const updateQuestProgress = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     // Récupérer les quêtes actives
@@ -174,8 +175,8 @@ export const useQuestProgressTracking = () => {
     }
 
     // Rafraîchir les quêtes
-    queryClient.invalidateQueries({ queryKey: ["quests"] });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: ["quests", user?.id] });
+  }, [queryClient, user]);
 
   // Mettre à jour la progression au montage et toutes les 30 secondes
   useEffect(() => {
