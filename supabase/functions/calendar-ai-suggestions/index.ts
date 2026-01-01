@@ -12,12 +12,42 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, date } = await req.json();
-    console.log('Request received:', { userId, date });
-    
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+    
+    // SECURITY: Verify the user's JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: "Non autorisé - token manquant" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create a client with the anon key to verify the user's token
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    const token = authHeader.replace("Bearer ", "");
+    
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      console.error('Authentication failed:', userError?.message);
+      return new Response(
+        JSON.stringify({ error: "Non autorisé - token invalide" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // SECURITY: Use the authenticated user's ID, not from request body
+    const authenticatedUserId = userData.user.id;
+    console.log('Authenticated user:', authenticatedUserId);
+
+    // Parse request body for date only (userId from body is ignored for security)
+    const { date } = await req.json();
+    console.log('Request received:', { authenticatedUserId, date });
     
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY not configured');
@@ -27,19 +57,20 @@ serve(async (req) => {
       );
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Use service role key for database queries (needed to bypass RLS for internal operations)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     console.log('Gemini API key retrieved successfully');
 
-    // Récupérer les données de l'utilisateur
+    // Récupérer les données de l'utilisateur (using authenticated user ID)
     const targetDate = new Date(date).toISOString().split('T')[0];
     const selectedDay = new Date(date).getDay();
 
     // Récupérer aussi les événements Google Calendar
     const [tasksRes, habitsRes, goalsRes, calendarTokenRes] = await Promise.all([
-      supabase.from('tasks').select('*').eq('user_id', userId).eq('completed', false),
-      supabase.from('habits').select('*').eq('user_id', userId).eq('is_archived', false),
-      supabase.from('goals').select('*').eq('user_id', userId).eq('completed', false),
-      supabase.from('google_calendar_tokens').select('*').eq('user_id', userId).single()
+      supabase.from('tasks').select('*').eq('user_id', authenticatedUserId).eq('completed', false),
+      supabase.from('habits').select('*').eq('user_id', authenticatedUserId).eq('is_archived', false),
+      supabase.from('goals').select('*').eq('user_id', authenticatedUserId).eq('completed', false),
+      supabase.from('google_calendar_tokens').select('*').eq('user_id', authenticatedUserId).single()
     ]);
 
     const tasks = tasksRes.data || [];
@@ -62,7 +93,7 @@ serve(async (req) => {
         const { data: eventsData } = await supabase.functions.invoke('google-calendar-api', {
           body: {
             action: 'list',
-            user_id: userId,
+            user_id: authenticatedUserId,
             time_min: weekStart.toISOString(),
             time_max: weekEnd.toISOString()
           }
