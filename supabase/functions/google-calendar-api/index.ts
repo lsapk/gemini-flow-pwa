@@ -30,18 +30,50 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, user_id, event_data, event_id, time_min, time_max } = await req.json();
+    // SECURITY FIX: Authenticate user from JWT instead of trusting request body
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No authorization header' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
 
+    // Create a client with the user's JWT to authenticate them
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Verify the user's identity from their JWT
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    // Use authenticated user's ID - NEVER trust user_id from request body
+    const authenticatedUserId = user.id;
+    console.log('Authenticated user:', authenticatedUserId);
+
+    const { action, event_data, event_id, time_min, time_max } = await req.json();
+
+    // Use service role client for database operations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user's tokens
+    // Get user's tokens using the AUTHENTICATED user ID
     const { data: tokenData, error: tokenError } = await supabase
       .from('google_calendar_tokens')
       .select('*')
-      .eq('user_id', user_id)
+      .eq('user_id', authenticatedUserId)
       .single();
 
     if (tokenError || !tokenData) {
@@ -63,7 +95,7 @@ Deno.serve(async (req) => {
       
       accessToken = await refreshAccessToken(tokenData.refresh_token);
       
-      // Update token in database
+      // Update token in database using authenticated user ID
       await supabase
         .from('google_calendar_tokens')
         .update({
@@ -71,7 +103,7 @@ Deno.serve(async (req) => {
           token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user_id);
+        .eq('user_id', authenticatedUserId);
     }
 
     let result;
