@@ -49,10 +49,13 @@ serve(async (req) => {
       throw new Error("User ID is required and must be a string");
     }
     
-    // Sanitize message - remove potential harmful content
+    // Sanitize message - remove ALL HTML tags to prevent XSS
+    // This is more secure than pattern-matching specific tags
     const sanitizedMessage = message
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<[^>]*>/g, '') // Remove all HTML tags
+      .replace(/javascript:/gi, '') // Remove javascript: URLs
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers like onclick=, onerror=, etc.
+      .replace(/data:/gi, 'data-blocked:') // Block data: URLs which can contain executable content
       .trim();
 
     // Initialize Supabase client with service role for admin access

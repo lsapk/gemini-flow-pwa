@@ -73,7 +73,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.google-calendar-oauth]
-verify_jwt = false
+verify_jwt = true
 
 [functions.google-calendar-api]
 verify_jwt = true
