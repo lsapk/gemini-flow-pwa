@@ -13,77 +13,100 @@ export interface PowerUp {
 
 export type PowerUpType = 
   | "ai_credits_bonus"
-  | "dark_theme_unlock"
-  | "neon_theme_unlock"
-  | "cyber_avatar_unlock"
+  | "ai_credits_mega"
+  | "xp_boost_2x"
+  | "xp_boost_3x"
   | "streak_shield"
-  | "mystery_box";
+  | "streak_mega_shield"
+  | "mystery_box"
+  | "legendary_box"
+  | "cyber_visor"
+  | "neon_crown"
+  | "energy_armor";
 
 export const POWERUP_DEFINITIONS: Record<PowerUpType, {
   name: string;
   description: string;
   reward: string;
-  rewardType: "ai_credits" | "theme" | "avatar" | "protection" | "random";
+  rewardType: "ai_credits" | "xp_boost" | "protection" | "random" | "cosmetic";
   rewardValue: number | string;
   duration: number;
   cost: number;
   icon: string;
   color: string;
+  rarity: "common" | "rare" | "epic" | "legendary";
 }> = {
   ai_credits_bonus: {
-    name: "Crédits IA",
+    name: "Pack IA Basic",
     description: "Recevez 25 crédits IA pour l'assistant",
     reward: "+25 crédits IA",
     rewardType: "ai_credits",
     rewardValue: 25,
-    duration: 0, // Permanent
+    duration: 0,
     cost: 50,
     icon: "🤖",
     color: "from-blue-500 to-cyan-500",
+    rarity: "common",
   },
-  dark_theme_unlock: {
-    name: "Thème Obsidian",
-    description: "Débloquez le thème sombre Obsidian",
-    reward: "Thème Obsidian",
-    rewardType: "theme",
-    rewardValue: "obsidian",
-    duration: 0,
-    cost: 100,
-    icon: "🌙",
-    color: "from-slate-600 to-slate-800",
-  },
-  neon_theme_unlock: {
-    name: "Thème Neon",
-    description: "Débloquez le thème cyberpunk Neon",
-    reward: "Thème Neon",
-    rewardType: "theme",
-    rewardValue: "neon",
+  ai_credits_mega: {
+    name: "Pack IA Mega",
+    description: "Recevez 100 crédits IA pour l'assistant",
+    reward: "+100 crédits IA",
+    rewardType: "ai_credits",
+    rewardValue: 100,
     duration: 0,
     cost: 150,
-    icon: "💜",
-    color: "from-purple-500 to-pink-500",
+    icon: "🧠",
+    color: "from-indigo-500 to-purple-500",
+    rarity: "rare",
   },
-  cyber_avatar_unlock: {
-    name: "Avatar Cyber Elite",
-    description: "Débloquez l'avatar Cyber Elite premium",
-    reward: "Avatar Cyber Elite",
-    rewardType: "avatar",
-    rewardValue: "cyber_elite",
-    duration: 0,
+  xp_boost_2x: {
+    name: "XP Boost x2",
+    description: "Doublez vos gains d'XP pendant 24h",
+    reward: "XP x2 pendant 24h",
+    rewardType: "xp_boost",
+    rewardValue: 2,
+    duration: 1440,
+    cost: 100,
+    icon: "⚡",
+    color: "from-yellow-500 to-orange-500",
+    rarity: "rare",
+  },
+  xp_boost_3x: {
+    name: "XP Boost x3",
+    description: "Triplez vos gains d'XP pendant 24h",
+    reward: "XP x3 pendant 24h",
+    rewardType: "xp_boost",
+    rewardValue: 3,
+    duration: 1440,
     cost: 200,
-    icon: "🦾",
-    color: "from-amber-500 to-orange-500",
+    icon: "🔥",
+    color: "from-orange-500 to-red-500",
+    rarity: "epic",
   },
   streak_shield: {
     name: "Bouclier de Streak",
+    description: "Protège votre streak pendant 3 jours",
+    reward: "Protection 3 jours",
+    rewardType: "protection",
+    rewardValue: 3,
+    duration: 4320,
+    cost: 75,
+    icon: "🛡️",
+    color: "from-green-500 to-emerald-500",
+    rarity: "common",
+  },
+  streak_mega_shield: {
+    name: "Méga Bouclier",
     description: "Protège votre streak pendant 7 jours",
     reward: "Protection 7 jours",
     rewardType: "protection",
     rewardValue: 7,
-    duration: 10080, // 7 days in minutes
-    cost: 75,
-    icon: "🛡️",
-    color: "from-green-500 to-emerald-500",
+    duration: 10080,
+    cost: 150,
+    icon: "🔰",
+    color: "from-teal-500 to-cyan-500",
+    rarity: "rare",
   },
   mystery_box: {
     name: "Boîte Mystère",
@@ -94,7 +117,56 @@ export const POWERUP_DEFINITIONS: Record<PowerUpType, {
     duration: 0,
     cost: 30,
     icon: "🎁",
-    color: "from-yellow-500 to-red-500",
+    color: "from-pink-500 to-purple-500",
+    rarity: "common",
+  },
+  legendary_box: {
+    name: "Coffre Légendaire",
+    description: "Récompenses rares garanties !",
+    reward: "Récompense Légendaire",
+    rewardType: "random",
+    rewardValue: 1,
+    duration: 0,
+    cost: 250,
+    icon: "👑",
+    color: "from-amber-500 to-yellow-300",
+    rarity: "legendary",
+  },
+  cyber_visor: {
+    name: "Visière Cyber",
+    description: "Débloquez l'accessoire Visière Cyber",
+    reward: "Accessoire: Visière",
+    rewardType: "cosmetic",
+    rewardValue: "helmet_visor",
+    duration: 0,
+    cost: 120,
+    icon: "🥽",
+    color: "from-cyan-500 to-blue-500",
+    rarity: "rare",
+  },
+  neon_crown: {
+    name: "Couronne Néon",
+    description: "Débloquez l'accessoire Couronne Néon",
+    reward: "Accessoire: Couronne",
+    rewardType: "cosmetic",
+    rewardValue: "helmet_crown",
+    duration: 0,
+    cost: 180,
+    icon: "👑",
+    color: "from-purple-500 to-pink-500",
+    rarity: "epic",
+  },
+  energy_armor: {
+    name: "Armure Énergie",
+    description: "Débloquez l'armure Énergie",
+    reward: "Accessoire: Armure",
+    rewardType: "cosmetic",
+    rewardValue: "armor_energy",
+    duration: 0,
+    cost: 200,
+    icon: "⚡",
+    color: "from-blue-500 to-purple-500",
+    rarity: "epic",
   },
 };
 
@@ -146,7 +218,7 @@ export const usePowerUps = () => {
       // Check if user has enough credits
       const { data: profile } = await supabase
         .from("player_profiles")
-        .select("credits")
+        .select("credits, experience_points")
         .eq("user_id", user.id)
         .single();
 
@@ -163,7 +235,6 @@ export const usePowerUps = () => {
       // Handle different reward types
       switch (powerup.rewardType) {
         case "ai_credits":
-          // Add AI credits
           const { data: aiCredits } = await supabase
             .from("ai_credits")
             .select("credits")
@@ -182,14 +253,26 @@ export const usePowerUps = () => {
           }
           break;
 
-        case "theme":
-        case "avatar":
+        case "xp_boost":
+          const expiresAtBoost = new Date();
+          expiresAtBoost.setMinutes(expiresAtBoost.getMinutes() + powerup.duration);
+
+          await supabase
+            .from("active_powerups")
+            .insert({
+              user_id: user.id,
+              powerup_type: powerupType,
+              multiplier: powerup.rewardValue as number,
+              expires_at: expiresAtBoost.toISOString(),
+            });
+          break;
+
+        case "cosmetic":
           // Check if already unlocked
           const { data: existing } = await supabase
             .from("unlockables")
             .select("id")
             .eq("user_id", user.id)
-            .eq("unlockable_type", powerup.rewardType)
             .eq("unlockable_id", powerup.rewardValue as string)
             .maybeSingle();
 
@@ -206,13 +289,12 @@ export const usePowerUps = () => {
             .from("unlockables")
             .insert({
               user_id: user.id,
-              unlockable_type: powerup.rewardType,
+              unlockable_type: (powerup.rewardValue as string).startsWith("helmet") ? "helmet" : "armor",
               unlockable_id: powerup.rewardValue as string,
             });
           break;
 
         case "protection":
-          // Add temporary protection
           const expiresAt = new Date();
           expiresAt.setMinutes(expiresAt.getMinutes() + powerup.duration);
 
@@ -227,26 +309,28 @@ export const usePowerUps = () => {
           break;
 
         case "random":
-          // Mystery box - random reward
-          const rewards = [
+          // Mystery/Legendary box - random reward
+          const isLegendary = powerupType === "legendary_box";
+          const rewards = isLegendary ? [
+            { type: "xp", value: 500, message: "+500 XP 🎉" },
+            { type: "credits", value: 200, message: "+200 crédits 💰" },
+            { type: "ai_credits", value: 50, message: "+50 crédits IA 🧠" },
+            { type: "xp", value: 750, message: "+750 XP 🔥" },
+          ] : [
+            { type: "xp", value: 50, message: "+50 XP" },
             { type: "xp", value: 100, message: "+100 XP" },
+            { type: "credits", value: 25, message: "+25 crédits" },
             { type: "credits", value: 50, message: "+50 crédits" },
             { type: "ai_credits", value: 10, message: "+10 crédits IA" },
+            { type: "ai_credits", value: 5, message: "+5 crédits IA" },
           ];
           const randomReward = rewards[Math.floor(Math.random() * rewards.length)];
           
           if (randomReward.type === "xp") {
-            const { data: xpProfile } = await supabase
+            await supabase
               .from("player_profiles")
-              .select("experience_points")
-              .eq("user_id", user.id)
-              .single();
-            if (xpProfile) {
-              await supabase
-                .from("player_profiles")
-                .update({ experience_points: xpProfile.experience_points + randomReward.value })
-                .eq("user_id", user.id);
-            }
+              .update({ experience_points: profile.experience_points + randomReward.value })
+              .eq("user_id", user.id);
           } else if (randomReward.type === "credits") {
             await supabase
               .from("player_profiles")
@@ -278,7 +362,7 @@ export const usePowerUps = () => {
       
       if ('randomReward' in result && result.randomReward) {
         toast({
-          title: "🎁 Boîte Mystère Ouverte !",
+          title: "🎁 Coffre Ouvert !",
           description: `Vous avez gagné : ${result.randomReward.message}`,
         });
       } else {
@@ -304,7 +388,16 @@ export const usePowerUps = () => {
   };
 
   const hasActiveProtection = () => {
-    return activePowerUps?.some(p => p.powerup_type === "streak_shield") || false;
+    return activePowerUps?.some(p => 
+      p.powerup_type === "streak_shield" || p.powerup_type === "streak_mega_shield"
+    ) || false;
+  };
+
+  const getActiveXPMultiplier = () => {
+    const boost = activePowerUps?.find(p => 
+      p.powerup_type === "xp_boost_2x" || p.powerup_type === "xp_boost_3x"
+    );
+    return boost?.multiplier || 1;
   };
 
   return {
@@ -315,5 +408,6 @@ export const usePowerUps = () => {
     isActivating: activatePowerUp.isPending,
     isItemUnlocked,
     hasActiveProtection,
+    getActiveXPMultiplier,
   };
 };
