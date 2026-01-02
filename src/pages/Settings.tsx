@@ -13,7 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import { useAICredits } from "@/hooks/useAICredits";
-import { Link } from "react-router-dom";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Link, useSearchParams } from "react-router-dom";
+import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 
 import { 
   Settings as SettingsIcon, 
@@ -36,7 +38,8 @@ import {
   Target,
   CheckSquare,
   Flame,
-  Award
+  Award,
+  Crown
 } from "lucide-react";
 
 interface UserSettings {
@@ -52,6 +55,8 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { profile: playerProfile, isLoading: profileLoading } = usePlayerProfile();
   const { credits: aiCredits } = useAICredits();
+  const { currentTier, isPremium, capturePayPalOrder, getRemainingUses } = useSubscription();
+  const [searchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -70,6 +75,26 @@ export default function Settings() {
     goals_completed: 0,
     journal_entries: 0
   });
+
+  // Handle PayPal return
+  useEffect(() => {
+    const handlePayPalReturn = async () => {
+      const payment = searchParams.get("payment");
+      const token = searchParams.get("token");
+      
+      if (payment === "success" && token) {
+        try {
+          await capturePayPalOrder(token);
+        } catch (error) {
+          console.error("Error capturing PayPal order:", error);
+        }
+      } else if (payment === "cancelled") {
+        toast.error("Paiement annulé");
+      }
+    };
+    
+    handlePayPalReturn();
+  }, [searchParams, capturePayPalOrder]);
 
   useEffect(() => {
     if (user) {
@@ -231,6 +256,9 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Premium Subscription */}
+      <PremiumUpgradeCard />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Apparence */}

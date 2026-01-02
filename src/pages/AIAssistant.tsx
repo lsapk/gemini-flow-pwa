@@ -7,13 +7,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { Send, Bot, User, Loader2, Settings, Sparkles, BarChart3 } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Send, Bot, User, Loader2, Settings, Sparkles, BarChart3, Crown, Lock } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
+import { Link } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -36,6 +39,7 @@ const STORAGE_KEY = 'deepflow_ai_conversation';
 
 export default function AIAssistant() {
   const { user } = useAuth();
+  const { canUseFeature, getRemainingUses, trackUsage, isPremium, currentTier } = useSubscription();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -149,6 +153,11 @@ export default function AIAssistant() {
 
   const sendMessage = async () => {
     if (!input.trim() || !user) return;
+    // Check if user can use chat feature
+    if (!canUseFeature("chat")) {
+      toast.error("Limite quotidienne atteinte. Passez à Premium pour un accès illimité !");
+      return;
+    }
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -160,6 +169,9 @@ export default function AIAssistant() {
     setMessages(prev => [...prev, newMessage]);
     setInput("");
     setIsLoading(true);
+
+    // Track usage for Basic users
+    trackUsage("chat");
 
     try {
       const userData = await getUserData();
@@ -288,6 +300,17 @@ export default function AIAssistant() {
                 <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
                 {analysisMode && <BarChart3 className="h-4 w-4 text-blue-500" />}
                 {creationModeEnabled && <Sparkles className="h-4 w-4 text-green-500" />}
+                {!isPremium && (
+                  <Badge variant="outline" className="text-xs">
+                    {getRemainingUses("chat")}/5 restants
+                  </Badge>
+                )}
+                {isPremium && (
+                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Premium
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center space-x-2">

@@ -7,14 +7,19 @@ import { AchievementsList } from "@/components/gamification/AchievementsList";
 import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Gamepad2, Target, ShoppingBag, Trophy, Zap, Star, Crown } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Gamepad2, Target, ShoppingBag, Trophy, Zap, Star, Crown, Lock } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 export default function Gamification() {
   useEnsurePlayerProfile();
   useQuestProgressTracking();
   const { profile } = usePlayerProfile();
+  const { canUseFeature, isPremium } = useSubscription();
 
   const getRankInfo = () => {
     if (!profile) return { name: "Novice", icon: "🌱", tier: 1 };
@@ -26,6 +31,7 @@ export default function Gamification() {
   };
 
   const rank = getRankInfo();
+  const hasFullGamification = canUseFeature("gamification");
 
   return (
     <AppLayout>
@@ -184,11 +190,47 @@ export default function Gamification() {
             </TabsContent>
 
             <TabsContent value="achievements" className="animate-fade-in">
-              <AchievementsList />
+              {hasFullGamification ? (
+                <AchievementsList />
+              ) : (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">Achievements Premium</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Débloquez tous les achievements avec un abonnement Premium
+                    </p>
+                    <Button asChild>
+                      <Link to="/settings">
+                        <Crown className="h-4 w-4 mr-2" />
+                        Passer à Premium
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="shop" className="animate-fade-in">
-              <PowerUpShop />
+              {hasFullGamification ? (
+                <PowerUpShop />
+              ) : (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">Boutique Premium</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Accédez à la boutique de power-ups avec un abonnement Premium
+                    </p>
+                    <Button asChild>
+                      <Link to="/settings">
+                        <Crown className="h-4 w-4 mr-2" />
+                        Passer à Premium
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </motion.div>

@@ -2,17 +2,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarChart3, RefreshCw, TrendingUp, Target, Timer, BookOpen, Brain, Lightbulb } from "lucide-react";
+import { BarChart3, RefreshCw, TrendingUp, Target, Timer, BookOpen, Brain, Lightbulb, Crown, Lock } from "lucide-react";
 import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useRealProductivityAnalysis } from "@/hooks/useRealProductivityAnalysis";
+import { useSubscription } from "@/hooks/useSubscription";
 import { InsightCard } from "@/components/ui/InsightCard";
 import { useAIProductivityInsights } from "@/hooks/useAIProductivityInsights";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
   const { data: productivityData, isLoading: productivityLoading } = useRealProductivityAnalysis();
+  const { canUseFeature, getRemainingUses, trackUsage, isPremium } = useSubscription();
+
+  // Track analysis usage when component loads with data
+  useEffect(() => {
+    if (productivityData && !isPremium) {
+      trackUsage("analysis");
+    }
+  }, [productivityData?.score]);
 
   // Extract productivity scores from the data with defaults
   const {
@@ -29,6 +40,44 @@ export default function Analysis() {
   } = productivityData || {};
 
   const { insights: aiInsights, isLoading: insightsLoading } = useAIProductivityInsights();
+
+  // Check if user can access analysis
+  if (!canUseFeature("analysis") && !isPremium) {
+    return (
+      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analyse approfondie</h1>
+            <p className="text-muted-foreground">Vue d'ensemble de votre productivité avec insights IA</p>
+          </div>
+        </motion.div>
+
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold mb-2">Limite quotidienne atteinte</h3>
+            <p className="text-muted-foreground mb-2">
+              Vous avez utilisé votre analyse gratuite du jour.
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Les utilisateurs Basic ont droit à 1 analyse par jour.
+            </p>
+            <Button asChild size="lg">
+              <Link to="/settings">
+                <Crown className="h-4 w-4 mr-2" />
+                Passer à Premium pour un accès illimité
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   if (isLoading || productivityLoading) {
     return (
