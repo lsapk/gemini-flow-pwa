@@ -530,6 +530,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_usage: {
+        Row: {
+          ai_analysis_count: number
+          ai_chat_count: number
+          created_at: string
+          id: string
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis_count?: number
+          ai_chat_count?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis_count?: number
+          ai_chat_count?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_destinations: {
         Row: {
           createdAt: string
@@ -1303,6 +1333,45 @@ export type Database = {
           id?: number
           name?: string
           timestamp?: number
+        }
+        Relationships: []
+      }
+      paypal_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          paypal_order_id: string
+          paypal_payer_id: string | null
+          status: string
+          subscription_tier: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paypal_order_id: string
+          paypal_payer_id?: string | null
+          status?: string
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paypal_order_id?: string
+          paypal_payer_id?: string | null
+          status?: string
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
