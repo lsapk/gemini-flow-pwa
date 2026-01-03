@@ -152,7 +152,7 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
             disabled={isCreatingOrder}
             className="flex flex-col h-auto py-4"
           >
-            <span className="text-lg font-bold">9,99€</span>
+            <span className="text-lg font-bold">4,99€</span>
             <span className="text-xs opacity-80">/mois</span>
           </Button>
           <Button
@@ -162,7 +162,7 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
             className="flex flex-col h-auto py-4 relative"
           >
             <Badge className="absolute -top-2 -right-2 bg-green-500">-17%</Badge>
-            <span className="text-lg font-bold">99,99€</span>
+            <span className="text-lg font-bold">49,99€</span>
             <span className="text-xs opacity-80">/an</span>
           </Button>
         </div>

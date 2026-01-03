@@ -4,22 +4,21 @@ import { XPBar } from "@/components/gamification/XPBar";
 import { QuestBoard } from "@/components/gamification/QuestBoard";
 import { PowerUpShop } from "@/components/gamification/PowerUpShop";
 import { AchievementsList } from "@/components/gamification/AchievementsList";
+import { BadgesList } from "@/components/gamification/BadgesList";
 import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useAICredits } from "@/hooks/useAICredits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Gamepad2, Target, ShoppingBag, Trophy, Zap, Star, Crown, Lock } from "lucide-react";
+import { Gamepad2, Target, ShoppingBag, Trophy, Zap, Star, Crown, Brain, Award } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 
 export default function Gamification() {
   useEnsurePlayerProfile();
   useQuestProgressTracking();
   const { profile } = usePlayerProfile();
-  const { canUseFeature, isPremium } = useSubscription();
+  const { credits: aiCredits } = useAICredits();
 
   const getRankInfo = () => {
     if (!profile) return { name: "Novice", icon: "🌱", tier: 1 };
@@ -31,7 +30,6 @@ export default function Gamification() {
   };
 
   const rank = getRankInfo();
-  const hasFullGamification = canUseFeature("gamification");
 
   return (
     <AppLayout>
@@ -139,6 +137,14 @@ export default function Gamification() {
                   <span className="text-xs text-muted-foreground">crédits</span>
                 </motion.div>
                 <motion.div 
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <Brain className="w-4 h-4 text-blue-400" />
+                  <span className="font-heading text-blue-400">{aiCredits === Infinity ? "∞" : aiCredits}</span>
+                  <span className="text-xs text-muted-foreground">crédits IA</span>
+                </motion.div>
+                <motion.div 
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                 >
@@ -179,6 +185,10 @@ export default function Gamification() {
                 <Trophy className="w-4 h-4" />
                 <span className="hidden sm:inline">Achievements</span>
               </TabsTrigger>
+              <TabsTrigger value="badges" className="gap-2 data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">
+                <Award className="w-4 h-4" />
+                <span className="hidden sm:inline">Badges</span>
+              </TabsTrigger>
               <TabsTrigger value="shop" className="gap-2 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400">
                 <ShoppingBag className="w-4 h-4" />
                 <span className="hidden sm:inline">Boutique</span>
@@ -190,47 +200,15 @@ export default function Gamification() {
             </TabsContent>
 
             <TabsContent value="achievements" className="animate-fade-in">
-              {hasFullGamification ? (
-                <AchievementsList />
-              ) : (
-                <Card className="border-dashed">
-                  <CardContent className="py-12 text-center">
-                    <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Achievements Premium</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Débloquez tous les achievements avec un abonnement Premium
-                    </p>
-                    <Button asChild>
-                      <Link to="/settings">
-                        <Crown className="h-4 w-4 mr-2" />
-                        Passer à Premium
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+              <AchievementsList />
+            </TabsContent>
+
+            <TabsContent value="badges" className="animate-fade-in">
+              <BadgesList />
             </TabsContent>
 
             <TabsContent value="shop" className="animate-fade-in">
-              {hasFullGamification ? (
-                <PowerUpShop />
-              ) : (
-                <Card className="border-dashed">
-                  <CardContent className="py-12 text-center">
-                    <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Boutique Premium</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Accédez à la boutique de power-ups avec un abonnement Premium
-                    </p>
-                    <Button asChild>
-                      <Link to="/settings">
-                        <Crown className="h-4 w-4 mr-2" />
-                        Passer à Premium
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+              <PowerUpShop />
             </TabsContent>
           </Tabs>
         </motion.div>
