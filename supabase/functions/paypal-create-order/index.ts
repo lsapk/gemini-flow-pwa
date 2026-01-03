@@ -62,10 +62,10 @@ serve(async (req) => {
 
     const { plan } = await req.json();
     
-    // Define pricing for plans
+    // Define pricing for plans - Updated to 4.99€
     const prices: Record<string, { amount: string; tier: string }> = {
-      premium_monthly: { amount: "9.99", tier: "premium" },
-      premium_yearly: { amount: "99.99", tier: "premium" },
+      premium_monthly: { amount: "4.99", tier: "premium" },
+      premium_yearly: { amount: "49.99", tier: "premium" },
     };
 
     const selectedPlan = prices[plan];

@@ -45,7 +45,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: User, label: "Profil IA", path: "/profile" },
     { icon: BarChart3, label: "Analyse", path: "/analysis" },
     { icon: MessageSquare, label: "Assistant IA", path: "/ai-assistant" },
-    { icon: Award, label: "Badges", path: "/badges" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
 

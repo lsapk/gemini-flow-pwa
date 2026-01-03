@@ -236,12 +236,6 @@ export default function Settings() {
                   Arène
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/badges">
-                  <Award className="h-4 w-4 mr-2" />
-                  Badges
-                </Link>
-              </Button>
             </div>
           </div>
           

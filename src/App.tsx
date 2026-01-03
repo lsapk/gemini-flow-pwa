@@ -14,7 +14,7 @@ import Habits from "./pages/Habits";
 import Focus from "./pages/Focus";
 import Journal from "./pages/Journal";
 import Goals from "./pages/Goals";
-import Badges from "./pages/Badges";
+// Badges page removed - merged with Gamification
 import Analysis from "./pages/Analysis";
 import AIAssistant from "./pages/AIAssistant";
 import Reflection from "./pages/Reflection";
@@ -109,13 +109,8 @@ function App() {
                     </AppLayout>
                   </ProtectedRoute>
                 } />
-                <Route path="/badges" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Badges />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
+                {/* Badges route redirects to gamification */}
+                <Route path="/badges" element={<Navigate to="/gamification" replace />} />
                 <Route path="/analysis" element={
                   <ProtectedRoute>
                     <AppLayout>
