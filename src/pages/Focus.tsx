@@ -626,7 +626,7 @@ export default function Focus() {
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Sélectionner une tâche" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         <SelectItem value="none">Aucune tâche</SelectItem>
                         {tasks.map(task => (
                           <SelectItem key={task.id} value={task.id}>
