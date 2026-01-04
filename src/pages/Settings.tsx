@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import { useAICredits } from "@/hooks/useAICredits";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Link, useSearchParams } from "react-router-dom";
 import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
+import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
 
 import { 
   Settings as SettingsIcon, 
@@ -30,16 +31,13 @@ import {
   Trophy,
   Gamepad2,
   Sparkles,
-  Shield,
   LogOut,
-  ExternalLink,
   RefreshCw,
   Timer,
   Target,
   CheckSquare,
   Flame,
   Award,
-  Crown
 } from "lucide-react";
 
 interface UserSettings {
@@ -47,19 +45,17 @@ interface UserSettings {
   notifications_enabled?: boolean;
   sound_enabled?: boolean;
   focus_mode?: boolean;
-  karma_points?: number;
 }
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { profile: playerProfile, isLoading: profileLoading } = usePlayerProfile();
+  const { profile: playerProfile } = usePlayerProfile();
   const { credits: aiCredits } = useAICredits();
-  const { currentTier, isPremium, capturePayPalOrder, getRemainingUses } = useSubscription();
+  const { capturePayPalOrder } = useSubscription();
   const [searchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<UserSettings | null>(null);
   const [formData, setFormData] = useState({
     notifications_enabled: true,
     sound_enabled: true,
@@ -119,7 +115,6 @@ export default function Settings() {
       }
 
       if (data) {
-        setSettings(data as UserSettings);
         setFormData({
           notifications_enabled: data.notifications_enabled ?? true,
           sound_enabled: data.sound_enabled ?? true,
@@ -209,280 +204,309 @@ export default function Settings() {
         <h1 className="text-2xl md:text-3xl font-bold">Paramètres</h1>
       </div>
 
-      {/* Profil rapide */}
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex items-center gap-4 flex-1">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-2xl font-bold">
-                {user?.email?.charAt(0).toUpperCase() || "U"}
-              </div>
-              <div>
-                <h2 className="font-semibold text-lg">{user?.email}</h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Gamepad2 className="h-4 w-4" />
-                  <span>Niveau {playerProfile?.level || 1}</span>
-                  <span>•</span>
-                  <Sparkles className="h-4 w-4" />
-                  <span>{playerProfile?.experience_points || 0} XP</span>
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="profile" className="gap-2">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Profil</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Préférences</span>
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            <span className="hidden sm:inline">Statistiques</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="space-y-6">
+          {/* Quick Profile Overview */}
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-2xl font-bold">
+                    {user?.email?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-lg">{user?.email}</h2>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Gamepad2 className="h-4 w-4" />
+                      <span>Niveau {playerProfile?.level || 1}</span>
+                      <span>•</span>
+                      <Sparkles className="h-4 w-4" />
+                      <span>{playerProfile?.experience_points || 0} XP</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/gamification">
+                      <Trophy className="h-4 w-4 mr-2" />
+                      Arène
+                    </Link>
+                  </Button>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/gamification">
-                  <Trophy className="h-4 w-4 mr-2" />
-                  Arène
-                </Link>
-              </Button>
-            </div>
-          </div>
-          
-          {playerProfile && (
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Progression niveau {playerProfile.level}</span>
-                <span>{playerProfile.experience_points % 100} / 100 XP</span>
-              </div>
-              <Progress value={currentXPProgress} className="h-2" />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Premium Subscription */}
-      <PremiumUpgradeCard />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Apparence */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Palette className="h-5 w-5" />
-              Apparence
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Thème</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={theme === 'light' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('light')}
-                  className="flex-1"
-                >
-                  <Sun className="h-4 w-4 mr-2" />
-                  Clair
-                </Button>
-                <Button
-                  variant={theme === 'dark' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('dark')}
-                  className="flex-1"
-                >
-                  <Moon className="h-4 w-4 mr-2" />
-                  Sombre
-                </Button>
-                <Button
-                  variant={theme === 'system' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('system')}
-                  className="flex-1"
-                >
-                  Auto
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Notifications push</span>
-              </div>
-              <Switch
-                checked={formData.notifications_enabled}
-                onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Sons</span>
-              </div>
-              <Switch
-                checked={formData.sound_enabled}
-                onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Focus */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Brain className="h-5 w-5" />
-              Productivité
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Mode Focus</span>
+              
+              {playerProfile && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Progression niveau {playerProfile.level}</span>
+                    <span>{playerProfile.experience_points % 100} / 100 XP</span>
+                  </div>
+                  <Progress value={currentXPProgress} className="h-2" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Réduit les distractions pendant les sessions
-                </p>
-              </div>
-              <Switch
-                checked={formData.focus_mode}
-                onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
-              />
-            </div>
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Crédits IA */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="h-5 w-5" />
-              Crédits IA
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <div className="text-2xl font-bold text-primary">{aiCredits}</div>
-                <p className="text-xs text-muted-foreground">crédits disponibles</p>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/gamification">
-                  <Gamepad2 className="h-4 w-4 mr-2" />
-                  Boutique
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Statistiques */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Statistiques
-          </CardTitle>
-          <CardDescription>Votre activité sur DeepFlow</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-muted/30 rounded-xl">
-              <CheckSquare className="h-6 w-6 mx-auto mb-2 text-green-500" />
-              <div className="text-2xl font-bold">{stats.tasks_completed}</div>
-              <div className="text-xs text-muted-foreground">Tâches</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-xl">
-              <Target className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-              <div className="text-2xl font-bold">{stats.habits_tracked}</div>
-              <div className="text-xs text-muted-foreground">Habitudes</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-xl">
-              <Timer className="h-6 w-6 mx-auto mb-2 text-purple-500" />
-              <div className="text-2xl font-bold">{Math.round(stats.focus_minutes / 60)}h</div>
-              <div className="text-xs text-muted-foreground">Focus</div>
-            </div>
-            <div className="text-center p-4 bg-muted/30 rounded-xl">
-              <Flame className="h-6 w-6 mx-auto mb-2 text-orange-500" />
-              <div className="text-2xl font-bold">{stats.streak_max}</div>
-              <div className="text-xs text-muted-foreground">Max Streak</div>
-            </div>
-          </div>
+          {/* Profile Edit Form */}
+          <ProfileEditForm />
           
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div className="text-center p-3 bg-muted/20 rounded-lg">
-              <div className="text-lg font-semibold">{stats.goals_completed}</div>
-              <div className="text-xs text-muted-foreground">Objectifs atteints</div>
-            </div>
-            <div className="text-center p-3 bg-muted/20 rounded-lg">
-              <div className="text-lg font-semibold">{stats.journal_entries}</div>
-              <div className="text-xs text-muted-foreground">Entrées journal</div>
-            </div>
-            <div className="text-center p-3 bg-muted/20 rounded-lg">
-              <div className="text-lg font-semibold">{stats.focus_sessions}</div>
-              <div className="text-xs text-muted-foreground">Sessions focus</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Premium Subscription */}
+          <PremiumUpgradeCard />
+        </TabsContent>
 
-      {/* Gamification */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gamepad2 className="h-5 w-5" />
-            Progression Gamification
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
-              <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
-              <div className="text-2xl font-bold">{playerProfile?.level || 1}</div>
-              <div className="text-xs text-muted-foreground">Niveau</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
-              <Sparkles className="h-6 w-6 mx-auto mb-2 text-purple-500" />
-              <div className="text-2xl font-bold">{playerProfile?.experience_points || 0}</div>
-              <div className="text-xs text-muted-foreground">XP Total</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/20">
-              <Zap className="h-6 w-6 mx-auto mb-2 text-cyan-500" />
-              <div className="text-2xl font-bold">{playerProfile?.credits || 0}</div>
-              <div className="text-xs text-muted-foreground">Crédits</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
-              <Award className="h-6 w-6 mx-auto mb-2 text-green-500" />
-              <div className="text-2xl font-bold">{playerProfile?.total_quests_completed || 0}</div>
-              <div className="text-xs text-muted-foreground">Quêtes</div>
-            </div>
+        {/* Preferences Tab */}
+        <TabsContent value="preferences" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Apparence */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Palette className="h-5 w-5" />
+                  Apparence
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Thème</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={theme === 'light' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('light')}
+                      className="flex-1"
+                    >
+                      <Sun className="h-4 w-4 mr-2" />
+                      Clair
+                    </Button>
+                    <Button
+                      variant={theme === 'dark' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('dark')}
+                      className="flex-1"
+                    >
+                      <Moon className="h-4 w-4 mr-2" />
+                      Sombre
+                    </Button>
+                    <Button
+                      variant={theme === 'system' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('system')}
+                      className="flex-1"
+                    >
+                      Auto
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notifications */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Bell className="h-5 w-5" />
+                  Notifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Notifications push</span>
+                  </div>
+                  <Switch
+                    checked={formData.notifications_enabled}
+                    onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Sons</span>
+                  </div>
+                  <Switch
+                    checked={formData.sound_enabled}
+                    onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Focus */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Brain className="h-5 w-5" />
+                  Productivité
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Mode Focus</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Réduit les distractions pendant les sessions
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.focus_mode}
+                    onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Crédits IA */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5" />
+                  Crédits IA
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">{aiCredits}</div>
+                    <p className="text-xs text-muted-foreground">crédits disponibles</p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/gamification">
+                      <Gamepad2 className="h-4 w-4 mr-2" />
+                      Boutique
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          <Button onClick={handleSave} disabled={loading} className="w-full">
+            {loading ? "Sauvegarde..." : "Sauvegarder les préférences"}
+          </Button>
+        </TabsContent>
+
+        {/* Stats Tab */}
+        <TabsContent value="stats" className="space-y-6">
+          {/* Statistiques */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Statistiques
+              </CardTitle>
+              <CardDescription>Votre activité sur DeepFlow</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-muted/30 rounded-xl">
+                  <CheckSquare className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                  <div className="text-2xl font-bold">{stats.tasks_completed}</div>
+                  <div className="text-xs text-muted-foreground">Tâches</div>
+                </div>
+                <div className="text-center p-4 bg-muted/30 rounded-xl">
+                  <Target className="h-6 w-6 mx-auto mb-2 text-blue-500" />
+                  <div className="text-2xl font-bold">{stats.habits_tracked}</div>
+                  <div className="text-xs text-muted-foreground">Habitudes</div>
+                </div>
+                <div className="text-center p-4 bg-muted/30 rounded-xl">
+                  <Timer className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                  <div className="text-2xl font-bold">{Math.round(stats.focus_minutes / 60)}h</div>
+                  <div className="text-xs text-muted-foreground">Focus</div>
+                </div>
+                <div className="text-center p-4 bg-muted/30 rounded-xl">
+                  <Flame className="h-6 w-6 mx-auto mb-2 text-orange-500" />
+                  <div className="text-2xl font-bold">{stats.streak_max}</div>
+                  <div className="text-xs text-muted-foreground">Max Streak</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="text-center p-3 bg-muted/20 rounded-lg">
+                  <div className="text-lg font-semibold">{stats.goals_completed}</div>
+                  <div className="text-xs text-muted-foreground">Objectifs atteints</div>
+                </div>
+                <div className="text-center p-3 bg-muted/20 rounded-lg">
+                  <div className="text-lg font-semibold">{stats.journal_entries}</div>
+                  <div className="text-xs text-muted-foreground">Entrées journal</div>
+                </div>
+                <div className="text-center p-3 bg-muted/20 rounded-lg">
+                  <div className="text-lg font-semibold">{stats.focus_sessions}</div>
+                  <div className="text-xs text-muted-foreground">Sessions focus</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gamification */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gamepad2 className="h-5 w-5" />
+                Progression Gamification
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+                  <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
+                  <div className="text-2xl font-bold">{playerProfile?.level || 1}</div>
+                  <div className="text-xs text-muted-foreground">Niveau</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
+                  <Sparkles className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                  <div className="text-2xl font-bold">{playerProfile?.experience_points || 0}</div>
+                  <div className="text-xs text-muted-foreground">XP Total</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/20">
+                  <Zap className="h-6 w-6 mx-auto mb-2 text-cyan-500" />
+                  <div className="text-2xl font-bold">{playerProfile?.credits || 0}</div>
+                  <div className="text-xs text-muted-foreground">Crédits</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
+                  <Award className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                  <div className="text-2xl font-bold">{playerProfile?.total_quests_completed || 0}</div>
+                  <div className="text-xs text-muted-foreground">Quêtes</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button variant="outline" onClick={fetchStats} className="w-full">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualiser les statistiques
+          </Button>
+        </TabsContent>
+      </Tabs>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
+      <Separator />
+      <div className="flex justify-center">
         <Button variant="destructive" onClick={handleLogout}>
           <LogOut className="h-4 w-4 mr-2" />
           Déconnexion
         </Button>
-        
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchStats}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser
-          </Button>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? "Sauvegarde..." : "Sauvegarder"}
-          </Button>
-        </div>
       </div>
     </div>
   );

@@ -102,6 +102,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 p-2 sm:p-4 md:p-6">
+      {/* Admin Announcements Panel - At the very top */}
+      <AdminAnnouncementPanel />
+
       {/* En-tête avec gradient moderne */}
       <div className="mb-6">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold gradient-text mb-2 animate-fade-in">
@@ -109,9 +112,6 @@ export default function Dashboard() {
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground">Vue d'ensemble de votre productivité</p>
       </div>
-
-      {/* Admin Announcements Panel */}
-      <AdminAnnouncementPanel />
 
       {/* Raccourcis rapides avec design moderne */}
       <div className="space-y-4">

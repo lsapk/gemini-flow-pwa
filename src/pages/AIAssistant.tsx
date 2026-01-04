@@ -352,11 +352,11 @@ export default function AIAssistant() {
           
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pt-14 md:pt-0">
             <ScrollArea
-              className="flex-1 px-1 sm:px-8 pt-2 pb-2 w-full h-[50vh] sm:h-auto max-h-[60vh] sm:max-h-none overflow-y-auto"
+              className="flex-1 px-1 sm:px-8 pt-2 pb-2 w-full overflow-y-auto"
               ref={scrollAreaRef}
               style={{
                 minHeight: '200px',
-                maxHeight: 'calc(100dvh - 160px)',
+                height: 'calc(100dvh - 280px)',
               }}
             >
               <div className="space-y-4">
@@ -395,9 +395,11 @@ export default function AIAssistant() {
                       </Avatar>
                     )}
 
-                    <div className={`max-w-[90vw] sm:max-w-[70%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words`}>
+                    <div className={`max-w-[90vw] sm:max-w-[75%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words overflow-hidden`}>
                       {message.role === 'assistant' ? (
-                        <Markdown content={message.content} />
+                        <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
+                          <Markdown content={message.content} />
+                        </div>
                       ) : (
                         <p className="text-sm">{message.content}</p>
                       )}
