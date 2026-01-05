@@ -35,16 +35,16 @@ export default function CalendarPage() {
   const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
 
   useEffect(() => {
-    if (user && !isAuthLoading) {
+    if (user && session && !isAuthLoading) {
       checkConnection();
     }
-  }, [user, isAuthLoading]);
+  }, [user, session, isAuthLoading]);
 
   useEffect(() => {
-    if (isConnected && selectedDate && session) {
+    if (isConnected && selectedDate && session && !isAuthLoading) {
       loadEvents();
     }
-  }, [isConnected, selectedDate, session]);
+  }, [isConnected, selectedDate, session, isAuthLoading]);
 
   const checkConnection = async () => {
     if (!user) return;

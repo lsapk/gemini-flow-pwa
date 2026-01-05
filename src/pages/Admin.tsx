@@ -86,6 +86,15 @@ export default function Admin() {
       }
 
       try {
+        // Ensure we have a valid session before calling the edge function
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          console.error('No active session for admin verification');
+          setServerVerifiedAdmin(false);
+          setVerifyingAdmin(false);
+          return;
+        }
+
         const { data, error } = await supabase.functions.invoke('verify-admin');
         
         if (error) {
@@ -102,7 +111,7 @@ export default function Admin() {
       }
     };
 
-    if (!isLoading) {
+    if (!isLoading && user) {
       verifyAdminServerSide();
     }
   }, [user, isLoading]);

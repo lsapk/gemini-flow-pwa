@@ -170,7 +170,7 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
         contents: contents,
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         }
       }),
     });
