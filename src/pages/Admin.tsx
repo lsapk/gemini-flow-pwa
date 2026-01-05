@@ -86,14 +86,22 @@ export default function Admin() {
       }
 
       try {
-        // Ensure we have a valid session before calling the edge function
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
-          console.error('No active session for admin verification');
-          setServerVerifiedAdmin(false);
-          setVerifyingAdmin(false);
-          return;
+        // Refresh the session to ensure we have a valid token
+        const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
+        
+        if (sessionError || !sessionData.session) {
+          console.error('Failed to refresh session for admin verification:', sessionError);
+          // Fallback: try to get existing session
+          const { data: existingSession } = await supabase.auth.getSession();
+          if (!existingSession.session) {
+            setServerVerifiedAdmin(false);
+            setVerifyingAdmin(false);
+            return;
+          }
         }
+
+        // Small delay to ensure the session is fully propagated
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const { data, error } = await supabase.functions.invoke('verify-admin');
         
