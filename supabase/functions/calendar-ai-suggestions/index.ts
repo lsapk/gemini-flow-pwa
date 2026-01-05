@@ -90,16 +90,28 @@ serve(async (req) => {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
         
-        const { data: eventsData } = await supabase.functions.invoke('google-calendar-api', {
-          body: {
-            action: 'list',
-            user_id: authenticatedUserId,
-            time_min: weekStart.toISOString(),
-            time_max: weekEnd.toISOString()
+        // Use the original auth header to call the calendar API
+        const calendarResponse = await fetch(
+          `${supabaseUrl}/functions/v1/google-calendar-api`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader,
+              'apikey': supabaseAnonKey
+            },
+            body: JSON.stringify({
+              action: 'list',
+              time_min: weekStart.toISOString(),
+              time_max: weekEnd.toISOString()
+            })
           }
-        });
+        );
         
-        calendarEvents = eventsData?.items || [];
+        if (calendarResponse.ok) {
+          const eventsData = await calendarResponse.json();
+          calendarEvents = eventsData?.items || [];
+        }
       } catch (e) {
         console.log('Could not load calendar events:', e);
       }

@@ -21,7 +21,7 @@ interface CalendarEvent {
 }
 
 export default function CalendarPage() {
-  const { user } = useAuth();
+  const { user, session, isLoading: isAuthLoading } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -35,14 +35,16 @@ export default function CalendarPage() {
   const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
 
   useEffect(() => {
-    checkConnection();
-  }, [user]);
+    if (user && !isAuthLoading) {
+      checkConnection();
+    }
+  }, [user, isAuthLoading]);
 
   useEffect(() => {
-    if (isConnected && selectedDate) {
+    if (isConnected && selectedDate && session) {
       loadEvents();
     }
-  }, [isConnected, selectedDate]);
+  }, [isConnected, selectedDate, session]);
 
   const checkConnection = async () => {
     if (!user) return;
@@ -107,19 +109,26 @@ export default function CalendarPage() {
   }, [user]);
 
   const loadEvents = async () => {
-    if (!user || !selectedDate) return;
+    if (!user || !selectedDate || !session) return;
 
     setIsLoading(true);
     try {
       const startDate = new Date(selectedDate);
-      startDate.setDate(startDate.getDate() - 7); // Start from a week before
+      startDate.setDate(startDate.getDate() - 7);
       const endDate = new Date(selectedDate);
-      endDate.setDate(endDate.getDate() + 7); // End a week after
+      endDate.setDate(endDate.getDate() + 7);
+
+      // Ensure we have a fresh session before making the call
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("No active session for calendar API call");
+        toast.error("Session expirée, veuillez vous reconnecter");
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("google-calendar-api", {
         body: {
           action: "list",
-          user_id: user.id,
           time_min: startDate.toISOString(),
           time_max: endDate.toISOString(),
         },
@@ -137,13 +146,12 @@ export default function CalendarPage() {
   };
 
   const getAISuggestions = async () => {
-    if (!user || !selectedDate) return;
+    if (!user || !selectedDate || !session) return;
 
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("calendar-ai-suggestions", {
         body: {
-          userId: user.id,
           date: selectedDate.toISOString(),
         },
       });
@@ -199,7 +207,7 @@ export default function CalendarPage() {
   };
 
   const createEvent = async (eventData: EventFormData) => {
-    if (!user) return;
+    if (!user || !session) return;
 
     setIsLoading(true);
     try {
@@ -231,7 +239,6 @@ export default function CalendarPage() {
       const { error } = await supabase.functions.invoke("google-calendar-api", {
         body: {
           action: "create",
-          user_id: user.id,
           event_data: googleEventData,
         },
       });
