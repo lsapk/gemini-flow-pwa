@@ -361,7 +361,7 @@ export default function Focus() {
         .eq('user_id', user.id)
         .eq('completed', false)
         .order('priority', { ascending: false })
-        .limit(5);
+        .limit(50);
 
       if (error) throw error;
       setTasks((data || []).map(task => ({
