@@ -10,16 +10,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { message, user_id, context } = await req.json();
-
-    console.log('Received request:', { message, user_id, hasContext: !!context });
-
-    if (!user_id) {
+    // Authenticate user via JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'User ID is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
     }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('Authentication failed:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const authenticatedUserId = claimsData.claims.sub;
+
+    const { message, context } = await req.json();
+
+    console.log('Received request:', { message, userId: authenticatedUserId, hasContext: !!context });
 
     // Get API keys
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
@@ -31,7 +52,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client
+    // Create Supabase client with service role for database operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -241,7 +262,7 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
 
     // Log AI request
     await supabaseClient.from('ai_requests').insert({
-      user_id,
+      user_id: authenticatedUserId,
       service: 'gemini-chat-enhanced'
     });
 
