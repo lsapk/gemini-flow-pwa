@@ -111,13 +111,6 @@ function App() {
                 } />
                 {/* Badges route redirects to gamification */}
                 <Route path="/badges" element={<Navigate to="/gamification" replace />} />
-                <Route path="/analysis" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Analysis />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
                 <Route path="/ai-assistant" element={
                   <ProtectedRoute>
                     <AppLayout>
@@ -125,20 +118,10 @@ function App() {
                     </AppLayout>
                   </ProtectedRoute>
                 } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Profile />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/reflection" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <Reflection />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
+                {/* Redirect old routes to unified AI page */}
+                <Route path="/profile" element={<Navigate to="/ai-assistant" replace />} />
+                <Route path="/reflection" element={<Navigate to="/ai-assistant" replace />} />
+                <Route path="/analysis" element={<Navigate to="/ai-assistant" replace />} />
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <AppLayout>
