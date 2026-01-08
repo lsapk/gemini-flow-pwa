@@ -181,22 +181,48 @@ export function ProfileEditForm() {
                   {displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full">
+              <label 
+                htmlFor="avatar-upload" 
+                className="absolute bottom-0 right-0 p-1.5 bg-primary rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
+              >
                 <Camera className="h-4 w-4 text-primary-foreground" />
-              </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !user) return;
+                    
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${user.id}/avatar.${fileExt}`;
+                      
+                      const { error: uploadError } = await supabase.storage
+                        .from('avatars')
+                        .upload(fileName, file, { upsert: true });
+                      
+                      if (uploadError) throw uploadError;
+                      
+                      const { data: { publicUrl } } = supabase.storage
+                        .from('avatars')
+                        .getPublicUrl(fileName);
+                      
+                      // Add cache buster to force reload
+                      setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
+                      toast.success("Photo de profil mise à jour !");
+                    } catch (error: any) {
+                      console.error('Error uploading avatar:', error);
+                      toast.error("Erreur lors de l'upload de la photo");
+                    }
+                  }}
+                />
+              </label>
             </div>
-            <div className="w-full max-w-sm">
-              <Label htmlFor="avatar-url" className="text-sm text-muted-foreground">
-                URL de l'avatar
-              </Label>
-              <Input
-                id="avatar-url"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://exemple.com/avatar.jpg"
-                className="mt-1"
-              />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Cliquez sur l'icône caméra pour changer votre photo
+            </p>
           </div>
 
           <Separator />

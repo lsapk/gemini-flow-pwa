@@ -287,7 +287,6 @@ FORMAT DE RÉPONSE (JSON strict, sans texte avant/après):
 }
 
 Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
-            user_id: user.id,
             context: {
               analysis_mode: true,
               user_data: userSummary

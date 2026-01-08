@@ -31,16 +31,16 @@ export const MonthlyAIReport = () => {
     setIsGenerating(true);
 
     try {
-      // Get monthly data
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+      // Get PREVIOUS month data (complete month)
+      const now = new Date();
+      const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
       const [tasksResult, habitsResult, focusResult, journalResult, goalsResult] = await Promise.all([
-        supabase.from('tasks').select('*').eq('user_id', user.id).gte('created_at', startOfMonth.toISOString()),
+        supabase.from('tasks').select('*').eq('user_id', user.id).gte('created_at', startOfPrevMonth.toISOString()).lte('created_at', endOfPrevMonth.toISOString()),
         supabase.from('habits').select('*').eq('user_id', user.id),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('created_at', startOfMonth.toISOString()),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('created_at', startOfMonth.toISOString()),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).gte('created_at', startOfPrevMonth.toISOString()).lte('created_at', endOfPrevMonth.toISOString()),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('created_at', startOfPrevMonth.toISOString()).lte('created_at', endOfPrevMonth.toISOString()),
         supabase.from('goals').select('*').eq('user_id', user.id),
       ]);
 
@@ -78,14 +78,13 @@ export const MonthlyAIReport = () => {
 5. **Recommandations** - 3 actions concrètes pour le mois prochain
 6. **Score global** - Note sur 100 avec explication
 
-Données du mois:
+Données du mois précédent (${startOfPrevMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}):
 - Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} complétées
 - Focus: ${monthlyData.focus.sessions} sessions, ${Math.round(monthlyData.focus.totalMinutes / 60)}h au total
 - Journal: ${monthlyData.journal.entries} entrées
 - Objectifs: ${monthlyData.goals.completed}/${monthlyData.goals.total} atteints
 - Progression moyenne objectifs: ${Math.round(monthlyData.goals.avgProgress)}%
 - Streak moyen habitudes: ${Math.round(monthlyData.habits.avgStreak)} jours`,
-          user_id: user.id,
           context: {
             analysis_mode: true,
             user_data: monthlyData,
@@ -110,7 +109,7 @@ Données du mois:
     }
   };
 
-  const currentMonth = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const previousMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
   return (
     <motion.div
@@ -127,7 +126,7 @@ Données du mois:
               <div>
                 <span className="font-heading">Rapport Mensuel IA</span>
                 <Badge variant="outline" className="ml-2 text-xs capitalize">
-                  {currentMonth}
+                  {previousMonth}
                 </Badge>
               </div>
             </div>

@@ -8,15 +8,19 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Settings, Sparkles, BarChart3, Crown, Lock } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Lock, Brain, MessageSquare, Target, FileText } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 import { Link } from "react-router-dom";
+import Analysis from "./Analysis";
+import Profile from "./Profile";
+import Reflection from "./Reflection";
 
 interface Message {
   id: string;
@@ -47,6 +51,7 @@ export default function AIAssistant() {
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const [creationModeEnabled, setCreationModeEnabled] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("chat");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -199,7 +204,6 @@ export default function AIAssistant() {
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
           message: finalMessage,
-          user_id: user.id,
           context: {
             user_data: userData,
             recent_messages: recentMessages,
@@ -291,8 +295,47 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <Card className="flex-1 flex flex-col w-full h-[100dvh] rounded-none md:rounded-xl shadow-none md:shadow-lg bg-background md:my-4 md:w-[90%] md:mx-auto transition-all">
+    <div className="max-w-6xl mx-auto p-2 sm:p-4">
+      {/* Header avec onglets */}
+      <div className="mb-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20">
+            <Brain className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Intelligence IA</h1>
+            <p className="text-sm text-muted-foreground">Toutes vos fonctionnalités IA au même endroit</p>
+          </div>
+          {isPremium && (
+            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs ml-auto">
+              <Crown className="h-3 w-3 mr-1" />
+              Premium
+            </Badge>
+          )}
+        </div>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Assistant</span>
+            </TabsTrigger>
+            <TabsTrigger value="analysis" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Analyse</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profil IA</span>
+            </TabsTrigger>
+            <TabsTrigger value="reflection" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Réflexion</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chat" className="mt-0">
+      <Card className="flex-1 flex flex-col w-full min-h-[70vh] max-h-[80vh] rounded-xl shadow-lg bg-background transition-all">
           <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
             <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">
               <div className="flex items-center gap-2">
@@ -464,6 +507,21 @@ export default function AIAssistant() {
             </div>
           </CardContent>
       </Card>
+          </TabsContent>
+          
+          <TabsContent value="analysis" className="mt-0">
+            <Analysis />
+          </TabsContent>
+          
+          <TabsContent value="profile" className="mt-0">
+            <Profile />
+          </TabsContent>
+          
+          <TabsContent value="reflection" className="mt-0">
+            <Reflection />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       <AISuggestionDialog
         suggestion={currentSuggestion}

@@ -98,7 +98,6 @@ export function useAIProductivityInsights() {
   }
 ]
 Uniquement la liste JSON, aucune explication extérieure.`,
-              user_id: user.id,
               context: { user_data: userData, recent_messages: [] }
             }
           })
