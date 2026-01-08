@@ -15,7 +15,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     // SECURITY: Verify the user's JWT token
     const authHeader = req.headers.get("Authorization");
@@ -49,8 +49,8 @@ serve(async (req) => {
     const { date } = await req.json();
     console.log('Request received:', { authenticatedUserId, date });
     
-    if (!geminiApiKey) {
-      console.error('GEMINI_API_KEY not configured');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: "Service IA non configuré" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -59,7 +59,7 @@ serve(async (req) => {
     
     // Use service role key for database queries (needed to bypass RLS for internal operations)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log('Gemini API key retrieved successfully');
+    console.log('Lovable API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur (using authenticated user ID)
     const targetDate = new Date(date).toISOString().split('T')[0];
@@ -119,7 +119,9 @@ serve(async (req) => {
 
     const targetDateStr = new Date(date).toISOString().split('T')[0];
     
-    const prompt = `Tu es un assistant de productivité expert. Analyse les données suivantes et fournis des suggestions pour la journée du ${targetDate}.
+    const systemPrompt = `Tu es un assistant de productivité expert. Tu dois fournir des suggestions complètes et détaillées pour organiser la journée de l'utilisateur. Ne coupe JAMAIS ta réponse - termine toujours complètement.`;
+    
+    const userPrompt = `Analyse les données suivantes et fournis des suggestions COMPLÈTES pour la journée du ${targetDate}.
 
 Données de l'utilisateur:
 - Tâches: ${tasks.length > 0 ? tasks.map((t: any) => `"${t.title}" (${t.priority || 'medium'})`).join(', ') : 'aucune'}
@@ -127,83 +129,43 @@ Données de l'utilisateur:
 - Objectifs: ${goals.length > 0 ? goals.map((g: any) => `"${g.title}" (${g.progress || 0}%)`).join(', ') : 'aucun'}
 - Événements Google Calendar: ${calendarEvents.length > 0 ? calendarEvents.map((e: any) => `"${e.summary}"`).join(', ') : 'aucun'}
 
-INSTRUCTIONS CRITIQUES:
+INSTRUCTIONS:
 1. Fournis des suggestions en Markdown avec emojis (📅, 🎯, 💪, 🚀)
-2. Pour chaque activité suggérée, INCLUS TOUJOURS un horaire au format "09h00 - 10h00"
-3. APPELLE OBLIGATOIREMENT la fonction suggest_events avec 3-5 événements concrets basés sur les données
+2. Pour chaque activité suggérée, inclus un horaire au format "09h00 - 10h00"
+3. Propose 3-5 événements concrets basés sur les données
 4. Chaque événement doit avoir un titre clair et des horaires précis pour le ${targetDateStr}
-5. Limite ta réponse à 300 mots maximum
+5. TERMINE TOUJOURS ta réponse complètement - ne coupe jamais
 
-Format attendu pour les événements suggérés (via suggest_events):
-- Titre descriptif et actionnable
-- Horaires réalistes et espacés (ex: 09:00, 11:00, 14:00, 16:00)
-- Durée adaptée à l'activité (30min à 2h)`;
+Retourne également un JSON avec les événements suggérés dans ce format:
+\`\`\`json
+{
+  "events": [
+    {"title": "Titre", "description": "Description", "startDateTime": "${targetDateStr}T09:00:00", "endDateTime": "${targetDateStr}T10:00:00"}
+  ]
+}
+\`\`\``;
 
-    console.log('Calling Gemini API with function calling...');
-    const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          tools: [{
-            functionDeclarations: [{
-              name: "suggest_events",
-              description: "Suggère des événements de calendrier à créer pour aider l'utilisateur à organiser sa journée",
-              parameters: {
-                type: "OBJECT",
-                properties: {
-                  events: {
-                    type: "ARRAY",
-                    description: "Liste des événements suggérés",
-                    items: {
-                      type: "OBJECT",
-                      properties: {
-                        title: {
-                          type: "STRING",
-                          description: "Titre de l'événement"
-                        },
-                        description: {
-                          type: "STRING",
-                          description: "Description de l'événement"
-                        },
-                        startDateTime: {
-                          type: "STRING",
-                          description: "Date et heure de début au format ISO (ex: 2025-03-19T09:00:00)"
-                        },
-                        endDateTime: {
-                          type: "STRING",
-                          description: "Date et heure de fin au format ISO (ex: 2025-03-19T10:00:00)"
-                        }
-                      },
-                      required: ["title", "startDateTime", "endDateTime"]
-                    }
-                  }
-                },
-                required: ["events"]
-              }
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          }
-        }),
-      }
-    );
+    console.log('Calling Lovable AI Gateway...');
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+      }),
+    });
 
-    console.log('Gemini API response status:', aiResponse.status);
+    console.log('Lovable AI Gateway response status:', aiResponse.status);
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('Gemini API error response:', { status: aiResponse.status, body: errorText });
+      console.error('Lovable AI Gateway error response:', { status: aiResponse.status, body: errorText });
       
       if (aiResponse.status === 429) {
         return new Response(
@@ -211,95 +173,70 @@ Format attendu pour les événements suggérés (via suggest_events):
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw new Error(`Gemini API error: ${aiResponse.status} - ${errorText}`);
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw new Error(`AI gateway error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    console.log('Full Gemini response:', JSON.stringify(aiData, null, 2));
+    console.log('Lovable AI Gateway response received');
     
-    const suggestion = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Aucune suggestion disponible";
+    const suggestion = aiData.choices?.[0]?.message?.content || "Aucune suggestion disponible";
 
-    // Extraire les événements suggérés via function calling
+    // Extraire les événements suggérés du JSON dans la réponse
     let suggestedEvents: any[] = [];
     
-    const functionCall = aiData.candidates?.[0]?.content?.parts?.find((part: any) => part.functionCall);
-    console.log('Function call found:', !!functionCall);
-    
-    if (functionCall?.functionCall?.name === "suggest_events") {
-      const args = functionCall.functionCall.args;
-      suggestedEvents = args?.events || [];
-      console.log('Extracted events from function call:', suggestedEvents.length);
-    } else {
-      // Si pas de function call, extraire du texte avec patterns multiples
-      console.log('No function call, parsing text for events');
-      
-      // Pattern 1: **Titre** suivi de horaires
-      const pattern1 = /\*\*([^*]+)\*\*.*?(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})/g;
-      // Pattern 2: - Titre (horaire)
-      const pattern2 = /-\s*([^(]+)\s*\((\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})\)/g;
-      // Pattern 3: Horaire: Titre
-      const pattern3 = /(\d{1,2}h\d{2})\s*-\s*(\d{1,2}h\d{2})\s*:\s*([^\n]+)/g;
-      
-      const parseMatch = (title: string, startTime: string, endTime: string) => {
-        const cleanTitle = title.trim().replace(/[*-]/g, '').trim();
-        const start = startTime.replace('h', ':');
-        const end = endTime.replace('h', ':');
-        return {
-          title: cleanTitle,
-          description: '',
-          startDateTime: `${targetDateStr}T${start}:00`,
-          endDateTime: `${targetDateStr}T${end}:00`
-        };
-      };
-      
-      // Essayer tous les patterns
-      let match;
-      while ((match = pattern1.exec(suggestion)) !== null) {
-        suggestedEvents.push(parseMatch(match[1], match[2], match[3]));
-      }
-      while ((match = pattern2.exec(suggestion)) !== null) {
-        suggestedEvents.push(parseMatch(match[1], match[2], match[3]));
-      }
-      while ((match = pattern3.exec(suggestion)) !== null) {
-        suggestedEvents.push(parseMatch(match[3], match[1], match[2]));
-      }
-      
-      console.log('Extracted events from text patterns:', suggestedEvents.length);
-      
-      // Si toujours aucun événement, créer des suggestions par défaut basées sur les données
-      if (suggestedEvents.length === 0 && (tasks.length > 0 || habits.length > 0)) {
-        console.log('Creating default event suggestions from user data');
-        
-        let hour = 9;
-        
-        // Ajouter les tâches prioritaires
-        const priorityTasks = tasks.filter((t: any) => t.priority === 'high').slice(0, 2);
-        priorityTasks.forEach((task: any) => {
-          suggestedEvents.push({
-            title: `Tâche: ${task.title}`,
-            description: task.description || '',
-            startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
-            endDateTime: `${targetDateStr}T${(hour + 1).toString().padStart(2, '0')}:00:00`
-          });
-          hour += 2;
-        });
-        
-        // Ajouter les habitudes
-        habits.slice(0, 2).forEach((habit: any) => {
-          suggestedEvents.push({
-            title: `Habitude: ${habit.title}`,
-            description: `Fréquence: ${habit.frequency}`,
-            startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
-            endDateTime: `${targetDateStr}T${(hour).toString().padStart(2, '0')}:30:00`
-          });
-          hour += 1;
-        });
-        
-        console.log('Created default events:', suggestedEvents.length);
+    // Essayer d'extraire le JSON des événements
+    const jsonMatch = suggestion.match(/```json\s*([\s\S]*?)```/);
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        const parsed = JSON.parse(jsonMatch[1]);
+        if (parsed.events && Array.isArray(parsed.events)) {
+          suggestedEvents = parsed.events;
+          console.log('Extracted events from JSON:', suggestedEvents.length);
+        }
+      } catch (e) {
+        console.log('Could not parse JSON events:', e);
       }
     }
     
-    console.log('Final suggested events:', suggestedEvents);
+    // Si pas d'événements extraits, créer des suggestions par défaut
+    if (suggestedEvents.length === 0 && (tasks.length > 0 || habits.length > 0)) {
+      console.log('Creating default event suggestions from user data');
+      
+      let hour = 9;
+      
+      // Ajouter les tâches prioritaires
+      const priorityTasks = tasks.filter((t: any) => t.priority === 'high').slice(0, 2);
+      priorityTasks.forEach((task: any) => {
+        suggestedEvents.push({
+          title: `Tâche: ${task.title}`,
+          description: task.description || '',
+          startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
+          endDateTime: `${targetDateStr}T${(hour + 1).toString().padStart(2, '0')}:00:00`
+        });
+        hour += 2;
+      });
+      
+      // Ajouter les habitudes
+      habits.slice(0, 2).forEach((habit: any) => {
+        suggestedEvents.push({
+          title: `Habitude: ${habit.title}`,
+          description: `Fréquence: ${habit.frequency}`,
+          startDateTime: `${targetDateStr}T${hour.toString().padStart(2, '0')}:00:00`,
+          endDateTime: `${targetDateStr}T${(hour).toString().padStart(2, '0')}:30:00`
+        });
+        hour += 1;
+      });
+      
+      console.log('Created default events:', suggestedEvents.length);
+    }
+    
+    console.log('Final suggested events:', suggestedEvents.length);
 
     return new Response(
       JSON.stringify({ 
