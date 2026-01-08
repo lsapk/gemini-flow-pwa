@@ -120,7 +120,13 @@ function App() {
                 } />
                 {/* Redirect old routes to unified AI page */}
                 <Route path="/profile" element={<Navigate to="/ai-assistant" replace />} />
-                <Route path="/reflection" element={<Navigate to="/ai-assistant" replace />} />
+                <Route path="/reflection" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <Reflection />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
                 <Route path="/analysis" element={<Navigate to="/ai-assistant" replace />} />
                 <Route path="/settings" element={
                   <ProtectedRoute>

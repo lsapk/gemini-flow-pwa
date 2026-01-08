@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -26,9 +27,9 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getUser(token);
     
-    if (claimsError || !claimsData?.claims?.sub) {
+    if (claimsError || !claimsData?.user?.id) {
       console.error('Authentication failed:', claimsError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
@@ -36,16 +37,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const authenticatedUserId = claimsData.claims.sub;
+    const authenticatedUserId = claimsData.user.id;
 
     const { message, context } = await req.json();
 
-    console.log('Received request:', { message, userId: authenticatedUserId, hasContext: !!context });
+    console.log('Received request:', { message: message?.substring(0, 100), userId: authenticatedUserId, hasContext: !!context });
 
-    // Get API keys
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      console.error('GEMINI_API_KEY not found');
+    // Get Lovable API key
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not found');
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -87,6 +88,7 @@ STYLE DE RÉPONSE:
 - Donne des insights surprenants mais fondés
 - Propose des actions concrètes avec des délais
 - Utilise des métaphores ou comparaisons pour clarifier
+- RÉPONDS DE MANIÈRE COMPLÈTE - ne coupe jamais ta réponse
 
 DONNÉES UTILISATEUR DISPONIBLES: ${JSON.stringify(context?.user_data || {})}
 
@@ -128,10 +130,11 @@ MISSION: Être un conseiller en productivité bienveillant et expert.
 RÈGLES STRICTES:
 - NE SUGGÈRE PAS de créations automatiquement
 - Concentre-toi sur les conseils, l'analyse et la discussion
-- Réponds aux questions de manière approfondie
+- Réponds aux questions de manière approfondie ET COMPLÈTE
 - Partage des techniques et méthodes de productivité
 - Aide à résoudre des problèmes spécifiques
 - Donne des insights sur les données existantes
+- NE COUPE JAMAIS TA RÉPONSE - termine toujours tes phrases
 
 STYLE:
 - Conversationnel et bienveillant
@@ -150,49 +153,25 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
       content: msg.content
     }));
 
-    console.log('Making request to Google Gemini API with mode:', messageContext);
+    console.log('Making request to Lovable AI Gateway with mode:', messageContext);
     
-    // Build contents for Gemini API format
-    const contents = [];
-    
-    // Add system instruction as first user message
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt }]
-    });
-    
-    // Add model response acknowledging the system instruction
-    contents.push({
-      role: 'model',
-      parts: [{ text: 'Je comprends mes instructions. Comment puis-je vous aider ?' }]
-    });
-    
-    // Add recent messages
-    recentMessages.forEach((msg: any) => {
-      contents.push({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      });
-    });
-    
-    // Add current message
-    contents.push({
-      role: 'user',
-      parts: [{ text: message }]
-    });
+    // Build messages array for Lovable AI Gateway (OpenAI-compatible format)
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages,
+      { role: 'user', content: message }
+    ];
 
-    // Call Google Gemini API (using gemini-2.5-flash)
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+    // Call Lovable AI Gateway
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        }
+        model: 'google/gemini-2.5-flash',
+        messages: messages,
       }),
     });
 
@@ -203,15 +182,21 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
         );
       }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits in Settings → Cloud → Usage.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 402 }
+        );
+      }
       const errorText = await aiResponse.text();
-      console.error('Google Gemini API error:', aiResponse.status, errorText);
-      throw new Error(`Gemini API error: ${errorText}`);
+      console.error('Lovable AI Gateway error:', aiResponse.status, errorText);
+      throw new Error(`AI gateway error: ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    let responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let responseText = aiData.choices?.[0]?.message?.content || '';
 
-    console.log('Google Gemini API response received:', responseText);
+    console.log('Lovable AI Gateway response received, length:', responseText.length);
 
     // Try to parse JSON response
     let suggestion = null;

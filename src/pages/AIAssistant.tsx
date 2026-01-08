@@ -13,14 +13,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Lock, Brain, MessageSquare, Target, FileText } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 import { Link } from "react-router-dom";
 import Analysis from "./Analysis";
 import Profile from "./Profile";
-import Reflection from "./Reflection";
 
 interface Message {
   id: string;
@@ -315,7 +314,7 @@ export default function AIAssistant() {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Assistant</span>
@@ -327,10 +326,6 @@ export default function AIAssistant() {
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profil IA</span>
-            </TabsTrigger>
-            <TabsTrigger value="reflection" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Réflexion</span>
             </TabsTrigger>
           </TabsList>
           
@@ -515,10 +510,6 @@ export default function AIAssistant() {
           
           <TabsContent value="profile" className="mt-0">
             <Profile />
-          </TabsContent>
-          
-          <TabsContent value="reflection" className="mt-0">
-            <Reflection />
           </TabsContent>
         </Tabs>
       </div>
