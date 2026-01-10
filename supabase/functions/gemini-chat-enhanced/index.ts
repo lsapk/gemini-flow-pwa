@@ -159,7 +159,7 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       generationConfig: {
         maxOutputTokens: 8192,
         temperature: 0.7,
