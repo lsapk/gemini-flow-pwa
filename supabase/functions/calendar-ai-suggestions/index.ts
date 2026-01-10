@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     
     // SECURITY: Verify the user's JWT token
     const authHeader = req.headers.get("Authorization");
@@ -49,8 +50,8 @@ serve(async (req) => {
     const { date } = await req.json();
     console.log('Request received:', { authenticatedUserId, date });
     
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: "Service IA non configuré" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -59,7 +60,7 @@ serve(async (req) => {
     
     // Use service role key for database queries (needed to bypass RLS for internal operations)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log('Lovable API key retrieved successfully');
+    console.log('Gemini API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur (using authenticated user ID)
     const targetDate = new Date(date).toISOString().split('T')[0];
@@ -145,47 +146,32 @@ Retourne également un JSON avec les événements suggérés dans ce format:
 }
 \`\`\``;
 
-    console.log('Calling Lovable AI Gateway...');
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-      }),
+    console.log('Calling Gemini API...');
+    
+    // Initialize Gemini
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        maxOutputTokens: 8192,
+        temperature: 0.7,
+      }
     });
 
-    console.log('Lovable AI Gateway response status:', aiResponse.status);
+    // Start chat
+    const chat = model.startChat({
+      history: [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'Compris, je suis prêt à aider.' }] }
+      ]
+    });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('Lovable AI Gateway error response:', { status: aiResponse.status, body: errorText });
-      
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requêtes dépassée. Veuillez réessayer dans quelques instants." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI gateway error: ${aiResponse.status} - ${errorText}`);
-    }
+    // Send message
+    const result = await chat.sendMessage(userPrompt);
+    const response = await result.response;
+    const suggestion = response.text();
 
-    const aiData = await aiResponse.json();
-    console.log('Lovable AI Gateway response received');
-    
-    const suggestion = aiData.choices?.[0]?.message?.content || "Aucune suggestion disponible";
+    console.log('Gemini response received, length:', suggestion.length);
 
     // Extraire les événements suggérés du JSON dans la réponse
     let suggestedEvents: any[] = [];
