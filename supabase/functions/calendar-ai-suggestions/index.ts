@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +15,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     // SECURITY: Verify the user's JWT token
     const authHeader = req.headers.get("Authorization");
@@ -50,8 +49,8 @@ serve(async (req) => {
     const { date } = await req.json();
     console.log('Request received:', { authenticatedUserId, date });
     
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY not configured');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: "Service IA non configuré" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -60,7 +59,7 @@ serve(async (req) => {
     
     // Use service role key for database queries (needed to bypass RLS for internal operations)
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log('Gemini API key retrieved successfully');
+    console.log('Lovable API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur (using authenticated user ID)
     const targetDate = new Date(date).toISOString().split('T')[0];
@@ -146,32 +145,48 @@ Retourne également un JSON avec les événements suggérés dans ce format:
 }
 \`\`\``;
 
-    console.log('Calling Gemini API...');
+    console.log('Calling Lovable AI Gateway (Gemini)...');
     
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        maxOutputTokens: 8192,
+    // Call Lovable AI Gateway (which uses Gemini)
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 8192,
         temperature: 0.7,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
       }
-    });
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits to your Lovable workspace.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 402 }
+        );
+      }
+      const errorText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errorText);
+      throw new Error(`AI gateway error: ${errorText}`);
+    }
 
-    // Start chat
-    const chat = model.startChat({
-      history: [
-        { role: 'user', parts: [{ text: systemPrompt }] },
-        { role: 'model', parts: [{ text: 'Compris, je suis prêt à aider.' }] }
-      ]
-    });
+    const aiData = await aiResponse.json();
+    const suggestion = aiData.choices?.[0]?.message?.content || '';
 
-    // Send message
-    const result = await chat.sendMessage(userPrompt);
-    const response = await result.response;
-    const suggestion = response.text();
-
-    console.log('Gemini response received, length:', suggestion.length);
+    console.log('AI response received, length:', suggestion.length);
 
     // Extraire les événements suggérés du JSON dans la réponse
     let suggestedEvents: any[] = [];

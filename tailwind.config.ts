@@ -19,9 +19,10 @@ export default {
 			}
 		},
 		extend: {
-			fontFamily: {
-				sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
-				heading: ['Orbitron', 'system-ui', 'sans-serif'],
+		fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+				heading: ['Clash Display', 'system-ui', 'sans-serif'],
+				mono: ['Space Mono', 'monospace'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
