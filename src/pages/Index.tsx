@@ -49,7 +49,7 @@ const Index = () => {
           </div>
           <Link to="/register">
             <Button size="lg" className="font-semibold px-6 bg-primary hover:bg-primary/90">
-              Démarrer ma première session Focus
+              Reprendre le contrôle
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
@@ -89,7 +89,7 @@ const Index = () => {
                     size="lg" 
                     className="text-lg px-10 py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-105"
                   >
-                    Démarrer ma première session Focus
+                    Reprendre le contrôle
                     <ArrowRight className="ml-3 h-6 w-6" />
                   </Button>
                 </Link>
@@ -323,7 +323,7 @@ const Index = () => {
               size="lg" 
               className="text-lg px-10 py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25"
             >
-              Démarrer ma première session Focus
+              Reprendre le contrôle
               <ArrowRight className="ml-3 h-6 w-6" />
             </Button>
           </Link>
