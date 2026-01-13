@@ -248,9 +248,6 @@ export default function Journal() {
         </Button>
       </div>
 
-      {/* Statistics */}
-      <JournalStats entries={entries} />
-
       {/* Create/Edit Form */}
       {showForm && (
         <Card>

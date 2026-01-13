@@ -294,7 +294,7 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-2 sm:p-4">
+    <div className="h-[calc(100vh-80px)] flex flex-col p-2 sm:p-4 max-w-7xl mx-auto">
       {/* Header avec onglets */}
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-4">
@@ -329,97 +329,75 @@ export default function AIAssistant() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="chat" className="mt-0">
-      <Card className="flex-1 flex flex-col w-full min-h-[70vh] max-h-[80vh] rounded-xl shadow-lg bg-background transition-all">
-          <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-8">
-            <CardTitle className="flex items-center justify-between gap-2 text-base sm:text-2xl md:flex">
-              <div className="flex items-center gap-2">
-                <Bot className="h-6 w-6 text-primary" />
-                <span className="font-semibold">Assistant IA <span className="hidden sm:inline">DeepFlow</span></span>
-                {analysisMode && <BarChart3 className="h-4 w-4 text-blue-500" />}
-                {creationModeEnabled && <Sparkles className="h-4 w-4 text-green-500" />}
-                {!isPremium && (
-                  <Badge variant="outline" className="text-xs">
-                    {getRemainingUses("chat")}/5 restants
-                  </Badge>
-                )}
-                {isPremium && (
-                  <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                    <Crown className="h-3 w-3 mr-1" />
-                    Premium
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <Label htmlFor="analysis-mode" className="text-xs">Analyse</Label>
-                  <Switch
-                    id="analysis-mode"
-                    checked={analysisMode}
-                    onCheckedChange={(checked) => {
-                      setAnalysisMode(checked);
-                      if (checked) setCreationModeEnabled(false);
-                    }}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="h-4 w-4" />
-                  <Label htmlFor="creation-mode" className="text-xs">Création</Label>
-                  <Switch
-                    id="creation-mode"
-                    checked={creationModeEnabled}
-                    onCheckedChange={(checked) => {
-                      setCreationModeEnabled(checked);
-                      if (checked) setAnalysisMode(false);
-                    }}
-                  />
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearConversation}
-                  disabled={messages.length === 0}
-                  className="!rounded-lg"
-                >
-                  Effacer
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pt-14 md:pt-0">
-            <ScrollArea
-              className="flex-1 px-1 sm:px-8 pt-2 pb-2 w-full overflow-y-auto"
-              ref={scrollAreaRef}
-              style={{
-                minHeight: '200px',
-                height: 'calc(100dvh - 280px)',
-              }}
-            >
-              <div className="space-y-4">
-                {messages.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <Bot className="h-12 w-12 mx-auto mb-4 text-primary/50" />
-                    <p className="text-lg font-medium mb-2">Bonjour ! Je suis votre assistant IA personnel. 🤖</p>
-                    <p className="text-sm mb-4">
-                      {analysisMode ? "Mode analyse approfondie activé - Je vais analyser vos données en détail ! 📊" :
-                       creationModeEnabled ? "Mode création activé - Je peux créer des éléments selon vos besoins ! ✨" :
-                       "Je suis là pour discuter de votre productivité et vous conseiller ! 💬"}
-                    </p>
-                    <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg max-w-md mx-auto">
-                      <p className="font-medium mb-1">
-                        {analysisMode ? "🔍 Mode Analyse Approfondie" :
-                         creationModeEnabled ? "✨ Mode Création" : "💬 Mode Discussion"}
-                      </p>
-                      <p>
-                        {analysisMode ? "Je vais analyser vos données, identifier des tendances et vous donner des insights personnalisés" :
-                         creationModeEnabled ? "Je peux créer des tâches, habitudes et objectifs selon vos besoins" :
-                         "Mode discussion - je me concentre sur l'analyse et les conseils"}
-                      </p>
+          <TabsContent value="chat" className="mt-0 flex-1">
+            <div className="flex gap-4 h-[calc(100vh-220px)]">
+              {/* Main Chat Area */}
+              <Card className="flex-1 flex flex-col rounded-xl shadow-lg bg-background">
+                <CardHeader className="flex-shrink-0 px-4 py-3 border-b">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-5 w-5 text-primary" />
+                      <span className="font-semibold">Assistant IA</span>
+                      {!isPremium && (
+                        <Badge variant="outline" className="text-xs">
+                          {getRemainingUses("chat")}/5
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="analysis-mode" className="text-xs">Analyse</Label>
+                        <Switch
+                          id="analysis-mode"
+                          checked={analysisMode}
+                          onCheckedChange={(checked) => {
+                            setAnalysisMode(checked);
+                            if (checked) setCreationModeEnabled(false);
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-muted-foreground" />
+                        <Label htmlFor="creation-mode" className="text-xs">Création</Label>
+                        <Switch
+                          id="creation-mode"
+                          checked={creationModeEnabled}
+                          onCheckedChange={(checked) => {
+                            setCreationModeEnabled(checked);
+                            if (checked) setAnalysisMode(false);
+                          }}
+                        />
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearConversation}
+                        disabled={messages.length === 0}
+                      >
+                        Effacer
+                      </Button>
                     </div>
                   </div>
-                )}
+                </CardHeader>
+          
+                <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+                  <ScrollArea
+                    className="flex-1 px-4 py-4"
+                    ref={scrollAreaRef}
+                  >
+                    <div className="space-y-4">
+                      {messages.length === 0 && (
+                        <div className="text-center text-muted-foreground py-12">
+                          <Bot className="h-16 w-16 mx-auto mb-4 text-primary/30" />
+                          <p className="text-lg font-medium mb-2">Bonjour ! 👋</p>
+                          <p className="text-sm max-w-md mx-auto">
+                            {analysisMode ? "Mode analyse activé. Demandez-moi d'analyser vos données." :
+                            creationModeEnabled ? "Mode création activé. Je peux créer des tâches et habitudes." :
+                            "Comment puis-je vous aider aujourd'hui ?"}
+                          </p>
+                        </div>
+                      )}
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -474,45 +452,46 @@ export default function AIAssistant() {
                     </div>
                   </div>
                 )}
+                      </div>
+                    </ScrollArea>
+                    
+                    <div className="border-t bg-background px-4 py-3 flex gap-2">
+                      <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder={getPlaceholderText()}
+                        disabled={isLoading}
+                        className="flex-1 h-11"
+                        autoFocus
+                      />
+                      <Button 
+                        onClick={sendMessage} 
+                        disabled={isLoading || !input.trim()}
+                        size="icon"
+                        className="h-11 w-11"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </ScrollArea>
+            </TabsContent>
             
-            <div className="border-t bg-background px-1 py-2 sm:px-6 flex-shrink-0 flex gap-2 sticky bottom-0 left-0 w-full z-10">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={getPlaceholderText()}
-                disabled={isLoading}
-                className="flex-1 text-base h-11 px-2 rounded-lg focus:ring-2 focus:ring-primary"
-                autoFocus
-              />
-              <Button 
-                onClick={sendMessage} 
-                disabled={isLoading || !input.trim()}
-                size="icon"
-                className="h-11 w-11 rounded-lg"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </CardContent>
-      </Card>
-          </TabsContent>
-          
-          <TabsContent value="analysis" className="mt-0">
-            <Analysis />
-          </TabsContent>
-          
-          <TabsContent value="profile" className="mt-0">
-            <Profile />
-          </TabsContent>
-        </Tabs>
-      </div>
+            <TabsContent value="analysis" className="mt-0">
+              <Analysis />
+            </TabsContent>
+            
+            <TabsContent value="profile" className="mt-0">
+              <Profile />
+            </TabsContent>
+          </Tabs>
+        </div>
 
       <AISuggestionDialog
         suggestion={currentSuggestion}

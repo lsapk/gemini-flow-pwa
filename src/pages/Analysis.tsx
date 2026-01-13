@@ -1,75 +1,87 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarChart3, RefreshCw, TrendingUp, Target, Timer, BookOpen, Brain, Lightbulb, Crown, Lock } from "lucide-react";
-import { SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart } from "@/components/ui/custom-charts";
+import { RefreshCw, Target, Timer, TrendingUp, CheckCircle2, Crown, Lock } from "lucide-react";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { useRealProductivityAnalysis } from "@/hooks/useRealProductivityAnalysis";
 import { useSubscription } from "@/hooks/useSubscription";
-import { InsightCard } from "@/components/ui/InsightCard";
-import { useAIProductivityInsights } from "@/hooks/useAIProductivityInsights";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
 
 export default function Analysis() {
-  const { habitsData, tasksData, focusData, activityData, isLoading, refetch } = useAnalyticsData();
-  const { data: productivityData, isLoading: productivityLoading } = useRealProductivityAnalysis();
-  const { canUseFeature, getRemainingUses, trackUsage, isPremium } = useSubscription();
+  const { habitsData, tasksData, focusData, activityData, isLoading, refetch, taskCompletionRate, totalFocusTime, streakCount } = useAnalyticsData();
+  const { canUseFeature, trackUsage, isPremium } = useSubscription();
 
-  // Track analysis usage when component loads with data
+  // Track analysis usage when component loads
   useEffect(() => {
-    if (productivityData && !isPremium) {
+    if (!isPremium && canUseFeature("analysis")) {
       trackUsage("analysis");
     }
-  }, [productivityData?.score]);
+  }, []);
 
-  // Extract productivity scores from the data with defaults
-  const {
-    score = 0,
-    completionRate = 0,
-    focusTimeScore = 0,
-    consistencyScore = 0,
-    qualityScore = 0,
-    timeManagementScore = 0,
-    journalScore = 0,
-    goalScore = 0,
-    insights = [],
-    recommendations = []
-  } = productivityData || {};
+  // Calculate scores from real data
+  const scores = useMemo(() => {
+    const taskScore = Math.min(100, Math.round(taskCompletionRate || 0));
+    const focusScore = Math.min(100, Math.round((totalFocusTime || 0) / 60 * 10)); // 10 points per hour
+    const habitScore = Math.min(100, (streakCount || 0) * 10);
+    const overall = Math.round((taskScore + focusScore + habitScore) / 3);
+    
+    return { taskScore, focusScore, habitScore, overall };
+  }, [taskCompletionRate, totalFocusTime, streakCount]);
 
-  const { insights: aiInsights, isLoading: insightsLoading } = useAIProductivityInsights();
+  // Prepare chart data
+  const focusChartData = useMemo(() => {
+    if (focusData && focusData.length > 0) {
+      return focusData.slice(0, 7).map(session => ({
+        name: session.date || 'Session',
+        value: Math.round(session.minutes || 0)
+      }));
+    }
+    return [
+      { name: 'Lun', value: 45 },
+      { name: 'Mar', value: 60 },
+      { name: 'Mer', value: 30 },
+      { name: 'Jeu', value: 90 },
+      { name: 'Ven', value: 75 },
+      { name: 'Sam', value: 20 },
+      { name: 'Dim', value: 10 }
+    ];
+  }, [focusData]);
+
+  const activityPieData = useMemo(() => {
+    return [
+      { name: 'Tâches', value: scores.taskScore, color: '#10B981' },
+      { name: 'Focus', value: scores.focusScore, color: '#3B82F6' },
+      { name: 'Habitudes', value: scores.habitScore, color: '#8B5CF6' }
+    ];
+  }, [scores]);
 
   // Check if user can access analysis
   if (!canUseFeature("analysis") && !isPremium) {
     return (
-      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Analyse approfondie</h1>
-            <p className="text-muted-foreground">Vue d'ensemble de votre productivité avec insights IA</p>
-          </div>
-        </motion.div>
-
+      <div className="space-y-6 max-w-4xl mx-auto">
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
             <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-xl font-semibold mb-2">Limite quotidienne atteinte</h3>
-            <p className="text-muted-foreground mb-2">
-              Vous avez utilisé votre analyse gratuite du jour.
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-6">
               Les utilisateurs Basic ont droit à 1 analyse par jour.
             </p>
             <Button asChild size="lg">
               <Link to="/settings">
                 <Crown className="h-4 w-4 mr-2" />
-                Passer à Premium pour un accès illimité
+                Passer à Premium
               </Link>
             </Button>
           </CardContent>
@@ -78,174 +90,63 @@ export default function Analysis() {
     );
   }
 
-
-  if (isLoading || productivityLoading) {
+  if (isLoading) {
     return (
-      <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-        <div className="text-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4">Chargement de l'analyse approfondie...</p>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  const breakdown = {
-    tasks: Math.round(completionRate),
-    habits: Math.round(consistencyScore),
-    goals: Math.round(qualityScore),
-    focus: Math.round(focusTimeScore),
-    timeManagement: Math.round(timeManagementScore),
-    journal: Math.round(journalScore),
-    goalScore: Math.round(goalScore)
-  };
-
-  // Prepare chart data with real data
-  const tasksChartData = tasksData && tasksData.length > 0 ? tasksData.map(task => ({
-    name: task.name,
-    completed: task.completed || 0,
-    pending: task.pending || 0,
-    total: (task.completed || 0) + (task.pending || 0)
-  })) : [
-    { name: 'Lun', completed: 3, pending: 2, total: 5 },
-    { name: 'Mar', completed: 5, pending: 3, total: 8 },
-    { name: 'Mer', completed: 4, pending: 2, total: 6 },
-    { name: 'Jeu', completed: 7, pending: 3, total: 10 },
-    { name: 'Ven', completed: 5, pending: 2, total: 7 },
-    { name: 'Sam', completed: 3, pending: 1, total: 4 },
-    { name: 'Dim', completed: 2, pending: 1, total: 3 }
-  ];
-
-  const habitsChartData = habitsData && habitsData.length > 0 ? habitsData.map(habit => ({
-    name: habit.name || 'Habitude',
-    value: habit.value || 0
-  })) : [
-    { name: 'Lun', value: 3 },
-    { name: 'Mar', value: 4 },
-    { name: 'Mer', value: 3 },
-    { name: 'Jeu', value: 5 },
-    { name: 'Ven', value: 4 },
-    { name: 'Sam', value: 2 },
-    { name: 'Dim', value: 1 }
-  ];
-
-  const focusChartData = focusData && focusData.length > 0 ? focusData.map(session => ({
-    name: session.date || 'Session',
-    value: session.minutes || 0
-  })) : [
-    { name: 'Lun', value: 120 },
-    { name: 'Mar', value: 90 },
-    { name: 'Mer', value: 150 },
-    { name: 'Jeu', value: 180 },
-    { name: 'Ven', value: 100 },
-    { name: 'Sam', value: 60 },
-    { name: 'Dim', value: 30 }
-  ];
-
-  const activityChartData = activityData && activityData.length > 0 ? activityData.map(activity => ({
-    name: activity.date || 'Activité',
-    value: activity.count || 0
-  })) : [
-    { name: 'Tâches', value: 40 },
-    { name: 'Habitudes', value: 25 },
-    { name: 'Focus', value: 20 },
-    { name: 'Journal', value: 15 }
-  ];
-
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-6xl">
-      {/* Enhanced Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analyse approfondie</h1>
-          <p className="text-muted-foreground">Vue d'ensemble de votre productivité avec insights IA</p>
-        </div>
-        <Button onClick={refetch} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualiser
-        </Button>
-      </motion.div>
-
-      {/* Enhanced Productivity Overview */}
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Score Global - Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
       >
-        <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-l-4 border-l-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl">Score de Productivité Global</h2>
-                <p className="text-sm text-muted-foreground">Analyse détaillée de vos performances</p>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main Score */}
-              <div className="text-center">
-                <div className="text-6xl font-bold text-primary mb-2">
-                  {score}%
+        <Card className="bg-gradient-to-br from-primary/10 via-background to-purple-500/10 border-primary/20">
+          <CardContent className="py-8">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              {/* Score Circle */}
+              <div className="relative">
+                <div className="w-36 h-36 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-xl">
+                  <div className="w-28 h-28 rounded-full bg-background flex items-center justify-center">
+                    <div className="text-center">
+                      <span className="text-4xl font-bold">{scores.overall}</span>
+                      <span className="text-lg text-muted-foreground">%</span>
+                    </div>
+                  </div>
                 </div>
-                <Badge variant="outline" className="mb-4">Score Global</Badge>
-                
-                {/* Performance Indicators */}
-                <div className="space-y-2">
-                  {score >= 80 && (
-                    <Badge className="bg-green-500 text-white">🏆 Performance Excellente</Badge>
-                  )}
-                  {score >= 60 && score < 80 && (
-                    <Badge className="bg-blue-500 text-white">📈 Bonne Performance</Badge>
-                  )}
-                  {score >= 40 && score < 60 && (
-                    <Badge className="bg-yellow-500 text-white">⚡ En Progression</Badge>
-                  )}
-                  {score < 40 && (
-                    <Badge className="bg-red-500 text-white">🎯 Potentiel d'Amélioration</Badge>
-                  )}
-                </div>
+                <Badge 
+                  className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${
+                    scores.overall >= 80 ? 'bg-green-500' :
+                    scores.overall >= 60 ? 'bg-blue-500' :
+                    scores.overall >= 40 ? 'bg-yellow-500' : 'bg-orange-500'
+                  } text-white`}
+                >
+                  {scores.overall >= 80 ? '🏆 Excellent' :
+                   scores.overall >= 60 ? '👍 Bien' :
+                   scores.overall >= 40 ? '📈 Progresse' : '🎯 À améliorer'}
+                </Badge>
               </div>
-              
-              {/* Detailed Breakdown */}
-              <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-semibold text-lg mb-4">Analyse détaillée par domaine</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-5 w-5 text-green-500" />
-                      <span>Tâches</span>
-                    </div>
-                    <span className="font-bold text-lg">{breakdown.tasks}%</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
-                      <span>Habitudes</span>
-                    </div>
-                    <span className="font-bold text-lg">{breakdown.habits}%</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <Timer className="h-5 w-5 text-orange-500" />
-                      <span>Focus</span>
-                    </div>
-                    <span className="font-bold text-lg">{breakdown.focus}%</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-purple-500" />
-                      <span>Journal</span>
-                    </div>
-                    <span className="font-bold text-lg">{breakdown.journal}%</span>
-                  </div>
+
+              {/* Stats Grid */}
+              <div className="flex-1 grid grid-cols-3 gap-4 w-full">
+                <div className="text-center p-4 bg-background/50 rounded-xl border">
+                  <Target className="h-6 w-6 mx-auto mb-2 text-green-500" />
+                  <div className="text-2xl font-bold">{scores.taskScore}%</div>
+                  <div className="text-xs text-muted-foreground">Tâches</div>
+                </div>
+                <div className="text-center p-4 bg-background/50 rounded-xl border">
+                  <Timer className="h-6 w-6 mx-auto mb-2 text-blue-500" />
+                  <div className="text-2xl font-bold">{Math.round(totalFocusTime / 60)}h</div>
+                  <div className="text-xs text-muted-foreground">Focus</div>
+                </div>
+                <div className="text-center p-4 bg-background/50 rounded-xl border">
+                  <TrendingUp className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                  <div className="text-2xl font-bold">{streakCount}</div>
+                  <div className="text-xs text-muted-foreground">Streak</div>
                 </div>
               </div>
             </div>
@@ -253,169 +154,158 @@ export default function Analysis() {
         </Card>
       </motion.div>
 
-      {/* AI Insights personnalisés */}
-      {(insights.length > 0 || recommendations.length > 0) && (
+      {/* Charts Row */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Focus Time Chart */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Timer className="h-4 w-4 text-blue-500" />
+                Temps de Focus
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={focusChartData}>
+                    <defs>
+                      <linearGradient id="focusGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis hide />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`${value} min`, 'Focus']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#3B82F6" 
+                      strokeWidth={2}
+                      fill="url(#focusGradient)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Activity Distribution */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                Analyse IA Personnalisée
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                Répartition
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {insights.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4" />
-                    Observations clés
-                  </h3>
-                  <div className="grid gap-2">
-                    {insights.map((insight, index) => (
-                      <div key={index} className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-l-4 border-blue-400 dark:border-blue-600">
-                        <p className="text-sm text-blue-900 dark:text-blue-100">{insight}</p>
-                      </div>
-                    ))}
+            <CardContent>
+              <div className="h-48 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={activityPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {activityPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                      formatter={(value: number) => [`${value}%`, '']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex justify-center gap-4 mt-2">
+                {activityPieData.map((item) => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs text-muted-foreground">{item.name}</span>
                   </div>
-                </div>
-              )}
-              
-              {recommendations.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Recommandations personnalisées
-                  </h3>
-                  <div className="grid gap-2">
-                    {recommendations.map((recommendation, index) => (
-                      <div key={index} className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-400 dark:border-green-600">
-                        <p className="text-sm font-medium text-green-900 dark:text-green-100">{recommendation}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
-      )}
+      </div>
 
-      {/* AI Insights from separate hook */}
-      {(insightsLoading || (aiInsights && aiInsights.length > 0)) && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              Conseils personnalisés générés par l'IA
-            </h2>
-            {insightsLoading ? (
-              <Card className="p-8">
-                <div className="text-center">
-                  <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">L'IA analyse vos données pour générer des conseils personnalisés...</p>
-                </div>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {aiInsights.map(insight => (
-                  <InsightCard
-                    key={insight.id}
-                    title={insight.title}
-                    insight={insight.insight}
-                    recommendation={insight.recommendation}
-                    priority={insight.priority}
-                    icon={BarChart3}
-                    metric={insight.metric}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Enhanced Charts Section */}
+      {/* Quick Tips */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.3 }}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Évolution des Tâches</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {tasksData && tasksData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SimpleLineChart 
-                data={tasksChartData} 
-                lines={[
-                  { dataKey: "completed", name: "Complétées", color: "#10B981" },
-                  { dataKey: "pending", name: "En cours", color: "#F59E0B" },
-                  { dataKey: "total", name: "Total", color: "#7C3AED" }
-                ]}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance des Habitudes</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {habitsData && habitsData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SimpleBarChart data={habitsChartData} color="#10B981" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Sessions de Focus</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {focusData && focusData.length > 0 ? 'Données en temps réel (minutes)' : 'Données de démonstration'}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SimpleAreaChart data={focusChartData} color="#3B82F6" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Répartition des Activités</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {activityData && activityData.length > 0 ? 'Données en temps réel' : 'Données de démonstration'}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SimplePieChart data={activityChartData} />
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
-
-      {/* Data Status Indicator */}
-      {(!tasksData || tasksData.length === 0) && (!habitsData || habitsData.length === 0) && (
-        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-orange-800 dark:text-orange-200">
-              📊 Les graphiques affichent des données de démonstration. Commencez à utiliser l'application (créez des tâches, habitudes, sessions de focus) pour voir vos vraies données d'analyse.
-            </p>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">💡 Conseils Rapides</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {scores.taskScore < 50 && (
+                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <p className="text-sm">
+                    <span className="font-medium text-green-600">📋 Tâches:</span> Essayez de terminer 2-3 tâches importantes chaque jour.
+                  </p>
+                </div>
+              )}
+              {scores.focusScore < 50 && (
+                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <p className="text-sm">
+                    <span className="font-medium text-blue-600">⏱️ Focus:</span> Planifiez des sessions de 25min pour booster votre concentration.
+                  </p>
+                </div>
+              )}
+              {scores.habitScore < 50 && (
+                <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                  <p className="text-sm">
+                    <span className="font-medium text-purple-600">🔥 Habitudes:</span> Maintenez votre streak en validant vos habitudes quotidiennes.
+                  </p>
+                </div>
+              )}
+              {scores.overall >= 60 && (
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  <p className="text-sm">
+                    <span className="font-medium text-amber-600">🌟 Bravo!</span> Continuez sur cette lancée, vous êtes sur la bonne voie!
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
-      )}
+      </motion.div>
     </div>
   );
 }
