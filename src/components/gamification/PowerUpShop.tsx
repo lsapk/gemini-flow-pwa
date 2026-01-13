@@ -47,12 +47,16 @@ export const PowerUpShop = () => {
   };
 
   const isPermanentlyUnlocked = (type: PowerUpType) => {
-    const powerup = POWERUP_DEFINITIONS[type];
-    if (powerup.rewardType === "cosmetic") {
-      const cosmeticType = (powerup.rewardValue as string).startsWith("helmet") ? "helmet" : "armor";
-      return isItemUnlocked(cosmeticType, powerup.rewardValue as string);
+    try {
+      const powerup = POWERUP_DEFINITIONS[type];
+      if (powerup.rewardType === "cosmetic") {
+        const cosmeticType = (powerup.rewardValue as string).startsWith("helmet") ? "helmet" : "armor";
+        return isItemUnlocked(cosmeticType, powerup.rewardValue as string);
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   // Group powerups by category

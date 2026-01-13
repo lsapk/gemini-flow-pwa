@@ -333,7 +333,18 @@ export default function Settings() {
                   </div>
                   <Switch
                     checked={formData.notifications_enabled}
-                    onCheckedChange={(checked) => setFormData({...formData, notifications_enabled: checked})}
+                    onCheckedChange={async (checked) => {
+                      setFormData({...formData, notifications_enabled: checked});
+                      if (checked && 'Notification' in window) {
+                        const permission = await Notification.requestPermission();
+                        if (permission !== 'granted') {
+                          toast.error("Notifications bloquées par le navigateur");
+                          setFormData({...formData, notifications_enabled: false});
+                        } else {
+                          toast.success("Notifications activées");
+                        }
+                      }
+                    }}
                   />
                 </div>
                 
@@ -363,15 +374,22 @@ export default function Settings() {
                   <div>
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Mode Focus</span>
+                      <span className="text-sm font-medium">Mode Focus (Ne pas déranger)</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Réduit les distractions pendant les sessions
+                      Désactive les notifications pendant les sessions
                     </p>
                   </div>
                   <Switch
                     checked={formData.focus_mode}
-                    onCheckedChange={(checked) => setFormData({...formData, focus_mode: checked})}
+                    onCheckedChange={(checked) => {
+                      setFormData({...formData, focus_mode: checked});
+                      if (checked) {
+                        toast.success("Mode Ne Pas Déranger activé");
+                      } else {
+                        toast.info("Mode Ne Pas Déranger désactivé");
+                      }
+                    }}
                   />
                 </div>
               </CardContent>

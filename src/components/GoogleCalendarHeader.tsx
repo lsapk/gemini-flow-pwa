@@ -30,19 +30,23 @@ export function GoogleCalendarHeader({
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
 
-  const handlePreviousMonth = () => {
-    onDateChange(subMonths(currentDate, 1));
+  const handlePreviousWeek = () => {
+    const prevWeek = new Date(currentDate);
+    prevWeek.setDate(prevWeek.getDate() - 7);
+    onDateChange(prevWeek);
   };
 
-  const handleNextMonth = () => {
-    onDateChange(addMonths(currentDate, 1));
+  const handleNextWeek = () => {
+    const nextWeek = new Date(currentDate);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    onDateChange(nextWeek);
   };
 
   const handleToday = () => {
     onDateChange(new Date());
   };
 
-  const displayMonth = format(currentDate, 'MMMM', { locale: fr });
+  const displayMonth = format(currentDate, 'MMMM yyyy', { locale: fr });
 
   return (
     <header className="border-b bg-background sticky top-0 z-50">
@@ -61,9 +65,17 @@ export function GoogleCalendarHeader({
           {/* Month navigation */}
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToday}
+              className="hidden sm:inline-flex"
+            >
+              Aujourd'hui
+            </Button>
+            <Button
               variant="ghost"
               size="icon"
-              onClick={handlePreviousMonth}
+              onClick={handlePreviousWeek}
               className="h-8 w-8"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -95,11 +107,16 @@ export function GoogleCalendarHeader({
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleNextMonth}
+              onClick={handleNextWeek}
               className="h-8 w-8"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+          </div>
+          
+          {/* Week display */}
+          <div className="hidden md:block text-sm text-muted-foreground">
+            {format(weekStart, 'd MMM', { locale: fr })} - {format(weekEnd, 'd MMM', { locale: fr })}
           </div>
         </div>
 

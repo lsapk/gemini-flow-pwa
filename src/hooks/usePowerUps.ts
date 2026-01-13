@@ -199,13 +199,21 @@ export const usePowerUps = () => {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from("unlockables")
-        .select("*")
-        .eq("user_id", user.id);
+      try {
+        const { data, error } = await supabase
+          .from("unlockables")
+          .select("*")
+          .eq("user_id", user.id);
 
-      if (error) throw error;
-      return data;
+        if (error) {
+          // Table might not exist, return empty array
+          console.warn("Unlockables table not available:", error.message);
+          return [];
+        }
+        return data || [];
+      } catch (e) {
+        return [];
+      }
     },
     enabled: !!user,
   });
