@@ -122,6 +122,70 @@
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 258 90% 66%;
   }
+
+  /* =====================================================
+     APPLE DESIGN MODE - Minimalist Interface
+     ===================================================== */
+  .design-apple {
+    /* Apple color overrides */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 11%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+    
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 211 100% 60%;
+    
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 11%;
+    
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 53%;
+    
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 11%;
+    
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 211 100% 50%;
+    
+    --radius: 0.75rem;
+    
+    --success: 142 70% 45%;
+    --warning: 38 92% 50%;
+    --info: 211 100% 50%;
+  }
+  
+  .dark.design-apple {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+  }
 }
 
 @layer base {
@@ -136,6 +200,11 @@
   body {
     @apply bg-background text-foreground antialiased min-h-screen;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+  }
+  
+  /* Futuristic mode body background */
+  .design-futuristic body,
+  body:not(.design-apple body) {
     background: 
       radial-gradient(circle at 10% 20%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
       radial-gradient(circle at 90% 80%, hsl(var(--info) / 0.06) 0%, transparent 50%),
@@ -143,8 +212,29 @@
     background-attachment: fixed;
   }
   
+  /* Apple mode body - pure clean background */
+  .design-apple body {
+    background: hsl(var(--background));
+  }
+  
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
+  }
+  
+  /* Apple mode typography - use system font */
+  .design-apple h1,
+  .design-apple h2,
+  .design-apple h3,
+  .design-apple h4,
+  .design-apple h5,
+  .design-apple h6 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  
+  .design-apple body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 }
 
@@ -153,18 +243,39 @@
     @apply fixed z-50 w-full bg-card/70 backdrop-blur-xl border-b border-border/50 shadow-sm;
   }
   
+  /* Apple mode nav - cleaner blur */
+  .design-apple .glass-nav {
+    @apply bg-card/80 backdrop-blur-2xl border-b border-border/30;
+  }
+  
   .glass-container {
     @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg p-6
            hover:shadow-xl hover:border-primary/30 transition-all duration-300;
+  }
+  
+  /* Apple mode container - minimal shadow, no hover effects */
+  .design-apple .glass-container {
+    @apply bg-card border border-border/40 rounded-xl shadow-sm p-5
+           hover:shadow-sm hover:border-border/40;
   }
   
   .dashboard-card {
     @apply bg-card/70 backdrop-blur-md border border-border/40 rounded-2xl shadow-md p-6 
            transition-all duration-300 hover:shadow-xl hover:border-primary/30 hover:scale-[1.02];
   }
+  
+  /* Apple mode card - flat, minimal, elegant */
+  .design-apple .dashboard-card {
+    @apply bg-card border-0 rounded-2xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] p-5
+           transition-all duration-200 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] hover:scale-100;
+  }
 
   .glass-morphism {
     @apply bg-card/50 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl;
+  }
+  
+  .design-apple .glass-morphism {
+    @apply bg-card/90 backdrop-blur-2xl border-0 rounded-2xl shadow-lg;
   }
   
   .glass-card {
@@ -172,16 +283,38 @@
            hover:shadow-xl transition-all duration-300;
   }
   
+  .design-apple .glass-card {
+    @apply bg-card border-0 rounded-xl shadow-sm hover:shadow-md;
+  }
+  
   .hover-scale {
     @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
+  }
+  
+  /* Apple mode - subtle hover, no scale */
+  .design-apple .hover-scale {
+    @apply transition-all duration-200 hover:scale-100 hover:shadow-md hover:opacity-90;
   }
   
   .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-glow to-info;
   }
   
+  /* Apple mode - no gradient text, solid color */
+  .design-apple .gradient-text {
+    @apply text-primary bg-none;
+    -webkit-text-fill-color: unset;
+  }
+  
   .glow-effect {
     box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+  
+  /* Apple mode - no glow effects */
+  .design-apple .glow-effect,
+  .design-apple .glow-effect-primary,
+  .design-apple .glow-effect-success {
+    box-shadow: none;
   }
   
   .glow-effect-primary {
@@ -206,6 +339,11 @@
     );
     transform: translateX(-100%);
     animation: shimmer 3s infinite;
+  }
+  
+  /* Apple mode - no animated borders */
+  .design-apple .animated-border::before {
+    display: none;
   }
   
   @keyframes shimmer {

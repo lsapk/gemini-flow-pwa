@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, FileText, Loader2, RefreshCw, Calendar, TrendingUp, Award, Crown, Lock } from "lucide-react";
+import { Brain, FileText, Loader2, RefreshCw, Calendar, TrendingUp, Award, Crown, Lock, Save, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -18,20 +18,67 @@ export const MonthlyAIReport = () => {
   const { taskCompletionRate, totalFocusTime, streakCount, habitsData, tasksData } = useAnalyticsData();
   const [report, setReport] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Load saved report on mount
+  useEffect(() => {
+    const loadSavedReport = async () => {
+      if (!user) return;
+      
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+      
+      const { data } = await supabase
+        .from('ai_productivity_analysis')
+        .select('analysis_data')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data?.analysis_data) {
+        const savedData = data.analysis_data as { report: string; monthKey: string };
+        if (savedData.monthKey === monthKey) {
+          setReport(savedData.report);
+          setIsSaved(true);
+        }
+      }
+    };
+    
+    loadSavedReport();
+  }, [user]);
+
+  const saveReport = async () => {
+    if (!user || !report) return;
+    
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
+    
+    const { error } = await supabase
+      .from('ai_productivity_analysis')
+      .upsert({
+        user_id: user.id,
+        analysis_data: { report, monthKey, savedAt: new Date().toISOString() }
+      }, { onConflict: 'user_id' });
+    
+    if (error) {
+      toast.error("Erreur lors de la sauvegarde");
+    } else {
+      setIsSaved(true);
+      toast.success("Rapport sauvegardé !");
+    }
+  };
 
   const generateReport = async () => {
     if (!user) return;
 
-    // Check if user can use analysis feature
     if (!isPremium && !canUseFeature("analysis")) {
       toast.error("Limite quotidienne atteinte. Passez à Premium pour plus d'analyses !");
       return;
     }
 
     setIsGenerating(true);
+    setIsSaved(false);
 
     try {
-      // Get PREVIOUS month data (complete month)
       const now = new Date();
       const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
@@ -45,65 +92,36 @@ export const MonthlyAIReport = () => {
       ]);
 
       const monthlyData = {
-        tasks: {
-          total: tasksResult.data?.length || 0,
-          completed: tasksResult.data?.filter(t => t.completed).length || 0,
-        },
-        habits: {
-          total: habitsResult.data?.length || 0,
-          avgStreak: habitsResult.data?.reduce((sum, h) => sum + (h.streak || 0), 0) / (habitsResult.data?.length || 1),
-        },
-        focus: {
-          sessions: focusResult.data?.length || 0,
-          totalMinutes: focusResult.data?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0,
-        },
-        journal: {
-          entries: journalResult.data?.length || 0,
-        },
-        goals: {
-          total: goalsResult.data?.length || 0,
-          completed: goalsResult.data?.filter(g => g.completed).length || 0,
-          avgProgress: goalsResult.data?.reduce((sum, g) => sum + (g.progress || 0), 0) / (goalsResult.data?.length || 1),
-        },
+        tasks: { total: tasksResult.data?.length || 0, completed: tasksResult.data?.filter(t => t.completed).length || 0 },
+        habits: { total: habitsResult.data?.length || 0, avgStreak: habitsResult.data?.reduce((sum, h) => sum + (h.streak || 0), 0) / (habitsResult.data?.length || 1) },
+        focus: { sessions: focusResult.data?.length || 0, totalMinutes: focusResult.data?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0 },
+        journal: { entries: journalResult.data?.length || 0 },
+        goals: { total: goalsResult.data?.length || 0, completed: goalsResult.data?.filter(g => g.completed).length || 0, avgProgress: goalsResult.data?.reduce((sum, g) => sum + (g.progress || 0), 0) / (goalsResult.data?.length || 1) },
       };
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: {
-          message: `[MODE ANALYSE APPROFONDIE] Génère un rapport mensuel complet de ma productivité avec:
+          message: `Génère un rapport mensuel CONCIS (max 300 mots) avec:
+1. **Score** - Note /100
+2. **Résumé** - 2 phrases max
+3. **Top 3** - Points forts (1 ligne chacun)
+4. **À améliorer** - 2 axes (1 ligne chacun)
+5. **Action** - 1 conseil prioritaire
 
-1. **Résumé du mois** - Vue d'ensemble des performances
-2. **Statistiques clés** - Chiffres importants avec tendances
-3. **Points forts** - Ce qui a bien fonctionné
-4. **Axes d'amélioration** - Ce qu'il faut améliorer
-5. **Recommandations** - 3 actions concrètes pour le mois prochain
-6. **Score global** - Note sur 100 avec explication
-
-Données du mois précédent (${startOfPrevMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}):
-- Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} complétées
-- Focus: ${monthlyData.focus.sessions} sessions, ${Math.round(monthlyData.focus.totalMinutes / 60)}h au total
-- Journal: ${monthlyData.journal.entries} entrées
-- Objectifs: ${monthlyData.goals.completed}/${monthlyData.goals.total} atteints
-- Progression moyenne objectifs: ${Math.round(monthlyData.goals.avgProgress)}%
-- Streak moyen habitudes: ${Math.round(monthlyData.habits.avgStreak)} jours`,
-          context: {
-            analysis_mode: true,
-            user_data: monthlyData,
-          }
+Données ${startOfPrevMonth.toLocaleDateString('fr-FR', { month: 'long' })}:
+Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} | Focus: ${Math.round(monthlyData.focus.totalMinutes / 60)}h | Objectifs: ${monthlyData.goals.completed}/${monthlyData.goals.total}`,
+          context: { analysis_mode: true, user_data: monthlyData }
         }
       });
 
       if (error) throw error;
-
-      // Track usage for basic users
-      if (!isPremium) {
-        trackUsage("analysis");
-      }
+      if (!isPremium) trackUsage("analysis");
 
       setReport(data.response);
-      toast.success("Rapport mensuel généré !");
+      toast.success("Rapport généré !");
     } catch (error: any) {
-      console.error("Error generating report:", error);
-      toast.error("Erreur lors de la génération du rapport");
+      console.error("Error:", error);
+      toast.error("Erreur lors de la génération");
     } finally {
       setIsGenerating(false);
     }
@@ -136,6 +154,17 @@ Données du mois précédent (${startOfPrevMonth.toLocaleDateString('fr-FR', { m
                   {getRemainingUses("analysis")}/1 restant
                 </Badge>
               )}
+              {report && !isSaved && (
+                <Button onClick={saveReport} variant="outline" size="sm" className="gap-2">
+                  <Save className="h-4 w-4" />
+                  Sauvegarder
+                </Button>
+              )}
+              {isSaved && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Check className="h-3 w-3" /> Sauvegardé
+                </Badge>
+              )}
               <Button
                 onClick={generateReport}
                 disabled={isGenerating || (!isPremium && !canUseFeature("analysis"))}
@@ -145,17 +174,17 @@ Données du mois précédent (${startOfPrevMonth.toLocaleDateString('fr-FR', { m
                 {isGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Génération...
+                    ...
                   </>
                 ) : report ? (
                   <>
                     <RefreshCw className="h-4 w-4" />
-                    Actualiser
+                    Nouveau
                   </>
                 ) : (
                   <>
                     <Brain className="h-4 w-4" />
-                    Générer le rapport
+                    Générer
                   </>
                 )}
               </Button>

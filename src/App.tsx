@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { DesignModeProvider } from "./contexts/DesignModeContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -56,12 +57,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <TooltipProvider>
-          <XPNotificationProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AuthProvider>
+        <DesignModeProvider>
+          <TooltipProvider>
+            <XPNotificationProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AuthProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />
@@ -156,10 +158,11 @@ function App() {
                 } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              </AuthProvider>
-            </BrowserRouter>
-          </XPNotificationProvider>
-        </TooltipProvider>
+                </AuthProvider>
+              </BrowserRouter>
+            </XPNotificationProvider>
+          </TooltipProvider>
+        </DesignModeProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

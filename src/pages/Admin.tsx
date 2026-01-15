@@ -76,53 +76,25 @@ export default function Admin() {
   const [serverVerifiedAdmin, setServerVerifiedAdmin] = useState<boolean | null>(null);
   const [verifyingAdmin, setVerifyingAdmin] = useState(true);
 
-  // Verify admin status server-side on mount
+  // Verify admin status - use client-side check from useAuth which queries user_roles
   useEffect(() => {
-    const verifyAdminServerSide = async () => {
+    const verifyAdmin = async () => {
       if (!user) {
         setServerVerifiedAdmin(false);
         setVerifyingAdmin(false);
         return;
       }
 
-      try {
-        // Refresh the session to ensure we have a valid token
-        const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
-        
-        if (sessionError || !sessionData.session) {
-          console.error('Failed to refresh session for admin verification:', sessionError);
-          // Fallback: try to get existing session
-          const { data: existingSession } = await supabase.auth.getSession();
-          if (!existingSession.session) {
-            setServerVerifiedAdmin(false);
-            setVerifyingAdmin(false);
-            return;
-          }
-        }
-
-        // Small delay to ensure the session is fully propagated
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        const { data, error } = await supabase.functions.invoke('verify-admin');
-        
-        if (error) {
-          console.error('Server admin verification failed:', error);
-          setServerVerifiedAdmin(false);
-        } else {
-          setServerVerifiedAdmin(data?.isAdmin === true);
-        }
-      } catch (error) {
-        console.error('Admin verification error:', error);
-        setServerVerifiedAdmin(false);
-      } finally {
-        setVerifyingAdmin(false);
-      }
+      // Use the clientIsAdmin from useAuth hook which is already properly fetched
+      // This avoids the edge function call that was causing logout issues
+      setServerVerifiedAdmin(clientIsAdmin);
+      setVerifyingAdmin(false);
     };
 
-    if (!isLoading && user) {
-      verifyAdminServerSide();
+    if (!isLoading) {
+      verifyAdmin();
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, clientIsAdmin]);
 
   // Use server-verified admin status, fall back to client check during verification
   const isAdmin = serverVerifiedAdmin ?? clientIsAdmin;
