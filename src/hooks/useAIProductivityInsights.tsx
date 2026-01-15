@@ -80,24 +80,14 @@ export function useAIProductivityInsights() {
           activityData
         };
 
-        // Prompt IA : donner des conseils personnalisés et catégorisés
-        // Queue the AI request to prevent rate limiting
+        // Prompt IA : conseils courts et actionnables
         const { data, error } = await aiRequestQueue.add(() =>
           supabase.functions.invoke("gemini-chat-enhanced", {
             body: {
-              message: `Analyse ces données utilisateur et génère 5 à 8 conseils personnalisés pour améliorer sa productivité, ses habitudes ou son focus. Chaque conseil doit suivre cet objet JSON, en français uniquement:
-[
-  {
-    "id": "unique_id",
-    "title": "titre_concis_du_conseil",
-    "insight": "phrase_d'analyse_personnalisée",
-    "recommendation": "recommandation_actionnable_claire",
-    "priority": "high|medium|low",
-    "category": "performance|habits|focus|motivation|optimization",
-    "metric": "valeur_ou_score_util"
-  }
-]
-Uniquement la liste JSON, aucune explication extérieure.`,
+              message: `Analyse ces données et donne 3 conseils COURTS (max 15 mots chacun). Format JSON uniquement:
+[{"id":"1","title":"Titre court","recommendation":"Action concrète","priority":"high|medium|low","category":"focus|habits|performance"}]
+
+Données: Tâches ${taskCompletionRate}% | Focus ${totalFocusTime}min | Streak ${streakCount} | Habitudes actives ${habitsData?.length || 0}`,
               context: { user_data: userData, recent_messages: [] }
             }
           })

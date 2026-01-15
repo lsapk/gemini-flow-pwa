@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
+import { useDesignMode } from "@/contexts/DesignModeContext";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import { useAICredits } from "@/hooks/useAICredits";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -38,6 +39,8 @@ import {
   CheckSquare,
   Flame,
   Award,
+  Apple,
+  Wand2,
 } from "lucide-react";
 
 interface UserSettings {
@@ -50,6 +53,7 @@ interface UserSettings {
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { designMode, setDesignMode } = useDesignMode();
   const { profile: playerProfile } = usePlayerProfile();
   const { credits: aiCredits } = useAICredits();
   const { capturePayPalOrder } = useSubscription();
@@ -304,15 +308,44 @@ export default function Settings() {
                       <Moon className="h-4 w-4 mr-2" />
                       Sombre
                     </Button>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <Label>Style de design</Label>
+                  <div className="flex gap-2">
                     <Button
-                      variant={theme === 'system' ? 'default' : 'outline'}
+                      variant={designMode === 'futuristic' ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setTheme('system')}
+                      onClick={() => {
+                        setDesignMode('futuristic');
+                        toast.success("Design Futuriste activé");
+                      }}
                       className="flex-1"
                     >
-                      Auto
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Futuriste
+                    </Button>
+                    <Button
+                      variant={designMode === 'apple' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setDesignMode('apple');
+                        toast.success("Design Apple activé");
+                      }}
+                      className="flex-1"
+                    >
+                      <Apple className="h-4 w-4 mr-2" />
+                      Minimal
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {designMode === 'apple' 
+                      ? "Interface épurée inspirée d'Apple : espaces généreux, ombres légères, sans effets."
+                      : "Interface moderne avec effets de verre, animations et dégradés."}
+                  </p>
                 </div>
               </CardContent>
             </Card>
