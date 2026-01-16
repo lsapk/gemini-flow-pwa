@@ -154,7 +154,8 @@
     --input: 0 0% 96%;
     --ring: 211 100% 50%;
     
-    --radius: 9999px;
+    /* Keep standard radius - not pill shaped */
+    --radius: 0.75rem;
     
     --success: 142 70% 45%;
     --warning: 38 92% 50%;
@@ -353,17 +354,10 @@
   }
   
   /* =====================================================
-     APPLE MODE - Button & Input Overrides (ChatGPT-style)
+     APPLE MODE - Component Overrides (Clean, Minimal)
      ===================================================== */
   
-  /* Pill buttons */
-  .design-apple button,
-  .design-apple [role="button"],
-  .design-apple .btn {
-    border-radius: 9999px !important;
-  }
-  
-  /* Primary buttons - solid fill */
+  /* Primary buttons - solid fill, no glow */
   .design-apple button[data-variant="default"],
   .design-apple .bg-primary {
     @apply shadow-none;
@@ -376,66 +370,48 @@
     @apply border border-border/50 bg-transparent;
   }
   
-  /* Inputs - pill shaped, clean */
+  /* Inputs - clean, subtle */
   .design-apple input,
   .design-apple textarea,
   .design-apple select,
   .design-apple [role="combobox"] {
-    border-radius: 9999px !important;
     @apply border border-border/40 bg-muted/50 shadow-none;
-  }
-  
-  .design-apple textarea {
-    border-radius: 1.25rem !important;
-  }
-  
-  /* Search inputs - extra rounded */
-  .design-apple input[type="search"],
-  .design-apple input[placeholder*="earch"],
-  .design-apple input[placeholder*="herch"] {
-    @apply bg-muted border-0 pl-10;
   }
   
   /* Cards - subtle border, no shadow */
   .design-apple [class*="Card"],
   .design-apple .card {
-    @apply border border-border/30 shadow-none rounded-2xl;
+    @apply border border-border/30 shadow-none;
   }
   
   /* Sidebar items - clean list style */
   .design-apple [data-sidebar="menu-button"] {
-    @apply rounded-xl;
+    @apply rounded-lg;
   }
   
   /* Dialogs/Modals - clean rounded */
   .design-apple [role="dialog"] {
-    @apply rounded-3xl border border-border/30 shadow-2xl;
+    @apply rounded-2xl border border-border/30 shadow-2xl;
   }
   
   /* Dropdowns - subtle */
   .design-apple [role="menu"],
   .design-apple [role="listbox"] {
-    @apply rounded-2xl border border-border/30 shadow-lg backdrop-blur-xl;
+    @apply rounded-xl border border-border/30 shadow-lg backdrop-blur-xl;
     background-color: hsl(var(--card) / 0.98);
   }
   
-  /* Tabs - pill style */
+  /* Tabs - clean style */
   .design-apple [role="tablist"] {
-    @apply bg-muted/50 rounded-full p-1;
+    @apply bg-muted/50 rounded-lg p-1;
   }
   
   .design-apple [role="tab"] {
-    @apply rounded-full;
+    @apply rounded-md;
   }
   
   .design-apple [role="tab"][data-state="active"] {
     @apply bg-card shadow-sm;
-  }
-  
-  /* Badges - pill */
-  .design-apple .badge,
-  .design-apple [class*="Badge"] {
-    border-radius: 9999px !important;
   }
   
   /* Switch - iOS style */
@@ -446,29 +422,6 @@
   /* Avatar - clean circle */
   .design-apple [class*="Avatar"] {
     @apply ring-0;
-  }
-  
-  /* Floating action button style */
-  .design-apple .fab,
-  .design-apple [class*="floating"] {
-    @apply rounded-full shadow-lg;
-  }
-  
-  /* Progress bars - rounded */
-  .design-apple [role="progressbar"],
-  .design-apple .progress {
-    @apply rounded-full;
-  }
-  
-  /* Tooltips - pill */
-  .design-apple [role="tooltip"] {
-    @apply rounded-full px-3 py-1.5;
-  }
-  
-  /* Accordion - clean */
-  .design-apple [data-state="open"][data-orientation="vertical"],
-  .design-apple [data-state="closed"][data-orientation="vertical"] {
-    @apply border-b border-border/20;
   }
   
   /* Scrollbar - minimal */
@@ -483,7 +436,7 @@
   
   .design-apple ::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 9999px;
+    border-radius: 6px;
   }
   
   .design-apple ::-webkit-scrollbar-thumb:hover {

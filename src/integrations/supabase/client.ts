@@ -5,20 +5,24 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://xzgdfetnjnwrberyddmf.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6Z2RmZXRuam53cmJlcnlkZG1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMjk4MTksImV4cCI6MjA1NzkwNTgxOX0.XJFYvBiZHo1vcfCV6Fn79C9U6LP4Vuf05PCixBWqaYU";
 
+// Storage key for session persistence across devices
+const STORAGE_KEY = 'deepflow-auth-session';
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    // Persist session in localStorage for multi-device support
+    // Persist session in localStorage
     persistSession: true,
-    // Store the session in localStorage to persist across tabs/devices
+    // Use localStorage with custom key for consistency
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: STORAGE_KEY,
     // Automatically refresh the token before it expires
     autoRefreshToken: true,
     // Detect session from URL (useful for OAuth redirects)
     detectSessionInUrl: true,
-    // Use PKCE flow for better security
-    flowType: 'pkce',
+    // Use implicit flow for better multi-device support
+    flowType: 'implicit',
   },
 });
