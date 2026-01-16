@@ -124,10 +124,10 @@
   }
 
   /* =====================================================
-     APPLE DESIGN MODE - Minimalist Interface
+     APPLE DESIGN MODE - Minimalist Interface (ChatGPT-inspired)
      ===================================================== */
   .design-apple {
-    /* Apple color overrides */
+    /* Apple color overrides - Clean white */
     --background: 0 0% 100%;
     --foreground: 0 0% 11%;
     
@@ -150,11 +150,11 @@
     --accent: 0 0% 96%;
     --accent-foreground: 0 0% 11%;
     
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
+    --border: 0 0% 92%;
+    --input: 0 0% 96%;
     --ring: 211 100% 50%;
     
-    --radius: 0.75rem;
+    --radius: 9999px;
     
     --success: 142 70% 45%;
     --warning: 38 92% 50%;
@@ -162,29 +162,30 @@
   }
   
   .dark.design-apple {
-    --background: 0 0% 0%;
+    /* Dark mode - ChatGPT-inspired dark */
+    --background: 0 0% 8%;
     --foreground: 0 0% 98%;
     
-    --card: 0 0% 7%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 0 0% 7%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 0 0% 15%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
     
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 64%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
     
-    --accent: 0 0% 15%;
+    --accent: 0 0% 18%;
     --accent-foreground: 0 0% 98%;
     
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 0 0% 22%;
+    --input: 0 0% 18%;
   }
 }
 
@@ -245,7 +246,7 @@
   
   /* Apple mode nav - cleaner blur */
   .design-apple .glass-nav {
-    @apply bg-card/80 backdrop-blur-2xl border-b border-border/30;
+    @apply bg-card/90 backdrop-blur-2xl border-b border-border/20;
   }
   
   .glass-container {
@@ -255,8 +256,8 @@
   
   /* Apple mode container - minimal shadow, no hover effects */
   .design-apple .glass-container {
-    @apply bg-card border border-border/40 rounded-xl shadow-sm p-5
-           hover:shadow-sm hover:border-border/40;
+    @apply bg-card border border-border/30 rounded-2xl shadow-sm p-5
+           hover:shadow-sm hover:border-border/30;
   }
   
   .dashboard-card {
@@ -266,8 +267,8 @@
   
   /* Apple mode card - flat, minimal, elegant */
   .design-apple .dashboard-card {
-    @apply bg-card border-0 rounded-2xl shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] p-5
-           transition-all duration-200 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] hover:scale-100;
+    @apply bg-card border border-border/30 rounded-2xl shadow-none p-5
+           transition-all duration-200 hover:bg-muted/50 hover:scale-100;
   }
 
   .glass-morphism {
@@ -275,7 +276,7 @@
   }
   
   .design-apple .glass-morphism {
-    @apply bg-card/90 backdrop-blur-2xl border-0 rounded-2xl shadow-lg;
+    @apply bg-card/95 backdrop-blur-2xl border border-border/20 rounded-2xl shadow-lg;
   }
   
   .glass-card {
@@ -284,7 +285,7 @@
   }
   
   .design-apple .glass-card {
-    @apply bg-card border-0 rounded-xl shadow-sm hover:shadow-md;
+    @apply bg-card border border-border/30 rounded-2xl shadow-none hover:bg-muted/30;
   }
   
   .hover-scale {
@@ -293,7 +294,7 @@
   
   /* Apple mode - subtle hover, no scale */
   .design-apple .hover-scale {
-    @apply transition-all duration-200 hover:scale-100 hover:shadow-md hover:opacity-90;
+    @apply transition-all duration-150 hover:scale-100 hover:opacity-80;
   }
   
   .gradient-text {
@@ -349,6 +350,144 @@
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+  
+  /* =====================================================
+     APPLE MODE - Button & Input Overrides (ChatGPT-style)
+     ===================================================== */
+  
+  /* Pill buttons */
+  .design-apple button,
+  .design-apple [role="button"],
+  .design-apple .btn {
+    border-radius: 9999px !important;
+  }
+  
+  /* Primary buttons - solid fill */
+  .design-apple button[data-variant="default"],
+  .design-apple .bg-primary {
+    @apply shadow-none;
+  }
+  
+  /* Secondary/Ghost buttons - transparent with subtle border */
+  .design-apple button[data-variant="outline"],
+  .design-apple button[data-variant="ghost"],
+  .design-apple button[data-variant="secondary"] {
+    @apply border border-border/50 bg-transparent;
+  }
+  
+  /* Inputs - pill shaped, clean */
+  .design-apple input,
+  .design-apple textarea,
+  .design-apple select,
+  .design-apple [role="combobox"] {
+    border-radius: 9999px !important;
+    @apply border border-border/40 bg-muted/50 shadow-none;
+  }
+  
+  .design-apple textarea {
+    border-radius: 1.25rem !important;
+  }
+  
+  /* Search inputs - extra rounded */
+  .design-apple input[type="search"],
+  .design-apple input[placeholder*="earch"],
+  .design-apple input[placeholder*="herch"] {
+    @apply bg-muted border-0 pl-10;
+  }
+  
+  /* Cards - subtle border, no shadow */
+  .design-apple [class*="Card"],
+  .design-apple .card {
+    @apply border border-border/30 shadow-none rounded-2xl;
+  }
+  
+  /* Sidebar items - clean list style */
+  .design-apple [data-sidebar="menu-button"] {
+    @apply rounded-xl;
+  }
+  
+  /* Dialogs/Modals - clean rounded */
+  .design-apple [role="dialog"] {
+    @apply rounded-3xl border border-border/30 shadow-2xl;
+  }
+  
+  /* Dropdowns - subtle */
+  .design-apple [role="menu"],
+  .design-apple [role="listbox"] {
+    @apply rounded-2xl border border-border/30 shadow-lg backdrop-blur-xl;
+    background-color: hsl(var(--card) / 0.98);
+  }
+  
+  /* Tabs - pill style */
+  .design-apple [role="tablist"] {
+    @apply bg-muted/50 rounded-full p-1;
+  }
+  
+  .design-apple [role="tab"] {
+    @apply rounded-full;
+  }
+  
+  .design-apple [role="tab"][data-state="active"] {
+    @apply bg-card shadow-sm;
+  }
+  
+  /* Badges - pill */
+  .design-apple .badge,
+  .design-apple [class*="Badge"] {
+    border-radius: 9999px !important;
+  }
+  
+  /* Switch - iOS style */
+  .design-apple [role="switch"] {
+    @apply rounded-full;
+  }
+  
+  /* Avatar - clean circle */
+  .design-apple [class*="Avatar"] {
+    @apply ring-0;
+  }
+  
+  /* Floating action button style */
+  .design-apple .fab,
+  .design-apple [class*="floating"] {
+    @apply rounded-full shadow-lg;
+  }
+  
+  /* Progress bars - rounded */
+  .design-apple [role="progressbar"],
+  .design-apple .progress {
+    @apply rounded-full;
+  }
+  
+  /* Tooltips - pill */
+  .design-apple [role="tooltip"] {
+    @apply rounded-full px-3 py-1.5;
+  }
+  
+  /* Accordion - clean */
+  .design-apple [data-state="open"][data-orientation="vertical"],
+  .design-apple [data-state="closed"][data-orientation="vertical"] {
+    @apply border-b border-border/20;
+  }
+  
+  /* Scrollbar - minimal */
+  .design-apple ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .design-apple ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .design-apple ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+  }
+  
+  .design-apple ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
