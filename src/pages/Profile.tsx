@@ -67,8 +67,14 @@ export default function Profile() {
     );
   }
 
-  // Parse profile data
+  // Parse profile data - handle both string and object formats
   const data = typeof profile === 'string' ? JSON.parse(profile) : profile;
+  
+  // Get traits - support both 'traits' and 'mainTraits' keys
+  const traits = data?.personality?.traits || data?.personality?.mainTraits || [];
+  const strengths = data?.personality?.strengths || [];
+  const workingStyle = data?.personality?.working_style || data?.personality?.workingStyle || "";
+  const habitsToDevvelop = data?.recommendations?.habits_to_develop || data?.recommendations?.habitsToDevvelop || [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -103,14 +109,14 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 gap-4">
-              {data?.personality?.mainTraits?.slice(0, 4).map((trait: string, i: number) => (
+              {traits.length > 0 ? traits.slice(0, 4).map((trait: string, i: number) => (
                 <div key={i} className="flex items-center gap-3 p-3 bg-background rounded-lg border">
                   <div className="p-2 bg-primary/10 rounded-full">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-sm font-medium">{trait}</span>
                 </div>
-              )) || (
+              )) : (
                 <p className="text-muted-foreground col-span-2">Données non disponibles</p>
               )}
             </div>
@@ -134,11 +140,11 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {data?.personality?.strengths?.slice(0, 3).map((strength: string, i: number) => (
+                {strengths.length > 0 ? strengths.slice(0, 3).map((strength: string, i: number) => (
                   <Badge key={i} variant="secondary" className="mr-2 mb-2">
                     ✨ {strength}
                   </Badge>
-                )) || <p className="text-sm text-muted-foreground">Non disponible</p>}
+                )) : <p className="text-sm text-muted-foreground">Non disponible</p>}
               </div>
             </CardContent>
           </Card>
@@ -158,7 +164,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {data?.personality?.workingStyle || "Analyse en cours..."}
+                {workingStyle || "Analyse en cours..."}
               </p>
             </CardContent>
           </Card>
@@ -180,11 +186,11 @@ export default function Profile() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 gap-3">
-              {data?.recommendations?.habitsToDevvelop?.slice(0, 4).map((habit: string, i: number) => (
+              {habitsToDevvelop.length > 0 ? habitsToDevvelop.slice(0, 4).map((habit: string, i: number) => (
                 <div key={i} className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm">💡 {habit}</p>
                 </div>
-              )) || (
+              )) : (
                 <p className="text-muted-foreground col-span-2">Générez votre profil pour voir les recommandations</p>
               )}
             </div>
