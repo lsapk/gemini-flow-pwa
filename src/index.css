@@ -154,8 +154,8 @@
     --input: 0 0% 96%;
     --ring: 211 100% 50%;
     
-    /* Keep standard radius - not pill shaped */
-    --radius: 0.75rem;
+    /* Apple-style slightly more rounded */
+    --radius: 1rem;
     
     --success: 142 70% 45%;
     --warning: 38 92% 50%;
