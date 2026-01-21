@@ -59,6 +59,79 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check if user is premium or admin
+    let isPremium = false;
+    try {
+      const { data: subscriptionData } = await supabaseClient
+        .from('subscribers')
+        .select('subscribed')
+        .eq('user_id', authenticatedUserId)
+        .maybeSingle();
+      
+      const { data: adminRole } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authenticatedUserId)
+        .eq('role', 'admin')
+        .maybeSingle();
+        
+      isPremium = subscriptionData?.subscribed === true || !!adminRole;
+    } catch (error) {
+      console.error("Error checking subscription status:", error);
+    }
+
+    // If user is not premium, check request limits and AI credits
+    if (!isPremium) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { count, error } = await supabaseClient
+        .from('ai_requests')
+        .select('*', { count: 'exact', head: false })
+        .eq('service', 'gemini-chat-enhanced')
+        .eq('user_id', authenticatedUserId)
+        .gte('created_at', today.toISOString());
+        
+      if (error) {
+        console.error("Error checking AI request limit:", error);
+      }
+      
+      const requestsToday = count || 0;
+      const BASE_FREE_REQUESTS = 5;
+      
+      // Check AI credits (25 credits = 1 extra request)
+      const { data: aiCreditsData } = await supabaseClient
+        .from('ai_credits')
+        .select('credits')
+        .eq('user_id', authenticatedUserId)
+        .maybeSingle();
+      
+      const aiCredits = aiCreditsData?.credits || 0;
+      const bonusRequests = Math.floor(aiCredits / 25);
+      const totalAllowedRequests = BASE_FREE_REQUESTS + bonusRequests;
+      
+      if (requestsToday >= BASE_FREE_REQUESTS) {
+        if (bonusRequests > 0 && requestsToday < totalAllowedRequests) {
+          // Deduct 25 credits for this extra request
+          const newCredits = aiCredits - 25;
+          await supabaseClient
+            .from('ai_credits')
+            .update({ credits: newCredits, last_updated: new Date().toISOString() })
+            .eq('user_id', authenticatedUserId);
+            
+          console.log(`Used 25 AI credits for bonus request. Credits remaining: ${newCredits}`);
+        } else if (requestsToday >= totalAllowedRequests) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'AI_LIMIT_REACHED',
+              response: `⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de ${BASE_FREE_REQUESTS} requêtes quotidiennes gratuites${bonusRequests > 0 ? ` + ${bonusRequests} requêtes bonus (crédits IA épuisés)` : ''}. Achetez des crédits IA dans la boutique (25 crédits = 1 requête) ou passez à premium.`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Déterminer le mode de conversation
     const analysisMode = context?.analysis_mode || message.includes('[MODE ANALYSE');
     const creationMode = context?.creation_mode || message.includes('[MODE CRÉATION');

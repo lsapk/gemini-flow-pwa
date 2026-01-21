@@ -195,9 +195,17 @@ export default function Habits() {
         // Ne mettre à jour le streak que si c'est aujourd'hui
         if (isToday) {
           const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
-          const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
           
-          await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+          // Check for streak protection before reducing streak
+          const hasProtection = await checkStreakProtection(user.id);
+          
+          if (hasProtection) {
+            // Don't reduce streak, just show message
+            toast.info("Bouclier de streak activé ! Votre streak est protégé.");
+          } else {
+            const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
+            await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+          }
         }
         
         toast.info("L'habitude n'est plus marquée comme faite.");
@@ -240,6 +248,25 @@ export default function Habits() {
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       toast.error("Erreur lors de la mise à jour de l'habitude");
+    }
+  };
+
+  // Helper function to check streak protection
+  const checkStreakProtection = async (userId: string): Promise<boolean> => {
+    try {
+      const { data: activePowerUps } = await supabase
+        .from("active_powerups")
+        .select("*")
+        .eq("user_id", userId)
+        .gt("expires_at", new Date().toISOString());
+
+      if (!activePowerUps) return false;
+
+      return activePowerUps.some(
+        (p) => p.powerup_type === "streak_shield" || p.powerup_type === "streak_mega_shield"
+      );
+    } catch {
+      return false;
     }
   };
 
