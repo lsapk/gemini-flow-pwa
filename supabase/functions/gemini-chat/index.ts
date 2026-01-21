@@ -90,7 +90,7 @@ serve(async (req) => {
       console.error("Error checking subscription status:", error);
     }
 
-    // If user is not premium, check request limits
+    // If user is not premium, check request limits and AI credits
     if (!isPremium) {
       // Get today's date (UTC midnight)
       const today = new Date();
@@ -109,20 +109,44 @@ serve(async (req) => {
       }
       
       const requestsToday = count || 0;
+      const BASE_FREE_REQUESTS = 5;
       
-      // If user has reached the limit, return an error
-      if (requestsToday >= 5) {
-        const limitMessage = {
-          fr: "⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de 5 requêtes quotidiennes avec le compte gratuit. Passez à un abonnement premium pour bénéficier d'un accès illimité.",
-          en: "⚠️ **Limit reached**\n\nYou have reached your limit of 5 daily requests with the free account. Upgrade to a premium subscription for unlimited access.",
-          es: "⚠️ **Límite alcanzado**\n\nHas alcanzado tu límite de 5 solicitudes diarias con la cuenta gratuita. Actualiza a una suscripción premium para obtener acceso ilimitado.",
-          de: "⚠️ **Limit erreicht**\n\nSie haben Ihr Limit von 5 täglichen Anfragen mit dem kostenlosen Konto erreicht. Upgrade auf ein Premium-Abonnement für unbegrenzten Zugriff."
-        };
-        
-        return new Response(
-          JSON.stringify({ response: limitMessage[userLanguage] || limitMessage.fr }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Check if user has AI credits (25 credits = 1 extra request)
+      const { data: aiCreditsData } = await supabase
+        .from('ai_credits')
+        .select('credits')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      const aiCredits = aiCreditsData?.credits || 0;
+      const bonusRequests = Math.floor(aiCredits / 25);
+      const totalAllowedRequests = BASE_FREE_REQUESTS + bonusRequests;
+      
+      // If user has reached the base limit, try to use AI credits
+      if (requestsToday >= BASE_FREE_REQUESTS) {
+        if (bonusRequests > 0 && requestsToday < totalAllowedRequests) {
+          // Deduct 25 credits for this extra request
+          const newCredits = aiCredits - 25;
+          await supabase
+            .from('ai_credits')
+            .update({ credits: newCredits, last_updated: new Date().toISOString() })
+            .eq('user_id', userId);
+            
+          console.log(`Used 25 AI credits for bonus request. Credits remaining: ${newCredits}`);
+        } else if (requestsToday >= totalAllowedRequests) {
+          // No more requests available
+          const limitMessage = {
+            fr: `⚠️ **Limite atteinte**\n\nVous avez atteint votre limite de ${BASE_FREE_REQUESTS} requêtes quotidiennes gratuites${bonusRequests > 0 ? ` + ${bonusRequests} requêtes bonus (crédits IA épuisés)` : ''}. Achetez des crédits IA dans la boutique (25 crédits = 1 requête) ou passez à un abonnement premium pour un accès illimité.`,
+            en: `⚠️ **Limit reached**\n\nYou have reached your limit of ${BASE_FREE_REQUESTS} free daily requests${bonusRequests > 0 ? ` + ${bonusRequests} bonus requests (AI credits exhausted)` : ''}. Buy AI credits in the shop (25 credits = 1 request) or upgrade to premium for unlimited access.`,
+            es: `⚠️ **Límite alcanzado**\n\nHas alcanzado tu límite de ${BASE_FREE_REQUESTS} solicitudes diarias gratuitas${bonusRequests > 0 ? ` + ${bonusRequests} solicitudes extra (créditos IA agotados)` : ''}. Compra créditos IA en la tienda (25 créditos = 1 solicitud) o actualiza a premium para acceso ilimitado.`,
+            de: `⚠️ **Limit erreicht**\n\nSie haben Ihr Limit von ${BASE_FREE_REQUESTS} kostenlosen täglichen Anfragen erreicht${bonusRequests > 0 ? ` + ${bonusRequests} Bonusanfragen (KI-Credits erschöpft)` : ''}. Kaufen Sie KI-Credits im Shop (25 Credits = 1 Anfrage) oder upgraden Sie auf Premium für unbegrenzten Zugriff.`
+          };
+          
+          return new Response(
+            JSON.stringify({ response: limitMessage[userLanguage] || limitMessage.fr }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 

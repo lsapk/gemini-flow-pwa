@@ -225,15 +225,16 @@ export const usePowerUps = () => {
 
       const powerup = POWERUP_DEFINITIONS[powerupType];
       
-      // Check if user has enough credits
+      // Check if user has enough credits (game credits, not AI credits)
       const { data: profile } = await supabase
         .from("player_profiles")
         .select("credits, experience_points")
         .eq("user_id", user.id)
         .single();
 
+      // Use game credits (player_profiles.credits), not admin AI credits
       if (!profile || profile.credits < powerup.cost) {
-        throw new Error("Pas assez de crédits");
+        throw new Error("Pas assez de crédits de jeu");
       }
 
       // Deduct credits

@@ -24,13 +24,38 @@ export const useGamificationRewards = () => {
   const queryClient = useQueryClient();
   const { showXP, showLevelUp, showCredits } = useXPNotification();
 
+  // Get active XP multiplier from power-ups
+  const getActiveXPMultiplier = useCallback(async (userId: string): Promise<number> => {
+    try {
+      const { data: activePowerUps } = await supabase
+        .from("active_powerups")
+        .select("*")
+        .eq("user_id", userId)
+        .gt("expires_at", new Date().toISOString());
+
+      if (!activePowerUps) return 1;
+
+      const xpBoost = activePowerUps.find(
+        (p) => p.powerup_type === "xp_boost_2x" || p.powerup_type === "xp_boost_3x"
+      );
+
+      return xpBoost?.multiplier || 1;
+    } catch {
+      return 1;
+    }
+  }, []);
+
   const awardXP = useCallback(async (action: RewardAction, customAmount?: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const config = XP_CONFIG[action];
-      const xpToAdd = customAmount || config.xp;
+      let xpToAdd = customAmount || config.xp;
+
+      // Apply XP multiplier from active power-ups
+      const multiplier = await getActiveXPMultiplier(user.id);
+      xpToAdd = Math.floor(xpToAdd * multiplier);
 
       // Get current profile
       const { data: profile } = await supabase
@@ -57,8 +82,11 @@ export const useGamificationRewards = () => {
         })
         .eq("user_id", user.id);
 
-      // Show notification
-      showXP(xpToAdd, config.message);
+      // Show notification with multiplier info
+      const xpMessage = multiplier > 1 
+        ? `${config.message} (x${multiplier})` 
+        : config.message;
+      showXP(xpToAdd, xpMessage);
 
       if (leveledUp) {
         setTimeout(() => showLevelUp(newLevel), 500);
@@ -74,7 +102,26 @@ export const useGamificationRewards = () => {
     } catch (error) {
       console.error("Error awarding XP:", error);
     }
-  }, [queryClient, showXP, showLevelUp, showCredits]);
+  }, [queryClient, showXP, showLevelUp, showCredits, getActiveXPMultiplier]);
+
+  // Check if user has active streak protection
+  const hasStreakProtection = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data: activePowerUps } = await supabase
+        .from("active_powerups")
+        .select("*")
+        .eq("user_id", userId)
+        .gt("expires_at", new Date().toISOString());
+
+      if (!activePowerUps) return false;
+
+      return activePowerUps.some(
+        (p) => p.powerup_type === "streak_shield" || p.powerup_type === "streak_mega_shield"
+      );
+    } catch {
+      return false;
+    }
+  }, []);
 
   const checkAndRewardStreak = useCallback(async (streak: number) => {
     if (streak === 3) await awardXP("streak_3");
@@ -85,6 +132,7 @@ export const useGamificationRewards = () => {
   return {
     awardXP,
     checkAndRewardStreak,
+    hasStreakProtection,
     XP_CONFIG,
   };
 };
