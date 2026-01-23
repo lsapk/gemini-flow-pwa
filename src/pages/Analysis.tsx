@@ -18,6 +18,9 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { LifeWheelChart } from "@/components/analysis/LifeWheelChart";
+import { ChronobiologyChart } from "@/components/analysis/ChronobiologyChart";
+import { ConsistencyHeatmap } from "@/components/analysis/ConsistencyHeatmap";
 
 export default function Analysis() {
   const { habitsData, tasksData, focusData, activityData, isLoading, refetch, taskCompletionRate, totalFocusTime, streakCount } = useAnalyticsData();
@@ -154,6 +157,12 @@ export default function Analysis() {
         </Card>
       </motion.div>
 
+      {/* Roue de la Vie - Life Balance Radar */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <LifeWheelChart />
+        <ChronobiologyChart />
+      </div>
+
       {/* Charts Row */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Focus Time Chart */}
@@ -256,6 +265,9 @@ export default function Analysis() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Consistency Heatmap - Full Width */}
+      <ConsistencyHeatmap days={isPremium ? 365 : 90} />
 
       {/* Quick Tips */}
       <motion.div
