@@ -98,3 +98,6 @@ verify_jwt = true
 
 [functions.paypal-capture-order]
 verify_jwt = true
+
+[functions.ai-cross-analysis]
+verify_jwt = true

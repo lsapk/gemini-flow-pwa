@@ -20,6 +20,8 @@ import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
 import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 import { AdminAnnouncementPanel } from "@/components/dashboard/AdminAnnouncementPanel";
 import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
+import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
+import { CrossInsightsWidget } from "@/components/ai/CrossInsightsWidget";
 
 export default function Dashboard() {
   // Ensure player profile exists
@@ -113,6 +115,9 @@ export default function Dashboard() {
         <p className="text-sm sm:text-base text-muted-foreground">Vue d'ensemble de votre productivité</p>
       </div>
 
+      {/* AI Daily Briefing - Top priority */}
+      <DailyBriefingCard />
+
       {/* Raccourcis rapides avec design moderne */}
       <div className="space-y-4">
         <h2 className="text-xl font-heading font-semibold">Accès rapide</h2>
@@ -197,6 +202,9 @@ export default function Dashboard() {
 
       {/* Monthly AI Report */}
       <MonthlyAIReport />
+
+      {/* Cross-Feature AI Insights */}
+      <CrossInsightsWidget />
 
       {/* Insights IA */}
       <SmartInsightsWidget />
