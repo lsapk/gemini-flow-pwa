@@ -1,298 +1,284 @@
 
-# Fonctionnalités IA Avancées pour DeepFlow
+# Plan de Refonte UX/UI : Tâches, Habitudes et Objectifs
 
-## Vision Globale : L'IA comme Coach Personnel Intégré
+## Analyse de l'Existant
 
-L'idée centrale est de créer un **système d'IA interconnecté** qui croise TOUTES les données (tâches, habitudes, objectifs, journal, focus, humeurs, quêtes, profil de personnalité) pour offrir une expérience unique et personnalisée.
+Apres analyse approfondie du code, voici les problèmes identifies :
 
----
+### Problemes actuels
 
-## 1. 🧠 Coach IA Proactif (Daily Briefing)
+**1. Manque de cohérence visuelle**
+- Les 3 listes (TaskList, HabitList, GoalList) ont des styles différents
+- TaskList utilise une grille, HabitList et GoalList utilisent une liste verticale
+- Les espaces, tailles de polices et paddings varient
 
-### Concept
-Chaque matin (ou à l'ouverture de l'app), l'IA génère un **briefing personnalisé** qui croise :
-- Tâches du jour + priorités
-- Habitudes à compléter
-- Humeur récente du journal
-- Pattern de chronobiologie
-- Objectifs en cours
-- Quêtes actives
+**2. Interface trop dense**
+- Trop d'informations affichées en même temps
+- Boutons d'action toujours visibles (encombrant)
+- Pas de hiérarchie visuelle claire
 
-### Exemple de briefing
-> "Bonjour ! 🌅 Tu es un lève-tôt (80% de tes tâches high priority avant 11h). 
-> Aujourd'hui, focus sur [3 tâches prioritaires]. Ton humeur était 'stressé' hier - 
-> je te recommande une session focus de 25min avant de commencer. 
-> Tu as une quête 'Deep Work' en cours : 45/60 min. Tu peux la finir aujourd'hui ! 🎯"
+**3. Interactions non optimales**
+- Le drag-and-drop existe mais pas de feedback visuel satisfaisant
+- Les checkboxes sont petites et difficiles à cliquer sur mobile
+- Pas d'animations de transition lors des actions
 
-### Données croisées
-- `chronobiologyData` → heures optimales
-- `journal_entries.mood` → état émotionnel
-- `tasks` → priorités
-- `quests` → progression
-- `player_profiles` → niveau et streaks
+**4. Manque de fonctionnalités UX modernes**
+- Pas de swipe actions sur mobile
+- Pas de filtrage rapide
+- Pas de vue compacte vs détaillée
 
 ---
 
-## 2. 🎯 Smart Task Prioritization IA
+## Solutions Proposées
 
-### Concept
-L'IA analyse et **réorganise automatiquement** les tâches selon :
-- Chronobiologie (quand l'utilisateur est le plus productif)
-- Énergie actuelle (déduite du journal)
-- Objectifs liés (impact sur la progression)
-- Deadlines et dépendances
-- Complexité estimée vs énergie disponible
+### 1. Nouveau Design System Unifié
 
-### Fonctionnement
-```
-Tâche "Rédiger rapport" → L'IA détecte :
-- Tu es productif le matin → Suggère 9h-11h
-- Humeur "motivé" → Tâches complexes ok
-- Objectif "Carrière" lié → Priorité boostée
-- Streak de 5 jours → +10% XP si complété aujourd'hui
+Créer un composant `ItemCard` réutilisable avec 3 variantes :
+- **Compact** : Une ligne, juste le titre et checkbox
+- **Standard** : Titre, description courte, badges principaux
+- **Expanded** : Toutes les infos + sous-éléments
+
+**Structure visuelle :**
+```text
+┌─────────────────────────────────────────────────────────┐
+│  ○ ════════════════════════════════════════ [badges]   │
+│    Titre de l'élément                                   │
+│    Description courte...                    [actions]   │
+│    ─────────────────────────────────────────────────── │
+│    ▸ 3 sous-éléments                                   │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Edge Function : `ai-smart-scheduling`
-Analyse les données et retourne un planning optimisé pour la journée.
+### 2. Animations et Micro-interactions
 
----
+- **Check animation** : Cercle qui se remplit avec effet "confetti" subtil
+- **Drag feedback** : Ombre portée + légère rotation lors du drag
+- **Hover states** : Boutons d'action apparaissent au survol (cachés par défaut)
+- **Swipe gestures** : Swipe gauche = supprimer, swipe droit = compléter (mobile)
+- **Transitions fluides** : Utiliser Framer Motion pour toutes les animations
 
-## 3. 📊 Mood-Productivity Correlation
+### 3. Header Amélioré avec Filtres
 
-### Concept
-Analyser la **corrélation entre humeur et productivité** pour donner des insights actionnables.
-
-### Insights générés
-- "Quand tu es 'calme', tu complètes 40% plus de tâches"
-- "Les jours où tu écris dans le journal, tu fais +2 sessions focus"
-- "Ta productivité baisse de 60% après 3 jours sans habitude 'Méditation'"
-
-### Visualisation
-- Graphique croisé : humeur (y) vs tâches complétées (x)
-- Heatmap : humeur par jour de la semaine
-- Tendance : évolution humeur + productivité sur 30 jours
-
-### Données croisées
-- `journal_entries.mood` + `journal_entries.created_at`
-- `tasks.completed` + `tasks.updated_at`
-- `focus_sessions.duration` + `focus_sessions.started_at`
-- `habit_completions.completed_date`
-
----
-
-## 4. 🌀 Flow State Predictor
-
-### Concept
-L'IA prédit quand l'utilisateur est susceptible d'entrer en **état de flow** basé sur :
-- Historique des sessions focus longues (>45min)
-- Conditions : heure, jour, humeur avant la session
-- Tâches travaillées pendant ces sessions
-
-### Output
-> "🎯 Fenêtre de Flow détectée : Tu as 78% de chances d'entrer en flow 
-> aujourd'hui entre 14h-16h (comme les 3 dernières fois où tu as fait 
-> des sessions de 60min+). Je te suggère de travailler sur [objectif Carrière]."
-
-### Edge Function : `predict-flow-state`
-Machine learning simplifié basé sur les patterns historiques.
-
----
-
-## 5. 🔮 Goal Achievement Predictor
-
-### Concept
-L'IA calcule la **probabilité d'atteindre chaque objectif** à temps basée sur :
-- Progression actuelle vs temps restant
-- Vélocité récente (tâches liées complétées)
-- Historique de complétion similaire
-- Consistance des habitudes liées
-
-### Visualisation
-Chaque objectif affiche :
-- Barre de progression actuelle
-- "Prédiction IA : 72% de succès à temps"
-- "⚠️ Risque : Tu as ralenti cette semaine. Ajoute 2 tâches/jour pour rester sur la bonne voie."
-
-### Données croisées
-- `goals.progress` + `goals.target_date`
-- `tasks` liées via `linked_goal_id`
-- `habits` de même catégorie
-- `focus_sessions` avec titre lié
-
----
-
-## 6. 🧬 Habit DNA Generator
-
-### Concept
-Générer un **profil ADN d'habitudes** unique basé sur :
-- Les catégories où l'utilisateur excelle
-- Les patterns de complétion
-- Les habitudes "fondation" (qui déclenchent d'autres comportements)
-- Les "habitudes toxiques" (patterns négatifs détectés)
-
-### Output visuel
-```
-TON ADN D'HABITUDES
-==================
-🧘 Mindfulness : ████████░░ 80% (Fondation)
-💪 Fitness     : ██████░░░░ 60% (En croissance)
-📚 Learning    : ████░░░░░░ 40% (À développer)
-🌙 Sleep       : ██░░░░░░░░ 20% (Point faible)
-
-💡 Insight : "Méditation" déclenche 3x plus de sessions focus.
-Considère l'ajouter comme première habitude du matin.
+Ajouter une barre de filtrage/recherche :
+```text
+┌─────────────────────────────────────────────────────────┐
+│  🔍 Rechercher...    [Toutes] [Haute] [Moyenne] [Basse] │
+│  ☰ Liste  ▦ Grille  ▤ Compact      📅 Aujourd'hui ▼    │
+└─────────────────────────────────────────────────────────┘
 ```
 
----
+### 4. Quick Actions Contextuelles
 
-## 7. 📝 Smart Journal Prompts IA
+- **Long press / Right click** : Menu contextuel avec actions rapides
+- **Inline editing** : Double-clic pour éditer le titre directement
+- **Bulk actions** : Sélection multiple avec actions groupées
 
-### Concept
-Générer des **prompts de journal personnalisés** basés sur :
-- Ce qui s'est passé aujourd'hui (tâches, focus, habitudes)
-- Humeur récente et tendance
-- Objectifs en cours
-- Événements du calendrier
+### 5. Indicateurs Visuels Enrichis
 
-### Exemples
-- "Tu as complété 5 tâches aujourd'hui dont 2 liées à [Objectif Carrière]. Comment te sens-tu par rapport à ta progression ?"
-- "Ton streak de méditation atteint 7 jours ! Quel impact as-tu remarqué ?"
-- "Tu sembles stressé cette semaine (3 entrées 'anxieux'). Qu'est-ce qui te préoccupe ?"
+- **Progress rings** : Cercles de progression animés pour les objectifs
+- **Streak flames** : Animation de flamme pour les séries d'habitudes
+- **Priority indicators** : Barre colorée sur le côté gauche de la carte
+- **Due date badges** : Couleur dynamique (vert > 3j, orange < 3j, rouge = dépassé)
 
 ---
 
-## 8. 🎮 AI Quest Generator (Personnalisé)
+## Implémentation Technique
 
-### Concept
-Améliorer `generate-daily-quests` pour créer des quêtes **ultra-personnalisées** :
-- Basées sur les faiblesses détectées (zone à améliorer)
-- Liées aux objectifs actifs
-- Adaptées au niveau d'énergie (humeur)
-- Bonus XP pour les combos inter-fonctionnalités
+### Fichiers à créer
 
-### Exemples de quêtes IA
-- "🌅 Morning Warrior : Complète 2 tâches + 1 habitude avant 10h" (+50 XP)
-- "🧘 Zen Combo : Médite + Écris dans le journal + Session focus 25min" (+75 XP)
-- "📈 Career Sprint : Progresse de 10% sur [Objectif Carrière] aujourd'hui" (+100 XP)
-
----
-
-## 9. 🔄 Cross-Feature Insights Engine
-
-### Concept
-Un widget dashboard qui affiche des **insights croisant toutes les données** :
-
-### Types d'insights
-| Type | Exemple |
-|------|---------|
-| Corrélation | "Quand tu fais du sport, tu es 45% plus productif le lendemain" |
-| Pattern | "Tu abandonnes les habitudes après 12 jours en moyenne" |
-| Prédiction | "Risque de perte de streak dans 2 jours (pattern similaire au 15 mars)" |
-| Opportunité | "Tu n'as jamais essayé de session focus le weekend. Test suggéré !" |
-
----
-
-## 10. 🤖 AI Action Buttons (One-Click AI)
-
-### Concept
-Ajouter des boutons "IA" contextuels partout dans l'app :
-
-| Page | Action IA |
-|------|-----------|
-| Tasks | "🤖 Prioriser avec IA" → Réorganise la liste |
-| Habits | "🤖 Suggérer habitude complémentaire" |
-| Goals | "🤖 Décomposer en sous-objectifs" |
-| Focus | "🤖 Suggérer tâche optimale maintenant" |
-| Journal | "🤖 Analyser ma semaine émotionnelle" |
-| Dashboard | "🤖 Que dois-je faire maintenant ?" |
-
----
-
-## 11. 💬 Context-Aware AI Chat
-
-### Amélioration de l'assistant existant
-L'assistant IA devrait être **conscient du contexte temps réel** :
-
-- "Tu viens de terminer une session focus de 45min. Bravo ! Tu veux que je te suggère la prochaine tâche ?"
-- "Je vois que tu as validé 'Méditation' mais pas 'Journaling'. Un rappel ?"
-- "Ton objectif 'Lancer MVP' est à 80%. Tu veux qu'on planifie la dernière ligne droite ?"
-
----
-
-## 12. 🏆 AI Achievement Storyteller
-
-### Concept
-Quand l'utilisateur atteint un milestone, l'IA génère une **histoire personnalisée** de son parcours :
-
-> "🎉 Tu as atteint le niveau 10 !
-> 
-> En 45 jours, tu as :
-> - Complété 127 tâches (dont 34 high priority)
-> - Maintenu un streak de 12 jours sur 'Méditation'
-> - Accumulé 23h de focus (ton record : 2h15 d'affilée !)
-> 
-> Tu es passé de 'Débutant distrait' à 'Guerrier Focus'. Continue !"
-
----
-
-## Architecture Technique
-
-### Nouvelle Edge Function centrale
-`supabase/functions/ai-cross-analysis/index.ts`
-
-Cette fonction centralise l'analyse croisée et peut être appelée par différents composants.
-
-### Nouveaux hooks
-```
-src/hooks/useAIDailyBriefing.ts
-src/hooks/useSmartTaskPrioritization.ts
-src/hooks/useMoodProductivityCorrelation.ts
-src/hooks/useFlowStatePredictor.ts
-src/hooks/useGoalAchievementPredictor.ts
-src/hooks/useHabitDNA.ts
-src/hooks/useSmartJournalPrompts.ts
-src/hooks/useAIInsightsEngine.ts
+```text
+src/components/shared/
+├── ItemCard.tsx              # Composant carte unifié
+├── ItemCardActions.tsx       # Actions contextuelles
+├── ItemCardBadges.tsx        # Badges réutilisables
+├── CheckCircle.tsx           # Checkbox animée custom
+├── ProgressRing.tsx          # Anneau de progression SVG
+├── SwipeableItem.tsx         # Wrapper pour swipe gestures
+├── FilterBar.tsx             # Barre de filtrage
+├── ViewToggle.tsx            # Toggle liste/grille/compact
+└── QuickActionsMenu.tsx      # Menu contextuel
 ```
 
-### Nouveaux composants
+### Fichiers à modifier
+
+```text
+src/components/TaskList.tsx    # Utiliser nouveaux composants
+src/components/HabitList.tsx   # Utiliser nouveaux composants
+src/components/GoalList.tsx    # Utiliser nouveaux composants
+src/pages/Tasks.tsx            # Ajouter FilterBar
+src/pages/Habits.tsx           # Ajouter FilterBar
+src/pages/Goals.tsx            # Ajouter FilterBar
 ```
-src/components/ai/DailyBriefingCard.tsx
-src/components/ai/SmartTaskSuggestions.tsx
-src/components/ai/MoodProductivityChart.tsx
-src/components/ai/FlowStateWidget.tsx
-src/components/ai/GoalPredictionBadge.tsx
-src/components/ai/HabitDNAChart.tsx
-src/components/ai/SmartJournalPrompt.tsx
-src/components/ai/CrossInsightsWidget.tsx
-src/components/ai/AIActionButton.tsx
+
+### Nouvelles dépendances
+
+Aucune nouvelle dépendance requise :
+- `framer-motion` : déjà installé
+- `@dnd-kit` : déjà installé
+
+---
+
+## Détail des Composants
+
+### 1. ItemCard.tsx - Carte Unifiée
+
+**Props :**
+- `type`: 'task' | 'habit' | 'goal'
+- `variant`: 'compact' | 'standard' | 'expanded'
+- `data`: Task | Habit | Goal
+- `onComplete`, `onEdit`, `onDelete`
+- `showActions`: boolean (hover vs always)
+
+**Features :**
+- Indicateur de priorité coloré sur le bord gauche
+- Checkbox animée avec effet de complétion
+- Actions au survol (desktop) ou swipe (mobile)
+- Animation d'entrée/sortie avec Framer Motion
+
+### 2. CheckCircle.tsx - Checkbox Animée
+
+**Design :**
+- Cercle au lieu de carré (plus moderne)
+- Animation de remplissage lors du check
+- Effet de "pop" satisfaisant
+- Couleur selon le type (vert success pour tous)
+
+### 3. ProgressRing.tsx - Anneau de Progression
+
+**Pour les objectifs :**
+- SVG animé montrant le pourcentage
+- Gradient de couleur selon progression
+- Animation au chargement et changement
+
+### 4. FilterBar.tsx - Barre de Filtrage
+
+**Features :**
+- Recherche en temps réel
+- Filtres par priorité (chips cliquables)
+- Toggle de vue (liste/grille/compact)
+- Filtre par date (aujourd'hui/cette semaine/tout)
+
+### 5. SwipeableItem.tsx - Gestes Mobile
+
+**Utilisation de Framer Motion :**
+- Swipe gauche : révèle bouton supprimer (rouge)
+- Swipe droit : marque comme complété (vert)
+- Feedback haptique (vibration) si disponible
+
+---
+
+## Améliorations Spécifiques par Type
+
+### Tâches
+
+- **Priority lane** : Barre verticale colorée à gauche
+- **Due date smart badge** : "Aujourd'hui", "Demain", "En retard"
+- **Subtask preview** : Mini barre de progression inline
+- **Quick complete** : Swipe droit
+
+### Habitudes
+
+- **Streak badge animé** : Flamme avec compteur
+- **Completion ring** : Cercle de progression journalier
+- **Days indicator** : Points pour les jours de la semaine
+- **Category color** : Bordure colorée par catégorie
+
+### Objectifs
+
+- **Progress ring** : Grand anneau de progression (0-100%)
+- **Milestone markers** : Points sur l'anneau (25%, 50%, 75%)
+- **Target date countdown** : "J-15" avec couleur dynamique
+- **Subobjectives collapse** : Accordéon fluide
+
+---
+
+## Responsive Design
+
+### Mobile (< 640px)
+- Vue liste uniquement (pas de grille)
+- Swipe actions activées
+- Actions dans menu contextuel
+- Checkbox plus grande (touch-friendly)
+
+### Tablet (640px - 1024px)
+- Grille 2 colonnes optionnelle
+- Actions au survol
+- Tous les filtres visibles
+
+### Desktop (> 1024px)
+- Grille jusqu'à 3 colonnes
+- Actions au survol
+- Sidebar avec statistiques rapides
+
+---
+
+## Exemples Visuels (ASCII)
+
+### Carte Tâche Standard
+```text
+┌─────────────────────────────────────────────────────────┐
+│█                                                        │
+│█  ◯  Rédiger le rapport mensuel                        │
+│█     Préparer le document pour la réunion de lundi     │
+│█                                                        │
+│█     🔴 Haute    📅 Demain    ⏱️ Créé il y a 2h        │
+│█     ───────────────────────────────────────────────── │
+│█     ▸ 2/5 sous-tâches  ━━━━━━━░░░ 40%                │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Carte Habitude Standard
+```text
+┌─────────────────────────────────────────────────────────┐
+│  ◉  Méditation matinale                    🔥 12        │
+│     10 minutes de pleine conscience                     │
+│                                                         │
+│     🟢 Quotidien   L M M J V S D                        │
+│                    ● ● ● ○ ○ ○ ○                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Carte Objectif Standard
+```text
+┌─────────────────────────────────────────────────────────┐
+│  ╭───╮                                                  │
+│  │72%│  Lancer le MVP du projet                         │
+│  ╰───╯  Finaliser et déployer la v1                    │
+│                                                         │
+│     🏷️ Carrière   📅 J-23   ▸ 4 sous-objectifs         │
+│     ━━━━━━━━━━━━━━━━━━━━━━━░░░░░░░                      │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Priorités d'Implémentation
+## Ordre d'Implémentation
 
-| Priorité | Fonctionnalité | Impact | Effort |
-|----------|---------------|--------|--------|
-| 1 | Daily Briefing IA | Très élevé | Moyen |
-| 2 | Smart Task Prioritization | Élevé | Moyen |
-| 3 | Cross-Feature Insights | Très élevé | Élevé |
-| 4 | AI Action Buttons | Élevé | Faible |
-| 5 | Mood-Productivity Correlation | Moyen | Moyen |
-| 6 | Goal Achievement Predictor | Élevé | Moyen |
-| 7 | Smart Journal Prompts | Moyen | Faible |
-| 8 | Flow State Predictor | Moyen | Élevé |
-| 9 | Habit DNA Generator | Moyen | Moyen |
-| 10 | AI Quest Generator amélioré | Moyen | Moyen |
+| Étape | Composant | Priorité |
+|-------|-----------|----------|
+| 1 | CheckCircle.tsx (checkbox animée) | Haute |
+| 2 | ItemCard.tsx (structure de base) | Haute |
+| 3 | ItemCardBadges.tsx (badges réutilisables) | Haute |
+| 4 | ProgressRing.tsx (pour objectifs) | Moyenne |
+| 5 | TaskList refactoring | Haute |
+| 6 | HabitList refactoring | Haute |
+| 7 | GoalList refactoring | Haute |
+| 8 | FilterBar.tsx | Moyenne |
+| 9 | ViewToggle.tsx | Moyenne |
+| 10 | SwipeableItem.tsx (mobile) | Basse |
+| 11 | QuickActionsMenu.tsx | Basse |
 
 ---
 
-## Résumé
+## Résultat Attendu
 
-Ces fonctionnalités transforment DeepFlow d'une **app de productivité classique** en un **véritable coach IA personnel** qui :
-1. **Connecte** toutes les données entre elles
-2. **Prédit** les comportements et résultats
-3. **Guide** l'utilisateur de manière proactive
-4. **Personnalise** chaque interaction
-5. **Gamifie** l'amélioration continue
+Cette refonte apportera :
 
-C'est ce croisement intelligent des données qui créera un **effet "wow"** et différenciera DeepFlow de la concurrence.
+1. **Cohérence visuelle** : Même design system pour les 3 types d'éléments
+2. **Fluidité** : Animations et transitions satisfaisantes
+3. **Praticité** : Actions contextuelles, filtres, recherche
+4. **Modernité** : Design proche des meilleures apps de productivité (Todoist, Things 3)
+5. **Accessibilité** : Touch targets plus grands, contraste amélioré
+6. **Performance** : Optimisation avec virtualization si nécessaire
+
+Le tout en conservant 100% des fonctionnalités existantes (drag-drop, edit, delete, complete, subtasks, etc.)
