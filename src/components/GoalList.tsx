@@ -1,17 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit2, GripVertical } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Target, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { SubobjectiveList } from './SubobjectiveList';
+import { ItemCard, FilterBar, ViewMode, ProgressRing } from "@/components/shared/ItemCard";
+import { Progress } from "@/components/ui/progress";
 import {
   DndContext,
   closestCenter,
@@ -44,9 +42,19 @@ interface SortableGoalCardProps {
   onDelete: (goalId: string) => void;
   onStatusUpdate: (id: string, completed: boolean) => void;
   userId: string | undefined;
+  isExpanded: boolean;
+  onToggleExpanded: (goalId: string) => void;
 }
 
-function SortableGoalCard({ goal, onEdit, onDelete, onStatusUpdate, userId }: SortableGoalCardProps) {
+function SortableGoalCard({ 
+  goal, 
+  onEdit, 
+  onDelete, 
+  onStatusUpdate, 
+  userId,
+  isExpanded,
+  onToggleExpanded 
+}: SortableGoalCardProps) {
   const {
     attributes,
     listeners,
@@ -59,121 +67,97 @@ function SortableGoalCard({ goal, onEdit, onDelete, onStatusUpdate, userId }: So
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  const handleProgressIncrement = async () => {
+    const newProgress = Math.min(100, goal.progress + 10);
+    const { error } = await supabase
+      .from('goals')
+      .update({ progress: newProgress })
+      .eq('id', goal.id)
+      .eq('user_id', userId);
+    
+    if (!error) {
+      toast.success('Progrès mis à jour +10%');
+      // Trigger a refetch by reloading
+      window.location.reload();
+    }
   };
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-1.5 sm:p-2 md:p-3">
-          <div className="flex items-start gap-1.5 w-full min-w-0">
-            <div
-              {...attributes}
-              {...listeners}
-              className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors flex-shrink-0 mt-0.5"
-            >
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-            </div>
-            
-            <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden">
-              <div className="flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Checkbox
-                  checked={goal.completed}
-                  onCheckedChange={(checked) =>
-                    onStatusUpdate(goal.id, checked as boolean)
-                  }
-                  size="xl"
-                  className="data-[state=checked]:bg-green-500 border-2"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col gap-1 mb-1">
-                  <h3 className={`font-semibold text-xs sm:text-sm truncate leading-tight ${goal.completed ? 'line-through text-muted-foreground' : 'text-card-foreground'}`}>
-                    {goal.title}
-                  </h3>
-                  {goal.category && (
-                    <Badge variant="outline" className="text-xs flex-shrink-0 w-fit">
-                      {goal.category}
-                    </Badge>
-                  )}
-                </div>
-                
-                {goal.description && (
-                  <p className={`text-muted-foreground mb-1 text-xs line-clamp-2 break-words ${goal.completed ? 'line-through' : ''}`}>
-                    {goal.description}
-                  </p>
+      <ItemCard
+        type="goal"
+        data={goal}
+        variant={isExpanded ? 'expanded' : 'standard'}
+        onComplete={() => onStatusUpdate(goal.id, goal.completed)}
+        onEdit={() => onEdit(goal)}
+        onDelete={() => onDelete(goal.id)}
+        isDragging={isDragging}
+        dragHandleProps={{ listeners, attributes }}
+      >
+        {/* Goal-specific content */}
+        <div className="space-y-3">
+          {/* Progress Section */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-medium">{goal.progress}%</span>
+                {!goal.completed && goal.progress < 100 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 px-2 text-xs"
+                    onClick={handleProgressIncrement}
+                  >
+                    +10%
+                  </Button>
                 )}
-                
-                {goal.target_date && (
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {format(parseISO(goal.target_date), 'dd/MM/yy', { locale: fr })}
-                  </p>
-                )}
-                
-                <div className="mb-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-muted-foreground">{goal.progress}%</span>
-                    {!goal.completed && goal.progress < 100 && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-5 px-1.5 text-xs"
-                        onClick={async () => {
-                          const newProgress = Math.min(100, goal.progress + 10);
-                          const { error } = await supabase
-                            .from('goals')
-                            .update({ progress: newProgress })
-                            .eq('id', goal.id)
-                            .eq('user_id', userId);
-                          
-                          if (!error) {
-                            toast.success('Progrès mis à jour +10%');
-                            window.location.reload();
-                          }
-                        }}
-                      >
-                        +10%
-                      </Button>
-                    )}
-                  </div>
-                  <Progress value={goal.progress} className="h-2" />
-                </div>
-                
-                <SubobjectiveList goalId={goal.id} />
               </div>
-            </div>
-            
-            <div className="flex flex-col gap-0.5 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(goal)}
-                aria-label="Modifier"
-                className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-              >
-                <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(goal.id)}
-                aria-label="Supprimer"
-                className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-              >
-                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+              <Progress value={goal.progress} className="h-2" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          
+          {/* Subobjectives toggle */}
+          <div className="pt-2 border-t">
+            <button
+              onClick={() => onToggleExpanded(goal.id)}
+              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <span className="flex-1 text-left">Sous-objectifs</span>
+              <motion.span
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                ▼
+              </motion.span>
+            </button>
+          </div>
+
+          {/* Subobjectives List */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <SubobjectiveList goalId={goal.id} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </ItemCard>
     </div>
   );
 }
 
 export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalListProps) => {
   const { user } = useAuth();
+  const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+  const [searchValue, setSearchValue] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -186,19 +170,30 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalLi
     })
   );
 
+  const toggleExpanded = (goalId: string) => {
+    const newExpanded = new Set(expandedGoals);
+    if (newExpanded.has(goalId)) {
+      newExpanded.delete(goalId);
+    } else {
+      newExpanded.add(goalId);
+    }
+    setExpandedGoals(newExpanded);
+  };
+
   const updateGoalStatus = async (id: string, completed: boolean) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
         .from('goals')
-        .update({ completed })
+        .update({ completed: !completed })
         .eq('id', id)
         .eq('user_id', user.id);
 
       if (error) throw error;
       
-      toast.success(`Objectif ${completed ? 'complété' : 'réactivé'} !`);
+      toast.success(`Objectif ${!completed ? 'complété' : 'réactivé'} !`);
+      window.location.reload();
     } catch (error) {
       console.error('Error updating goal:', error);
       toast.error('Erreur lors de la mise à jour de l\'objectif');
@@ -216,54 +211,104 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalLi
     }
   };
 
+  // Filter goals
+  const filteredGoals = goals.filter(goal => {
+    const matchesSearch = goal.title.toLowerCase().includes(searchValue.toLowerCase()) ||
+      goal.description?.toLowerCase().includes(searchValue.toLowerCase());
+    return matchesSearch;
+  });
+
   if (loading) {
     return (
-      <div className="grid gap-4 md:gap-6">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <div className="p-6">
-              <div className="h-6 bg-muted rounded mb-4"></div>
-              <div className="h-4 bg-muted rounded w-2/3"></div>
-            </div>
-          </Card>
-        ))}
+      <div className="space-y-4">
+        <div className="h-10 bg-muted rounded animate-pulse" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-2/3" />
+                    <div className="h-3 bg-muted rounded w-1/3" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (goals.length === 0) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-muted-foreground mb-2">
-          Aucun objectif pour le moment
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Créez votre premier objectif pour commencer
-        </p>
-      </div>
+      <Card>
+        <CardContent className="text-center py-12">
+          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Aucun objectif</h3>
+          <p className="text-muted-foreground">
+            Créez votre premier objectif pour commencer
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={goals.map(g => g.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-4">
-          {goals.map((goal) => (
-            <SortableGoalCard
-              key={goal.id}
-              goal={goal}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onStatusUpdate={updateGoalStatus}
-              userId={user?.id}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <div className="space-y-4">
+      {/* Filter Bar */}
+      <FilterBar
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showPriorityFilter={false}
+        showViewToggle={false}
+      />
+
+      {/* Goals List */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={filteredGoals.map(g => g.id)} strategy={verticalListSortingStrategy}>
+          <motion.div layout className="flex flex-col gap-3">
+            <AnimatePresence mode="popLayout">
+              {filteredGoals.map((goal) => (
+                <SortableGoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onStatusUpdate={updateGoalStatus}
+                  userId={user?.id}
+                  isExpanded={expandedGoals.has(goal.id)}
+                  onToggleExpanded={toggleExpanded}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </SortableContext>
+      </DndContext>
+
+      {/* Empty filtered state */}
+      {filteredGoals.length === 0 && goals.length > 0 && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">
+              Aucun objectif ne correspond à votre recherche.
+            </p>
+            <Button 
+              variant="link" 
+              onClick={() => setSearchValue('')}
+            >
+              Réinitialiser la recherche
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
