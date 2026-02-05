@@ -1,306 +1,270 @@
 
-# Plan de Refonte Complète : Cyber Arena
+# Plan d'Amélioration : Habitudes, Admin et Dashboard
 
-## Analyse de l'Existant
+## Problèmes Identifiés
 
-Après analyse approfondie du code, voici les problèmes identifiés :
+### 1. Bug Habitudes - Refresh de page
+**Cause racine :** Dans `src/pages/Habits.tsx`, la fonction `toggleHabitCompletion` appelle `fetchHabits()` après chaque complétion (ligne 247). Cette fonction recharge TOUTES les habitudes et réinitialise l'état de chargement (`setIsLoading(true)`), ce qui provoque le comportement de "retour au début".
 
-### Problemes Actuels
+**Solution :** Mise à jour optimiste du state local au lieu de refetch complet. On modifie le state `habits` immédiatement lors du clic, puis on synchronise en arrière-plan.
 
-**1. Structure & Navigation**
-- Page trop longue avec beaucoup de scroll
-- Les tabs (Quêtes, Achievements, Badges, Shop) sont noyées en bas
-- Pas de vision globale rapide de la progression
-- L'avatar et XP Bar occupent beaucoup d'espace sans apporter de valeur immédiate
+### 2. Nouvelles Fonctionnalités Admin
+L'interface admin actuelle est basique. On ajoute :
+- **Statistiques globales** : nombre total de tâches/habitudes/objectifs créés
+- **Gestion des rôles** : promouvoir/rétrograder des utilisateurs
+- **Logs d'activité** : voir les actions récentes des admins
+- **Export de données** : télécharger les stats en CSV
+- **Gestion des crédits** : donner/retirer des crédits IA
 
-**2. Redondances**
-- `BadgesList` et `AchievementsList` sont quasiment identiques conceptuellement
-- Les badges sont calculés localement (non persistés) alors que les achievements sont en DB
-- Double système de récompenses confus pour l'utilisateur
-
-**3. Quêtes - Problèmes UX**
-- Pas d'indication visuelle claire de l'urgence (temps restant)
-- Le bouton "Réclamer" n'est pas assez visible
-- Pas d'animation de célébration lors de la complétion
-- La génération automatique n'est pas expliquée
-
-**4. Boutique - Problèmes**
-- Les power-ups sont nombreux mais mal catégorisés visuellement
-- Pas de preview des cosmétiques avant achat
-- Les coffres mystères manquent de suspense/animation
-
-**5. Avatar - Sous-exploité**
-- La personnalisation est cachée derrière un bouton
-- L'impact visuel des équipements n'est pas clair
-- Le niveau et rank ne sont pas mis en valeur
-
-**6. Performances**
-- Le fond animé avec 20 particules est lourd
-- Trop de re-renders avec les animations infinies
-- Pas de lazy loading des composants
+### 3. Réorganisation du Dashboard
+L'ordre actuel n'est pas optimal. Nouvelle hiérarchie :
+1. **Annonces admin** (en haut si présentes)
+2. **En-tête** avec titre
+3. **Raccourcis rapides** (accès immédiat)
+4. **Briefing IA** (priorité du jour)
+5. **Score de productivité** (métrique principale)
+6. **Actions rapides** (tâches du jour, habitudes à faire)
+7. **Gamification Widget** (motivation)
+8. **Insights IA** (secondaire)
 
 ---
 
-## Solutions Proposées
+## Détails Techniques
 
-### 1. Nouvelle Architecture de Page
+### Correction Bug Habitudes
 
-Restructurer la page avec un layout plus professionnel :
+**Fichier :** `src/pages/Habits.tsx`
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  HERO COMPACT : Avatar + Level + XP + Stats Rapides             │
-├─────────────────────────────────────────────────────────────────┤
-│  NAVIGATION STICKY : [Quêtes] [Achievements] [Boutique]         │
-├─────────────────────────────────────────────────────────────────┤
-│  CONTENU DYNAMIQUE selon l'onglet sélectionné                   │
-└─────────────────────────────────────────────────────────────────┘
+**Modification de `toggleHabitCompletion` :**
+
+```typescript
+const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
+  if (!user) return;
+
+  const currentSelectedDate = new Date(selectedDate);
+  const targetDate = currentSelectedDate.toISOString().split('T')[0];
+
+  // OPTIMISTIC UPDATE - Mettre à jour immédiatement le state local
+  setHabits(prev => prev.map(habit => 
+    habit.id === habitId 
+      ? { ...habit, is_completed_today: !isCompleted }
+      : habit
+  ));
+
+  try {
+    if (isCompleted) {
+      // Supprimer la complétion...
+      await supabase.from('habit_completions').delete()...
+    } else {
+      // Créer la complétion...
+      await supabase.from('habit_completions').insert(...)...
+    }
+    // PAS de fetchHabits() - on garde l'état optimiste
+  } catch (error) {
+    // ROLLBACK - Revenir à l'état précédent en cas d'erreur
+    setHabits(prev => prev.map(habit => 
+      habit.id === habitId 
+        ? { ...habit, is_completed_today: isCompleted }
+        : habit
+    ));
+    toast.error("Erreur lors de la mise à jour");
+  }
+};
 ```
 
-### 2. Hero Compact Redesign
+### Nouvelles Fonctionnalités Admin
 
-Fusionner Avatar + XP Bar en un hero plus compact :
+**Fichier :** `src/pages/Admin.tsx`
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  ┌────┐  Niveau 12 • Expert ⭐                    💰 250        │
-│  │ 🤖 │  ━━━━━━━━━━━━━━━━━━━░░░░ 78% → Lvl 13    🧠 15 IA      │
-│  └────┘  450/575 XP                              🏆 23 Quêtes   │
-│          [Personnaliser Avatar]                                 │
-└─────────────────────────────────────────────────────────────────┘
+**Ajouts :**
+
+1. **Statistiques globales de la plateforme**
+```typescript
+// Nouveau state
+const [platformStats, setPlatformStats] = useState({
+  totalTasks: 0,
+  totalHabits: 0,
+  totalGoals: 0,
+  totalFocusHours: 0,
+  activeUsersToday: 0,
+});
+
+// Nouvelle section dans l'UI
+<Card>
+  <CardHeader>
+    <CardTitle>Statistiques Plateforme</CardTitle>
+  </CardHeader>
+  <CardContent>
+    // Graphiques et métriques globales
+  </CardContent>
+</Card>
 ```
 
-### 3. Fusion Achievements + Badges
+2. **Gestion des rôles utilisateurs**
+```typescript
+// Bouton pour promouvoir admin
+const handlePromoteToAdmin = async (userId: string) => {
+  await supabase.from('user_roles').insert({
+    user_id: userId,
+    role: 'admin'
+  });
+};
 
-Unifier les deux systèmes en un seul appelé "Accomplissements" :
-- Tous les badges deviennent des achievements persistés
-- Un seul hook `useAchievements` gère tout
-- Catégorisation claire : Productivité, Focus, Régularité, Spécial
-
-### 4. Quêtes Améliorées
-
-**Nouveaux éléments visuels :**
-- Barre de progression circulaire (style jeu mobile)
-- Timer animé pour les quêtes qui expirent
-- Animation "pulse" pour les quêtes prêtes à réclamer
-- Confetti/sparkle animation lors de la réclamation
-- Indicateur de difficulté (facile/moyen/difficile)
-
-**Nouvelle structure de carte :**
-```text
-┌─────────────────────────────────────────────┐
-│  🌅 Quête Quotidienne                  ⏱ 8h │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│  Complète 3 tâches aujourd'hui              │
-│                                             │
-│  ╭─────╮                                    │
-│  │ 67% │  2/3 complétées                   │
-│  ╰─────╯                                    │
-│                                             │
-│  Récompenses: ⚡ 50 XP  💰 20 crédits       │
-│                           [🎯 Réclamer]     │
-└─────────────────────────────────────────────┘
+// UI avec badge "Admin" et boutons Promouvoir/Rétrograder
 ```
 
-### 5. Boutique Redesign
+3. **Attribution de crédits IA**
+```typescript
+// Nouvelle fonction
+const handleGiveCredits = async (userId: string, amount: number) => {
+  const { data: profile } = await supabase
+    .from('player_profiles')
+    .select('ai_credits')
+    .eq('user_id', userId)
+    .single();
+  
+  await supabase
+    .from('player_profiles')
+    .update({ ai_credits: (profile?.ai_credits || 0) + amount })
+    .eq('user_id', userId);
+};
 
-**Nouvelle organisation :**
-- Section "Recommandé" avec 2-3 items mis en avant
-- Carrousel pour les cosmétiques avec preview
-- Animation d'ouverture de coffre (spinner/reveal)
-- Historique des achats récents
+// Dialog pour entrer le montant
+```
 
-**Preview des cosmétiques :**
-- Aperçu en temps réel sur l'avatar avant achat
-- Badge "Équipé" pour les items déjà possédés
+4. **Historique des actions admin**
+```typescript
+// Nouvelle table: admin_actions_log
+// Composant pour afficher les dernières actions
+<Card>
+  <CardHeader>
+    <CardTitle>Historique des actions</CardTitle>
+  </CardHeader>
+  <ScrollArea>
+    {adminLogs.map(log => (
+      <div>
+        {log.action} par {log.admin_email} - {formatDate(log.created_at)}
+      </div>
+    ))}
+  </ScrollArea>
+</Card>
+```
 
-### 6. Système de Notifications Amélioré
+### Réorganisation Dashboard
 
-Améliorer `XPNotification` avec :
-- Animation de "level up" plus spectaculaire
-- Sound effects optionnels
-- Notification de streak maintenu
-- Célébration pour les achievements rares
+**Fichier :** `src/pages/Dashboard.tsx`
 
-### 7. Stats & Progression Dashboard
+**Nouvel ordre des composants :**
 
-Ajouter un mini-dashboard de stats :
-```text
-┌─────────────────────────────────────────────┐
-│  📊 Cette semaine                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
-│  Quêtes: 12/15  |  XP: +450  |  Streak: 7🔥 │
-│  [Mini graphique de progression]            │
-└─────────────────────────────────────────────┘
+```tsx
+<div className="space-y-6">
+  {/* 1. Annonces admin (critique) */}
+  <AdminAnnouncementPanel />
+
+  {/* 2. En-tête */}
+  <DashboardHeader />
+
+  {/* 3. Raccourcis rapides (action immédiate) */}
+  <QuickLinksSection />
+
+  {/* 4. Score de productivité (métrique clé) */}
+  <ProductivityScoreCard />
+
+  {/* 5. NOUVEAU: Actions rapides du jour */}
+  <TodayActionsCard />
+  {/* 
+    - Tâches prioritaires du jour
+    - Habitudes à compléter
+    - Prochaine session focus suggérée
+  */}
+
+  {/* 6. Briefing IA (contextuel) */}
+  <DailyBriefingCard />
+
+  {/* 7. Gamification (motivation) */}
+  <GamificationWidget />
+
+  {/* 8. Insights IA (secondaire) */}
+  <Collapsible>
+    <CrossInsightsWidget />
+    <SmartInsightsWidget />
+    <MonthlyAIReport />
+  </Collapsible>
+</div>
+```
+
+**Nouveau composant : TodayActionsCard**
+
+```typescript
+// src/components/dashboard/TodayActionsCard.tsx
+
+export const TodayActionsCard = () => {
+  const { tasksData, habitsData } = useAnalyticsData();
+  
+  const todayTasks = tasksData?.filter(t => 
+    !t.completed && isToday(new Date(t.due_date))
+  ) || [];
+  
+  const pendingHabits = habitsData?.filter(h => 
+    !h.is_completed_today
+  ) || [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>À faire aujourd'hui</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Tâches du jour */}
+          <div>
+            <h4>Tâches prioritaires</h4>
+            {todayTasks.slice(0, 3).map(task => (
+              <TaskMiniCard task={task} />
+            ))}
+          </div>
+          
+          {/* Habitudes */}
+          <div>
+            <h4>Habitudes</h4>
+            {pendingHabits.slice(0, 3).map(habit => (
+              <HabitMiniCard habit={habit} />
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 ```
 
 ---
-
-## Fichiers à Créer
-
-```text
-src/components/gamification/
-├── GamificationHero.tsx          # Hero compact (avatar + stats)
-├── QuestCard.tsx                 # Nouvelle carte quête
-├── QuestProgressRing.tsx         # Anneau de progression circulaire
-├── QuestTimer.tsx                # Timer countdown animé
-├── ShopItemPreview.tsx           # Preview cosmétique
-├── ChestOpenAnimation.tsx        # Animation ouverture coffre
-├── AchievementCard.tsx           # Carte achievement unifiée
-├── WeeklyStatsWidget.tsx         # Mini dashboard stats
-└── LevelUpCelebration.tsx        # Animation level up
-```
 
 ## Fichiers à Modifier
 
-```text
-src/pages/Gamification.tsx        # Refonte complète du layout
-src/components/gamification/
-├── QuestBoard.tsx                # Utiliser nouveaux composants
-├── CyberAvatar.tsx               # Version compacte + personnalisation
-├── XPBar.tsx                     # Intégrer dans Hero
-├── PowerUpShop.tsx               # Nouveau design + animations
-├── AchievementsList.tsx          # Fusionner avec BadgesList
-└── BadgesList.tsx                # À supprimer ou fusionner
-
-src/hooks/
-├── useAchievements.ts            # Étendre avec les badges
-└── useQuests.ts                  # Ajouter logique de timer
-```
-
----
-
-## Détail des Améliorations par Composant
-
-### GamificationHero.tsx
-
-**Features :**
-- Layout horizontal compact
-- Avatar miniature avec glow selon la couleur choisie
-- XP bar inline avec pourcentage
-- Stats rapides en chips
-- Bouton "Personnaliser" ouvrant un drawer
-
-### QuestCard.tsx (Refonte)
-
-**Nouvelles features :**
-- `ProgressRing` circulaire animé
-- Timer countdown pour quêtes expirantes
-- Indicateur de difficulté avec étoiles
-- Animation "shake" quand prêt à réclamer
-- Transition fluide lors de la complétion
-
-### QuestProgressRing.tsx
-
-**Design :**
-- SVG circulaire avec dégradé
-- Animation de remplissage fluide
-- Texte central avec pourcentage
-- Effet glow quand >= 100%
-
-### ChestOpenAnimation.tsx
-
-**Animation séquence :**
-1. Coffre fermé qui tremble
-2. Ouverture avec lumière
-3. Révélation de la récompense
-4. Confetti et XP flying
-
-### WeeklyStatsWidget.tsx
-
-**Contenu :**
-- Quêtes complétées cette semaine
-- XP gagnés
-- Streak actuel
-- Mini graphique sparkline
-
----
-
-## Améliorations UX Globales
-
-### Navigation Sticky
-
-```tsx
-<Tabs className="sticky top-0 z-20 bg-background/80 backdrop-blur">
-  // Tabs visibles en permanence lors du scroll
-</Tabs>
-```
-
-### Animations
-
-| Élément | Animation |
-|---------|-----------|
-| Quête complétée | Scale up + confetti |
-| XP gagné | Fly-in depuis source |
-| Level up | Full screen celebration |
-| Coffre ouvert | Shake → Open → Reveal |
-| Achievement | Badge slide-in + sound |
-
-### Feedback Haptique (Mobile)
-
-Vibration légère sur :
-- Complétion de quête
-- Achat réussi
-- Level up
-
-### Accessibilité
-
-- Labels aria pour les progress rings
-- Focus visible sur tous les éléments interactifs
-- Descriptions pour les icônes
-
----
-
-## Optimisations Performances
-
-### Lazy Loading
-
-```tsx
-const PowerUpShop = lazy(() => import('./PowerUpShop'));
-const AchievementsList = lazy(() => import('./AchievementsList'));
-```
-
-### Réduction des Animations
-
-- Remplacer les 20 particules par 6 max
-- Utiliser `will-change` sur les éléments animés
-- `useMemo` pour les calculs de stats
-
-### Caching
-
-- Cache les achievements débloqués
-- Cache les stats hebdomadaires (refresh toutes les 5 min)
+| Fichier | Modification |
+|---------|--------------|
+| `src/pages/Habits.tsx` | Optimistic update pour `toggleHabitCompletion` |
+| `src/pages/Admin.tsx` | Nouvelles fonctionnalités admin |
+| `src/pages/Dashboard.tsx` | Réorganisation + nouveau composant |
+| `src/components/dashboard/TodayActionsCard.tsx` | **NOUVEAU** - Actions rapides |
+| `src/hooks/useAdminStats.ts` | **NOUVEAU** - Stats plateforme |
 
 ---
 
 ## Ordre d'Implémentation
 
-| Priorité | Composant | Impact |
-|----------|-----------|--------|
-| 1 | GamificationHero.tsx | Élevé - Vision immédiate |
-| 2 | QuestCard + ProgressRing | Élevé - Coeur de l'expérience |
-| 3 | Refonte Gamification.tsx | Élevé - Structure globale |
-| 4 | Fusion Achievements/Badges | Moyen - Simplification |
-| 5 | QuestTimer.tsx | Moyen - Urgence visuelle |
-| 6 | ChestOpenAnimation.tsx | Moyen - Fun factor |
-| 7 | WeeklyStatsWidget.tsx | Moyen - Motivation |
-| 8 | LevelUpCelebration.tsx | Faible - Polish |
-| 9 | ShopItemPreview.tsx | Faible - Nice to have |
+| Priorité | Tâche |
+|----------|-------|
+| 1 | Corriger le bug de refresh des habitudes (impact UX immédiat) |
+| 2 | Créer le composant TodayActionsCard |
+| 3 | Réorganiser le Dashboard |
+| 4 | Ajouter les fonctionnalités admin (stats, rôles, crédits) |
 
 ---
 
 ## Résultat Attendu
 
-Cette refonte transformera la Cyber Arena en une expérience :
-
-1. **Plus intuitive** : Navigation claire, informations hiérarchisées
-2. **Plus fluide** : Animations performantes, transitions satisfaisantes  
-3. **Plus attrayante** : Célébrations, feedback visuel, gamification engageante
-4. **Plus professionnelle** : Design cohérent, UX moderne
-5. **Plus fonctionnelle** : Fusion des systèmes redondants, clarté
-
-L'objectif est de créer un "moment de jeu" quotidien motivant l'utilisateur à revenir pour :
-- Compléter ses quêtes quotidiennes
-- Collecter ses récompenses
-- Progresser dans les achievements
-- Personnaliser son avatar
+1. **Habitudes** : Cocher plusieurs habitudes sans refresh, interface fluide
+2. **Admin** : Tableau de bord complet avec gestion avancée des utilisateurs
+3. **Dashboard** : Hiérarchie claire, actions prioritaires visibles immédiatement
