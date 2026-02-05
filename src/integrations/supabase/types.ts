@@ -74,6 +74,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_actions_log: {
+        Row: {
+          action: string
+          admin_email: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_user_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_email: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_email?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_announcements: {
         Row: {
           announcement_type: string | null
