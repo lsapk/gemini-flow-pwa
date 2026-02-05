@@ -181,6 +181,13 @@ export default function Habits() {
     }
     const isToday = targetDate === new Date().toISOString().split('T')[0];
 
+    // OPTIMISTIC UPDATE - Mettre à jour immédiatement le state local
+    setHabits(prev => prev.map(h => 
+      h.id === habitId 
+        ? { ...h, is_completed_today: !isCompleted }
+        : h
+    ));
+
     try {
       if (isCompleted) {
         const { error: deleteError } = await supabase
@@ -242,11 +249,15 @@ export default function Habits() {
 
         toast.success('Habitude complétée !');
       }
-      
-      // Recharger les habitudes pour la date capturée (pas selectedDate qui peut avoir changé)
-      await fetchHabits(currentSelectedDate);
+      // PAS de fetchHabits() - on garde l'état optimiste pour une UX fluide
     } catch (error) {
       console.error('Error toggling habit completion:', error);
+      // ROLLBACK - Revenir à l'état précédent en cas d'erreur
+      setHabits(prev => prev.map(h => 
+        h.id === habitId 
+          ? { ...h, is_completed_today: isCompleted }
+          : h
+      ));
       toast.error("Erreur lors de la mise à jour de l'habitude");
     }
   };
