@@ -164,7 +164,9 @@ function App() {
                       } />
                       <Route path="/gamification" element={
                         <ProtectedRoute>
-                          <Gamification />
+                          <AppLayout>
+                            <Gamification />
+                          </AppLayout>
                         </ProtectedRoute>
                       } />
                       <Route path="/admin" element={

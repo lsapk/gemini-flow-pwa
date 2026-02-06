@@ -1,5 +1,4 @@
 import { Suspense, lazy } from "react";
-import AppLayout from "@/components/layout/AppLayout";
 import { GamificationHero } from "@/components/gamification/GamificationHero";
 import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
 import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
@@ -35,8 +34,7 @@ export default function Gamification() {
   useQuestProgressTracking();
 
   return (
-    <AppLayout>
-      <div className="space-y-4 relative">
+      <div className="space-y-4 relative p-3 sm:p-6">
         {/* Optimized Background - fewer particles */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute inset-0 opacity-[0.03]">
@@ -132,6 +130,5 @@ export default function Gamification() {
           </Tabs>
         </motion.div>
       </div>
-    </AppLayout>
   );
 }

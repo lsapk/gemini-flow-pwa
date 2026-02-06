@@ -34,6 +34,7 @@ interface GoalListProps {
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
   onReorder?: (goals: Goal[]) => void;
+  onRefresh?: () => void;
 }
 
 interface SortableGoalCardProps {
@@ -44,6 +45,7 @@ interface SortableGoalCardProps {
   userId: string | undefined;
   isExpanded: boolean;
   onToggleExpanded: (goalId: string) => void;
+  onRefresh?: () => void;
 }
 
 function SortableGoalCard({ 
@@ -53,7 +55,8 @@ function SortableGoalCard({
   onStatusUpdate, 
   userId,
   isExpanded,
-  onToggleExpanded 
+  onToggleExpanded,
+  onRefresh 
 }: SortableGoalCardProps) {
   const {
     attributes,
@@ -79,8 +82,7 @@ function SortableGoalCard({
     
     if (!error) {
       toast.success('Progrès mis à jour +10%');
-      // Trigger a refetch by reloading
-      window.location.reload();
+      onRefresh?.();
     }
   };
 
@@ -153,7 +155,7 @@ function SortableGoalCard({
   );
 }
 
-export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalListProps) => {
+export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder, onRefresh }: GoalListProps) => {
   const { user } = useAuth();
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
   const [searchValue, setSearchValue] = useState('');
@@ -193,7 +195,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalLi
       if (error) throw error;
       
       toast.success(`Objectif ${!completed ? 'complété' : 'réactivé'} !`);
-      window.location.reload();
+      onRefresh?.();
     } catch (error) {
       console.error('Error updating goal:', error);
       toast.error('Erreur lors de la mise à jour de l\'objectif');
@@ -286,6 +288,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder }: GoalLi
                   userId={user?.id}
                   isExpanded={expandedGoals.has(goal.id)}
                   onToggleExpanded={toggleExpanded}
+                  onRefresh={onRefresh}
                 />
               ))}
             </AnimatePresence>

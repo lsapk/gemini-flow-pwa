@@ -221,6 +221,7 @@ export default function Goals() {
               onEdit={handleEdit}
               onDelete={requestDelete}
               onReorder={handleReorder}
+              onRefresh={fetchGoals}
             />
           )}
         </TabsContent>
