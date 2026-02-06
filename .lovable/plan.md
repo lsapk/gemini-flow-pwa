@@ -1,270 +1,120 @@
 
-# Plan d'Amélioration : Habitudes, Admin et Dashboard
+# Plan de Correction : Sous-taches, Transitions, Navigation, Credits
 
-## Problèmes Identifiés
+## Problemes Identifies
 
-### 1. Bug Habitudes - Refresh de page
-**Cause racine :** Dans `src/pages/Habits.tsx`, la fonction `toggleHabitCompletion` appelle `fetchHabits()` après chaque complétion (ligne 247). Cette fonction recharge TOUTES les habitudes et réinitialise l'état de chargement (`setIsLoading(true)`), ce qui provoque le comportement de "retour au début".
+### 1. Sous-taches ne s'affichent plus
+**Cause racine :** Dans `ItemCard.tsx` (ligne 245), les `children` (qui contiennent les sous-taches) ne sont rendus QUE si `variant === 'expanded'`. Mais dans `TaskList.tsx`, la variante est definie ainsi :
+```
+variant={isExpanded ? 'expanded' : 'standard'}
+```
+Le probleme est que `isExpanded` est base sur un `Set<string>` local qui commence vide. Quand une tache a des sous-taches, le contenu passe en `expanded` mais les sous-taches elles-memes sont les `children` de `ItemCard` -- or le toggle d'expansion est DANS les children, donc il n'est jamais visible pour cliquer dessus.
 
-**Solution :** Mise à jour optimiste du state local au lieu de refetch complet. On modifie le state `habits` immédiatement lors du clic, puis on synchronise en arrière-plan.
+En effet dans `SortableTaskCard` (TaskList.tsx lignes 88-151), tout le bloc sous-taches (toggle + liste) est passe en `children` de `ItemCard`. Mais `ItemCard` ne rend les children que quand `variant === 'expanded'` (ligne 245). Le bouton pour passer en mode expanded est LUI-MEME dans les children. C'est un cercle vicieux : on ne peut pas cliquer sur "voir les sous-taches" car le bouton est cache dans un bloc qui requiert d'etre deja expanded.
 
-### 2. Nouvelles Fonctionnalités Admin
-L'interface admin actuelle est basique. On ajoute :
-- **Statistiques globales** : nombre total de tâches/habitudes/objectifs créés
-- **Gestion des rôles** : promouvoir/rétrograder des utilisateurs
-- **Logs d'activité** : voir les actions récentes des admins
-- **Export de données** : télécharger les stats en CSV
-- **Gestion des crédits** : donner/retirer des crédits IA
+**Solution :** Modifier `ItemCard.tsx` pour toujours rendre les children quand ils existent (pas seulement en mode `expanded`). Le variant `expanded` controlera juste le style additionnel, pas la visibilite des children.
 
-### 3. Réorganisation du Dashboard
-L'ordre actuel n'est pas optimal. Nouvelle hiérarchie :
-1. **Annonces admin** (en haut si présentes)
-2. **En-tête** avec titre
-3. **Raccourcis rapides** (accès immédiat)
-4. **Briefing IA** (priorité du jour)
-5. **Score de productivité** (métrique principale)
-6. **Actions rapides** (tâches du jour, habitudes à faire)
-7. **Gamification Widget** (motivation)
-8. **Insights IA** (secondaire)
+### 2. Bugs de transition
+**Cause racine :** Les `motion.div` avec `layout` et `AnimatePresence mode="popLayout"` dans les listes provoquent des glitches visuels lors des mises a jour optimistes (changement d'etat rapide). Aussi dans `GoalList.tsx`, `handleProgressIncrement` et `updateGoalStatus` utilisent `window.location.reload()` (lignes 83 et 196) ce qui cause un refresh complet au lieu d'une mise a jour fluide.
+
+**Solution :**
+- Retirer `window.location.reload()` dans `GoalList.tsx` et utiliser un callback `onRefresh` a la place
+- Ajouter une prop `onRefresh` dans `GoalList` pour rafraichir les donnees sans recharger la page
+- Simplifier les animations `AnimatePresence` pour eviter les conflits
+
+### 3. Navigation sidebar rafraichit la page
+**Cause racine :** La sidebar utilise `navigate(path)` de React Router, ce qui est correct et ne devrait PAS causer de refresh. Le probleme vient probablement de la page `Gamification.tsx` qui a sa propre `AppLayout` dans la page au lieu d'utiliser celle de `App.tsx`. En effet dans `App.tsx` ligne 165-168, la route `/gamification` n'est PAS wrappee dans `<AppLayout>` comme les autres routes -- elle gere son propre layout. Quand on navigue vers/depuis `/gamification`, le composant `AppLayout` est monte/demonte, ce qui donne l'impression d'un refresh.
+
+De plus, les hooks dans Gamification (comme `useQuestProgressTracking`, `useEnsurePlayerProfile`) se re-executent a chaque montage, causant des chargements visibles.
+
+**Solution :**
+- Standardiser la route `/gamification` dans `App.tsx` pour utiliser `<AppLayout>` comme toutes les autres routes
+- Retirer le `<AppLayout>` interne de `Gamification.tsx`
+- S'assurer que tous les hooks utilisent le cache React Query pour eviter les re-fetches inutiles
+
+### 4. Admin : credits de jeu illimites
+**Cause racine :** Dans `usePlayerProfile.ts` (ligne 106-108), les admins ont deja `credits: Infinity`. Mais dans `EnhancedShop.tsx` (ligne 104), le check `canAfford` utilise `(profile?.credits || 0) >= powerup.cost`, et `Infinity >= n` est toujours `true`. Cependant dans `usePowerUps.ts` (ligne 236-238), la mutation `activatePowerUp` charge le profil directement depuis la DB (pas via le hook), donc la valeur reelle des credits est utilisee, pas la valeur `Infinity` du hook.
+
+**Solution :**
+- Modifier `usePowerUps.ts` pour verifier si l'utilisateur est admin AVANT de deduire les credits
+- Si admin, sauter la verification de credits et la deduction
+
+### 5. Credits IA non fonctionnels
+**Causes multiples :**
+- Le hook `useAICredits` existe et fonctionne techniquement
+- Le systeme de credits dans l'edge function `gemini-chat-enhanced` est en place (lignes 83-133)
+- MAIS le probleme est que les credits IA ne sont pas DONNES aux nouveaux utilisateurs (pas de credits de depart)
+- La boutique (`usePowerUps.ts`) peut donner des credits IA via les packs, mais ils sont achetes avec des credits de jeu
+- Il n'y a pas de moyen visible pour l'utilisateur de VOIR ses credits IA en dehors de la Cyber Arena
+
+**Solution :**
+- Ajouter des credits IA de depart (ex: 50) lors de la creation du profil joueur
+- Afficher les credits IA restants dans le header de l'assistant IA (`AIAssistant.tsx`)
+- S'assurer que le systeme de deduction fonctionne correctement
+- Ajouter l'affichage des credits IA dans les parametres ou le profil
 
 ---
 
-## Détails Techniques
+## Modifications par Fichier
 
-### Correction Bug Habitudes
+### 1. `src/components/shared/ItemCard.tsx`
+- Changer la condition de rendu des children : toujours les afficher s'ils existent, pas seulement en mode `expanded`
+- Le mode `expanded` ajoute juste un separateur visuel
 
-**Fichier :** `src/pages/Habits.tsx`
+### 2. `src/components/GoalList.tsx`
+- Remplacer les 2 appels `window.location.reload()` par un callback `onRefresh`
+- Ajouter la prop `onRefresh` au composant
+- Mettre a jour `handleProgressIncrement` pour utiliser le refresh propre
 
-**Modification de `toggleHabitCompletion` :**
+### 3. `src/pages/Goals.tsx`
+- Passer la prop `onRefresh` a `GoalList`
 
-```typescript
-const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
-  if (!user) return;
+### 4. `src/App.tsx`
+- Wrapper la route `/gamification` dans `<AppLayout>` comme les autres routes
 
-  const currentSelectedDate = new Date(selectedDate);
-  const targetDate = currentSelectedDate.toISOString().split('T')[0];
+### 5. `src/pages/Gamification.tsx`
+- Retirer le wrapper `<AppLayout>` interne
+- Garder le layout interne (hero, tabs, etc.)
 
-  // OPTIMISTIC UPDATE - Mettre à jour immédiatement le state local
-  setHabits(prev => prev.map(habit => 
-    habit.id === habitId 
-      ? { ...habit, is_completed_today: !isCompleted }
-      : habit
-  ));
+### 6. `src/hooks/usePowerUps.ts`
+- Ajouter le check `isAdmin` depuis `useAuth()`
+- Si admin, sauter la verification de credits et la deduction dans `activatePowerUp`
 
-  try {
-    if (isCompleted) {
-      // Supprimer la complétion...
-      await supabase.from('habit_completions').delete()...
-    } else {
-      // Créer la complétion...
-      await supabase.from('habit_completions').insert(...)...
-    }
-    // PAS de fetchHabits() - on garde l'état optimiste
-  } catch (error) {
-    // ROLLBACK - Revenir à l'état précédent en cas d'erreur
-    setHabits(prev => prev.map(habit => 
-      habit.id === habitId 
-        ? { ...habit, is_completed_today: isCompleted }
-        : habit
-    ));
-    toast.error("Erreur lors de la mise à jour");
-  }
-};
-```
+### 7. `src/pages/AIAssistant.tsx`
+- Importer et utiliser `useAICredits`
+- Afficher le compteur de credits IA dans le header du chat
+- Afficher un avertissement quand les credits sont bas
 
-### Nouvelles Fonctionnalités Admin
-
-**Fichier :** `src/pages/Admin.tsx`
-
-**Ajouts :**
-
-1. **Statistiques globales de la plateforme**
-```typescript
-// Nouveau state
-const [platformStats, setPlatformStats] = useState({
-  totalTasks: 0,
-  totalHabits: 0,
-  totalGoals: 0,
-  totalFocusHours: 0,
-  activeUsersToday: 0,
-});
-
-// Nouvelle section dans l'UI
-<Card>
-  <CardHeader>
-    <CardTitle>Statistiques Plateforme</CardTitle>
-  </CardHeader>
-  <CardContent>
-    // Graphiques et métriques globales
-  </CardContent>
-</Card>
-```
-
-2. **Gestion des rôles utilisateurs**
-```typescript
-// Bouton pour promouvoir admin
-const handlePromoteToAdmin = async (userId: string) => {
-  await supabase.from('user_roles').insert({
-    user_id: userId,
-    role: 'admin'
-  });
-};
-
-// UI avec badge "Admin" et boutons Promouvoir/Rétrograder
-```
-
-3. **Attribution de crédits IA**
-```typescript
-// Nouvelle fonction
-const handleGiveCredits = async (userId: string, amount: number) => {
-  const { data: profile } = await supabase
-    .from('player_profiles')
-    .select('ai_credits')
-    .eq('user_id', userId)
-    .single();
-  
-  await supabase
-    .from('player_profiles')
-    .update({ ai_credits: (profile?.ai_credits || 0) + amount })
-    .eq('user_id', userId);
-};
-
-// Dialog pour entrer le montant
-```
-
-4. **Historique des actions admin**
-```typescript
-// Nouvelle table: admin_actions_log
-// Composant pour afficher les dernières actions
-<Card>
-  <CardHeader>
-    <CardTitle>Historique des actions</CardTitle>
-  </CardHeader>
-  <ScrollArea>
-    {adminLogs.map(log => (
-      <div>
-        {log.action} par {log.admin_email} - {formatDate(log.created_at)}
-      </div>
-    ))}
-  </ScrollArea>
-</Card>
-```
-
-### Réorganisation Dashboard
-
-**Fichier :** `src/pages/Dashboard.tsx`
-
-**Nouvel ordre des composants :**
-
-```tsx
-<div className="space-y-6">
-  {/* 1. Annonces admin (critique) */}
-  <AdminAnnouncementPanel />
-
-  {/* 2. En-tête */}
-  <DashboardHeader />
-
-  {/* 3. Raccourcis rapides (action immédiate) */}
-  <QuickLinksSection />
-
-  {/* 4. Score de productivité (métrique clé) */}
-  <ProductivityScoreCard />
-
-  {/* 5. NOUVEAU: Actions rapides du jour */}
-  <TodayActionsCard />
-  {/* 
-    - Tâches prioritaires du jour
-    - Habitudes à compléter
-    - Prochaine session focus suggérée
-  */}
-
-  {/* 6. Briefing IA (contextuel) */}
-  <DailyBriefingCard />
-
-  {/* 7. Gamification (motivation) */}
-  <GamificationWidget />
-
-  {/* 8. Insights IA (secondaire) */}
-  <Collapsible>
-    <CrossInsightsWidget />
-    <SmartInsightsWidget />
-    <MonthlyAIReport />
-  </Collapsible>
-</div>
-```
-
-**Nouveau composant : TodayActionsCard**
-
-```typescript
-// src/components/dashboard/TodayActionsCard.tsx
-
-export const TodayActionsCard = () => {
-  const { tasksData, habitsData } = useAnalyticsData();
-  
-  const todayTasks = tasksData?.filter(t => 
-    !t.completed && isToday(new Date(t.due_date))
-  ) || [];
-  
-  const pendingHabits = habitsData?.filter(h => 
-    !h.is_completed_today
-  ) || [];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>À faire aujourd'hui</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Tâches du jour */}
-          <div>
-            <h4>Tâches prioritaires</h4>
-            {todayTasks.slice(0, 3).map(task => (
-              <TaskMiniCard task={task} />
-            ))}
-          </div>
-          
-          {/* Habitudes */}
-          <div>
-            <h4>Habitudes</h4>
-            {pendingHabits.slice(0, 3).map(habit => (
-              <HabitMiniCard habit={habit} />
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-```
+### 8. `src/hooks/useEnsurePlayerProfile.ts`
+- Ajouter la creation d'un enregistrement `ai_credits` initial (50 credits) lors de la creation du profil joueur
 
 ---
 
-## Fichiers à Modifier
+## Ordre d'Implementation
 
-| Fichier | Modification |
-|---------|--------------|
-| `src/pages/Habits.tsx` | Optimistic update pour `toggleHabitCompletion` |
-| `src/pages/Admin.tsx` | Nouvelles fonctionnalités admin |
-| `src/pages/Dashboard.tsx` | Réorganisation + nouveau composant |
-| `src/components/dashboard/TodayActionsCard.tsx` | **NOUVEAU** - Actions rapides |
-| `src/hooks/useAdminStats.ts` | **NOUVEAU** - Stats plateforme |
-
----
-
-## Ordre d'Implémentation
-
-| Priorité | Tâche |
-|----------|-------|
-| 1 | Corriger le bug de refresh des habitudes (impact UX immédiat) |
-| 2 | Créer le composant TodayActionsCard |
-| 3 | Réorganiser le Dashboard |
-| 4 | Ajouter les fonctionnalités admin (stats, rôles, crédits) |
+| Etape | Modification | Impact |
+|-------|-------------|--------|
+| 1 | Fix ItemCard.tsx children rendering | Sous-taches visibles |
+| 2 | Fix GoalList.tsx window.reload | Transitions fluides |
+| 3 | Standardiser route Gamification dans App.tsx | Navigation sans refresh |
+| 4 | Fix usePowerUps.ts pour admin | Credits jeu illimites admin |
+| 5 | Afficher credits IA dans AIAssistant | Visibilite credits IA |
+| 6 | Credits IA de depart dans useEnsurePlayerProfile | Credits IA fonctionnels |
 
 ---
 
-## Résultat Attendu
+## Details Techniques Importants
 
-1. **Habitudes** : Cocher plusieurs habitudes sans refresh, interface fluide
-2. **Admin** : Tableau de bord complet avec gestion avancée des utilisateurs
-3. **Dashboard** : Hiérarchie claire, actions prioritaires visibles immédiatement
+**Sous-taches (ItemCard):** Le changement est minimal -- une seule ligne a modifier. Au lieu de `{variant === 'expanded' && children && (...)}`, on utilise `{children && (...)}`. Cela rend les children visibles quelle que soit la variante, ce qui permet au bouton toggle des sous-taches d'etre visible.
+
+**Navigation:** Le vrai probleme n'est pas `navigate()` mais le montage/demontage de `AppLayout`. Quand on va sur `/gamification` depuis `/dashboard`, `AppLayout` est demonte puis remonte dans `Gamification.tsx`, causant un flash visuel. En uniformisant le layout, la sidebar et le header restent stables.
+
+**Credits Admin:** Dans `usePowerUps.ts`, on ajoute `const { isAdmin } = useAuth()` et dans la mutation, on fait:
+```typescript
+if (!isAdmin) {
+  // Verifier et deduire les credits
+}
+// Continuer avec l'achat
+```
+
+**Credits IA de depart:** Dans `useEnsurePlayerProfile.ts`, apres creation du player_profile, on ajoute aussi un insert dans `ai_credits` avec 50 credits initiaux.
