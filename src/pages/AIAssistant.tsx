@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap } from "lucide-react";
+import { useAICredits } from "@/hooks/useAICredits";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
@@ -42,6 +43,7 @@ const STORAGE_KEY = 'deepflow_ai_conversation';
 
 export default function AIAssistant() {
   const { user } = useAuth();
+  const { credits: aiCredits, isLoading: creditsLoading, isAdmin: isAIAdmin } = useAICredits();
   const { canUseFeature, getRemainingUses, trackUsage, isPremium, currentTier } = useSubscription();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -338,6 +340,11 @@ export default function AIAssistant() {
                     <div className="flex items-center gap-2">
                       <Bot className="h-5 w-5 text-primary" />
                       <span className="font-semibold">Assistant IA</span>
+                      {/* AI Credits display */}
+                      <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "outline"} className="text-xs">
+                        <Zap className="h-3 w-3 mr-1" />
+                        {isAIAdmin ? "∞" : aiCredits} crédits
+                      </Badge>
                       {!isPremium && (
                         <Badge variant="outline" className="text-xs">
                           {getRemainingUses("chat")}/5

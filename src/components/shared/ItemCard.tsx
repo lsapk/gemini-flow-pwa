@@ -241,9 +241,9 @@ export function ItemCard({
                 )}
               </div>
 
-              {/* Expandable content (children) */}
-              {variant === 'expanded' && children && (
-                <div className="mt-3 pt-3 border-t border-border">
+              {/* Expandable content (children) - always render if present */}
+              {children && (
+                <div className={cn("mt-3", variant === 'expanded' && "pt-3 border-t border-border")}>
                   {children}
                 </div>
               )}

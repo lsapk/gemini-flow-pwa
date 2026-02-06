@@ -34,13 +34,13 @@ export const useEnsurePlayerProfile = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Si les crédits n'existent pas, les créer
+      // Si les crédits n'existent pas, les créer avec 50 crédits de départ
       if (!credits) {
         await supabase
           .from("ai_credits")
           .insert({
             user_id: user.id,
-            credits: 10,
+            credits: 50,
           })
           .select()
           .single();

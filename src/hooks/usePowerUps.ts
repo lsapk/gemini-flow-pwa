@@ -174,7 +174,7 @@ export const POWERUP_DEFINITIONS: Record<PowerUpType, {
 export const usePowerUps = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const { data: activePowerUps, isLoading } = useQuery({
     queryKey: ["active-powerups", user?.id],
@@ -225,23 +225,25 @@ export const usePowerUps = () => {
 
       const powerup = POWERUP_DEFINITIONS[powerupType];
       
-      // Check if user has enough credits (game credits, not AI credits)
+      // Fetch profile for XP and credits info
       const { data: profile } = await supabase
         .from("player_profiles")
         .select("credits, experience_points")
         .eq("user_id", user.id)
         .single();
 
-      // Use game credits (player_profiles.credits), not admin AI credits
-      if (!profile || profile.credits < powerup.cost) {
-        throw new Error("Pas assez de crédits de jeu");
-      }
+      // Admins bypass credit check and deduction
+      if (!isAdmin) {
+        if (!profile || profile.credits < powerup.cost) {
+          throw new Error("Pas assez de crédits de jeu");
+        }
 
-      // Deduct credits
-      await supabase
-        .from("player_profiles")
-        .update({ credits: profile.credits - powerup.cost })
-        .eq("user_id", user.id);
+        // Deduct credits only for non-admins
+        await supabase
+          .from("player_profiles")
+          .update({ credits: profile.credits - powerup.cost })
+          .eq("user_id", user.id);
+      }
 
       // Handle different reward types
       switch (powerup.rewardType) {
