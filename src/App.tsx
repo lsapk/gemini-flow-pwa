@@ -37,11 +37,7 @@ const Cookies = lazy(() => import("./pages/legal/Cookies"));
 
 const queryClient = new QueryClient();
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-function ProtectedRoute({ children }: ProtectedRouteProps) {
+function ProtectedLayout() {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
@@ -56,7 +52,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
   
-  return <>{children}</>;
+  return <AppLayout />;
 }
 
 // Loading fallback component
@@ -91,91 +87,21 @@ function App() {
                       <Route path="/legal/terms" element={<Terms />} />
                       <Route path="/legal/cookies" element={<Cookies />} />
                       
-                      {/* Protected routes */}
-                      <Route path="/dashboard" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Dashboard />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/tasks" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Tasks />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/habits" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Habits />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/focus" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Focus />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/journal" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Journal />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/goals" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Goals />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/ai-assistant" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <AIAssistant />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/reflection" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Reflection />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Settings />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/calendar" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Calendar />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/gamification" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Gamification />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/admin" element={
-                        <ProtectedRoute>
-                          <AppLayout>
-                            <Admin />
-                          </AppLayout>
-                        </ProtectedRoute>
-                      } />
+                      {/* Protected routes - single persistent layout */}
+                      <Route element={<ProtectedLayout />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/tasks" element={<Tasks />} />
+                        <Route path="/habits" element={<Habits />} />
+                        <Route path="/focus" element={<Focus />} />
+                        <Route path="/journal" element={<Journal />} />
+                        <Route path="/goals" element={<Goals />} />
+                        <Route path="/ai-assistant" element={<AIAssistant />} />
+                        <Route path="/reflection" element={<Reflection />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/calendar" element={<Calendar />} />
+                        <Route path="/gamification" element={<Gamification />} />
+                        <Route path="/admin" element={<Admin />} />
+                      </Route>
                       
                       {/* Redirects */}
                       <Route path="/badges" element={<Navigate to="/gamification" replace />} />
