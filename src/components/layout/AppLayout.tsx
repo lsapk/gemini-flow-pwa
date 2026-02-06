@@ -1,30 +1,16 @@
 
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface AppLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { user, isLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -53,7 +39,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Main Content */}
         <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-6 md:pr-6 min-h-screen">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>
