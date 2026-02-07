@@ -1,120 +1,181 @@
 
-# Plan de Correction : Sous-taches, Transitions, Navigation, Credits
+# Plan : Credits Admin, Logo, Fond Auth, Parametres, Legal
 
-## Problemes Identifies
+## 1. Credits Admin - Fonctionnel pour credits IA ET jeu
 
-### 1. Sous-taches ne s'affichent plus
-**Cause racine :** Dans `ItemCard.tsx` (ligne 245), les `children` (qui contiennent les sous-taches) ne sont rendus QUE si `variant === 'expanded'`. Mais dans `TaskList.tsx`, la variante est definie ainsi :
-```
-variant={isExpanded ? 'expanded' : 'standard'}
-```
-Le probleme est que `isExpanded` est base sur un `Set<string>` local qui commence vide. Quand une tache a des sous-taches, le contenu passe en `expanded` mais les sous-taches elles-memes sont les `children` de `ItemCard` -- or le toggle d'expansion est DANS les children, donc il n'est jamais visible pour cliquer dessus.
-
-En effet dans `SortableTaskCard` (TaskList.tsx lignes 88-151), tout le bloc sous-taches (toggle + liste) est passe en `children` de `ItemCard`. Mais `ItemCard` ne rend les children que quand `variant === 'expanded'` (ligne 245). Le bouton pour passer en mode expanded est LUI-MEME dans les children. C'est un cercle vicieux : on ne peut pas cliquer sur "voir les sous-taches" car le bouton est cache dans un bloc qui requiert d'etre deja expanded.
-
-**Solution :** Modifier `ItemCard.tsx` pour toujours rendre les children quand ils existent (pas seulement en mode `expanded`). Le variant `expanded` controlera juste le style additionnel, pas la visibilite des children.
-
-### 2. Bugs de transition
-**Cause racine :** Les `motion.div` avec `layout` et `AnimatePresence mode="popLayout"` dans les listes provoquent des glitches visuels lors des mises a jour optimistes (changement d'etat rapide). Aussi dans `GoalList.tsx`, `handleProgressIncrement` et `updateGoalStatus` utilisent `window.location.reload()` (lignes 83 et 196) ce qui cause un refresh complet au lieu d'une mise a jour fluide.
+**Probleme actuel :** La fonction `handleGiveCredits` dans `Admin.tsx` (ligne 315-347) modifie uniquement les credits **de jeu** dans `player_profiles.credits`, mais pas les **credits IA** dans la table `ai_credits`. L'admin n'a aucun moyen de gerer les credits IA des utilisateurs.
 
 **Solution :**
-- Retirer `window.location.reload()` dans `GoalList.tsx` et utiliser un callback `onRefresh` a la place
-- Ajouter une prop `onRefresh` dans `GoalList` pour rafraichir les donnees sans recharger la page
-- Simplifier les animations `AnimatePresence` pour eviter les conflits
+- Modifier le dialog de credits admin pour offrir **2 onglets** : "Credits Jeu" et "Credits IA"
+- Ajouter une fonction `handleGiveAICredits` qui insere/met a jour la table `ai_credits`
+- La fonction existante `handleGiveCredits` reste pour les credits de jeu
+- Afficher dans le profil utilisateur les 2 types de credits (jeu + IA)
 
-### 3. Navigation sidebar rafraichit la page
-**Cause racine :** La sidebar utilise `navigate(path)` de React Router, ce qui est correct et ne devrait PAS causer de refresh. Le probleme vient probablement de la page `Gamification.tsx` qui a sa propre `AppLayout` dans la page au lieu d'utiliser celle de `App.tsx`. En effet dans `App.tsx` ligne 165-168, la route `/gamification` n'est PAS wrappee dans `<AppLayout>` comme les autres routes -- elle gere son propre layout. Quand on navigue vers/depuis `/gamification`, le composant `AppLayout` est monte/demonte, ce qui donne l'impression d'un refresh.
-
-De plus, les hooks dans Gamification (comme `useQuestProgressTracking`, `useEnsurePlayerProfile`) se re-executent a chaque montage, causant des chargements visibles.
-
-**Solution :**
-- Standardiser la route `/gamification` dans `App.tsx` pour utiliser `<AppLayout>` comme toutes les autres routes
-- Retirer le `<AppLayout>` interne de `Gamification.tsx`
-- S'assurer que tous les hooks utilisent le cache React Query pour eviter les re-fetches inutiles
-
-### 4. Admin : credits de jeu illimites
-**Cause racine :** Dans `usePlayerProfile.ts` (ligne 106-108), les admins ont deja `credits: Infinity`. Mais dans `EnhancedShop.tsx` (ligne 104), le check `canAfford` utilise `(profile?.credits || 0) >= powerup.cost`, et `Infinity >= n` est toujours `true`. Cependant dans `usePowerUps.ts` (ligne 236-238), la mutation `activatePowerUp` charge le profil directement depuis la DB (pas via le hook), donc la valeur reelle des credits est utilisee, pas la valeur `Infinity` du hook.
-
-**Solution :**
-- Modifier `usePowerUps.ts` pour verifier si l'utilisateur est admin AVANT de deduire les credits
-- Si admin, sauter la verification de credits et la deduction
-
-### 5. Credits IA non fonctionnels
-**Causes multiples :**
-- Le hook `useAICredits` existe et fonctionne techniquement
-- Le systeme de credits dans l'edge function `gemini-chat-enhanced` est en place (lignes 83-133)
-- MAIS le probleme est que les credits IA ne sont pas DONNES aux nouveaux utilisateurs (pas de credits de depart)
-- La boutique (`usePowerUps.ts`) peut donner des credits IA via les packs, mais ils sont achetes avec des credits de jeu
-- Il n'y a pas de moyen visible pour l'utilisateur de VOIR ses credits IA en dehors de la Cyber Arena
-
-**Solution :**
-- Ajouter des credits IA de depart (ex: 50) lors de la creation du profil joueur
-- Afficher les credits IA restants dans le header de l'assistant IA (`AIAssistant.tsx`)
-- S'assurer que le systeme de deduction fonctionne correctement
-- Ajouter l'affichage des credits IA dans les parametres ou le profil
+**Fichier :** `src/pages/Admin.tsx`
 
 ---
 
-## Modifications par Fichier
+## 2. Changement du logo
 
-### 1. `src/components/shared/ItemCard.tsx`
-- Changer la condition de rendu des children : toujours les afficher s'ils existent, pas seulement en mode `expanded`
-- Le mode `expanded` ajoute juste un separateur visuel
+**Situation actuelle :** Le logo utilise `src/assets/deepflow-logo.jpg` dans la Sidebar et le MobileHeader. Les pages Login/Register/ForgotPassword utilisent des icones Lucide (`Zap`, `Sparkles`) au lieu du vrai logo.
 
-### 2. `src/components/GoalList.tsx`
-- Remplacer les 2 appels `window.location.reload()` par un callback `onRefresh`
-- Ajouter la prop `onRefresh` au composant
-- Mettre a jour `handleProgressIncrement` pour utiliser le refresh propre
+**Solution :**
+- Copier l'image du "D" brush (image-5.png) vers `src/assets/deepflow-logo.png`
+- Remplacer la reference dans `Sidebar.tsx` et `MobileHeader.tsx`
+- Le logo a un fond blanc, donc pour le theme sombre : ajouter `rounded-xl` avec un fond transparent et une ombre pour bien integrer
+- Mettre a jour les pages Login, Register et ForgotPassword pour utiliser le nouveau logo au lieu des icones Lucide
+- Ajouter un filtre CSS `dark:invert` sur le logo pour qu'il s'adapte au theme sombre (le "D" noir passe en blanc)
 
-### 3. `src/pages/Goals.tsx`
-- Passer la prop `onRefresh` a `GoalList`
-
-### 4. `src/App.tsx`
-- Wrapper la route `/gamification` dans `<AppLayout>` comme les autres routes
-
-### 5. `src/pages/Gamification.tsx`
-- Retirer le wrapper `<AppLayout>` interne
-- Garder le layout interne (hero, tabs, etc.)
-
-### 6. `src/hooks/usePowerUps.ts`
-- Ajouter le check `isAdmin` depuis `useAuth()`
-- Si admin, sauter la verification de credits et la deduction dans `activatePowerUp`
-
-### 7. `src/pages/AIAssistant.tsx`
-- Importer et utiliser `useAICredits`
-- Afficher le compteur de credits IA dans le header du chat
-- Afficher un avertissement quand les credits sont bas
-
-### 8. `src/hooks/useEnsurePlayerProfile.ts`
-- Ajouter la creation d'un enregistrement `ai_credits` initial (50 credits) lors de la creation du profil joueur
+**Fichiers :** `src/components/layout/Sidebar.tsx`, `src/components/layout/MobileHeader.tsx`, `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`
 
 ---
 
-## Ordre d'Implementation
+## 3. Image de fond pour les pages de connexion/inscription
+
+**Situation actuelle :** Les pages Login, Register, ForgotPassword ont un fond abstrait avec des gradients et un motif de grille. Aucune image de fond.
+
+**Solution :**
+- Copier l'image de l'oeil bleu (1770368575206~2_1.jpg) vers `public/images/auth-bg.jpg` (dans public car c'est utilise en CSS)
+- Ajouter l'image en arriere-plan sur les pages Login, Register, ForgotPassword et ResetPassword
+- L'image sera affichee en `cover` avec un overlay sombre semi-transparent pour la lisibilite
+- Le formulaire restera au centre avec l'effet glassmorphism par-dessus
+
+**Fichiers :** `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`, `src/pages/ResetPassword.tsx`
+
+---
+
+## 4. Photo de profil et preferences qui fonctionnent
+
+### Photo de profil zoomee
+**Probleme :** L'avatar dans `ProfileEditForm.tsx` utilise `<AvatarImage>` qui applique `object-cover` par defaut dans Radix. La photo apparat zoomee car le composant `Avatar` fait 96x96px (`h-24 w-24`) et force un recadrage.
+
+**Solution :**
+- Ajouter `className="object-cover"` sur `AvatarImage` pour s'assurer du bon cadrage
+- Verifier que le composant Avatar de Radix n'a pas de styles conflictuels
+- Dans le profil Settings (ligne 234), la photo de l'utilisateur est un simple cercle avec l'initiale -- il faut aussi y afficher la photo si elle existe
+
+### Theme sombre/clair pour les 2 designs
+**Probleme actuel :** Le `ThemeProvider` utilise `next-themes` (dans `App.tsx` ligne 68) mais le Settings utilise le `useTheme` de `@/components/theme-provider` local (ligne 13). Ces deux providers sont differents -- l'un vient de `next-themes`, l'autre du composant local. Il y a conflit.
+
+**Solution :** 
+- L'import dans `App.tsx` utilise `import { ThemeProvider } from "next-themes"` 
+- L'import dans Settings utilise `import { useTheme } from "@/components/theme-provider"` qui est un provider **different** jamais rendu dans l'arbre
+- Corriger Settings pour utiliser `useTheme` de `next-themes` directement
+- Le composant local `theme-provider.tsx` est redondant -- on le garde mais on s'assure que Settings utilise le bon provider
+
+### Notifications et Ne pas deranger
+**Probleme :** Les switches changent le state local mais l'utilisateur doit cliquer "Sauvegarder les preferences" separement. 
+
+**Solution :** Faire un auto-save quand un switch change (debounce de 500ms), avec confirmation toast immediate.
+
+**Fichiers :** `src/components/settings/ProfileEditForm.tsx`, `src/pages/Settings.tsx`
+
+---
+
+## 5. Section legale dans les Parametres
+
+**Situation actuelle :** Les pages legales existent (`/legal/privacy`, `/legal/terms`, `/legal/cookies`) mais ne sont pas accessibles depuis les Parametres. Le Footer existe mais il n'est pas visible dans l'app connectee. L'email de contact est `contact@deepflow.app` au lieu de `deepflow.ia@gmail.com`.
+
+**Solution :**
+- Ajouter un **4eme onglet** dans Settings : "A propos" avec une icone `Info`
+- Contenu de ce tab :
+  - **Mentions legales** : editeur, hebergeur, email de contact
+  - **Liens rapides** : Privacy, Terms, Cookies (vers les pages existantes)
+  - **FAQ** basique (5-6 questions/reponses les plus courantes dans un Accordion)
+  - **Nous contacter** : afficher deepflow.ia@gmail.com avec un bouton copier/mailto
+  - **Version de l'app** (badge)
+- Mettre a jour le Footer avec `deepflow.ia@gmail.com`
+- Mettre a jour les pages legales (Privacy, Terms, Cookies) avec la bonne adresse email
+
+**Fichiers :** `src/pages/Settings.tsx`, `src/components/layout/Footer.tsx`, `src/pages/legal/Privacy.tsx`, `src/pages/legal/Terms.tsx`, `src/pages/legal/Cookies.tsx`
+
+---
+
+## Details Techniques
+
+### Fichiers a modifier
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/Admin.tsx` | Ajouter gestion credits IA (table `ai_credits`) + tabs dans le dialog |
+| `src/assets/deepflow-logo.png` | **NOUVEAU** - Copie de image-5.png |
+| `public/images/auth-bg.jpg` | **NOUVEAU** - Copie de l'image oeil bleu |
+| `src/components/layout/Sidebar.tsx` | Nouveau logo avec gestion theme |
+| `src/components/layout/MobileHeader.tsx` | Nouveau logo avec gestion theme |
+| `src/pages/Login.tsx` | Nouveau logo + image de fond |
+| `src/pages/Register.tsx` | Nouveau logo + image de fond |
+| `src/pages/ForgotPassword.tsx` | Nouveau logo + image de fond |
+| `src/pages/ResetPassword.tsx` | Image de fond |
+| `src/components/settings/ProfileEditForm.tsx` | Fix photo zoomee |
+| `src/pages/Settings.tsx` | Fix theme provider, auto-save preferences, nouvel onglet "A propos" avec FAQ/Legal/Contact |
+| `src/components/layout/Footer.tsx` | Email mis a jour |
+| `src/pages/legal/Privacy.tsx` | Email mis a jour |
+| `src/pages/legal/Terms.tsx` | Email mis a jour |
+| `src/pages/legal/Cookies.tsx` | Email mis a jour |
+
+### Ordre d'implementation
 
 | Etape | Modification | Impact |
 |-------|-------------|--------|
-| 1 | Fix ItemCard.tsx children rendering | Sous-taches visibles |
-| 2 | Fix GoalList.tsx window.reload | Transitions fluides |
-| 3 | Standardiser route Gamification dans App.tsx | Navigation sans refresh |
-| 4 | Fix usePowerUps.ts pour admin | Credits jeu illimites admin |
-| 5 | Afficher credits IA dans AIAssistant | Visibilite credits IA |
-| 6 | Credits IA de depart dans useEnsurePlayerProfile | Credits IA fonctionnels |
+| 1 | Copier les 2 images (logo + fond) | Prerequis pour tout le reste |
+| 2 | Mettre a jour le logo (Sidebar, MobileHeader, pages auth) | Branding |
+| 3 | Ajouter image de fond aux pages auth | Visuel |
+| 4 | Fix credits admin (IA + jeu) | Fonctionnel |
+| 5 | Fix theme provider dans Settings | Fonctionnel |
+| 6 | Fix photo profil + auto-save preferences | UX |
+| 7 | Ajouter onglet "A propos" + mettre a jour emails | Legal |
 
----
+### Credits Admin - Detail technique
 
-## Details Techniques Importants
+Dans le dialog de credits (`Admin.tsx` lignes 843-879), ajouter un systeme a 2 types :
 
-**Sous-taches (ItemCard):** Le changement est minimal -- une seule ligne a modifier. Au lieu de `{variant === 'expanded' && children && (...)}`, on utilise `{children && (...)}`. Cela rend les children visibles quelle que soit la variante, ce qui permet au bouton toggle des sous-taches d'etre visible.
-
-**Navigation:** Le vrai probleme n'est pas `navigate()` mais le montage/demontage de `AppLayout`. Quand on va sur `/gamification` depuis `/dashboard`, `AppLayout` est demonte puis remonte dans `Gamification.tsx`, causant un flash visuel. En uniformisant le layout, la sidebar et le header restent stables.
-
-**Credits Admin:** Dans `usePowerUps.ts`, on ajoute `const { isAdmin } = useAuth()` et dans la mutation, on fait:
 ```typescript
-if (!isAdmin) {
-  // Verifier et deduire les credits
-}
-// Continuer avec l'achat
+// Nouveau state
+const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
+
+// Nouvelle fonction pour credits IA
+const handleGiveAICredits = async () => {
+  if (!creditsUser || creditsAmount === 0) return;
+  
+  const { data: existing } = await supabase
+    .from("ai_credits")
+    .select("credits")
+    .eq("user_id", creditsUser.id)
+    .maybeSingle();
+  
+  const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
+  
+  if (existing) {
+    await supabase.from("ai_credits")
+      .update({ credits: newCredits })
+      .eq("user_id", creditsUser.id);
+  } else {
+    await supabase.from("ai_credits")
+      .insert({ user_id: creditsUser.id, credits: newCredits });
+  }
+  
+  await logAction("modify_ai_credits", ...);
+};
 ```
 
-**Credits IA de depart:** Dans `useEnsurePlayerProfile.ts`, apres creation du player_profile, on ajoute aussi un insert dans `ai_credits` avec 50 credits initiaux.
+### Fix Theme - Detail technique
+
+Le probleme est que `App.tsx` utilise `import { ThemeProvider } from "next-themes"` mais `Settings.tsx` importe `useTheme` depuis `@/components/theme-provider` qui est un provider local jamais monte dans l'arbre de composants.
+
+**Solution :** Changer l'import dans Settings.tsx :
+```typescript
+// Avant
+import { useTheme } from "@/components/theme-provider";
+// Apres
+import { useTheme } from "next-themes";
+```
+
+### FAQ - Contenu
+
+Questions prevues pour la FAQ :
+1. Comment fonctionne DeepFlow ?
+2. Qu'est-ce que les credits IA ?
+3. Comment gagner des credits de jeu ?
+4. Mes donnees sont-elles securisees ?
+5. Comment contacter le support ?
+6. Puis-je utiliser DeepFlow hors ligne ?
