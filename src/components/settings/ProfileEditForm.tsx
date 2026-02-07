@@ -176,7 +176,7 @@ export function ProfileEditForm() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar className="h-24 w-24 border-4 border-primary/20">
-                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarImage src={avatarUrl || undefined} className="object-cover" />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
                   {displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
                 </AvatarFallback>

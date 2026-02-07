@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "next-themes";
 import { useDesignMode } from "@/contexts/DesignModeContext";
 import { usePlayerProfile } from "@/hooks/usePlayerProfile";
 import { useAICredits } from "@/hooks/useAICredits";
@@ -18,6 +19,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Link, useSearchParams } from "react-router-dom";
 import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { 
   Settings as SettingsIcon, 
@@ -41,6 +43,13 @@ import {
   Award,
   Apple,
   Wand2,
+  Info,
+  Mail,
+  Copy,
+  ExternalLink,
+  FileText,
+  Shield,
+  HelpCircle,
 } from "lucide-react";
 
 interface UserSettings {
@@ -76,23 +85,19 @@ export default function Settings() {
     journal_entries: 0
   });
 
+  const [userProfile, setUserProfile] = useState<{ display_name: string | null; photo_url: string | null } | null>(null);
+
   // Handle PayPal return
   useEffect(() => {
     const handlePayPalReturn = async () => {
       const payment = searchParams.get("payment");
       const token = searchParams.get("token");
-      
       if (payment === "success" && token) {
-        try {
-          await capturePayPalOrder(token);
-        } catch (error) {
-          console.error("Error capturing PayPal order:", error);
-        }
+        try { await capturePayPalOrder(token); } catch (error) { console.error("Error capturing PayPal order:", error); }
       } else if (payment === "cancelled") {
         toast.error("Paiement annulé");
       }
     };
-    
     handlePayPalReturn();
   }, [searchParams, capturePayPalOrder]);
 
@@ -100,24 +105,21 @@ export default function Settings() {
     if (user) {
       fetchSettings();
       fetchStats();
+      fetchUserProfile();
     }
   }, [user]);
 
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('user_profiles').select('display_name, photo_url').eq('id', user.id).maybeSingle();
+    if (data) setUserProfile(data);
+  };
+
   const fetchSettings = async () => {
     if (!user) return;
-    
     try {
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Settings fetch error:', error);
-        return;
-      }
-
+      const { data, error } = await supabase.from('user_settings').select('*').eq('id', user.id).maybeSingle();
+      if (error && error.code !== 'PGRST116') { console.error('Settings fetch error:', error); return; }
       if (data) {
         setFormData({
           notifications_enabled: data.notifications_enabled ?? true,
@@ -125,14 +127,11 @@ export default function Settings() {
           focus_mode: data.focus_mode ?? false
         });
       }
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-    }
+    } catch (error) { console.error('Error fetching settings:', error); }
   };
 
   const fetchStats = async () => {
     if (!user) return;
-
     try {
       const [tasksRes, habitsRes, focusRes, goalsRes, journalRes] = await Promise.allSettled([
         supabase.from('tasks').select('id').eq('user_id', user.id).eq('completed', true),
@@ -141,65 +140,50 @@ export default function Settings() {
         supabase.from('goals').select('id').eq('user_id', user.id).eq('completed', true),
         supabase.from('journal_entries').select('id').eq('user_id', user.id)
       ]);
-
       const tasks = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.length || 0) : 0;
       const habits = habitsRes.status === 'fulfilled' ? (habitsRes.value.data || []) : [];
       const focusSessions = focusRes.status === 'fulfilled' ? (focusRes.value.data || []) : [];
       const goals = goalsRes.status === 'fulfilled' ? (goalsRes.value.data?.length || 0) : 0;
       const journal = journalRes.status === 'fulfilled' ? (journalRes.value.data?.length || 0) : 0;
-
       const maxStreak = Math.max(...habits.map(h => h.streak || 0), 0);
       const totalMinutes = focusSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
-
-      setStats({
-        tasks_completed: tasks,
-        habits_tracked: habits.length,
-        focus_sessions: focusSessions.length,
-        focus_minutes: totalMinutes,
-        streak_max: maxStreak,
-        goals_completed: goals,
-        journal_entries: journal
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+      setStats({ tasks_completed: tasks, habits_tracked: habits.length, focus_sessions: focusSessions.length, focus_minutes: totalMinutes, streak_max: maxStreak, goals_completed: goals, journal_entries: journal });
+    } catch (error) { console.error('Error fetching stats:', error); }
   };
 
-  const handleSave = async () => {
+  // Auto-save preferences
+  const autoSavePreferences = useCallback(async (newFormData: typeof formData) => {
     if (!user) return;
-    
-    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          id: user.id,
-          ...formData,
-          updated_at: new Date().toISOString()
-        });
-
+      const { error } = await supabase.from('user_settings').upsert({
+        id: user.id,
+        ...newFormData,
+        updated_at: new Date().toISOString()
+      });
       if (error) throw error;
-      
-      toast.success("Paramètres sauvegardés !");
-      fetchSettings();
+      toast.success("Préférences sauvegardées");
     } catch (error: any) {
       toast.error("Erreur: " + error.message);
-    } finally {
-      setLoading(false);
     }
+  }, [user]);
+
+  const updatePreference = (key: keyof typeof formData, value: boolean) => {
+    const newFormData = { ...formData, [key]: value };
+    setFormData(newFormData);
+    autoSavePreferences(newFormData);
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut();
-      toast.success("Déconnexion réussie");
-    } catch (error) {
-      toast.error("Erreur lors de la déconnexion");
-    }
+    try { await signOut(); toast.success("Déconnexion réussie"); } catch (error) { toast.error("Erreur lors de la déconnexion"); }
   };
 
   const xpForNextLevel = playerProfile ? (playerProfile.level * 100) : 100;
   const currentXPProgress = playerProfile ? ((playerProfile.experience_points % 100) / 100) * 100 : 0;
+
+  const copyEmail = () => {
+    navigator.clipboard.writeText("deepflow.ia@gmail.com");
+    toast.success("Email copié !");
+  };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -209,7 +193,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profil</span>
@@ -222,6 +206,10 @@ export default function Settings() {
             <Trophy className="h-4 w-4" />
             <span className="hidden sm:inline">Statistiques</span>
           </TabsTrigger>
+          <TabsTrigger value="about" className="gap-2">
+            <Info className="h-4 w-4" />
+            <span className="hidden sm:inline">À propos</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
@@ -231,11 +219,14 @@ export default function Settings() {
             <CardContent className="p-4 md:p-6">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground text-2xl font-bold">
-                    {user?.email?.charAt(0).toUpperCase() || "U"}
-                  </div>
+                  <Avatar className="h-16 w-16 border-2 border-primary/20">
+                    <AvatarImage src={userProfile?.photo_url || undefined} className="object-cover" />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
+                      {userProfile?.display_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <h2 className="font-semibold text-lg">{user?.email}</h2>
+                    <h2 className="font-semibold text-lg">{userProfile?.display_name || user?.email}</h2>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Gamepad2 className="h-4 w-4" />
                       <span>Niveau {playerProfile?.level || 1}</span>
@@ -245,17 +236,12 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
-                
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <Link to="/gamification">
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Arène
-                    </Link>
+                    <Link to="/gamification"><Trophy className="h-4 w-4 mr-2" />Arène</Link>
                   </Button>
                 </div>
               </div>
-              
               {playerProfile && (
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -267,11 +253,7 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
-
-          {/* Profile Edit Form */}
           <ProfileEditForm />
-          
-          {/* Premium Subscription */}
           <PremiumUpgradeCard />
         </TabsContent>
 
@@ -281,70 +263,33 @@ export default function Settings() {
             {/* Apparence */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Palette className="h-5 w-5" />
-                  Apparence
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg"><Palette className="h-5 w-5" />Apparence</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Thème</Label>
                   <div className="flex gap-2">
-                    <Button
-                      variant={theme === 'light' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTheme('light')}
-                      className="flex-1"
-                    >
-                      <Sun className="h-4 w-4 mr-2" />
-                      Clair
+                    <Button variant={theme === 'light' ? 'default' : 'outline'} size="sm" onClick={() => setTheme('light')} className="flex-1">
+                      <Sun className="h-4 w-4 mr-2" />Clair
                     </Button>
-                    <Button
-                      variant={theme === 'dark' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTheme('dark')}
-                      className="flex-1"
-                    >
-                      <Moon className="h-4 w-4 mr-2" />
-                      Sombre
+                    <Button variant={theme === 'dark' ? 'default' : 'outline'} size="sm" onClick={() => setTheme('dark')} className="flex-1">
+                      <Moon className="h-4 w-4 mr-2" />Sombre
                     </Button>
                   </div>
                 </div>
-                
                 <Separator />
-                
                 <div className="space-y-2">
                   <Label>Style de design</Label>
                   <div className="flex gap-2">
-                    <Button
-                      variant={designMode === 'futuristic' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setDesignMode('futuristic');
-                        toast.success("Design Futuriste activé");
-                      }}
-                      className="flex-1"
-                    >
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Futuriste
+                    <Button variant={designMode === 'futuristic' ? 'default' : 'outline'} size="sm" onClick={() => { setDesignMode('futuristic'); toast.success("Design Futuriste activé"); }} className="flex-1">
+                      <Wand2 className="h-4 w-4 mr-2" />Futuriste
                     </Button>
-                    <Button
-                      variant={designMode === 'apple' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setDesignMode('apple');
-                        toast.success("Design Apple activé");
-                      }}
-                      className="flex-1"
-                    >
-                      <Apple className="h-4 w-4 mr-2" />
-                      Minimal
+                    <Button variant={designMode === 'apple' ? 'default' : 'outline'} size="sm" onClick={() => { setDesignMode('apple'); toast.success("Design Apple activé"); }} className="flex-1">
+                      <Apple className="h-4 w-4 mr-2" />Minimal
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {designMode === 'apple' 
-                      ? "Interface épurée inspirée d'Apple : espaces généreux, ombres légères, sans effets."
-                      : "Interface moderne avec effets de verre, animations et dégradés."}
+                    {designMode === 'apple' ? "Interface épurée inspirée d'Apple : espaces généreux, ombres légères, sans effets." : "Interface moderne avec effets de verre, animations et dégradés."}
                   </p>
                 </div>
               </CardContent>
@@ -353,43 +298,28 @@ export default function Settings() {
             {/* Notifications */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Bell className="h-5 w-5" />
-                  Notifications
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg"><Bell className="h-5 w-5" />Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Notifications push</span>
-                  </div>
+                  <div className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Notifications push</span></div>
                   <Switch
                     checked={formData.notifications_enabled}
                     onCheckedChange={async (checked) => {
-                      setFormData({...formData, notifications_enabled: checked});
                       if (checked && 'Notification' in window) {
                         const permission = await Notification.requestPermission();
                         if (permission !== 'granted') {
                           toast.error("Notifications bloquées par le navigateur");
-                          setFormData({...formData, notifications_enabled: false});
-                        } else {
-                          toast.success("Notifications activées");
+                          return;
                         }
                       }
+                      updatePreference('notifications_enabled', checked);
                     }}
                   />
                 </div>
-                
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Sons</span>
-                  </div>
-                  <Switch
-                    checked={formData.sound_enabled}
-                    onCheckedChange={(checked) => setFormData({...formData, sound_enabled: checked})}
-                  />
+                  <div className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Sons</span></div>
+                  <Switch checked={formData.sound_enabled} onCheckedChange={(checked) => updatePreference('sound_enabled', checked)} />
                 </div>
               </CardContent>
             </Card>
@@ -397,33 +327,15 @@ export default function Settings() {
             {/* Focus */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Brain className="h-5 w-5" />
-                  Productivité
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg"><Brain className="h-5 w-5" />Productivité</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Mode Focus (Ne pas déranger)</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Désactive les notifications pendant les sessions
-                    </p>
+                    <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-medium">Mode Focus (Ne pas déranger)</span></div>
+                    <p className="text-xs text-muted-foreground mt-1">Désactive les notifications pendant les sessions</p>
                   </div>
-                  <Switch
-                    checked={formData.focus_mode}
-                    onCheckedChange={(checked) => {
-                      setFormData({...formData, focus_mode: checked});
-                      if (checked) {
-                        toast.success("Mode Ne Pas Déranger activé");
-                      } else {
-                        toast.info("Mode Ne Pas Déranger désactivé");
-                      }
-                    }}
-                  />
+                  <Switch checked={formData.focus_mode} onCheckedChange={(checked) => updatePreference('focus_mode', checked)} />
                 </div>
               </CardContent>
             </Card>
@@ -431,42 +343,28 @@ export default function Settings() {
             {/* Crédits IA */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-5 w-5" />
-                  Crédits IA
-                </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg"><Sparkles className="h-5 w-5" />Crédits IA</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
-                    <div className="text-2xl font-bold text-primary">{aiCredits}</div>
+                    <div className="text-2xl font-bold text-primary">{aiCredits === Infinity ? "∞" : aiCredits}</div>
                     <p className="text-xs text-muted-foreground">crédits disponibles</p>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to="/gamification">
-                      <Gamepad2 className="h-4 w-4 mr-2" />
-                      Boutique
-                    </Link>
+                    <Link to="/gamification"><Gamepad2 className="h-4 w-4 mr-2" />Boutique</Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          <Button onClick={handleSave} disabled={loading} className="w-full">
-            {loading ? "Sauvegarde..." : "Sauvegarder les préférences"}
-          </Button>
         </TabsContent>
 
         {/* Stats Tab */}
         <TabsContent value="stats" className="space-y-6">
-          {/* Statistiques */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Statistiques
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Statistiques</CardTitle>
               <CardDescription>Votre activité sur DeepFlow</CardDescription>
             </CardHeader>
             <CardContent>
@@ -492,7 +390,6 @@ export default function Settings() {
                   <div className="text-xs text-muted-foreground">Max Streak</div>
                 </div>
               </div>
-              
               <div className="grid grid-cols-3 gap-4 mt-4">
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <div className="text-lg font-semibold">{stats.goals_completed}</div>
@@ -510,13 +407,9 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Gamification */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gamepad2 className="h-5 w-5" />
-                Progression Gamification
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Gamepad2 className="h-5 w-5" />Progression Gamification</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -545,9 +438,113 @@ export default function Settings() {
           </Card>
 
           <Button variant="outline" onClick={fetchStats} className="w-full">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser les statistiques
+            <RefreshCw className="h-4 w-4 mr-2" />Actualiser les statistiques
           </Button>
+        </TabsContent>
+
+        {/* About Tab */}
+        <TabsContent value="about" className="space-y-6">
+          {/* Mentions légales */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Mentions Légales</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <div><strong className="text-foreground">Éditeur :</strong> DeepFlow</div>
+              <div><strong className="text-foreground">Email de contact :</strong> deepflow.ia@gmail.com</div>
+              <div><strong className="text-foreground">Hébergement :</strong> Supabase (infrastructure) / Lovable (frontend)</div>
+              <div><strong className="text-foreground">Pays :</strong> France 🇫🇷</div>
+              <Separator />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/legal/privacy"><FileText className="h-4 w-4 mr-1" />Confidentialité</Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/legal/terms"><FileText className="h-4 w-4 mr-1" />CGU</Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/legal/cookies"><FileText className="h-4 w-4 mr-1" />Cookies</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* FAQ */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><HelpCircle className="h-5 w-5" />Foire Aux Questions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="1">
+                  <AccordionTrigger>Comment fonctionne DeepFlow ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    DeepFlow est une application de productivité augmentée par l'IA. Elle combine gestion de tâches, suivi d'habitudes, sessions de focus, journaling et gamification pour vous aider à atteindre vos objectifs. L'IA analyse vos données pour fournir des insights personnalisés.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="2">
+                  <AccordionTrigger>Qu'est-ce que les crédits IA ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    Les crédits IA vous permettent d'utiliser les fonctionnalités d'intelligence artificielle (analyse, chat, suggestions). Chaque requête IA consomme des crédits. Vous recevez des crédits de départ et pouvez en gagner via la boutique de la Cyber Arena.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="3">
+                  <AccordionTrigger>Comment gagner des crédits de jeu ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    Vous gagnez des crédits de jeu en complétant des quêtes quotidières et hebdomadaires, en montant de niveau, et en maintenant des séries (streaks) d'habitudes. Ces crédits servent à acheter des power-ups et des packs de crédits IA dans la boutique.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="4">
+                  <AccordionTrigger>Mes données sont-elles sécurisées ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    Oui. Vos données sont stockées de manière sécurisée avec Supabase, qui utilise le chiffrement en transit et au repos. L'authentification est gérée de manière sécurisée et vos données personnelles ne sont jamais partagées avec des tiers sans votre consentement.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="5">
+                  <AccordionTrigger>Comment contacter le support ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    Envoyez un email à <strong>deepflow.ia@gmail.com</strong> pour toute question, suggestion ou problème. Nous répondons généralement sous 48h.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="6">
+                  <AccordionTrigger>Puis-je utiliser DeepFlow hors ligne ?</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    DeepFlow dispose d'un mode hors ligne partiel grâce au Service Worker (PWA). Vous pouvez consulter certaines données en cache et créer des éléments hors ligne. La synchronisation se fait automatiquement lorsque la connexion est rétablie.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Contact */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" />Nous Contacter</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-primary" />
+                  <span className="font-medium">deepflow.ia@gmail.com</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" onClick={copyEmail} title="Copier">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" asChild title="Envoyer un email">
+                    <a href="mailto:deepflow.ia@gmail.com"><ExternalLink className="h-4 w-4" /></a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Version */}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="outline">v1.0.0</Badge>
+            <span>•</span>
+            <span>🇫🇷 Made in France</span>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -555,8 +552,7 @@ export default function Settings() {
       <Separator />
       <div className="flex justify-center">
         <Button variant="destructive" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Déconnexion
+          <LogOut className="h-4 w-4 mr-2" />Déconnexion
         </Button>
       </div>
     </div>

@@ -90,6 +90,7 @@ export default function Admin() {
   const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
   const [creditsUser, setCreditsUser] = useState<UserData | null>(null);
   const [creditsAmount, setCreditsAmount] = useState<number>(0);
+  const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
   
   // Admin promotion dialog
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
@@ -316,27 +317,61 @@ export default function Admin() {
     if (!creditsUser || creditsAmount === 0) return;
 
     try {
-      const { data: profile } = await supabase
-        .from("player_profiles")
-        .select("credits")
-        .eq("user_id", creditsUser.id)
-        .single();
+      if (creditType === 'game') {
+        const { data: profile } = await supabase
+          .from("player_profiles")
+          .select("credits")
+          .eq("user_id", creditsUser.id)
+          .single();
 
-      const newCredits = Math.max(0, (profile?.credits || 0) + creditsAmount);
+        const newCredits = Math.max(0, (profile?.credits || 0) + creditsAmount);
 
-      const { error } = await supabase
-        .from("player_profiles")
-        .update({ credits: newCredits })
-        .eq("user_id", creditsUser.id);
+        const { error } = await supabase
+          .from("player_profiles")
+          .update({ credits: newCredits })
+          .eq("user_id", creditsUser.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      await logAction("modify_credits", creditsUser.id, creditsUser.email, { 
-        amount: creditsAmount,
-        new_total: newCredits 
-      });
-      
-      toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits pour ${creditsUser.email}`);
+        await logAction("modify_game_credits", creditsUser.id, creditsUser.email, { 
+          type: 'game',
+          amount: creditsAmount,
+          new_total: newCredits 
+        });
+        
+        toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits jeu pour ${creditsUser.email}`);
+      } else {
+        // AI credits
+        const { data: existing } = await supabase
+          .from("ai_credits")
+          .select("credits")
+          .eq("user_id", creditsUser.id)
+          .maybeSingle();
+
+        const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
+
+        if (existing) {
+          const { error } = await supabase
+            .from("ai_credits")
+            .update({ credits: newCredits, last_updated: new Date().toISOString() })
+            .eq("user_id", creditsUser.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("ai_credits")
+            .insert({ user_id: creditsUser.id, credits: newCredits });
+          if (error) throw error;
+        }
+
+        await logAction("modify_ai_credits", creditsUser.id, creditsUser.email, { 
+          type: 'ai',
+          amount: creditsAmount,
+          new_total: newCredits 
+        });
+        
+        toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits IA pour ${creditsUser.email}`);
+      }
+
       setCreditsDialogOpen(false);
       setCreditsUser(null);
       setCreditsAmount(0);
@@ -375,6 +410,7 @@ export default function Admin() {
   const openCreditsDialog = (userData: UserData) => {
     setCreditsUser(userData);
     setCreditsAmount(0);
+    setCreditType('game');
     setCreditsDialogOpen(true);
   };
 
@@ -853,6 +889,28 @@ export default function Admin() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Credit type selector */}
+            <div className="flex gap-2">
+              <Button
+                variant={creditType === 'game' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCreditType('game')}
+                className="flex-1"
+              >
+                <Coins className="h-4 w-4 mr-2" />
+                Crédits Jeu
+              </Button>
+              <Button
+                variant={creditType === 'ai' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCreditType('ai')}
+                className="flex-1"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Crédits IA
+              </Button>
+            </div>
+
             <div className="flex items-center gap-4">
               <Button variant="outline" onClick={() => setCreditsAmount(prev => prev - 100)}>-100</Button>
               <Button variant="outline" onClick={() => setCreditsAmount(prev => prev - 10)}>-10</Button>
@@ -866,7 +924,11 @@ export default function Admin() {
               <Button variant="outline" onClick={() => setCreditsAmount(prev => prev + 100)}>+100</Button>
             </div>
             <p className="text-center text-sm text-muted-foreground">
-              {creditsAmount > 0 ? `Ajouter ${creditsAmount} crédits` : creditsAmount < 0 ? `Retirer ${Math.abs(creditsAmount)} crédits` : "Aucun changement"}
+              {creditsAmount > 0 
+                ? `Ajouter ${creditsAmount} crédits ${creditType === 'ai' ? 'IA' : 'jeu'}` 
+                : creditsAmount < 0 
+                ? `Retirer ${Math.abs(creditsAmount)} crédits ${creditType === 'ai' ? 'IA' : 'jeu'}` 
+                : "Aucun changement"}
             </p>
           </div>
           <DialogFooter>

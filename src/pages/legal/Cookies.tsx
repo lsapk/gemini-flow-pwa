@@ -133,7 +133,7 @@ export default function Cookies() {
             <section>
               <h2 className="text-2xl font-bold mb-4">6. Contact</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pour toute question concernant notre utilisation des cookies, contactez-nous à : <a href="mailto:privacy@deepflow.app" className="text-primary hover:underline">privacy@deepflow.app</a>
+                Pour toute question concernant notre utilisation des cookies, contactez-nous à : <a href="mailto:deepflow.ia@gmail.com" className="text-primary hover:underline">deepflow.ia@gmail.com</a>
               </p>
             </section>
           </div>
