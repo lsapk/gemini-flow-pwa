@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
-import deepflowLogo from "@/assets/deepflow-logo.jpg";
+import deepflowLogo from "@/assets/deepflow-logo.png";
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -24,7 +24,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
           </Button>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-lg object-cover ring-2 ring-primary/20" />
+              <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-lg object-contain bg-white/90 dark:bg-white/10 dark:invert p-0.5 ring-2 ring-primary/20" />
               <div className="absolute inset-0 rounded-lg bg-primary/10 blur-sm -z-10"></div>
             </div>
             <h1 className="text-lg font-heading font-bold gradient-text">DeepFlow</h1>

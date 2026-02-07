@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import deepflowLogo from "@/assets/deepflow-logo.jpg";
+import deepflowLogo from "@/assets/deepflow-logo.png";
 
 interface SidebarProps {
   className?: string;
@@ -61,7 +61,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
       <div className="p-5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-10 w-10 rounded-xl object-cover ring-2 ring-primary/20" />
+            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-10 w-10 rounded-xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-1 ring-2 ring-primary/20" />
             <div className="absolute inset-0 rounded-xl bg-primary/20 blur-md -z-10"></div>
           </div>
           <h1 className="text-xl font-heading font-bold gradient-text tracking-tight">DeepFlow</h1>
