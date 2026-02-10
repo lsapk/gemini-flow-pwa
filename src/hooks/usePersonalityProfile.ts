@@ -316,13 +316,22 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
             if (analysisResult.personality) {
               setProfile(analysisResult);
               
+              console.log('Sauvegarde du profil dans Supabase...');
               // Save to database
-              await supabase
+              const { error: saveError } = await supabase
                 .from('ai_personality_profiles')
                 .upsert({
                   user_id: user.id,
-                  profile_data: analysisResult as any
+                  profile_data: analysisResult as any,
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'user_id'
                 });
+
+              if (saveError) {
+                console.error('Erreur lors de la sauvegarde du profil:', saveError);
+                throw saveError;
+              }
               
               toast.success('Profil de personnalité généré et sauvegardé !');
               return;
@@ -371,13 +380,22 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
 
       setProfile(analysisResult);
       
+      console.log('Sauvegarde du profil (fallback) dans Supabase...');
       // Save to database
-      await supabase
+      const { error: saveError } = await supabase
         .from('ai_personality_profiles')
         .upsert({
           user_id: user.id,
-          profile_data: analysisResult as any
+          profile_data: analysisResult as any,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
         });
+
+      if (saveError) {
+        console.error('Erreur lors de la sauvegarde du profil (fallback):', saveError);
+        throw saveError;
+      }
       
       toast.success('Profil de personnalité généré et sauvegardé !');
       
