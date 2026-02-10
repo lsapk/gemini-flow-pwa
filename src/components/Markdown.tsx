@@ -34,13 +34,13 @@ export const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           );
         },
         // Add styles for other markdown elements
-        h1: ({ node, ...props }) => <h1 className="text-xl font-bold mt-6 mb-4" {...props} />,
-        h2: ({ node, ...props }) => <h2 className="text-lg font-bold mt-5 mb-3" {...props} />,
-        h3: ({ node, ...props }) => <h3 className="text-md font-bold mt-4 mb-2" {...props} />,
-        p: ({ node, ...props }) => <p className="mb-4" {...props} />,
-        ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4" {...props} />,
-        ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4" {...props} />,
-        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+        h1: ({ node, ...props }) => <h1 className="text-lg font-bold mt-2 mb-1" {...props} />,
+        h2: ({ node, ...props }) => <h2 className="text-md font-bold mt-2 mb-1" {...props} />,
+        h3: ({ node, ...props }) => <h3 className="text-sm font-bold mt-1 mb-0.5" {...props} />,
+        p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0" {...props} />,
+        ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-1.5" {...props} />,
+        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-1.5" {...props} />,
+        li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
         a: ({ node, ...props }) => <a className="text-blue-500 hover:underline" {...props} />,
         blockquote: ({ node, ...props }) => (
           <blockquote className="border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic my-4" {...props} />

@@ -48,15 +48,15 @@ export default function PersonalityProfileCard({
   isLoading 
 }: PersonalityProfileCardProps) {
   return (
-    <div className="space-y-6 md:space-y-8 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20">
-            <Brain className="h-8 w-8 text-primary" />
+    <div className="space-y-4 md:space-y-6 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-xl ring-1 ring-primary/20">
+            <Brain className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Profil de Personnalité IA</h2>
-            <p className="text-muted-foreground">Basé sur vos patterns d'activité et vos réflexions</p>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight">Profil de Personnalité IA</h2>
+            <p className="text-xs text-muted-foreground">Basé sur vos patterns d'activité et vos réflexions</p>
           </div>
         </div>
         <Button
@@ -74,7 +74,7 @@ export default function PersonalityProfileCard({
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
       >
         {/* Personnalité & Traits */}
         <motion.div variants={item} className="lg:col-span-1">
