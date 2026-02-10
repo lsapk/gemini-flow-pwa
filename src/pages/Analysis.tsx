@@ -31,7 +31,7 @@ export default function Analysis() {
     if (!isPremium && canUseFeature("analysis")) {
       trackUsage("analysis");
     }
-  }, []);
+  }, [isPremium, canUseFeature, trackUsage]);
 
   // Calculate scores from real data
   const scores = useMemo(() => {
@@ -112,21 +112,19 @@ export default function Analysis() {
           <CardContent className="py-4 md:py-6">
             <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
               {/* Score Circle */}
-              <div className="relative">
-                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-lg">
-                  <div className="w-22 h-22 md:w-26 md:h-26 rounded-full bg-background flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="text-4xl font-bold">{scores.overall}</span>
-                      <span className="text-lg text-muted-foreground">%</span>
-                    </div>
+              <div className="relative group">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl shadow-primary/20 transition-transform duration-300 group-hover:scale-105">
+                  <div className="text-center">
+                    <span className="text-4xl md:text-5xl font-black text-white">{scores.overall}</span>
+                    <span className="text-sm md:text-base text-white/80 font-bold ml-0.5">%</span>
                   </div>
                 </div>
                 <Badge 
-                  className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${
+                  className={`absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-lg border-2 border-background px-3 py-1 rounded-full text-white font-bold transition-all ${
                     scores.overall >= 80 ? 'bg-green-500' :
-                    scores.overall >= 60 ? 'bg-blue-500' :
+                    scores.overall >= 60 ? 'bg-blue-600' :
                     scores.overall >= 40 ? 'bg-yellow-500' : 'bg-orange-500'
-                  } text-white`}
+                  }`}
                 >
                   {scores.overall >= 80 ? '🏆 Excellent' :
                    scores.overall >= 60 ? '👍 Bien' :
