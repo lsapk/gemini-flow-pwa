@@ -34,7 +34,7 @@ export default function Gamification() {
   useQuestProgressTracking();
 
   return (
-      <div className="space-y-4 relative p-3 sm:p-6">
+      <div className="space-y-4 relative">
         {/* Optimized Background - fewer particles */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute inset-0 opacity-[0.03]">

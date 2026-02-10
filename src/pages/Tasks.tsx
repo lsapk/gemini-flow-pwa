@@ -323,114 +323,114 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="pt-16 md:pt-6 px-4 md:px-6">
+    <>
+      <div className="space-y-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
-            <div className="flex gap-2">
-              {googleTasks.isConnected ? (
-                <>
+              <h1 className="text-2xl md:text-3xl font-bold">Tâches</h1>
+              <div className="flex gap-2">
+                {googleTasks.isConnected ? (
+                  <>
+                    <Button
+                      onClick={() => setShowSyncDialog(true)}
+                      size="sm"
+                      variant="outline"
+                      disabled={googleTasks.isLoading}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
+                      Synchroniser
+                    </Button>
+                    <Button
+                      onClick={googleTasks.disconnect}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <CloudOff className="h-4 w-4 mr-2" />
+                      Déconnecter
+                    </Button>
+                  </>
+                ) : (
                   <Button 
-                    onClick={() => setShowSyncDialog(true)} 
+                    onClick={googleTasks.connectToGoogle}
                     size="sm" 
                     variant="outline"
-                    disabled={googleTasks.isLoading}
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
-                    Synchroniser
+                    <Cloud className="h-4 w-4 mr-2" />
+                    Google Tasks
                   </Button>
-                  <Button 
-                    onClick={googleTasks.disconnect} 
-                    size="sm" 
-                    variant="outline"
-                  >
-                    <CloudOff className="h-4 w-4 mr-2" />
-                    Déconnecter
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  onClick={googleTasks.connectToGoogle} 
-                  size="sm" 
-                  variant="outline"
-                >
-                  <Cloud className="h-4 w-4 mr-2" />
-                  Google Tasks
+                )}
+                <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvelle tâche
                 </Button>
-              )}
-              <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nouvelle tâche
-              </Button>
+              </div>
             </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="pending" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  En cours ({pendingTasks.length})
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Terminées ({completedTasks.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value={activeTab} className="mt-4">
+                <TaskList
+                  tasks={currentTasks}
+                  loading={isLoading}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleComplete={handleToggleComplete}
+                  subtasks={subtasks}
+                  onRefreshSubtasks={handleRefreshSubtasks}
+                  onReorder={handleReorder}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pending" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                En cours ({pendingTasks.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center gap-2">
-                <CheckSquare className="h-4 w-4" />
-                Terminées ({completedTasks.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={activeTab} className="mt-4">
-              <TaskList
-                tasks={currentTasks}
-                loading={isLoading}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onToggleComplete={handleToggleComplete}
-                subtasks={subtasks}
-                onRefreshSubtasks={handleRefreshSubtasks}
-                onReorder={handleReorder}
-              />
-            </TabsContent>
-          </Tabs>
         </div>
-      </div>
 
-      {isCreateModalOpen && (
-        <CreateModal 
-          type="task"
-          onSuccess={handleTaskCreated}
-        />
-      )}
+        {isCreateModalOpen && (
+          <CreateModal
+            type="task"
+            onSuccess={handleTaskCreated}
+          />
+        )}
 
-      {isEditModalOpen && (
-        <EditTaskModal 
-          task={editingTask}
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={handleTaskEdited}
-        />
-      )}
+        {isEditModalOpen && (
+          <EditTaskModal
+            task={editingTask}
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            onSuccess={handleTaskEdited}
+          />
+        )}
 
-      <AlertDialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Synchroniser avec Google Tasks</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action va synchroniser vos tâches DeepFlow avec Google Tasks dans les deux sens :
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Les tâches DeepFlow seront ajoutées à Google Tasks</li>
-                <li>Les tâches Google Tasks seront importées dans DeepFlow</li>
-              </ul>
-              Voulez-vous continuer ?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSyncWithGoogle}>
-              Synchroniser
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Synchroniser avec Google Tasks</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action va synchroniser vos tâches DeepFlow avec Google Tasks dans les deux sens :
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Les tâches DeepFlow seront ajoutées à Google Tasks</li>
+                  <li>Les tâches Google Tasks seront importées dans DeepFlow</li>
+                </ul>
+                Voulez-vous continuer ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSyncWithGoogle}>
+                Synchroniser
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+    </>
   );
 }
