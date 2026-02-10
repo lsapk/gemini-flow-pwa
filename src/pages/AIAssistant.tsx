@@ -54,17 +54,11 @@ export default function AIAssistant() {
   const [creationModeEnabled, setCreationModeEnabled] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(false);
   const [activeTab, setActiveTab] = useState("chat");
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeTab === 'chat') {
       setTimeout(() => {
-        if (scrollAreaRef.current) {
-          const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-          if (scrollContainer) {
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-          }
-        }
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }, 100);
     }
   }, [activeTab]);
@@ -87,7 +81,7 @@ export default function AIAssistant() {
       if (savedConversation) {
         try {
           const parsedMessages = JSON.parse(savedConversation);
-          setMessages(parsedMessages.map((msg: any) => ({
+          setMessages(parsedMessages.map((msg: Message) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
           })));
@@ -106,13 +100,10 @@ export default function AIAssistant() {
   }, [messages, user]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+    if (activeTab === 'chat' && messages.length > 0) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, activeTab]);
 
   const clearConversation = () => {
     setMessages([]);
@@ -260,16 +251,17 @@ export default function AIAssistant() {
         setIsSuggestionDialogOpen(true);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Erreur complète:', error);
         let errorContent = "Désolé, une erreur s'est produite. Veuillez réessayer.";
+        const errorMessageStr = error instanceof Error ? error.message : String(error);
         
         // Check if it's a credits exhausted error (402)
-        if (error?.message?.includes('402') || error?.message?.includes('credits exhausted') || error?.message?.includes('Payment Required')) {
+        if (errorMessageStr.includes('402') || errorMessageStr.includes('credits exhausted') || errorMessageStr.includes('Payment Required')) {
           errorContent = "💳 **Crédits IA épuisés** - Vos crédits Lovable AI sont épuisés. Ajoutez des crédits dans Settings → Cloud → Usage pour continuer à utiliser l'IA.";
         }
         // Check if it's a rate limit error (429)
-        else if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+        else if (errorMessageStr.includes('429') || errorMessageStr.includes('quota') || errorMessageStr.includes('Too Many Requests')) {
           errorContent = "🚫 **Limite d'API atteinte** - Le quota journalier de l'IA a été dépassé (50 requêtes/jour). Réessayez demain ou contactez l'admin pour augmenter le quota.";
         }
         
@@ -305,8 +297,8 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] flex flex-col max-w-7xl mx-auto overflow-hidden">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full w-full">
+    <div className="flex flex-col max-w-7xl mx-auto min-h-screen">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col w-full h-full">
         {/* Header compact */}
         <div className="flex flex-col mb-3 space-y-3 shrink-0">
           <div className="flex items-center justify-between">
@@ -350,8 +342,8 @@ export default function AIAssistant() {
           </TabsList>
         </div>
 
-        <TabsContent value="chat" className="flex-1 mt-0 min-h-0 animate-in fade-in slide-in-from-bottom-2 focus-visible:outline-none data-[state=inactive]:hidden">
-          <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl overflow-hidden">
+        <TabsContent value="chat" className="flex-1 mt-0 animate-in fade-in slide-in-from-bottom-2 focus-visible:outline-none data-[state=inactive]:hidden">
+          <div className="flex flex-col bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl">
             {/* Toolbar du chat */}
               <div className="px-4 py-2 border-b bg-muted/10 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-3">
@@ -405,9 +397,8 @@ export default function AIAssistant() {
               </div>
 
               {/* Zone des messages */}
-              <div className="flex-1 overflow-hidden relative">
-                <ScrollArea className="h-full" ref={scrollAreaRef}>
-                  <div className="p-4 md:p-6 space-y-6">
+              <div className="flex-1 relative">
+                <div className="p-4 md:p-6 space-y-6">
                     {messages.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-md mx-auto">
                         <div className="p-6 bg-primary/5 rounded-full ring-1 ring-primary/10 animate-pulse">
@@ -486,11 +477,10 @@ export default function AIAssistant() {
                       </motion.div>
                     )}
                   </div>
-                </ScrollArea>
               </div>
 
               {/* Zone de saisie */}
-              <div className="p-3 md:p-4 border-t bg-background/50 backdrop-blur-md shrink-0">
+              <div className="p-3 md:p-4 border-t bg-background/80 backdrop-blur-md shrink-0 sticky bottom-0 z-20">
                 <div className="relative flex items-center max-w-4xl mx-auto gap-2">
                   <div className="relative flex-1 group">
                     <Input
@@ -530,20 +520,16 @@ export default function AIAssistant() {
             </div>
           </TabsContent>
             
-        <TabsContent value="analysis" className="flex-1 mt-0 min-h-0 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-          <ScrollArea className="h-full">
-            <div className="p-1">
-              <Analysis />
-            </div>
-          </ScrollArea>
+        <TabsContent value="analysis" className="flex-1 mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
+          <div className="p-1">
+            <Analysis />
+          </div>
         </TabsContent>
 
-        <TabsContent value="profile" className="flex-1 mt-0 min-h-0 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-          <ScrollArea className="h-full">
-            <div className="p-1">
-              <Profile />
-            </div>
-          </ScrollArea>
+        <TabsContent value="profile" className="flex-1 mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
+          <div className="p-1">
+            <Profile />
+          </div>
         </TabsContent>
       </Tabs>
 
