@@ -102,19 +102,19 @@ export default function Analysis() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto">
       {/* Score Global - Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card className="bg-gradient-to-br from-primary/10 via-background to-purple-500/10 border-primary/20">
-          <CardContent className="py-8">
-            <div className="flex flex-col md:flex-row items-center gap-8">
+        <Card className="bg-gradient-to-br from-primary/10 via-background to-purple-500/10 border-primary/20 shadow-sm">
+          <CardContent className="py-4 md:py-6">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
               {/* Score Circle */}
               <div className="relative">
-                <div className="w-36 h-36 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-xl">
-                  <div className="w-28 h-28 rounded-full bg-background flex items-center justify-center">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-lg">
+                  <div className="w-22 h-22 md:w-26 md:h-26 rounded-full bg-background flex items-center justify-center">
                     <div className="text-center">
                       <span className="text-4xl font-bold">{scores.overall}</span>
                       <span className="text-lg text-muted-foreground">%</span>
@@ -158,13 +158,13 @@ export default function Analysis() {
       </motion.div>
 
       {/* Roue de la Vie - Life Balance Radar */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4">
         <LifeWheelChart />
         <ChronobiologyChart />
       </div>
 
       {/* Charts Row */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4">
         {/* Focus Time Chart */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}

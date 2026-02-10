@@ -56,6 +56,19 @@ export default function AIAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setTimeout(() => {
+        if (scrollAreaRef.current) {
+          const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+          if (scrollContainer) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          }
+        }
+      }, 100);
+    }
+  }, [activeTab]);
+
   const { 
     habitsData, 
     tasksData, 
@@ -187,8 +200,6 @@ export default function AIAssistant() {
         content: msg.content
       }));
 
-      console.log('Sending message to AI:', { input, userData, recentMessages, creationModeEnabled, analysisMode });
-
       let finalMessage = input;
       let messageContext = "conversation normale";
 
@@ -215,8 +226,6 @@ export default function AIAssistant() {
           }
         }
       });
-
-      console.log('AI response received:', { data, error });
 
       if (error) {
         console.error('Supabase function error:', error);
@@ -247,7 +256,6 @@ export default function AIAssistant() {
           data.suggestion.type && 
           data.suggestion.title && 
           data.suggestion.reasoning) {
-        console.log('Valid AI suggestion received:', data.suggestion);
         setCurrentSuggestion(data.suggestion);
         setIsSuggestionDialogOpen(true);
       }
@@ -297,60 +305,61 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] md:h-[calc(100vh-60px)] flex flex-col max-w-7xl mx-auto overflow-hidden">
-      {/* Header compact */}
-      <div className="flex flex-col mb-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-md shadow-primary/20">
-              <Brain className="h-6 w-6 text-white" />
+    <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] flex flex-col max-w-7xl mx-auto overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full w-full">
+        {/* Header compact */}
+        <div className="flex flex-col mb-3 space-y-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-md shadow-primary/20">
+                <Brain className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold tracking-tight leading-tight">Intelligence IA</h1>
+                <p className="text-[10px] text-muted-foreground hidden sm:block">Votre coach personnel propulsé par l'IA</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight leading-tight">Intelligence IA</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Votre coach personnel propulsé par l'IA</p>
+
+            <div className="flex items-center gap-1.5">
+              <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "secondary"} className="h-7 px-3 rounded-full font-medium">
+                <Zap className="h-3.5 w-3.5 mr-1 text-amber-500 fill-amber-500" />
+                {isAIAdmin ? "Illimité" : `${aiCredits} crédits`}
+              </Badge>
+              {isPremium && (
+                <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none h-7 px-3 rounded-full shadow-sm">
+                  <Crown className="h-3.5 w-3.5 mr-1 fill-white" />
+                  Premium
+                </Badge>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "secondary"} className="h-7 px-3 rounded-full font-medium">
-              <Zap className="h-3.5 w-3.5 mr-1 text-amber-500 fill-amber-500" />
-              {isAIAdmin ? "Illimité" : `${aiCredits} crédits`}
-            </Badge>
-            {isPremium && (
-              <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none h-7 px-3 rounded-full shadow-sm">
-                <Crown className="h-3.5 w-3.5 mr-1 fill-white" />
-                Premium
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl h-12">
-            <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              <span className="text-sm font-medium">Assistant</span>
+          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl h-10">
+            <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2 py-1">
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Assistant</span>
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="text-sm font-medium">Analyse</span>
+            <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2 py-1">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Analyse</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="text-sm font-medium">Profil IA</span>
+            <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2 py-1">
+              <User className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Profil IA</span>
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="chat" className="mt-0 h-[calc(100vh-250px)] md:h-[calc(100vh-220px)] animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl overflow-hidden">
-              {/* Toolbar du chat */}
-              <div className="px-4 py-3 border-b bg-muted/20 flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 group">
+        </div>
+
+        <TabsContent value="chat" className="flex-1 mt-0 min-h-0 animate-in fade-in slide-in-from-bottom-2 focus-visible:outline-none data-[state=inactive]:hidden">
+          <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl overflow-hidden">
+            {/* Toolbar du chat */}
+              <div className="px-4 py-2 border-b bg-muted/10 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 bg-background/50 p-1.5 pr-2 rounded-lg border shadow-sm">
                     <div className={analysisMode ? "text-primary" : "text-muted-foreground"}>
-                      <BarChart3 className="h-4 w-4 transition-colors" />
+                      <BarChart3 className="h-3.5 w-3.5 transition-colors" />
                     </div>
-                    <Label htmlFor="analysis-mode" className="text-xs font-semibold cursor-pointer">Analyse</Label>
+                    <Label htmlFor="analysis-mode" className="text-[10px] font-bold uppercase tracking-wider cursor-pointer">Analyse</Label>
                     <Switch
                       id="analysis-mode"
                       checked={analysisMode}
@@ -358,14 +367,14 @@ export default function AIAssistant() {
                         setAnalysisMode(checked);
                         if (checked) setCreationModeEnabled(false);
                       }}
-                      className="scale-75"
+                      className="scale-[0.6] origin-left"
                     />
                   </div>
-                  <div className="flex items-center gap-2 group">
+                  <div className="flex items-center gap-1.5 bg-background/50 p-1.5 pr-2 rounded-lg border shadow-sm">
                     <div className={creationModeEnabled ? "text-primary" : "text-muted-foreground"}>
-                      <Sparkles className="h-4 w-4 transition-colors" />
+                      <Sparkles className="h-3.5 w-3.5 transition-colors" />
                     </div>
-                    <Label htmlFor="creation-mode" className="text-xs font-semibold cursor-pointer">Création</Label>
+                    <Label htmlFor="creation-mode" className="text-[10px] font-bold uppercase tracking-wider cursor-pointer">Création</Label>
                     <Switch
                       id="creation-mode"
                       checked={creationModeEnabled}
@@ -373,24 +382,24 @@ export default function AIAssistant() {
                         setCreationModeEnabled(checked);
                         if (checked) setAnalysisMode(false);
                       }}
-                      className="scale-75"
+                      className="scale-[0.6] origin-left"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearConversation}
                     disabled={messages.length === 0}
-                    className="h-8 text-xs hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+                    className="h-7 text-[10px] uppercase font-bold tracking-wider hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors px-2"
                   >
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    <Trash2 className="h-3 w-3 mr-1" />
                     Effacer
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                    <Info className="h-4 w-4 text-muted-foreground" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md">
+                    <Info className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
                 </div>
               </div>
@@ -431,21 +440,21 @@ export default function AIAssistant() {
                             )}
                           </Avatar>
 
-                          <div className={`flex flex-col space-y-1.5 max-w-[85%] md:max-w-[70%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                            <div className={`px-4 py-3 rounded-2xl shadow-sm border ${
+                          <div className={`flex flex-col space-y-1 max-w-[90%] md:max-w-[85%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            <div className={`px-3 py-2 rounded-2xl shadow-sm ${
                               message.role === 'user'
-                                ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                : 'bg-background rounded-tl-none'
+                                ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                : 'bg-muted/50 backdrop-blur-sm border rounded-tl-sm'
                             }`}>
                               {message.role === 'assistant' ? (
-                                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50">
+                                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-tight prose-pre:bg-muted/50">
                                   <Markdown content={message.content} />
                                 </div>
                               ) : (
-                                <p className="text-sm leading-relaxed">{message.content}</p>
+                                <p className="text-sm leading-snug">{message.content}</p>
                               )}
                             </div>
-                            <span className="text-[10px] text-muted-foreground px-1 font-medium uppercase tracking-wider">
+                            <span className="text-[10px] opacity-50 px-1 font-medium">
                               {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
@@ -481,21 +490,21 @@ export default function AIAssistant() {
               </div>
 
               {/* Zone de saisie */}
-              <div className="p-4 border-t bg-background/50 backdrop-blur-md">
+              <div className="p-3 md:p-4 border-t bg-background/50 backdrop-blur-md shrink-0">
                 <div className="relative flex items-center max-w-4xl mx-auto gap-2">
-                  <div className="relative flex-1">
+                  <div className="relative flex-1 group">
                     <Input
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder={getPlaceholderText()}
                       disabled={isLoading}
-                      className="pr-12 h-12 rounded-xl border-muted-foreground/20 focus-visible:ring-primary shadow-inner bg-background/80"
+                      className="pr-12 h-10 rounded-xl border-muted-foreground/20 focus-visible:ring-primary shadow-md bg-background/80 transition-all focus:shadow-primary/5"
                       autoFocus
                     />
                     {!isPremium && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-muted/50 border-none">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 opacity-70">
                           {getRemainingUses("chat")}/5
                         </Badge>
                       </div>
@@ -505,31 +514,38 @@ export default function AIAssistant() {
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}
                     size="icon"
-                    className="h-12 w-12 rounded-xl shadow-lg shadow-primary/20 shrink-0 transition-all active:scale-95"
+                    className="h-10 w-10 rounded-xl shadow-lg shadow-primary/20 shrink-0 transition-all active:scale-95 bg-primary hover:bg-primary/90"
                   >
                     {isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Send className="h-5 w-5" />
+                      <Send className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
-                <p className="text-[10px] text-center mt-2 text-muted-foreground italic">
-                  L'IA peut faire des erreurs. Vérifiez les informations importantes.
+                <p className="text-[10px] text-center mt-3 text-muted-foreground/60 font-medium">
+                  DeepFlow AI peut faire des erreurs. Vérifiez les informations importantes.
                 </p>
               </div>
             </div>
           </TabsContent>
             
-            <TabsContent value="analysis" className="mt-0">
+        <TabsContent value="analysis" className="flex-1 mt-0 min-h-0 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+          <ScrollArea className="h-full">
+            <div className="p-1">
               <Analysis />
-            </TabsContent>
-            
-            <TabsContent value="profile" className="mt-0">
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="profile" className="flex-1 mt-0 min-h-0 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+          <ScrollArea className="h-full">
+            <div className="p-1">
               <Profile />
-            </TabsContent>
-          </Tabs>
-        </div>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+      </Tabs>
 
       <AISuggestionDialog
         suggestion={currentSuggestion}
