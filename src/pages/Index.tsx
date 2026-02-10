@@ -36,19 +36,22 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
       {/* Navigation - Simple et épurée */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
-        <div className="container max-w-6xl mx-auto flex justify-between items-center py-4 px-6">
-          <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10">
+        <div className="container max-w-6xl mx-auto flex justify-between items-center py-3 px-4 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10">
               <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary to-primary-glow animate-pulse opacity-60"></div>
               <div className="absolute inset-0.5 rounded-xl bg-background"></div>
               <div className="absolute inset-2 rounded-lg bg-gradient-to-br from-primary to-primary-glow"></div>
             </div>
-            <span className="text-2xl font-heading font-bold text-foreground">
+            <span className="text-xl sm:text-2xl font-heading font-bold text-foreground">
               DeepFlow
             </span>
           </div>
           <Link to="/register">
-            <Button size="lg" className="font-semibold px-6 bg-primary hover:bg-primary/90">
+            <Button size="sm" className="sm:hidden font-semibold bg-primary hover:bg-primary/90 rounded-lg">
+              Start
+            </Button>
+            <Button size="lg" className="hidden sm:flex font-semibold px-6 bg-primary hover:bg-primary/90">
               Reprendre le contrôle
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -123,9 +126,9 @@ const Index = () => {
               </div>
               
               {/* Dashboard Preview Grid */}
-              <div className="grid grid-cols-3 gap-4 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
                 {/* Score Card */}
-                <div className="col-span-1 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-6 border border-primary/20">
+                <div className="md:col-span-1 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-6 border border-primary/20">
                   <div className="text-sm text-muted-foreground mb-2">Score Productivité</div>
                   <div className="text-5xl font-heading font-bold text-primary font-mono">87</div>
                   <div className="text-xs text-success mt-2 flex items-center gap-1">
@@ -134,23 +137,18 @@ const Index = () => {
                 </div>
                 
                 {/* Tasks Preview */}
-                <div className="col-span-2 bg-card/80 rounded-2xl p-6 border border-border/30">
+                <div className="md:col-span-2 bg-card/80 rounded-2xl p-6 border border-border/30">
                   <div className="text-sm text-muted-foreground mb-4">Tâches prioritaires</div>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      <span className="text-sm">Finaliser la présentation client</span>
-                      <span className="ml-auto text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-full">Urgent</span>
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+                      <span className="text-xs sm:text-sm">Finaliser la présentation client</span>
+                      <span className="ml-auto text-[10px] sm:text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-full">Urgent</span>
                     </div>
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30"></div>
-                      <span className="text-sm">Réviser le budget Q2</span>
-                      <span className="ml-auto text-xs bg-warning/20 text-warning px-2 py-1 rounded-full">Haute</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
-                      <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30"></div>
-                      <span className="text-sm">Appel avec l'équipe design</span>
-                      <span className="ml-auto text-xs bg-info/20 text-info px-2 py-1 rounded-full">Normale</span>
+                      <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border-2 border-muted-foreground/30"></div>
+                      <span className="text-xs sm:text-sm">Réviser le budget Q2</span>
+                      <span className="ml-auto text-[10px] sm:text-xs bg-warning/20 text-warning px-2 py-1 rounded-full">Haute</span>
                     </div>
                   </div>
                 </div>

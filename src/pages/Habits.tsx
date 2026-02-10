@@ -321,7 +321,7 @@ export default function Habits() {
   const currentHabits = activeTab === "active" ? habits : archivedHabits;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="space-y-3 md:space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
             <h1 className="text-lg md:text-2xl font-bold tracking-tight">Habitudes</h1>

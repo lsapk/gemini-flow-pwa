@@ -1,10 +1,10 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAICredits } from "@/hooks/useAICredits";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
@@ -296,199 +297,229 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col p-2 sm:p-4 max-w-7xl mx-auto">
-      {/* Header avec onglets */}
-      <div className="mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20">
-            <Brain className="h-6 w-6 text-primary" />
+    <div className="h-[calc(100vh-100px)] md:h-[calc(100vh-60px)] flex flex-col max-w-7xl mx-auto overflow-hidden">
+      {/* Header compact */}
+      <div className="flex flex-col mb-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-md shadow-primary/20">
+              <Brain className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight leading-tight">Intelligence IA</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">Votre coach personnel propulsé par l'IA</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Intelligence IA</h1>
-            <p className="text-sm text-muted-foreground">Toutes vos fonctionnalités IA au même endroit</p>
-          </div>
-          {isPremium && (
-            <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs ml-auto">
-              <Crown className="h-3 w-3 mr-1" />
-              Premium
+
+          <div className="flex items-center gap-2">
+            <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "secondary"} className="h-7 px-3 rounded-full font-medium">
+              <Zap className="h-3.5 w-3.5 mr-1 text-amber-500 fill-amber-500" />
+              {isAIAdmin ? "Illimité" : `${aiCredits} crédits`}
             </Badge>
-          )}
+            {isPremium && (
+              <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none h-7 px-3 rounded-full shadow-sm">
+                <Crown className="h-3.5 w-3.5 mr-1 fill-white" />
+                Premium
+              </Badge>
+            )}
+          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl h-12">
+            <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Assistant</span>
+              <span className="text-sm font-medium">Assistant</span>
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center gap-2">
+            <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Analyse</span>
+              <span className="text-sm font-medium">Analyse</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+            <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profil IA</span>
+              <span className="text-sm font-medium">Profil IA</span>
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="chat" className="mt-0 flex-1">
-            <div className="flex gap-4 h-[calc(100vh-220px)]">
-              {/* Main Chat Area */}
-              <Card className="flex-1 flex flex-col rounded-xl shadow-lg bg-background">
-                <CardHeader className="flex-shrink-0 px-4 py-3 border-b">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">Assistant IA</span>
-                      {/* AI Credits display */}
-                      <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "outline"} className="text-xs">
-                        <Zap className="h-3 w-3 mr-1" />
-                        {isAIAdmin ? "∞" : aiCredits} crédits
-                      </Badge>
-                      {!isPremium && (
-                        <Badge variant="outline" className="text-xs">
-                          {getRemainingUses("chat")}/5
-                        </Badge>
-                      )}
+          <TabsContent value="chat" className="mt-0 h-[calc(100vh-250px)] md:h-[calc(100vh-220px)] animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex flex-col h-full bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl overflow-hidden">
+              {/* Toolbar du chat */}
+              <div className="px-4 py-3 border-b bg-muted/20 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 group">
+                    <div className={analysisMode ? "text-primary" : "text-muted-foreground"}>
+                      <BarChart3 className="h-4 w-4 transition-colors" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="analysis-mode" className="text-xs">Analyse</Label>
-                        <Switch
-                          id="analysis-mode"
-                          checked={analysisMode}
-                          onCheckedChange={(checked) => {
-                            setAnalysisMode(checked);
-                            if (checked) setCreationModeEnabled(false);
-                          }}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        <Label htmlFor="creation-mode" className="text-xs">Création</Label>
-                        <Switch
-                          id="creation-mode"
-                          checked={creationModeEnabled}
-                          onCheckedChange={(checked) => {
-                            setCreationModeEnabled(checked);
-                            if (checked) setAnalysisMode(false);
-                          }}
-                        />
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={clearConversation}
-                        disabled={messages.length === 0}
-                      >
-                        Effacer
-                      </Button>
-                    </div>
+                    <Label htmlFor="analysis-mode" className="text-xs font-semibold cursor-pointer">Analyse</Label>
+                    <Switch
+                      id="analysis-mode"
+                      checked={analysisMode}
+                      onCheckedChange={(checked) => {
+                        setAnalysisMode(checked);
+                        if (checked) setCreationModeEnabled(false);
+                      }}
+                      className="scale-75"
+                    />
                   </div>
-                </CardHeader>
-          
-                <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-                  <ScrollArea
-                    className="flex-1 px-4 py-4"
-                    ref={scrollAreaRef}
+                  <div className="flex items-center gap-2 group">
+                    <div className={creationModeEnabled ? "text-primary" : "text-muted-foreground"}>
+                      <Sparkles className="h-4 w-4 transition-colors" />
+                    </div>
+                    <Label htmlFor="creation-mode" className="text-xs font-semibold cursor-pointer">Création</Label>
+                    <Switch
+                      id="creation-mode"
+                      checked={creationModeEnabled}
+                      onCheckedChange={(checked) => {
+                        setCreationModeEnabled(checked);
+                        if (checked) setAnalysisMode(false);
+                      }}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearConversation}
+                    disabled={messages.length === 0}
+                    className="h-8 text-xs hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
                   >
-                    <div className="space-y-4">
-                      {messages.length === 0 && (
-                        <div className="text-center text-muted-foreground py-12">
-                          <Bot className="h-16 w-16 mx-auto mb-4 text-primary/30" />
-                          <p className="text-lg font-medium mb-2">Bonjour ! 👋</p>
-                          <p className="text-sm max-w-md mx-auto">
-                            {analysisMode ? "Mode analyse activé. Demandez-moi d'analyser vos données." :
-                            creationModeEnabled ? "Mode création activé. Je peux créer des tâches et habitudes." :
-                            "Comment puis-je vous aider aujourd'hui ?"}
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    Effacer
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Zone des messages */}
+              <div className="flex-1 overflow-hidden relative">
+                <ScrollArea className="h-full" ref={scrollAreaRef}>
+                  <div className="p-4 md:p-6 space-y-6">
+                    {messages.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-md mx-auto">
+                        <div className="p-6 bg-primary/5 rounded-full ring-1 ring-primary/10 animate-pulse">
+                          <Bot className="h-12 w-12 text-primary/60" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold tracking-tight">Prêt à booster votre productivité ?</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {analysisMode ? "Envoyez un message pour lancer une analyse approfondie de vos performances récentes." :
+                             creationModeEnabled ? "Je suis prêt à vous aider à structurer vos journées en créant des tâches et des habitudes." :
+                             "Posez-moi n'importe quelle question sur votre organisation ou demandez des conseils personnalisés."}
                           </p>
                         </div>
-                      )}
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.role === 'assistant' && (
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarFallback>
-                          <Bot className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
+                      </div>
                     )}
 
-                    <div className={`max-w-[90vw] sm:max-w-[75%] rounded-lg p-2 sm:p-3 min-w-0 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'} text-sm break-words overflow-hidden`}>
-                      {message.role === 'assistant' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere">
-                          <Markdown content={message.content} />
-                        </div>
-                      ) : (
-                        <p className="text-sm">{message.content}</p>
-                      )}
-                      <p className="text-xs opacity-70 mt-2">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
+                    <AnimatePresence initial={false}>
+                      {messages.map((message, index) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                        >
+                          <Avatar className={`w-8 h-8 rounded-lg shadow-sm border ${message.role === 'user' ? 'bg-primary' : 'bg-background'}`}>
+                            {message.role === 'assistant' ? (
+                              <Bot className="h-4 w-4 text-primary" />
+                            ) : (
+                              <User className="h-4 w-4 text-primary-foreground" />
+                            )}
+                          </Avatar>
 
-                    {message.role === 'user' && (
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarFallback>
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-2 sm:gap-3 justify-start">
-                    <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarFallback>
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-lg p-2 sm:p-3">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">
-                          {analysisMode ? "Analyse en cours de vos données... 📊" :
-                           creationModeEnabled ? "Création en cours... ✨" : 
-                           "Réflexion en cours... 🤔"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                      </div>
-                    </ScrollArea>
-                    
-                    <div className="border-t bg-background px-4 py-3 flex gap-2">
-                      <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={getPlaceholderText()}
-                        disabled={isLoading}
-                        className="flex-1 h-11"
-                        autoFocus
-                      />
-                      <Button 
-                        onClick={sendMessage} 
-                        disabled={isLoading || !input.trim()}
-                        size="icon"
-                        className="h-11 w-11"
+                          <div className={`flex flex-col space-y-1.5 max-w-[85%] md:max-w-[70%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            <div className={`px-4 py-3 rounded-2xl shadow-sm border ${
+                              message.role === 'user'
+                                ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                : 'bg-background rounded-tl-none'
+                            }`}>
+                              {message.role === 'assistant' ? (
+                                <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50">
+                                  <Markdown content={message.content} />
+                                </div>
+                              ) : (
+                                <p className="text-sm leading-relaxed">{message.content}</p>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground px-1 font-medium uppercase tracking-wider">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+
+                    {isLoading && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex items-start gap-3"
                       >
-                        {isLoading ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Send className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                        <Avatar className="w-8 h-8 rounded-lg shadow-sm bg-background border">
+                          <Bot className="h-4 w-4 text-primary" />
+                        </Avatar>
+                        <div className="bg-muted/50 backdrop-blur-sm rounded-2xl rounded-tl-none px-4 py-3 border">
+                          <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {analysisMode ? "Analyse en cours..." : "Réflexion en cours..."}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
-            </TabsContent>
+
+              {/* Zone de saisie */}
+              <div className="p-4 border-t bg-background/50 backdrop-blur-md">
+                <div className="relative flex items-center max-w-4xl mx-auto gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder={getPlaceholderText()}
+                      disabled={isLoading}
+                      className="pr-12 h-12 rounded-xl border-muted-foreground/20 focus-visible:ring-primary shadow-inner bg-background/80"
+                      autoFocus
+                    />
+                    {!isPremium && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-muted/50 border-none">
+                          {getRemainingUses("chat")}/5
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    onClick={sendMessage}
+                    disabled={isLoading || !input.trim()}
+                    size="icon"
+                    className="h-12 w-12 rounded-xl shadow-lg shadow-primary/20 shrink-0 transition-all active:scale-95"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-center mt-2 text-muted-foreground italic">
+                  L'IA peut faire des erreurs. Vérifiez les informations importantes.
+                </p>
+              </div>
+            </div>
+          </TabsContent>
             
             <TabsContent value="analysis" className="mt-0">
               <Analysis />

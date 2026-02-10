@@ -471,7 +471,7 @@ export default function Focus() {
   };
 
   return (
-    <div className="container mx-auto p-3 sm:p-6 space-y-6 max-w-7xl">
+    <div className="container mx-auto space-y-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mode Focus</h1>

@@ -10,31 +10,33 @@ interface MobileHeaderProps {
 
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   return (
-    <header className="glass-nav md:hidden">
-      <div className="container flex h-14 items-center justify-between px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 md:hidden">
+      <div className="flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
-            className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
+            className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
             <span className="sr-only">Ouvrir le menu</span>
           </Button>
-          <div className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2.5 active:opacity-80 transition-opacity">
             <div className="relative">
-              <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-lg object-contain bg-white/90 dark:bg-white/10 dark:invert p-0.5 ring-2 ring-primary/20" />
-              <div className="absolute inset-0 rounded-lg bg-primary/10 blur-sm -z-10"></div>
+              <img src={deepflowLogo} alt="DeepFlow" className="h-9 w-9 rounded-xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-1 ring-1 ring-primary/20 shadow-sm" />
+              <div className="absolute inset-0 rounded-xl bg-primary/20 blur-md -z-10"></div>
             </div>
-            <h1 className="text-lg font-heading font-bold gradient-text">DeepFlow</h1>
-          </div>
+            <span className="text-xl font-heading font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
+              DeepFlow
+            </span>
+          </Link>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" asChild className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all active:scale-90">
             <Link to="/settings">
-              <Settings className="h-5 w-5" />
+              <Settings className="h-5 w-5 text-muted-foreground" />
               <span className="sr-only">Paramètres</span>
             </Link>
           </Button>

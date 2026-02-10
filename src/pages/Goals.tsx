@@ -149,7 +149,7 @@ export default function Goals() {
   const currentGoals = activeTab === "ongoing" ? goals : completedGoals;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 p-3 sm:p-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
         <h1 className="text-lg md:text-2xl font-bold tracking-tight">Objectifs</h1>
         <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">

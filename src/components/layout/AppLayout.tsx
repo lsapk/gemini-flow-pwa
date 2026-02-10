@@ -38,8 +38,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-14 md:pt-0 md:ml-64 md:pl-6 md:pr-6 min-h-screen">
-          {children || <Outlet />}
+        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen transition-all duration-300">
+          <div className="p-3 sm:p-4 md:p-8 max-w-[1600px] mx-auto">
+            {children || <Outlet />}
+          </div>
         </main>
       </div>
     </div>

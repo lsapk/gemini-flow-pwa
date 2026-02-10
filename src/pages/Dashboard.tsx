@@ -89,7 +89,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 p-2 sm:p-4 md:p-6">
+    <div className="space-y-6 md:space-y-10">
       {/* 1. Admin Announcements Panel - At the very top */}
       <AdminAnnouncementPanel />
 

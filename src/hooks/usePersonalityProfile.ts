@@ -40,20 +40,31 @@ export const usePersonalityProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PersonalityProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Load saved profile on mount
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setIsInitialLoading(false);
+      return;
+    }
     
     const loadSavedProfile = async () => {
-      const { data } = await supabase
-        .from('ai_personality_profiles')
-        .select('profile_data')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (data?.profile_data) {
-        setProfile(data.profile_data as unknown as PersonalityProfile);
+      try {
+        setIsInitialLoading(true);
+        const { data, error } = await supabase
+          .from('ai_personality_profiles')
+          .select('profile_data')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (data?.profile_data) {
+          setProfile(data.profile_data as unknown as PersonalityProfile);
+        }
+      } catch (error) {
+        console.error("Error loading saved profile:", error);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
@@ -389,6 +400,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
   return {
     profile,
     isLoading,
+    isInitialLoading,
     generateProfile
   };
 };
