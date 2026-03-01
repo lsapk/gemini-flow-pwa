@@ -1,134 +1,152 @@
 import { Suspense, lazy } from "react";
-import { GamificationHero } from "@/components/gamification/GamificationHero";
-import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
-import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
+import { useEnsurePenguinProfile } from "@/hooks/useEnsurePenguinProfile";
+import { usePenguinProfile } from "@/hooks/usePenguinProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, Trophy, ShoppingBag } from "lucide-react";
+import { Compass, Gift, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PenguinAvatar } from "@/components/penguin/PenguinAvatar";
+import { IcebergView } from "@/components/penguin/IcebergView";
+import { Progress } from "@/components/ui/progress";
 
-// Lazy load heavy components
-const EnhancedQuestBoard = lazy(() => 
-  import("@/components/gamification/EnhancedQuestBoard").then(m => ({ default: m.EnhancedQuestBoard }))
+const ExpeditionBoard = lazy(() => 
+  import("@/components/penguin/ExpeditionBoard").then(m => ({ default: m.ExpeditionBoard }))
 );
-const AchievementsList = lazy(() => 
-  import("@/components/gamification/AchievementsList").then(m => ({ default: m.AchievementsList }))
+const PearlsPanel = lazy(() => 
+  import("@/components/penguin/PearlsPanel").then(m => ({ default: m.PearlsPanel }))
 );
-const EnhancedShop = lazy(() => 
-  import("@/components/gamification/EnhancedShop").then(m => ({ default: m.EnhancedShop }))
+const AccessoryShop = lazy(() => 
+  import("@/components/penguin/AccessoryShop").then(m => ({ default: m.AccessoryShop }))
 );
 
 const LoadingFallback = () => (
-  <Card className="glass-morphism p-6">
+  <Card className="p-6">
     <div className="space-y-4">
       <Skeleton className="h-8 w-1/3" />
-      <Skeleton className="h-24 w-full" />
       <Skeleton className="h-24 w-full" />
     </div>
   </Card>
 );
 
 export default function Gamification() {
-  useEnsurePlayerProfile();
-  useQuestProgressTracking();
+  useEnsurePenguinProfile();
+  const { profile, nextStageProgress, canEatShrimp } = usePenguinProfile();
+
+  const progress = nextStageProgress 
+    ? Math.min((nextStageProgress.current / nextStageProgress.target) * 100, 100) 
+    : 100;
 
   return (
-      <div className="space-y-4 relative">
-        {/* Optimized Background - fewer particles */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-          <div className="absolute inset-0 opacity-[0.03]">
-            <div 
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `linear-gradient(hsl(var(--primary)/0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.3) 1px, transparent 1px)`,
-                backgroundSize: '60px 60px',
-              }}
-            />
-          </div>
-          {/* Reduced particles - only 6 */}
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20"
-              style={{
-                left: `${15 + i * 15}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{ 
-                y: [0, -50, 0],
-                opacity: [0.2, 0.5, 0.2]
-              }}
-              transition={{ 
-                duration: 4 + i,
-                repeat: Infinity,
-                delay: i * 0.5
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Compact Hero */}
-        <motion.div 
-          className="relative z-10"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <GamificationHero />
-        </motion.div>
-
-        {/* Main Tabs - Sticky Navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="relative z-10"
-        >
-          <Tabs defaultValue="quests" className="space-y-4">
-            <TabsList className="glass-morphism p-1 border border-primary/20 sticky top-0 z-20 bg-background/80 backdrop-blur w-full grid grid-cols-3">
-              <TabsTrigger 
-                value="quests" 
-                className="gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary transition-all"
-              >
-                <Target className="w-4 h-4" />
-                <span className="hidden sm:inline">Quêtes</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="achievements" 
-                className="gap-2 data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400 transition-all"
-              >
-                <Trophy className="w-4 h-4" />
-                <span className="hidden sm:inline">Succès</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="shop" 
-                className="gap-2 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 transition-all"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span className="hidden sm:inline">Boutique</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="quests" className="mt-4">
-              <Suspense fallback={<LoadingFallback />}>
-                <EnhancedQuestBoard />
-              </Suspense>
-            </TabsContent>
-
-            <TabsContent value="achievements" className="mt-4">
-              <Suspense fallback={<LoadingFallback />}>
-                <AchievementsList />
-              </Suspense>
-            </TabsContent>
-
-            <TabsContent value="shop" className="mt-4">
-              <Suspense fallback={<LoadingFallback />}>
-                <EnhancedShop />
-              </Suspense>
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+    <div className="space-y-4 relative">
+      {/* Polar Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-50/30 to-transparent dark:from-sky-950/20 dark:to-transparent" />
       </div>
+
+      {/* Hero Section */}
+      <motion.div 
+        className="relative z-10"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-6 border-sky-200/30 dark:border-sky-800/30">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            {/* Penguin */}
+            <PenguinAvatar 
+              stage={profile?.stage || 'egg'} 
+              size="lg" 
+              accessories={(profile?.equipped_accessories as string[]) || []} 
+            />
+            
+            <div className="flex-1 space-y-3 text-center sm:text-left mt-4 sm:mt-0">
+              <h1 className="text-2xl font-heading font-bold">Mon Pingouin</h1>
+              
+              {/* Evolution Progress */}
+              {nextStageProgress && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-muted-foreground">Vers : {nextStageProgress.label}</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {nextStageProgress.current}/{nextStageProgress.target} 🐟
+                    </span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                </div>
+              )}
+              
+              {/* Food Stats */}
+              <div className="flex gap-4 justify-center sm:justify-start">
+                <div className="text-center">
+                  <span className="text-lg">🦐</span>
+                  <div className="text-sm font-bold">{profile?.shrimp_total || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {canEatShrimp ? `${profile?.shrimp_today || 0}/${profile?.shrimp_daily_limit || 10}` : 'Plein'}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-lg">🐟</span>
+                  <div className="text-sm font-bold">{profile?.salmon_total || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Saumon</div>
+                </div>
+                <div className="text-center">
+                  <span className="text-lg">✨🐠</span>
+                  <div className="text-sm font-bold">{profile?.golden_fish_total || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Doré</div>
+                </div>
+                <div className="text-center">
+                  <span className="text-lg">🧊</span>
+                  <div className="text-sm font-bold">{profile?.iceberg_size || 1}</div>
+                  <div className="text-[10px] text-muted-foreground">Iceberg</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Iceberg View */}
+          {profile && (
+            <div className="mt-4">
+              <IcebergView profile={profile} />
+            </div>
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="relative z-10"
+      >
+        <Tabs defaultValue="expeditions" className="space-y-4">
+          <TabsList className="p-1 border border-sky-200/30 dark:border-sky-800/30 sticky top-0 z-20 bg-background/80 backdrop-blur w-full grid grid-cols-3">
+            <TabsTrigger value="expeditions" className="gap-2 data-[state=active]:bg-sky-100/50 dark:data-[state=active]:bg-sky-900/30 data-[state=active]:text-sky-700 dark:data-[state=active]:text-sky-300">
+              <Compass className="w-4 h-4" />
+              <span className="hidden sm:inline">Expéditions</span>
+            </TabsTrigger>
+            <TabsTrigger value="pearls" className="gap-2 data-[state=active]:bg-amber-100/50 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-300">
+              <Gift className="w-4 h-4" />
+              <span className="hidden sm:inline">Perles</span>
+            </TabsTrigger>
+            <TabsTrigger value="shop" className="gap-2 data-[state=active]:bg-purple-100/50 dark:data-[state=active]:bg-purple-900/30 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Boutique</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="expeditions" className="mt-4">
+            <Suspense fallback={<LoadingFallback />}><ExpeditionBoard /></Suspense>
+          </TabsContent>
+          <TabsContent value="pearls" className="mt-4">
+            <Suspense fallback={<LoadingFallback />}><PearlsPanel /></Suspense>
+          </TabsContent>
+          <TabsContent value="shop" className="mt-4">
+            <Suspense fallback={<LoadingFallback />}><AccessoryShop /></Suspense>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    </div>
   );
 }

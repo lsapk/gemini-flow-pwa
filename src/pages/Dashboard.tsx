@@ -16,9 +16,8 @@ import {
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
-import { GamificationWidget } from "@/components/gamification/GamificationWidget";
-import { useEnsurePlayerProfile } from "@/hooks/useEnsurePlayerProfile";
-import { useQuestProgressTracking } from "@/hooks/useQuestProgressTracking";
+import { PenguinDashboardWidget } from "@/components/penguin/PenguinDashboardWidget";
+import { useEnsurePenguinProfile } from "@/hooks/useEnsurePenguinProfile";
 import { AdminAnnouncementPanel } from "@/components/dashboard/AdminAnnouncementPanel";
 import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
 import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
@@ -29,11 +28,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export default function Dashboard() {
-  // Ensure player profile exists
-  useEnsurePlayerProfile();
-  // Track quest progress
-  useQuestProgressTracking();
-  
+  useEnsurePenguinProfile();
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   const { 
@@ -85,7 +80,7 @@ export default function Dashboard() {
     { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
     { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
     { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
-    { icon: Trophy, label: "Arène", path: "/gamification", color: "bg-warning/10 text-warning" },
+    { icon: Trophy, label: "Pingouin", path: "/gamification", color: "bg-warning/10 text-warning" },
   ];
 
   return (
@@ -187,7 +182,7 @@ export default function Dashboard() {
       <DailyBriefingCard />
 
       {/* 7. Gamification Widget */}
-      <GamificationWidget />
+      <PenguinDashboardWidget />
 
       {/* 8. Insights IA (collapsible pour réduire le scroll) */}
       <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen}>

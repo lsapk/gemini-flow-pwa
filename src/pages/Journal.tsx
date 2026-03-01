@@ -13,7 +13,7 @@ import JournalEntryCard from "@/components/JournalEntryCard";
 import { JournalStats } from "@/components/ui/JournalStats";
 import { Plus, BookOpen } from "lucide-react";
 import { JournalEntry } from "@/types";
-import { useGamificationRewards } from "@/hooks/useGamificationRewards";
+import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -88,7 +88,7 @@ const moods = [
 
 export default function Journal() {
   const { user } = useAuth();
-  const { awardXP } = useGamificationRewards();
+  const { rewardJournalEntry } = usePenguinRewards();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

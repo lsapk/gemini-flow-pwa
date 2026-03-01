@@ -1441,6 +1441,195 @@ export type Database = {
         }
         Relationships: []
       }
+      penguin_accessories: {
+        Row: {
+          accessory_id: string
+          accessory_name: string
+          accessory_type: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          accessory_id: string
+          accessory_name: string
+          accessory_type: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          accessory_id?: string
+          accessory_name?: string
+          accessory_type?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      penguin_expeditions: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          current_progress: number
+          description: string
+          expedition_type: string
+          expires_at: string | null
+          id: string
+          reward_amount: number
+          reward_type: string
+          started_at: string
+          target_value: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          current_progress?: number
+          description: string
+          expedition_type?: string
+          expires_at?: string | null
+          id?: string
+          reward_amount?: number
+          reward_type?: string
+          started_at?: string
+          target_value?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          current_progress?: number
+          description?: string
+          expedition_type?: string
+          expires_at?: string | null
+          id?: string
+          reward_amount?: number
+          reward_type?: string
+          started_at?: string
+          target_value?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      penguin_food_log: {
+        Row: {
+          earned_at: string
+          food_type: string
+          id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          earned_at?: string
+          food_type: string
+          id?: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          earned_at?: string
+          food_type?: string
+          id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      penguin_pearls: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          pearl_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message: string
+          pearl_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          pearl_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      penguin_profiles: {
+        Row: {
+          climate_state: string
+          created_at: string
+          equipped_accessories: Json
+          golden_fish_total: number
+          has_library: boolean
+          has_lounge_chair: boolean
+          has_radio: boolean
+          iceberg_size: number
+          id: string
+          last_shrimp_reset: string
+          salmon_total: number
+          shrimp_daily_limit: number
+          shrimp_today: number
+          shrimp_total: number
+          stage: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          climate_state?: string
+          created_at?: string
+          equipped_accessories?: Json
+          golden_fish_total?: number
+          has_library?: boolean
+          has_lounge_chair?: boolean
+          has_radio?: boolean
+          iceberg_size?: number
+          id?: string
+          last_shrimp_reset?: string
+          salmon_total?: number
+          shrimp_daily_limit?: number
+          shrimp_today?: number
+          shrimp_total?: number
+          stage?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          climate_state?: string
+          created_at?: string
+          equipped_accessories?: Json
+          golden_fish_total?: number
+          has_library?: boolean
+          has_lounge_chair?: boolean
+          has_radio?: boolean
+          iceberg_size?: number
+          id?: string
+          last_shrimp_reset?: string
+          salmon_total?: number
+          shrimp_daily_limit?: number
+          shrimp_today?: number
+          shrimp_total?: number
+          stage?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_profiles: {
         Row: {
           avatar_customization: Json | null

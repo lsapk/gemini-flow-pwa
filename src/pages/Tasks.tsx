@@ -8,7 +8,7 @@ import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
 import EditTaskModal from "@/components/modals/EditTaskModal";
-import { useGamificationRewards } from "@/hooks/useGamificationRewards";
+import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import {
   Tabs,
   TabsContent,
@@ -56,7 +56,7 @@ interface Subtask {
 export default function Tasks() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { awardXP } = useGamificationRewards();
+  const { rewardTaskComplete } = usePenguinRewards();
   
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -190,8 +190,7 @@ export default function Tasks() {
 
       // Award XP when completing a task (not uncompleting)
       if (!completed && task) {
-        const isHighPriority = task.priority === 'high';
-        awardXP(isHighPriority ? 'task_high_priority' : 'task_completed');
+        rewardTaskComplete();
       }
 
       toast({

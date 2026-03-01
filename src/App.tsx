@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { DesignModeProvider } from "./contexts/DesignModeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-import { XPNotificationProvider } from "./components/gamification/XPNotification";
+import { FoodNotificationProvider } from "./components/penguin/FoodNotification";
 import AppLayout from "./components/layout/AppLayout";
 
 // Lazy loaded pages for better performance
@@ -68,7 +68,7 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <DesignModeProvider>
           <TooltipProvider>
-            <XPNotificationProvider>
+            <FoodNotificationProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -114,7 +114,7 @@ function App() {
                   </Suspense>
                 </AuthProvider>
               </BrowserRouter>
-            </XPNotificationProvider>
+            </FoodNotificationProvider>
           </TooltipProvider>
         </DesignModeProvider>
       </ThemeProvider>

@@ -34,7 +34,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
-    { icon: Gamepad2, label: "Cyber Arena", path: "/gamification" },
+    { icon: Gamepad2, label: "Mon Pingouin", path: "/gamification" },
     { icon: CheckSquare, label: "Tâches", path: "/tasks" },
     { icon: BarChart3, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },

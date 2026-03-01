@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "next-themes";
 import { useDesignMode } from "@/contexts/DesignModeContext";
-import { usePlayerProfile } from "@/hooks/usePlayerProfile";
+import { usePenguinProfile } from "@/hooks/usePenguinProfile";
 import { useAICredits } from "@/hooks/useAICredits";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Link, useSearchParams } from "react-router-dom";
@@ -63,7 +63,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { designMode, setDesignMode } = useDesignMode();
-  const { profile: playerProfile } = usePlayerProfile();
+  const { profile: playerProfile } = usePenguinProfile();
   const { credits: aiCredits } = useAICredits();
   const { capturePayPalOrder } = useSubscription();
   const [searchParams] = useSearchParams();
@@ -177,8 +177,8 @@ export default function Settings() {
     try { await signOut(); toast.success("Déconnexion réussie"); } catch (error) { toast.error("Erreur lors de la déconnexion"); }
   };
 
-  const xpForNextLevel = playerProfile ? (playerProfile.level * 100) : 100;
-  const currentXPProgress = playerProfile ? ((playerProfile.experience_points % 100) / 100) * 100 : 0;
+  const stageLabel = playerProfile?.stage === 'emperor' ? 'Empereur' : playerProfile?.stage === 'explorer' ? 'Explorateur' : playerProfile?.stage === 'chick' ? 'Poussin' : 'Œuf';
+  const currentXPProgress = 0;
 
   const copyEmail = () => {
     navigator.clipboard.writeText("deepflow.ia@gmail.com");
@@ -228,11 +228,9 @@ export default function Settings() {
                   <div>
                     <h2 className="font-semibold text-lg">{userProfile?.display_name || user?.email}</h2>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Gamepad2 className="h-4 w-4" />
-                      <span>Niveau {playerProfile?.level || 1}</span>
+                      <span>🐧 {stageLabel}</span>
                       <span>•</span>
-                      <Sparkles className="h-4 w-4" />
-                      <span>{playerProfile?.experience_points || 0} XP</span>
+                      <span>🐟 {playerProfile?.salmon_total || 0} saumons</span>
                     </div>
                   </div>
                 </div>
@@ -245,10 +243,10 @@ export default function Settings() {
               {playerProfile && (
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                    <span>Progression niveau {playerProfile.level}</span>
-                    <span>{playerProfile.experience_points % 100} / 100 XP</span>
+                    <span>🐧 {stageLabel}</span>
+                    <span>🦐 {playerProfile.shrimp_total} | 🐟 {playerProfile.salmon_total} | ✨🐠 {playerProfile.golden_fish_total}</span>
                   </div>
-                  <Progress value={currentXPProgress} className="h-2" />
+                  <Progress value={50} className="h-2" />
                 </div>
               )}
             </CardContent>
@@ -413,25 +411,25 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
-                  <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
-                  <div className="text-2xl font-bold">{playerProfile?.level || 1}</div>
-                  <div className="text-xs text-muted-foreground">Niveau</div>
+                <div className="text-center p-4 bg-gradient-to-br from-sky-500/10 to-blue-500/10 rounded-xl border border-sky-500/20">
+                  <span className="text-2xl block mb-1">🐧</span>
+                  <div className="text-2xl font-bold">{stageLabel}</div>
+                  <div className="text-xs text-muted-foreground">Stade</div>
                 </div>
-                <div className="text-center p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
-                  <Sparkles className="h-6 w-6 mx-auto mb-2 text-purple-500" />
-                  <div className="text-2xl font-bold">{playerProfile?.experience_points || 0}</div>
-                  <div className="text-xs text-muted-foreground">XP Total</div>
+                <div className="text-center p-4 bg-gradient-to-br from-orange-500/10 to-rose-500/10 rounded-xl border border-orange-500/20">
+                  <span className="text-2xl block mb-1">🦐</span>
+                  <div className="text-2xl font-bold">{playerProfile?.shrimp_total || 0}</div>
+                  <div className="text-xs text-muted-foreground">Crevettes</div>
                 </div>
-                <div className="text-center p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/20">
-                  <Zap className="h-6 w-6 mx-auto mb-2 text-cyan-500" />
-                  <div className="text-2xl font-bold">{playerProfile?.credits || 0}</div>
-                  <div className="text-xs text-muted-foreground">Crédits</div>
+                <div className="text-center p-4 bg-gradient-to-br from-rose-500/10 to-pink-500/10 rounded-xl border border-rose-500/20">
+                  <span className="text-2xl block mb-1">🐟</span>
+                  <div className="text-2xl font-bold">{playerProfile?.salmon_total || 0}</div>
+                  <div className="text-xs text-muted-foreground">Saumons</div>
                 </div>
-                <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
-                  <Award className="h-6 w-6 mx-auto mb-2 text-green-500" />
-                  <div className="text-2xl font-bold">{playerProfile?.total_quests_completed || 0}</div>
-                  <div className="text-xs text-muted-foreground">Quêtes</div>
+                <div className="text-center p-4 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 rounded-xl border border-amber-500/20">
+                  <span className="text-2xl block mb-1">✨🐠</span>
+                  <div className="text-2xl font-bold">{playerProfile?.golden_fish_total || 0}</div>
+                  <div className="text-xs text-muted-foreground">Poissons Dorés</div>
                 </div>
               </div>
             </CardContent>
