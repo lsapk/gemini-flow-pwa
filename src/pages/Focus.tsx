@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History, Plus, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useAchievementTracking } from "@/hooks/useAchievementTracking";
-import { useGamificationRewards } from "@/hooks/useGamificationRewards";
+import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
@@ -49,8 +48,7 @@ export default function Focus() {
   
   const { user } = useAuth();
   const { toast } = useToast();
-  const { awardXP } = useGamificationRewards();
-  useAchievementTracking(); // Suivre les achievements automatiquement
+  const { rewardFocusSession } = usePenguinRewards();
 
   useEffect(() => {
     if (!currentSessionId) {
@@ -258,14 +256,8 @@ export default function Focus() {
           completed_at: new Date().toISOString()
         });
       
-      // Award XP based on session duration
-      if (sessionData.duration >= 45) {
-        awardXP('focus_session_long');
-      } else if (sessionData.duration >= 25) {
-        awardXP('focus_session_pomodoro');
-      } else {
-        awardXP('focus_session_mini');
-      }
+      // Reward penguin based on session duration
+      rewardFocusSession(sessionData.duration);
 
       toast({
         title: "🎉 Session terminée !",
@@ -434,14 +426,8 @@ export default function Focus() {
 
       if (error) throw error;
 
-      // Award XP based on duration
-      if (durationMinutes >= 45) {
-        awardXP('focus_session_long');
-      } else if (durationMinutes >= 25) {
-        awardXP('focus_session_pomodoro');
-      } else {
-        awardXP('focus_session_mini');
-      }
+      // Reward penguin
+      rewardFocusSession(durationMinutes);
 
       toast({
         title: "Session ajoutée !",
