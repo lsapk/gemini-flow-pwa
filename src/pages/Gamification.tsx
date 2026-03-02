@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PenguinAvatar } from "@/components/penguin/PenguinAvatar";
 import { IcebergView } from "@/components/penguin/IcebergView";
 import { Progress } from "@/components/ui/progress";
+import penguinMascot from "@/assets/penguin-mascot.png";
 
 const ExpeditionBoard = lazy(() => 
   import("@/components/penguin/ExpeditionBoard").then(m => ({ default: m.ExpeditionBoard }))
@@ -61,7 +62,10 @@ export default function Gamification() {
             />
             
             <div className="flex-1 space-y-3 text-center sm:text-left mt-4 sm:mt-0">
-              <h1 className="text-2xl font-heading font-bold">Mon Pingouin</h1>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <h1 className="text-2xl font-heading font-bold">Mon Pingouin</h1>
+                <img src={penguinMascot} alt="" className="h-8 w-8 object-contain" />
+              </div>
               
               {/* Evolution Progress */}
               {nextStageProgress && (

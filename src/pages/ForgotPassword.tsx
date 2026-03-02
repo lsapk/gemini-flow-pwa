@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import deepflowLogo from "@/assets/deepflow-logo.png";
+import penguinMascot from "@/assets/penguin-mascot.png";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -41,48 +42,60 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/images/auth-bg.jpg')` }} />
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950" />
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20 bg-cover bg-center"
+        style={{ backgroundImage: `url('/images/auth-bg.jpg')`, filter: 'blur(2px)' }}
+      />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-sky-500/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-3xl" />
 
       <div className="relative z-10 w-full max-w-md p-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="text-center mb-8">
-            <motion.div className="flex justify-center mb-4" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
+            <motion.div className="flex justify-center items-end gap-3 mb-4" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
               <div className="relative">
-                <img src={deepflowLogo} alt="DeepFlow" className="h-20 w-20 rounded-2xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-2 shadow-xl ring-2 ring-white/20" />
-                <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl -z-10" />
+                <img src={deepflowLogo} alt="DeepFlow" className="h-16 w-16 rounded-2xl object-contain bg-white/90 p-1.5 shadow-xl ring-2 ring-white/20" />
+                <div className="absolute inset-0 rounded-2xl bg-sky-400/30 blur-xl -z-10" />
               </div>
+              <motion.img 
+                src={penguinMascot} 
+                alt="Penguin mascot" 
+                className="h-20 w-20 object-contain drop-shadow-2xl"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
             </motion.div>
             <motion.h1 className="text-3xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-            <Card className="bg-card/80 backdrop-blur-xl border-white/10 shadow-2xl">
+            <Card className="bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl">
               <CardHeader className="space-y-1 text-center pb-4">
-                <CardTitle className="text-2xl font-bold">{isEmailSent ? "Email envoyé !" : "Mot de passe oublié"}</CardTitle>
-                <CardDescription>{isEmailSent ? "Vérifiez votre boîte de réception" : "Entrez votre email pour réinitialiser votre mot de passe"}</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">{isEmailSent ? "Email envoyé !" : "Mot de passe oublié"}</CardTitle>
+                <CardDescription className="text-sky-200/50">{isEmailSent ? "Vérifiez votre boîte de réception" : "Entrez votre email pour réinitialiser votre mot de passe"}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isEmailSent ? (
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center"><CheckCircle2 className="w-8 h-8 text-success" /></div>
-                    <p className="text-muted-foreground mb-4">Un email a été envoyé à <strong className="text-foreground">{email}</strong></p>
-                    <p className="text-sm text-muted-foreground">Cliquez sur le lien dans l'email pour créer un nouveau mot de passe. Vérifiez aussi vos spams si vous ne le trouvez pas.</p>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center"><CheckCircle2 className="w-8 h-8 text-emerald-400" /></div>
+                    <p className="text-white/60 mb-4">Un email a été envoyé à <strong className="text-white">{email}</strong></p>
+                    <p className="text-sm text-white/40">Cliquez sur le lien dans l'email pour créer un nouveau mot de passe.</p>
                   </motion.div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors" />
+                      <Label htmlFor="email" className="text-sm font-medium text-sky-100/80">Email</Label>
+                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors" />
                     </div>
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-opacity glow-effect text-primary-foreground font-medium" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 transition-all text-white font-medium shadow-lg shadow-sky-500/20" disabled={isLoading}>
                       {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Envoi en cours...</>) : (<><Mail className="mr-2 h-4 w-4" />Envoyer le lien</>)}
                     </Button>
                   </form>
                 )}
               </CardContent>
               <CardFooter className="flex justify-center pt-2">
-                <Link to="/login" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"><ArrowLeft className="w-4 h-4" />Retour à la connexion</Link>
+                <Link to="/login" className="text-sm text-white/40 hover:text-sky-300 transition-colors flex items-center gap-2"><ArrowLeft className="w-4 h-4" />Retour à la connexion</Link>
               </CardFooter>
             </Card>
           </motion.div>

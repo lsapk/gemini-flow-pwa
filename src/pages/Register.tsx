@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
-import { Zap, Eye, EyeOff, Loader2, Sparkles, Shield, Target } from "lucide-react";
+import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
 import deepflowLogo from "@/assets/deepflow-logo.png";
+import penguinMascot from "@/assets/penguin-mascot.png";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255, { message: "L'adresse e-mail est trop longue." }),
@@ -50,79 +51,92 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Background image */}
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/images/auth-bg.jpg')` }} />
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950" />
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20 bg-cover bg-center"
+        style={{ backgroundImage: `url('/images/auth-bg.jpg')`, filter: 'blur(2px)' }}
+      />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-sky-500/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-indigo-500/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-3xl" />
 
       <div className="relative z-10 w-full max-w-md p-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           {/* Logo and branding */}
           <div className="text-center mb-8">
-            <motion.div className="flex justify-center mb-4" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
+            <motion.div className="flex justify-center items-end gap-3 mb-4" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
               <div className="relative">
-                <img src={deepflowLogo} alt="DeepFlow" className="h-20 w-20 rounded-2xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-2 shadow-xl ring-2 ring-white/20" />
-                <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl -z-10" />
+                <img src={deepflowLogo} alt="DeepFlow" className="h-16 w-16 rounded-2xl object-contain bg-white/90 p-1.5 shadow-xl ring-2 ring-white/20" />
+                <div className="absolute inset-0 rounded-2xl bg-sky-400/30 blur-xl -z-10" />
               </div>
+              <motion.img 
+                src={penguinMascot} 
+                alt="Penguin mascot" 
+                className="h-20 w-20 object-contain drop-shadow-2xl"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
             </motion.div>
             <motion.h1 className="text-3xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
-            <motion.p className="text-white/70 mt-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Rejoignez la communauté productive</motion.p>
+            <motion.p className="text-sky-200/60 mt-2 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Rejoignez la communauté productive</motion.p>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <Card className="bg-card/80 backdrop-blur-xl border-white/10 shadow-2xl">
+            <Card className="bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl">
               <CardHeader className="space-y-1 text-center pb-4">
-                <CardTitle className="text-2xl font-bold">Créer un compte</CardTitle>
-                <CardDescription>Commencez votre voyage vers la productivité</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Créer un compte</CardTitle>
+                <CardDescription className="text-sky-200/50">Commencez votre voyage vers la productivité</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField control={form.control} name="displayName" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">Nom d'utilisateur</FormLabel>
-                        <FormControl><Input placeholder="John Doe" {...field} disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors" /></FormControl>
+                        <FormLabel className="text-sm font-medium text-sky-100/80">Nom d'utilisateur</FormLabel>
+                        <FormControl><Input placeholder="John Doe" {...field} disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">Email</FormLabel>
-                        <FormControl><Input placeholder="nom@exemple.com" {...field} autoComplete="email" disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors" /></FormControl>
+                        <FormLabel className="text-sm font-medium text-sky-100/80">Email</FormLabel>
+                        <FormControl><Input placeholder="nom@exemple.com" {...field} autoComplete="email" disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="password" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">Mot de passe</FormLabel>
+                        <FormLabel className="text-sm font-medium text-sky-100/80">Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} autoComplete="new-password" disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors pr-10" />
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} autoComplete="new-password" disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors pr-10" />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/40 hover:text-white/70" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                           </div>
                         </FormControl>
-                        <FormDescription className="text-xs text-muted-foreground">Min. 8 caractères avec majuscule, minuscule et chiffre</FormDescription>
+                        <FormDescription className="text-xs text-white/30">Min. 8 caractères avec majuscule, minuscule et chiffre</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-success hover:opacity-90 transition-opacity glow-effect text-primary-foreground font-medium" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 transition-all text-white font-medium shadow-lg shadow-sky-500/20" disabled={isLoading}>
                       {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Inscription...</>) : (<><Zap className="mr-2 h-4 w-4" />Créer mon compte</>)}
                     </Button>
                   </form>
                 </Form>
               </CardContent>
               <CardFooter className="flex flex-col items-center gap-4 pt-2">
-                <div className="text-sm text-muted-foreground">Vous avez déjà un compte ?{" "}<Link to="/login" className="text-primary hover:text-primary-glow transition-colors font-medium">Se connecter</Link></div>
-                <div className="text-xs text-muted-foreground text-center">En vous inscrivant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.</div>
+                <div className="text-sm text-white/40">Vous avez déjà un compte ?{" "}<Link to="/login" className="text-sky-400 hover:text-sky-300 transition-colors font-medium">Se connecter</Link></div>
+                <div className="text-xs text-white/30 text-center">En vous inscrivant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.</div>
               </CardFooter>
             </Card>
           </motion.div>
 
-          <motion.div className="mt-8 flex justify-center gap-6 text-xs text-white/60" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.6 }}>
-            <div className="flex items-center gap-1"><Target className="w-3 h-3 text-primary" /><span>Objectifs</span></div>
-            <div className="flex items-center gap-1"><Shield className="w-3 h-3 text-green-400" /><span>Habitudes</span></div>
-            <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-yellow-400" /><span>Focus</span></div>
+          <motion.div className="mt-8 flex justify-center gap-6 text-xs text-white/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.6 }}>
+            <div className="flex items-center gap-1"><Target className="w-3 h-3 text-sky-400" /><span>Objectifs</span></div>
+            <div className="flex items-center gap-1"><Shield className="w-3 h-3 text-emerald-400" /><span>Habitudes</span></div>
+            <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" /><span>Focus</span></div>
           </motion.div>
         </motion.div>
       </div>

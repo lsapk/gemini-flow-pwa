@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { usePenguinProfile } from "@/hooks/usePenguinProfile";
 import { usePenguinExpeditions } from "@/hooks/usePenguinExpeditions";
 import { PenguinAvatar } from "./PenguinAvatar";
+import penguinMascot from "@/assets/penguin-mascot.png";
 
 export const PenguinDashboardWidget = () => {
   const { profile, nextStageProgress, canEatShrimp } = usePenguinProfile();
@@ -24,7 +25,7 @@ export const PenguinDashboardWidget = () => {
       <CardHeader className="pb-3 relative z-10">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xl font-heading">
-            <span>🐧</span>
+            <img src={penguinMascot} alt="" className="h-7 w-7 object-contain" />
             Mon Pingouin
           </div>
           <Link to="/gamification">
@@ -41,12 +42,8 @@ export const PenguinDashboardWidget = () => {
           <PenguinAvatar stage={profile.stage} size="sm" accessories={profile.equipped_accessories as string[]} />
           <div className="flex-1 ml-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium">
-                {nextStageProgress?.label || 'Maître'}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {nextStageProgress ? `${nextStageProgress.current}/${nextStageProgress.target}` : '✨'}
-              </span>
+              <span className="text-sm font-medium">{nextStageProgress?.label || 'Maître'}</span>
+              <span className="text-xs text-muted-foreground">{nextStageProgress ? `${nextStageProgress.current}/${nextStageProgress.target}` : '✨'}</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
@@ -57,9 +54,7 @@ export const PenguinDashboardWidget = () => {
           <div className="text-center p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/30 dark:border-orange-800/30">
             <span className="text-lg">🦐</span>
             <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{profile.shrimp_total}</div>
-            <div className="text-[10px] text-muted-foreground">
-              {canEatShrimp ? `${profile.shrimp_today}/${profile.shrimp_daily_limit}` : 'Plein'}
-            </div>
+            <div className="text-[10px] text-muted-foreground">{canEatShrimp ? `${profile.shrimp_today}/${profile.shrimp_daily_limit}` : 'Plein'}</div>
           </div>
           <div className="text-center p-2 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-200/30 dark:border-rose-800/30">
             <span className="text-lg">🐟</span>
@@ -96,9 +91,7 @@ export const PenguinDashboardWidget = () => {
           <div className="text-center py-3 text-muted-foreground">
             <p className="text-sm">Lancez des expéditions !</p>
             <Link to="/gamification">
-              <Button size="sm" variant="outline" className="mt-2 border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-400">
-                Explorer
-              </Button>
+              <Button size="sm" variant="outline" className="mt-2 border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-400">Explorer</Button>
             </Link>
           </div>
         )}
