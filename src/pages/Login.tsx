@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import deepflowLogo from "@/assets/deepflow-logo.png";
+import penguinMascot from "@/assets/penguin-mascot.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -82,13 +83,16 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Background image */}
+      {/* Background: eye image positioned as a subtle element */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950" />
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url('/images/auth-bg.jpg')` }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20 bg-cover bg-center"
+        style={{ backgroundImage: `url('/images/auth-bg.jpg')`, filter: 'blur(2px)' }}
       />
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* Ambient glow rings */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-sky-500/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-indigo-500/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-3xl" />
 
       <div className="relative z-10 w-full max-w-md p-4">
         <motion.div
@@ -99,7 +103,7 @@ export default function Login() {
           {/* Logo and branding */}
           <div className="text-center mb-8">
             <motion.div 
-              className="flex justify-center mb-4"
+              className="flex justify-center items-end gap-3 mb-4"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -108,10 +112,17 @@ export default function Login() {
                 <img 
                   src={deepflowLogo} 
                   alt="DeepFlow" 
-                  className="h-20 w-20 rounded-2xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-2 shadow-xl ring-2 ring-white/20" 
+                  className="h-16 w-16 rounded-2xl object-contain bg-white/90 p-1.5 shadow-xl ring-2 ring-white/20" 
                 />
-                <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl -z-10" />
+                <div className="absolute inset-0 rounded-2xl bg-sky-400/30 blur-xl -z-10" />
               </div>
+              <motion.img 
+                src={penguinMascot} 
+                alt="Penguin mascot" 
+                className="h-20 w-20 object-contain drop-shadow-2xl"
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
             </motion.div>
             <motion.h1 
               className="text-3xl font-bold text-white font-heading"
@@ -122,7 +133,7 @@ export default function Login() {
               DeepFlow
             </motion.h1>
             <motion.p 
-              className="text-white/70 mt-2"
+              className="text-sky-200/60 mt-2 text-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -136,54 +147,54 @@ export default function Login() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Card className="bg-card/80 backdrop-blur-xl border-white/10 shadow-2xl">
+            <Card className="bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl">
               <CardHeader className="space-y-1 text-center pb-4">
-                <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
-                <CardDescription>Accédez à votre espace personnel</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Connexion</CardTitle>
+                <CardDescription className="text-sky-200/50">Accédez à votre espace personnel</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors" />
+                    <Label htmlFor="email" className="text-sm font-medium text-sky-100/80">Email</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Mot de passe</Label>
+                    <Label htmlFor="password" className="text-sm font-medium text-sky-100/80">Mot de passe</Label>
                     <div className="relative">
-                      <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required disabled={isLoading} className="h-11 bg-background/50 border-border/50 focus:border-primary/50 transition-colors pr-10" />
-                      <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                      <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required disabled={isLoading} className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 transition-colors pr-10" />
+                      <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/40 hover:text-white/70" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} disabled={isLoading} className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-                    <Label htmlFor="remember" className="text-sm text-muted-foreground leading-none cursor-pointer">Se souvenir de moi sur cet appareil</Label>
+                    <Checkbox id="remember" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} disabled={isLoading} className="border-white/20 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-500" />
+                    <Label htmlFor="remember" className="text-sm text-white/50 leading-none cursor-pointer">Se souvenir de moi</Label>
                   </div>
-                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-opacity glow-effect text-primary-foreground font-medium" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-11 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 transition-all text-white font-medium shadow-lg shadow-sky-500/20" disabled={isLoading}>
                     {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion...</>) : (<><Shield className="mr-2 h-4 w-4" />Se connecter</>)}
                   </Button>
                 </form>
               </CardContent>
               <CardFooter className="flex flex-col items-center gap-4 pt-2">
-                <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary transition-colors">Mot de passe oublié ?</Link>
-                <div className="text-sm text-muted-foreground">
+                <Link to="/forgot-password" className="text-sm text-white/40 hover:text-sky-300 transition-colors">Mot de passe oublié ?</Link>
+                <div className="text-sm text-white/40">
                   Pas encore de compte ?{" "}
-                  <Link to="/register" className="text-primary hover:text-primary-glow transition-colors font-medium">S'inscrire gratuitement</Link>
+                  <Link to="/register" className="text-sky-400 hover:text-sky-300 transition-colors font-medium">S'inscrire gratuitement</Link>
                 </div>
               </CardFooter>
             </Card>
           </motion.div>
 
           <motion.div 
-            className="mt-8 flex justify-center gap-6 text-xs text-white/60"
+            className="mt-8 flex justify-center gap-6 text-xs text-white/40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <div className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-primary" /><span>IA intégrée</span></div>
-            <div className="flex items-center gap-1"><Shield className="w-3 h-3 text-green-400" /><span>Sécurisé</span></div>
-            <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-yellow-400" /><span>Rapide</span></div>
+            <div className="flex items-center gap-1"><Sparkles className="w-3 h-3 text-sky-400" /><span>IA intégrée</span></div>
+            <div className="flex items-center gap-1"><Shield className="w-3 h-3 text-emerald-400" /><span>Sécurisé</span></div>
+            <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" /><span>Rapide</span></div>
           </motion.div>
         </motion.div>
       </div>

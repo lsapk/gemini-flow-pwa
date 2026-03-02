@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import penguinMascot from "@/assets/penguin-mascot.png";
 import { 
   Home, 
   CheckSquare, 
@@ -34,7 +35,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
-    { icon: Gamepad2, label: "Mon Pingouin", path: "/gamification" },
+    { icon: Gamepad2, label: "Mon Pingouin", path: "/gamification", isPenguin: true },
     { icon: CheckSquare, label: "Tâches", path: "/tasks" },
     { icon: BarChart3, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },
@@ -83,11 +84,17 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
               )}
               onClick={() => handleItemClick(item.path)}
             >
-              <item.icon className={cn(
-                "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
-                isActive && "text-primary",
-                isAdminItem && !isActive && "text-red-500"
-              )} />
+              {(item as any).isPenguin ? (
+                <img src={penguinMascot} alt="" className={cn(
+                  "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110 object-contain",
+                )} />
+              ) : (
+                <item.icon className={cn(
+                  "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
+                  isActive && "text-primary",
+                  isAdminItem && !isActive && "text-red-500"
+                )} />
+              )}
               <span className="truncate">{item.label}</span>
               {isActive && (
                 <div className="ml-auto h-2 w-2 rounded-full bg-primary animate-glow-pulse"></div>
