@@ -3,16 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle2, 
-  Target, 
-  Clock, 
-  Brain,
-  Zap,
-  BookOpen,
-  ListTodo,
-  Flame,
-  Trophy,
-  ChevronDown
+  CheckCircle2, Target, Clock, Brain, Zap, BookOpen, ListTodo, Flame, Trophy, ChevronDown
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
@@ -26,6 +17,7 @@ import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import penguinThinking from "@/assets/penguin-thinking.png";
 
 export default function Dashboard() {
   useEnsurePenguinProfile();
@@ -89,11 +81,14 @@ export default function Dashboard() {
       <AdminAnnouncementPanel />
 
       {/* 2. En-tête avec gradient moderne */}
-      <div className="mb-4">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold gradient-text mb-2 animate-fade-in">
-          Tableau de Bord
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground">Vue d'ensemble de votre productivité</p>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold gradient-text mb-1 animate-fade-in">
+            Tableau de Bord
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Vue d'ensemble de votre productivité</p>
+        </div>
+        <img src={penguinThinking} alt="" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md hidden sm:block" />
       </div>
 
       {/* 3. Raccourcis rapides avec design moderne */}
