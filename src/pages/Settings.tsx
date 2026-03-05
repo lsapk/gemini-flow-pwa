@@ -41,7 +41,7 @@ export default function Settings() {
   const { designMode, setDesignMode } = useDesignMode();
   const { profile: playerProfile } = usePenguinProfile();
   const { credits: aiCredits } = useAICredits();
-  const { capturePayPalOrder } = useSubscription();
+  const { handleManageSubscription } = useSubscription();
   const [searchParams] = useSearchParams();
   
   const [loading, setLoading] = useState(false);
@@ -59,15 +59,13 @@ export default function Settings() {
   const [userProfile, setUserProfile] = useState<{ display_name: string | null; photo_url: string | null } | null>(null);
 
   useEffect(() => {
-    const handlePayPalReturn = async () => {
-      const payment = searchParams.get("payment");
-      const token = searchParams.get("token");
-      if (payment === "success" && token) {
-        try { await capturePayPalOrder(token); } catch (error) { console.error("Error capturing PayPal order:", error); }
-      } else if (payment === "cancelled") { toast.error("Paiement annulé"); }
-    };
-    handlePayPalReturn();
-  }, [searchParams, capturePayPalOrder]);
+    const payment = searchParams.get("payment");
+    if (payment === "success") {
+      toast.success("Paiement réussi ! Bienvenue dans Premium 🎉");
+    } else if (payment === "cancelled") {
+      toast.error("Paiement annulé");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); }
