@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Sparkles, Zap, Brain, Trophy, Lock } from "lucide-react";
+import { Check, Crown, Sparkles, Zap, Brain, Trophy, Lock, CreditCard } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 
 interface PremiumUpgradeCardProps {
@@ -10,22 +10,21 @@ interface PremiumUpgradeCardProps {
 }
 
 export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrade }) => {
-  const { 
-    currentTier, 
-    isPremium, 
-    createPayPalOrder, 
-    isCreatingOrder,
+  const {
+    currentTier,
+    isPremium,
+    handleStripeCheckout,
+    handleManageSubscription,
     getRemainingUses,
   } = useSubscription();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleUpgrade = async (plan: string) => {
+  const handleUpgrade = async (plan: "premium_monthly" | "premium_yearly") => {
+    setIsLoading(true);
     try {
-      const result = await createPayPalOrder(plan);
-      if (result?.approvalUrl) {
-        window.location.href = result.approvalUrl;
-      }
-    } catch (error) {
-      console.error("Error creating order:", error);
+      await handleStripeCheckout(plan);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,28 +37,22 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
             <CardTitle>Abonnement Premium Actif</CardTitle>
           </div>
           <CardDescription>
-            Vous bénéficiez d'un accès illimité à toutes les fonctionnalités
+            Accès illimité à toutes les fonctionnalités
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Chat IA illimité</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Analyses illimitées</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Profil IA personnalisé</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Gamification complète</span>
-            </div>
+            {["Chat IA illimité", "Analyses illimitées", "Profil IA personnalisé", "Gamification complète"].map(f => (
+              <div key={f} className="flex items-center gap-2 text-sm">
+                <Check className="h-4 w-4 text-success" />
+                <span>{f}</span>
+              </div>
+            ))}
           </div>
+          <Button variant="outline" onClick={handleManageSubscription} className="w-full">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Gérer mon abonnement
+          </Button>
         </CardContent>
       </Card>
     );
@@ -102,46 +95,26 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
           </div>
         </div>
 
-        {/* Comparison */}
+        {/* Features */}
         <div className="space-y-4">
           <h4 className="font-medium">Ce que vous obtenez avec Premium:</h4>
           <div className="grid gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Zap className="h-4 w-4 text-primary" />
+            {[
+              { icon: Zap, title: "Chat IA illimité", sub: "Au lieu de 5/jour" },
+              { icon: Brain, title: "Analyses illimitées", sub: "Au lieu de 1/jour" },
+              { icon: Sparkles, title: "Profil IA personnalisé", sub: "Analyse psychologique complète" },
+              { icon: Trophy, title: "Gamification complète", sub: "Quêtes, achievements et récompenses" },
+            ].map(f => (
+              <div key={f.title} className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <f.icon className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">{f.title}</p>
+                  <p className="text-sm text-muted-foreground">{f.sub}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium">Chat IA illimité</p>
-                <p className="text-sm text-muted-foreground">Au lieu de 5/jour</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Brain className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Analyses illimitées</p>
-                <p className="text-sm text-muted-foreground">Au lieu de 1/jour</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Profil IA personnalisé</p>
-                <p className="text-sm text-muted-foreground">Analyse psychologique complète</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Trophy className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Gamification complète</p>
-                <p className="text-sm text-muted-foreground">Quêtes, achievements et récompenses</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -149,7 +122,7 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
         <div className="grid grid-cols-2 gap-4">
           <Button
             onClick={() => handleUpgrade("premium_monthly")}
-            disabled={isCreatingOrder}
+            disabled={isLoading}
             className="flex flex-col h-auto py-4"
           >
             <span className="text-lg font-bold">4,99€</span>
@@ -157,25 +130,25 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
           </Button>
           <Button
             onClick={() => handleUpgrade("premium_yearly")}
-            disabled={isCreatingOrder}
+            disabled={isLoading}
             variant="default"
             className="flex flex-col h-auto py-4 relative"
           >
-            <Badge className="absolute -top-2 -right-2 bg-green-500">-17%</Badge>
+            <Badge className="absolute -top-2 -right-2 bg-success">-17%</Badge>
             <span className="text-lg font-bold">49,99€</span>
             <span className="text-xs opacity-80">/an</span>
           </Button>
         </div>
 
         <p className="text-xs text-center text-muted-foreground">
-          Paiement sécurisé via PayPal • Annulation à tout moment
+          Paiement sécurisé via Stripe • Annulation à tout moment
         </p>
       </CardContent>
     </Card>
   );
 };
 
-export const FeatureLockedOverlay: React.FC<{ 
+export const FeatureLockedOverlay: React.FC<{
   feature: string;
   children: React.ReactNode;
 }> = ({ feature, children }) => {
@@ -191,28 +164,23 @@ export const FeatureLockedOverlay: React.FC<{
   const mappedFeature = featureMap[feature];
   const canUse = mappedFeature ? canUseFeature(mappedFeature) : true;
 
-  if (canUse) {
-    return <>{children}</>;
-  }
+  if (canUse) return <>{children}</>;
 
   return (
     <div className="relative">
-      <div className="opacity-50 pointer-events-none blur-sm">
-        {children}
-      </div>
+      <div className="opacity-50 pointer-events-none blur-sm">{children}</div>
       <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg">
         <div className="text-center p-6">
           <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="font-semibold mb-2">
-            {feature === "ai_profile" ? "Profil IA Premium" : 
+            {feature === "ai_profile" ? "Profil IA Premium" :
              feature === "gamification" ? "Gamification Premium" :
              "Limite quotidienne atteinte"}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {isPremium 
+            {isPremium
               ? "Cette fonctionnalité nécessite un abonnement premium"
-              : "Passez à Premium pour un accès illimité"
-            }
+              : "Passez à Premium pour un accès illimité"}
           </p>
           <Button size="sm" onClick={() => window.location.href = "/settings"}>
             <Crown className="h-4 w-4 mr-2" />
