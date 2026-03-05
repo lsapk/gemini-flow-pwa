@@ -43,8 +43,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {children || <Outlet />}
           </div>
         </main>
-          </div>
-        </main>
       </div>
     </div>
   );
