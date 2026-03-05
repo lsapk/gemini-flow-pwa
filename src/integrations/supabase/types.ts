@@ -2215,9 +2215,11 @@ export type Database = {
           google_task_id: string | null
           id: string
           linked_goal_id: string | null
+          offline_id: string | null
           parent_task_id: string | null
           priority: string | null
           sort_order: number | null
+          synced_at: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -2230,9 +2232,11 @@ export type Database = {
           google_task_id?: string | null
           id?: string
           linked_goal_id?: string | null
+          offline_id?: string | null
           parent_task_id?: string | null
           priority?: string | null
           sort_order?: number | null
+          synced_at?: string | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -2245,9 +2249,11 @@ export type Database = {
           google_task_id?: string | null
           id?: string
           linked_goal_id?: string | null
+          offline_id?: string | null
           parent_task_id?: string | null
           priority?: string | null
           sort_order?: number | null
+          synced_at?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
