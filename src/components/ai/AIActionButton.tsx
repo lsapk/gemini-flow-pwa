@@ -21,7 +21,7 @@ export type AIActionType =
 
 interface AIActionButtonProps {
   action: AIActionType;
-  onResult?: (result: any) => void;
+  onResult?: (result: unknown) => void;
   className?: string;
   variant?: 'default' | 'outline' | 'ghost' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
@@ -82,39 +82,25 @@ export function AIActionButton({
     setIsLoading(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Veuillez vous connecter');
-        return;
-      }
+      // Use centralized supabase client instead of hardcoded URL
+      const { data, error } = await supabase.functions.invoke('ai-cross-analysis', {
+        body: { type: config.analysisType },
+      });
 
-      const response = await fetch(
-        'https://xzgdfetnjnwrberyddmf.supabase.co/functions/v1/ai-cross-analysis',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ type: config.analysisType }),
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 429) {
+      if (error) {
+        const errorMsg = error.message || '';
+        if (errorMsg.includes('429')) {
           toast.error('Limite de requêtes atteinte. Réessayez plus tard.');
           return;
         }
-        if (response.status === 402) {
+        if (errorMsg.includes('402')) {
           toast.error('Crédits IA épuisés.');
           return;
         }
-        throw new Error('Failed');
+        throw error;
       }
-
-      const data = await response.json();
       
-      if (data.result) {
+      if (data?.result) {
         toast.success('Analyse terminée !');
         onResult?.(data.result);
       }
