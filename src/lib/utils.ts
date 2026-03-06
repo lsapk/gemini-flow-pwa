@@ -1,7 +1,6 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { supabase } from "@/integrations/supabase/client";
  
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -35,7 +34,6 @@ export function formatDate(date: Date | string | null, language = 'fr', clockFor
     year: 'numeric',
   };
   
-  // Ajouter le format d'heure si nécessaire
   if (clockFormat === '24h') {
     options.hour = '2-digit';
     options.minute = '2-digit';
@@ -65,36 +63,4 @@ export function formatMinutesToHoursMinutes(minutes: number): string {
   } else {
     return `${hours} h ${remainingMinutes} min`;
   }
-}
-
-/**
- * Installe et configure le compte administrateur lors du démarrage
- */
-export async function setupAdminAccount() {
-  try {
-    // Vérifier si l'utilisateur est connecté
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user?.email === 'deepflow.ia@gmail.com') {
-      // Appeler la fonction Edge qui configurera l'utilisateur comme admin
-      const { error } = await supabase.functions.invoke('setup-admin');
-      
-      if (error) {
-        console.error("Erreur lors de la configuration du compte administrateur:", error);
-      } else {
-        console.log("Compte administrateur configuré avec succès");
-      }
-    }
-  } catch (error) {
-    console.error("Erreur lors de la vérification du compte administrateur:", error);
-  }
-}
-
-// Appeler cette fonction au démarrage de l'application
-if (typeof window !== 'undefined') {
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session?.user?.email === 'deepflow.ia@gmail.com') {
-      setupAdminAccount();
-    }
-  });
 }

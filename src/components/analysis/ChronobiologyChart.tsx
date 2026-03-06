@@ -11,7 +11,6 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  Cell
 } from "recharts";
 
 const TYPE_ICONS = {
@@ -57,7 +56,6 @@ export function ChronobiologyChart() {
 
   const TypeIcon = TYPE_ICONS[productivityType];
 
-  // Format data for chart - show only relevant hours (5h-23h)
   const chartData = hourlyData
     .filter(h => h.hour >= 5 && h.hour <= 23)
     .map(h => ({
@@ -65,6 +63,9 @@ export function ChronobiologyChart() {
       name: `${h.hour}h`,
       isPeak: h.hour === peakHour
     }));
+
+  // Safely render insight text — strip any HTML tags to prevent XSS
+  const sanitizedInsight = insight.replace(/<[^>]*>/g, '').replace(/\*\*(.*?)\*\*/g, '$1');
 
   return (
     <motion.div
@@ -151,15 +152,13 @@ export function ChronobiologyChart() {
             </ResponsiveContainer>
           </div>
 
-          {/* Insight */}
-          {insight && (
+          {/* Insight — rendered as plain text, no HTML injection */}
+          {sanitizedInsight && (
             <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm" dangerouslySetInnerHTML={{ 
-                __html: insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
-              }} />
+              <p className="text-sm font-medium">{sanitizedInsight}</p>
               {recommendation && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  💡 {recommendation}
+                  💡 {recommendation.replace(/<[^>]*>/g, '')}
                 </p>
               )}
             </div>

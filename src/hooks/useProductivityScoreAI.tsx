@@ -19,7 +19,7 @@ export interface ProductivityMetrics {
   goalScore: number;
 }
 
-export const useProductivityScore = (): ProductivityMetrics => {
+export const useProductivityScoreAI = (): ProductivityMetrics => {
   const { user } = useAuth();
   const { 
     taskCompletionRate, 

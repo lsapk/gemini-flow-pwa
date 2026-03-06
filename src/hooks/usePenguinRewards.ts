@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useFoodNotification } from "@/components/penguin/FoodNotification";
@@ -11,16 +11,27 @@ const FOOD_LABELS: Record<FoodType, { emoji: string; label: string }> = {
   golden_fish: { emoji: '✨🐠', label: 'Poisson Doré' },
 };
 
+// Cooldown to prevent duplicate rewards from rapid clicks
+const REWARD_COOLDOWN_MS = 2000;
+
 export const usePenguinRewards = () => {
   const queryClient = useQueryClient();
   const { showFood, showEvolution } = useFoodNotification();
+  const lastRewardTime = useRef<Record<string, number>>({});
 
   const feedPenguin = useCallback(async (foodType: FoodType, source: string) => {
     try {
+      // Prevent duplicate rewards within cooldown window
+      const key = `${foodType}_${source}`;
+      const now = Date.now();
+      if (lastRewardTime.current[key] && now - lastRewardTime.current[key] < REWARD_COOLDOWN_MS) {
+        return;
+      }
+      lastRewardTime.current[key] = now;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get current profile
       const { data: profile } = await supabase
         .from("penguin_profiles")
         .select("*")
@@ -105,7 +116,7 @@ export const usePenguinRewards = () => {
     }
   }, [queryClient, showFood, showEvolution]);
 
-  // Map actions to food rewards
+  // Map actions to food rewards — one shrimp per habit completion, golden fish only for 7+ day streaks
   const rewardTaskComplete = useCallback(() => feedPenguin('shrimp', 'task_completed'), [feedPenguin]);
   const rewardFocusSession = useCallback((minutes: number) => {
     if (minutes >= 60) feedPenguin('salmon', 'focus_deep_work');
@@ -113,7 +124,8 @@ export const usePenguinRewards = () => {
   }, [feedPenguin]);
   const rewardHabitComplete = useCallback(() => feedPenguin('shrimp', 'habit_completed'), [feedPenguin]);
   const rewardStreak = useCallback((days: number) => {
-    if (days >= 7) feedPenguin('golden_fish', `streak_${days}`);
+    // Only reward golden fish for meaningful streaks, not every completion
+    if (days > 0 && days % 7 === 0) feedPenguin('golden_fish', `streak_${days}`);
   }, [feedPenguin]);
   const rewardJournalEntry = useCallback(() => feedPenguin('shrimp', 'journal_entry'), [feedPenguin]);
 
