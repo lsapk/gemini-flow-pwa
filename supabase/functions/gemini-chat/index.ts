@@ -32,9 +32,33 @@ serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+    // Authenticate user via JWT — never trust userId from body
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: authData, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !authData?.user?.id) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = authData.user.id;
+
     // Parse and validate request body
     const body = await req.json();
-    const { message, chatHistory, userId } = body;
+    const { message, chatHistory } = body;
     
     // Input validation
     if (!message || typeof message !== 'string') {
@@ -43,10 +67,6 @@ serve(async (req) => {
     
     if (message.length > 5000) {
       throw new Error("Message is too long (max 5000 characters)");
-    }
-    
-    if (!userId || typeof userId !== 'string') {
-      throw new Error("User ID is required and must be a string");
     }
     
     // Sanitize message - remove ALL HTML tags to prevent XSS
