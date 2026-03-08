@@ -231,12 +231,12 @@ export default function Admin() {
           updated_at: new Date().toISOString(),
         }).eq("user_id", subUser.id);
       } else {
-        await supabase.from("subscribers").insert({
+        await supabase.from("subscribers").insert([{
           user_id: subUser.id,
           subscription_tier: subTier,
           subscribed: subTier !== "basic",
           subscription_end: subTier !== "basic" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
-        });
+        }] as never[]);
       }
       await logAction("change_subscription", subUser.id, subUser.email, { tier: subTier });
       toast.success(`Abonnement de ${subUser.email} → ${subTier}`);
