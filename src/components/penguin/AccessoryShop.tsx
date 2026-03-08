@@ -54,12 +54,10 @@ export const AccessoryShop = () => {
   const purchaseMutation = useMutation({
     mutationFn: async (item: typeof SHOP_ITEMS[0]) => {
       if (!user || !profile) throw new Error("Not authenticated");
-
       if (['radio', 'library', 'lounge_chair'].includes(item.id)) {
         const flagKey = `has_${item.id}` as keyof typeof profile;
         await supabase.from("penguin_profiles").update({ [flagKey]: true }).eq("user_id", user.id);
       }
-
       await supabase.from("penguin_accessories").insert({
         user_id: user.id,
         accessory_id: item.id,
@@ -79,9 +77,15 @@ export const AccessoryShop = () => {
   return (
     <Card className="bg-card/80 backdrop-blur-xl border-border/30">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
-          <ShoppingBag className="w-5 h-5 text-purple-400" />
-          Boutique
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-lg text-foreground">
+            <ShoppingBag className="w-5 h-5 text-purple-400" />
+            Boutique
+          </span>
+          {/* Salmon balance */}
+          <Badge className="text-xs bg-sky-500/15 border-sky-500/25 text-sky-400 gap-1">
+            🐟 {profile?.salmon_total || 0} saumons
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -89,6 +93,7 @@ export const AccessoryShop = () => {
           {SHOP_ITEMS.map((item, i) => {
             const isOwned = ownedIds.has(item.id);
             const stageLocked = profile ? STAGE_ORDER[profile.stage] < STAGE_ORDER[item.stage_required] : true;
+            const canAfford = (profile?.salmon_total || 0) >= item.cost_salmon;
 
             return (
               <motion.div
@@ -96,26 +101,46 @@ export const AccessoryShop = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.04, type: "spring", stiffness: 300, damping: 25 }}
-                whileHover={{ scale: isOwned || stageLocked ? 1 : 1.03, y: isOwned || stageLocked ? 0 : -2 }}
-                className={`p-3 rounded-2xl border text-center backdrop-blur-sm transition-colors ${
+                whileHover={{ scale: isOwned || stageLocked ? 1 : 1.05, y: isOwned || stageLocked ? 0 : -3 }}
+                className={`p-3 rounded-2xl border text-center backdrop-blur-sm transition-colors relative overflow-hidden ${
                   isOwned
                     ? 'bg-success/10 border-success/20'
                     : stageLocked
-                    ? 'bg-muted/30 border-border/10 opacity-60'
+                    ? 'bg-muted/20 border-border/10'
                     : 'bg-card/60 border-border/20 hover:border-purple-500/30 hover:bg-purple-500/5'
                 }`}
               >
-                <span className="text-2xl block mb-1">{item.emoji}</span>
-                <p className="text-xs font-medium text-foreground/80 mb-1 truncate">{item.name}</p>
-                <div className="text-[10px] text-muted-foreground mb-2">🐟 {item.cost_salmon}</div>
+                {/* Blur overlay for locked */}
+                {stageLocked && !isOwned && (
+                  <div className="absolute inset-0 backdrop-blur-[2px] bg-background/30 z-10 rounded-2xl flex items-center justify-center">
+                    <Lock className="w-5 h-5 text-muted-foreground/50" />
+                  </div>
+                )}
+
+                <motion.span
+                  className="text-2xl block mb-1"
+                  animate={isOwned ? { scale: [1, 1.15, 1] } : {}}
+                  transition={{ duration: 0.4, delay: i * 0.05 }}
+                >
+                  {item.emoji}
+                </motion.span>
+                <p className="text-xs font-medium text-foreground/80 mb-0.5 truncate">{item.name}</p>
+                <div className="text-[10px] text-muted-foreground mb-2 flex items-center justify-center gap-1">
+                  🐟 {item.cost_salmon}
+                  {!canAfford && !isOwned && !stageLocked && (
+                    <span className="text-destructive/70 text-[9px]">(insuffisant)</span>
+                  )}
+                </div>
 
                 {isOwned ? (
-                  <Badge className="text-[10px] bg-success/20 border-success/30 text-success">
-                    <Check className="h-3 w-3 mr-1" /> Obtenu
-                  </Badge>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500 }}>
+                    <Badge className="text-[10px] bg-success/20 border-success/30 text-success gap-1">
+                      <Check className="h-3 w-3" /> Obtenu
+                    </Badge>
+                  </motion.div>
                 ) : stageLocked ? (
                   <Badge variant="secondary" className="text-[10px] bg-muted/50 border-0 text-muted-foreground">
-                    <Lock className="h-3 w-3 mr-1" /> {item.stage_required}
+                    {item.stage_required}
                   </Badge>
                 ) : (
                   <Button
@@ -123,7 +148,7 @@ export const AccessoryShop = () => {
                     variant="outline"
                     className="text-xs h-7 bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
                     onClick={() => purchaseMutation.mutate(item)}
-                    disabled={purchaseMutation.isPending}
+                    disabled={purchaseMutation.isPending || !canAfford}
                   >
                     Obtenir
                   </Button>
