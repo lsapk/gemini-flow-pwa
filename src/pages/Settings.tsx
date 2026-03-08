@@ -554,7 +554,7 @@ export default function Settings() {
                   <span className="font-medium text-sm">deepflow.ia@gmail.com</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="icon" onClick={copyEmail} title="Copier"><Copy className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText("deepflow.ia@gmail.com"); toast.success("Email copié !"); }} title="Copier"><Copy className="h-4 w-4" /></Button>
                   <Button variant="outline" size="icon" asChild title="Email"><a href="mailto:deepflow.ia@gmail.com"><ExternalLink className="h-4 w-4" /></a></Button>
                 </div>
               </div>
