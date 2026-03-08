@@ -117,7 +117,8 @@ function SortableTaskCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (!isExpanded) {
                   onToggleExpanded(task.id);
                 }
