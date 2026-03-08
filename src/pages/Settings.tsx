@@ -327,23 +327,6 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
-              <Separator />
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Style de design</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => { setDesignMode('futuristic'); toast.success("Design Futuriste"); }} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${designMode === 'futuristic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/30'}`}>
-                    <Wand2 className="h-6 w-6" />
-                    <span className="text-sm font-medium">Futuriste</span>
-                  </button>
-                  <button onClick={() => { setDesignMode('apple'); toast.success("Design Minimal"); }} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${designMode === 'apple' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/30'}`}>
-                    <Apple className="h-6 w-6" />
-                    <span className="text-sm font-medium">Minimal</span>
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {designMode === 'apple' ? "Interface épurée, espaces généreux." : "Effets de verre, animations, dégradés."}
-                </p>
-              </div>
             </CardContent>
           </Card>
 

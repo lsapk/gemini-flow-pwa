@@ -123,7 +123,7 @@ function SortableGoalCard({
           {/* Subobjectives toggle */}
           <div className="pt-2 border-t">
             <button
-              onClick={() => onToggleExpanded(goal.id)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleExpanded(goal.id); }}
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
             >
               <span className="flex-1 text-left">Sous-objectifs</span>
@@ -276,7 +276,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder, onRefres
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={filteredGoals.map(g => g.id)} strategy={verticalListSortingStrategy}>
-          <motion.div layout className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3">
             <AnimatePresence mode="popLayout">
               {filteredGoals.map((goal) => (
                 <SortableGoalCard

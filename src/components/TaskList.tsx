@@ -103,7 +103,7 @@ function SortableTaskCard({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => onToggleExpanded(task.id)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleExpanded(task.id); }}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {isExpanded ? (
@@ -117,7 +117,8 @@ function SortableTaskCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (!isExpanded) {
                   onToggleExpanded(task.id);
                 }
@@ -268,7 +269,6 @@ export default function TaskList({
           strategy={viewMode === 'grid' ? rectSortingStrategy : verticalListSortingStrategy}
         >
           <motion.div 
-            layout
             className={
               viewMode === 'grid' 
                 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" 
