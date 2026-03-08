@@ -401,7 +401,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: "Une erreur interne est survenue.",
         content: "⚠️ **Une erreur est survenue**\n\nImpossible de générer l'analyse pour le moment. Veuillez réessayer plus tard."
       }),
       {

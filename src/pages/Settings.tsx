@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
@@ -21,11 +22,17 @@ import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import penguinMascot from "@/assets/penguin-mascot.png";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { 
   Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain, Trophy,
   Gamepad2, Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
-  Apple, Wand2, Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle
+  Apple, Wand2, Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
+  Key, Trash2, Download
 } from "lucide-react";
 
 interface UserSettings {
@@ -126,13 +133,60 @@ export default function Settings() {
     try { await signOut(); toast.success("Déconnexion réussie"); } catch (error) { toast.error("Erreur lors de la déconnexion"); }
   };
 
+  // Password change
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) { toast.error("Le mot de passe doit contenir au moins 6 caractères"); return; }
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Mot de passe modifié avec succès");
+      setNewPassword("");
+    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    finally { setChangingPassword(false); }
+  };
+
+  // Account deletion
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const handleDeleteAccount = async () => {
+    try {
+      // Delete all user data from major tables
+      const tables = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions", "penguin_profiles", "ai_credits", "ai_requests", "daily_usage"] as const;
+      for (const table of tables) {
+        await (supabase.from(table).delete() as any).eq("user_id", user!.id);
+      }
+      await supabase.from("user_profiles").delete().eq("id", user!.id);
+      await supabase.from("user_settings").delete().eq("id", user!.id);
+      // Sign out after purge
+      await signOut();
+      toast.success("Compte supprimé. Adieu 🐧");
+    } catch (err) { toast.error("Erreur lors de la suppression du compte"); }
+  };
+
+  // Data export
+  const handleExportData = async () => {
+    if (!user) return;
+    try {
+      const [tasks, habits, goals, journal, focus] = await Promise.all([
+        supabase.from("tasks").select("*").eq("user_id", user.id),
+        supabase.from("habits").select("*").eq("user_id", user.id),
+        supabase.from("goals").select("*").eq("user_id", user.id),
+        supabase.from("journal_entries").select("*").eq("user_id", user.id),
+        supabase.from("focus_sessions").select("*").eq("user_id", user.id),
+      ]);
+      const exportData = { tasks: tasks.data, habits: habits.data, goals: goals.data, journal: journal.data, focus: focus.data, exported_at: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `deepflow_export_${new Date().toISOString().split("T")[0]}.json`;
+      link.click();
+      toast.success("Données exportées !");
+    } catch { toast.error("Erreur lors de l'export"); }
+  };
+
   const stageLabel = playerProfile?.stage === 'emperor' ? 'Empereur' : playerProfile?.stage === 'explorer' ? 'Explorateur' : playerProfile?.stage === 'chick' ? 'Poussin' : 'Œuf';
-
-  const copyEmail = () => { navigator.clipboard.writeText("deepflow.ia@gmail.com"); toast.success("Email copié !"); };
-
-  // AI credits progress (assuming max 200 for display purposes)
-  const maxCredits = 200;
-  const creditsProgress = aiCredits === Infinity ? 100 : Math.min((Number(aiCredits) / maxCredits) * 100, 100);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-8">
@@ -206,7 +260,7 @@ export default function Settings() {
                 Crédits IA
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold text-primary">{aiCredits === Infinity ? "∞" : aiCredits}</div>
@@ -216,15 +270,35 @@ export default function Settings() {
                   <Link to="/gamification"><Gamepad2 className="h-4 w-4 mr-2" />Boutique</Link>
                 </Button>
               </div>
-              {aiCredits !== Infinity && (
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Utilisés</span>
-                    <span>{Number(aiCredits)}/{maxCredits}</span>
-                  </div>
-                  <Progress value={creditsProgress} className="h-2.5" />
-                </div>
-              )}
+            </CardContent>
+          </Card>
+
+          {/* Password Change */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg"><Key className="h-5 w-5 text-primary" />Mot de passe</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input type="password" placeholder="Nouveau mot de passe (min. 6 car.)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <Button onClick={handleChangePassword} disabled={changingPassword || newPassword.length < 6} className="w-full">
+                {changingPassword ? "Modification..." : "Modifier le mot de passe"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Data & Account Management */}
+          <Card className="border-destructive/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg"><Shield className="h-5 w-5 text-destructive" />Données & Compte</CardTitle>
+              <CardDescription>Export RGPD et suppression de compte</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={handleExportData}>
+                <Download className="h-4 w-4" /> Exporter mes données (JSON)
+              </Button>
+              <Button variant="destructive" className="w-full justify-start gap-2" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Supprimer mon compte
+              </Button>
             </CardContent>
           </Card>
           
@@ -480,7 +554,7 @@ export default function Settings() {
                   <span className="font-medium text-sm">deepflow.ia@gmail.com</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="icon" onClick={copyEmail} title="Copier"><Copy className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText("deepflow.ia@gmail.com"); toast.success("Email copié !"); }} title="Copier"><Copy className="h-4 w-4" /></Button>
                   <Button variant="outline" size="icon" asChild title="Email"><a href="mailto:deepflow.ia@gmail.com"><ExternalLink className="h-4 w-4" /></a></Button>
                 </div>
               </div>
@@ -501,6 +575,22 @@ export default function Settings() {
           <LogOut className="h-4 w-4 mr-2" />Déconnexion
         </Button>
       </div>
+
+      {/* Delete Account Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer votre compte ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Toutes vos données (tâches, habitudes, journal, pingouin…) seront définitivement supprimées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">Supprimer définitivement</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

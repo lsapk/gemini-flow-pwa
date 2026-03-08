@@ -8,6 +8,8 @@ import { ThemeProvider } from "next-themes";
 import { DesignModeProvider } from "./contexts/DesignModeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { FoodNotificationProvider } from "./components/penguin/FoodNotification";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { CookieConsent } from "./components/CookieConsent";
 import AppLayout from "./components/layout/AppLayout";
 
 // Lazy loaded pages for better performance
@@ -35,7 +37,16 @@ const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
 const Cookies = lazy(() => import("./pages/legal/Cookies"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function ProtectedLayout() {
   const { user, isLoading } = useAuth();
@@ -73,6 +84,8 @@ function App() {
               <Sonner />
               <BrowserRouter>
                 <AuthProvider>
+                  <ErrorBoundary>
+                  <CookieConsent />
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -112,6 +125,7 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>
+                  </ErrorBoundary>
                 </AuthProvider>
               </BrowserRouter>
             </FoodNotificationProvider>

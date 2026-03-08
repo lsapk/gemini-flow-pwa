@@ -231,7 +231,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: "Une erreur interne est survenue.",
       }),
       {
         status: 500,

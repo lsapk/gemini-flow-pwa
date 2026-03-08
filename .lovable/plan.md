@@ -1,157 +1,181 @@
 
+# Plan : Credits Admin, Logo, Fond Auth, Parametres, Legal
 
-# Audit & Plan d'Améliorations — DeepFlow (10 points)
+## 1. Credits Admin - Fonctionnel pour credits IA ET jeu
 
-Après analyse complète du code, de la sécurité, de l'UX et de la conformité légale, voici les 10 améliorations classées par criticité.
+**Probleme actuel :** La fonction `handleGiveCredits` dans `Admin.tsx` (ligne 315-347) modifie uniquement les credits **de jeu** dans `player_profiles.credits`, mais pas les **credits IA** dans la table `ai_credits`. L'admin n'a aucun moyen de gerer les credits IA des utilisateurs.
 
----
+**Solution :**
+- Modifier le dialog de credits admin pour offrir **2 onglets** : "Credits Jeu" et "Credits IA"
+- Ajouter une fonction `handleGiveAICredits` qui insere/met a jour la table `ai_credits`
+- La fonction existante `handleGiveCredits` reste pour les credits de jeu
+- Afficher dans le profil utilisateur les 2 types de credits (jeu + IA)
 
-## 1. SECURITE — Admin protégé uniquement côté client (CRITIQUE)
-
-**Problème** : `Admin.tsx` copie simplement `clientIsAdmin` sans jamais appeler la Edge Function `verify-admin`. Un utilisateur manipulant le state client pourrait accéder aux actions admin.
-
-**Correction** :
-- Appeler `supabase.functions.invoke('verify-admin')` au chargement de la page Admin
-- Utiliser la réponse serveur pour gater l'accès, pas le state client
-- Ajouter des RLS policies strictes sur toutes les tables sensibles (bannissements, crédits, abonnements) pour que seuls les admins puissent écrire
+**Fichier :** `src/pages/Admin.tsx`
 
 ---
 
-## 2. SECURITE — Edge Functions exposent des détails d'erreur internes
+## 2. Changement du logo
 
-**Problème** : `validate-purchase` retourne `error.message` et `error.toString()` dans les réponses 500, exposant potentiellement des noms de tables et des stack traces.
+**Situation actuelle :** Le logo utilise `src/assets/deepflow-logo.jpg` dans la Sidebar et le MobileHeader. Les pages Login/Register/ForgotPassword utilisent des icones Lucide (`Zap`, `Sparkles`) au lieu du vrai logo.
 
-**Correction** :
-- Retourner des messages d'erreur génériques au client
-- Logger le détail serveur-side uniquement via `console.error`
-- Appliquer le même pattern à toutes les Edge Functions
+**Solution :**
+- Copier l'image du "D" brush (image-5.png) vers `src/assets/deepflow-logo.png`
+- Remplacer la reference dans `Sidebar.tsx` et `MobileHeader.tsx`
+- Le logo a un fond blanc, donc pour le theme sombre : ajouter `rounded-xl` avec un fond transparent et une ombre pour bien integrer
+- Mettre a jour les pages Login, Register et ForgotPassword pour utiliser le nouveau logo au lieu des icones Lucide
+- Ajouter un filtre CSS `dark:invert` sur le logo pour qu'il s'adapte au theme sombre (le "D" noir passe en blanc)
 
----
-
-## 3. LEGAL/RGPD — Absence de bandeau de consentement cookies et de suppression de compte
-
-**Problème** : 
-- Aucun bandeau de consentement cookies n'existe malgré l'utilisation de localStorage et de tracking
-- La politique de confidentialité mentionne le droit de suppression (RGPD Art.17) mais aucune fonctionnalité ne permet réellement de supprimer son compte
-- Les CGU disent "Vous pouvez supprimer votre compte depuis les paramètres" mais ce bouton n'existe pas
-
-**Correction** :
-- Créer un composant `CookieConsent` affiché au premier lancement
-- Ajouter un bouton "Supprimer mon compte" dans Settings qui appelle une Edge Function dédiée (suppression cascade de toutes les données utilisateur)
-- Ajouter un export de données (RGPD portabilité)
+**Fichiers :** `src/components/layout/Sidebar.tsx`, `src/components/layout/MobileHeader.tsx`, `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`
 
 ---
 
-## 4. MOBILE/PWA — Landing page et pages auth non optimisées pour petit écran
+## 3. Image de fond pour les pages de connexion/inscription
 
-**Problème** : 
-- La landing page (`Index.tsx`) a des titres en `text-5xl md:text-7xl` qui débordent sur petits écrans (< 375px)
-- Les statistiques "social proof" (+2,847 / 87% / 4.2h) ne sont pas des données réelles, potentiellement trompeur
-- Le footer CTA a un bouton avec `py-7` excessif sur mobile
+**Situation actuelle :** Les pages Login, Register, ForgotPassword ont un fond abstrait avec des gradients et un motif de grille. Aucune image de fond.
 
-**Correction** :
-- Ajuster la typographie hero pour les petits écrans (`text-3xl sm:text-5xl md:text-7xl`)
-- Réduire le padding du CTA footer
-- Ajouter `safe-area-inset` pour les iPhones avec encoche
+**Solution :**
+- Copier l'image de l'oeil bleu (1770368575206~2_1.jpg) vers `public/images/auth-bg.jpg` (dans public car c'est utilise en CSS)
+- Ajouter l'image en arriere-plan sur les pages Login, Register, ForgotPassword et ResetPassword
+- L'image sera affichee en `cover` avec un overlay sombre semi-transparent pour la lisibilite
+- Le formulaire restera au centre avec l'effet glassmorphism par-dessus
 
----
-
-## 5. CODE — Appel à une Edge Function inexistante (`check-subscription`)
-
-**Problème** : `billing.ts` appelle `supabase.functions.invoke('check-subscription')` mais cette fonction n'existe pas dans le projet. Si elle est appelée, elle provoquera une erreur silencieuse.
-
-**Correction** :
-- Soit créer la Edge Function `check-subscription`
-- Soit remplacer par une requête directe à la table `subscribers` (déjà fait dans `useSubscription.ts` — donc supprimer `checkSubscriptionStatus` de `billing.ts`)
-- Nettoyer aussi `validateInAppPurchase` qui appelle `validate-purchase` (déprécié/410)
+**Fichiers :** `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`, `src/pages/ResetPassword.tsx`
 
 ---
 
-## 6. UX — Absence de feedback d'erreur global et d'état vide cohérent
+## 4. Photo de profil et preferences qui fonctionnent
 
-**Problème** :
-- Pas de Error Boundary React : une erreur dans un composant crash toute l'app
-- Les pages ne gèrent pas toujours l'état "vide" de manière engageante (certaines affichent juste rien)
+### Photo de profil zoomee
+**Probleme :** L'avatar dans `ProfileEditForm.tsx` utilise `<AvatarImage>` qui applique `object-cover` par defaut dans Radix. La photo apparat zoomee car le composant `Avatar` fait 96x96px (`h-24 w-24`) et force un recadrage.
 
-**Correction** :
-- Ajouter un `ErrorBoundary` global dans `App.tsx` avec une page d'erreur conviviale (avec le pingouin)
-- Uniformiser les empty states avec `PagePenguinEmpty` sur toutes les pages (Tasks, Habits, Goals, Journal, Focus)
+**Solution :**
+- Ajouter `className="object-cover"` sur `AvatarImage` pour s'assurer du bon cadrage
+- Verifier que le composant Avatar de Radix n'a pas de styles conflictuels
+- Dans le profil Settings (ligne 234), la photo de l'utilisateur est un simple cercle avec l'initiale -- il faut aussi y afficher la photo si elle existe
+
+### Theme sombre/clair pour les 2 designs
+**Probleme actuel :** Le `ThemeProvider` utilise `next-themes` (dans `App.tsx` ligne 68) mais le Settings utilise le `useTheme` de `@/components/theme-provider` local (ligne 13). Ces deux providers sont differents -- l'un vient de `next-themes`, l'autre du composant local. Il y a conflit.
+
+**Solution :** 
+- L'import dans `App.tsx` utilise `import { ThemeProvider } from "next-themes"` 
+- L'import dans Settings utilise `import { useTheme } from "@/components/theme-provider"` qui est un provider **different** jamais rendu dans l'arbre
+- Corriger Settings pour utiliser `useTheme` de `next-themes` directement
+- Le composant local `theme-provider.tsx` est redondant -- on le garde mais on s'assure que Settings utilise le bon provider
+
+### Notifications et Ne pas deranger
+**Probleme :** Les switches changent le state local mais l'utilisateur doit cliquer "Sauvegarder les preferences" separement. 
+
+**Solution :** Faire un auto-save quand un switch change (debounce de 500ms), avec confirmation toast immediate.
+
+**Fichiers :** `src/components/settings/ProfileEditForm.tsx`, `src/pages/Settings.tsx`
 
 ---
 
-## 7. PERFORMANCE — QueryClient sans configuration optimale
+## 5. Section legale dans les Parametres
 
-**Problème** : `QueryClient` est instancié sans configuration dans `App.tsx` (ligne 38). Pas de `staleTime`, `gcTime`, ou `retry` par défaut. Chaque navigation re-fetch toutes les données.
+**Situation actuelle :** Les pages legales existent (`/legal/privacy`, `/legal/terms`, `/legal/cookies`) mais ne sont pas accessibles depuis les Parametres. Le Footer existe mais il n'est pas visible dans l'app connectee. L'email de contact est `contact@deepflow.app` au lieu de `deepflow.ia@gmail.com`.
 
-**Correction** :
-- Configurer des defaults raisonnables :
+**Solution :**
+- Ajouter un **4eme onglet** dans Settings : "A propos" avec une icone `Info`
+- Contenu de ce tab :
+  - **Mentions legales** : editeur, hebergeur, email de contact
+  - **Liens rapides** : Privacy, Terms, Cookies (vers les pages existantes)
+  - **FAQ** basique (5-6 questions/reponses les plus courantes dans un Accordion)
+  - **Nous contacter** : afficher deepflow.ia@gmail.com avec un bouton copier/mailto
+  - **Version de l'app** (badge)
+- Mettre a jour le Footer avec `deepflow.ia@gmail.com`
+- Mettre a jour les pages legales (Privacy, Terms, Cookies) avec la bonne adresse email
+
+**Fichiers :** `src/pages/Settings.tsx`, `src/components/layout/Footer.tsx`, `src/pages/legal/Privacy.tsx`, `src/pages/legal/Terms.tsx`, `src/pages/legal/Cookies.tsx`
+
+---
+
+## Details Techniques
+
+### Fichiers a modifier
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/Admin.tsx` | Ajouter gestion credits IA (table `ai_credits`) + tabs dans le dialog |
+| `src/assets/deepflow-logo.png` | **NOUVEAU** - Copie de image-5.png |
+| `public/images/auth-bg.jpg` | **NOUVEAU** - Copie de l'image oeil bleu |
+| `src/components/layout/Sidebar.tsx` | Nouveau logo avec gestion theme |
+| `src/components/layout/MobileHeader.tsx` | Nouveau logo avec gestion theme |
+| `src/pages/Login.tsx` | Nouveau logo + image de fond |
+| `src/pages/Register.tsx` | Nouveau logo + image de fond |
+| `src/pages/ForgotPassword.tsx` | Nouveau logo + image de fond |
+| `src/pages/ResetPassword.tsx` | Image de fond |
+| `src/components/settings/ProfileEditForm.tsx` | Fix photo zoomee |
+| `src/pages/Settings.tsx` | Fix theme provider, auto-save preferences, nouvel onglet "A propos" avec FAQ/Legal/Contact |
+| `src/components/layout/Footer.tsx` | Email mis a jour |
+| `src/pages/legal/Privacy.tsx` | Email mis a jour |
+| `src/pages/legal/Terms.tsx` | Email mis a jour |
+| `src/pages/legal/Cookies.tsx` | Email mis a jour |
+
+### Ordre d'implementation
+
+| Etape | Modification | Impact |
+|-------|-------------|--------|
+| 1 | Copier les 2 images (logo + fond) | Prerequis pour tout le reste |
+| 2 | Mettre a jour le logo (Sidebar, MobileHeader, pages auth) | Branding |
+| 3 | Ajouter image de fond aux pages auth | Visuel |
+| 4 | Fix credits admin (IA + jeu) | Fonctionnel |
+| 5 | Fix theme provider dans Settings | Fonctionnel |
+| 6 | Fix photo profil + auto-save preferences | UX |
+| 7 | Ajouter onglet "A propos" + mettre a jour emails | Legal |
+
+### Credits Admin - Detail technique
+
+Dans le dialog de credits (`Admin.tsx` lignes 843-879), ajouter un systeme a 2 types :
+
 ```typescript
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// Nouveau state
+const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
+
+// Nouvelle fonction pour credits IA
+const handleGiveAICredits = async () => {
+  if (!creditsUser || creditsAmount === 0) return;
+  
+  const { data: existing } = await supabase
+    .from("ai_credits")
+    .select("credits")
+    .eq("user_id", creditsUser.id)
+    .maybeSingle();
+  
+  const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
+  
+  if (existing) {
+    await supabase.from("ai_credits")
+      .update({ credits: newCredits })
+      .eq("user_id", creditsUser.id);
+  } else {
+    await supabase.from("ai_credits")
+      .insert({ user_id: creditsUser.id, credits: newCredits });
+  }
+  
+  await logAction("modify_ai_credits", ...);
+};
 ```
 
----
+### Fix Theme - Detail technique
 
-## 8. SECURITE — Auth flow en mode `implicit` (obsolète)
+Le probleme est que `App.tsx` utilise `import { ThemeProvider } from "next-themes"` mais `Settings.tsx` importe `useTheme` depuis `@/components/theme-provider` qui est un provider local jamais monte dans l'arbre de composants.
 
-**Problème** : Le client Supabase utilise `flowType: 'implicit'` dans `client.ts`. Le flow implicite expose le token dans l'URL fragment, et est considéré obsolète (RFC 6749 Section 10.16).
+**Solution :** Changer l'import dans Settings.tsx :
+```typescript
+// Avant
+import { useTheme } from "@/components/theme-provider";
+// Apres
+import { useTheme } from "next-themes";
+```
 
-**Correction** :
-- Migrer vers `flowType: 'pkce'` qui est plus sécurisé
-- Ajuster les redirections post-auth en conséquence
+### FAQ - Contenu
 
----
-
-## 9. UX/INTERFACE — Page Paramètres manque d'option de suppression de compte et d'export
-
-**Problème** : En plus du problème RGPD (point 3), la page Settings n'offre pas :
-- D'option pour changer de mot de passe depuis l'app
-- D'option d'export des données personnelles
-- La section "Crédits IA" affiche un max hardcodé de 200 qui ne correspond à rien de réel
-
-**Correction** :
-- Ajouter un bouton "Changer le mot de passe" qui utilise `supabase.auth.updateUser`
-- Ajouter un bouton "Exporter mes données" (Edge Function qui compile un JSON)
-- Calculer le max de crédits dynamiquement selon le tier d'abonnement
-
----
-
-## 10. LEGAL — Pages légales obsolètes (date janvier 2025) et informations incomplètes
-
-**Problème** :
-- Les pages Privacy et Terms affichent "Dernière mise à jour : Janvier 2025" — obsolète
-- Aucune mention du DPO ou responsable de traitement
-- Pas de mention de Stripe (nouveau processeur de paiement) dans la politique de confidentialité
-- Cookie policy ne mentionne pas les cookies techniques utilisés (localStorage `deepflow-auth-session`, `deepflow_remember_me`, etc.)
-
-**Correction** :
-- Mettre à jour la date à Mars 2026
-- Ajouter la mention de Stripe comme sous-traitant de paiement
-- Lister les cookies/localStorage techniques dans la page Cookies
-- Ajouter les coordonnées du responsable de traitement
-
----
-
-## Ordre de priorité recommandé
-
-| # | Amélioration | Impact | Difficulté |
-|---|-------------|--------|-----------|
-| 1 | Admin server-side verification | Sécurité critique | Facile |
-| 2 | Error details masquées dans Edge Functions | Sécurité | Facile |
-| 3 | Consentement cookies + suppression compte | Légal/RGPD | Moyen |
-| 5 | Nettoyage billing.ts (fonctions mortes) | Stabilité | Facile |
-| 8 | Migration auth PKCE | Sécurité | Moyen |
-| 7 | QueryClient optimisé | Performance | Facile |
-| 6 | Error Boundary + empty states | UX | Moyen |
-| 4 | Responsive mobile fine-tuning | UX | Moyen |
-| 9 | Settings enrichi (password, export) | UX/RGPD | Moyen |
-| 10 | Pages légales mises à jour | Légal | Facile |
-
+Questions prevues pour la FAQ :
+1. Comment fonctionne DeepFlow ?
+2. Qu'est-ce que les credits IA ?
+3. Comment gagner des credits de jeu ?
+4. Mes donnees sont-elles securisees ?
+5. Comment contacter le support ?
+6. Puis-je utiliser DeepFlow hors ligne ?

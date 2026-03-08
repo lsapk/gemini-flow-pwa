@@ -71,7 +71,7 @@ const Index = () => {
           <div className="container max-w-6xl mx-auto px-6 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               {/* Value Proposition - A à B */}
-              <h1 className="text-5xl md:text-7xl font-heading font-bold mb-8 leading-tight">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-heading font-bold mb-8 leading-tight">
                 <span className="text-foreground">Passez du </span>
                 <span className="text-muted-foreground line-through decoration-2">chaos mental</span>
                 <br />
@@ -90,7 +90,7 @@ const Index = () => {
                 <Link to="/register">
                   <Button 
                     size="lg" 
-                    className="text-lg px-10 py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-105"
+                    className="text-lg px-10 py-5 sm:py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-105"
                   >
                     Reprendre le contrôle
                     <ArrowRight className="ml-3 h-6 w-6" />
@@ -319,7 +319,7 @@ const Index = () => {
           <Link to="/register">
             <Button 
               size="lg" 
-              className="text-lg px-10 py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25"
+              className="text-lg px-10 py-5 sm:py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25"
             >
               Reprendre le contrôle
               <ArrowRight className="ml-3 h-6 w-6" />

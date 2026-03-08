@@ -22,7 +22,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     // Detect session from URL (useful for OAuth redirects)
     detectSessionInUrl: true,
-    // Use implicit flow for better multi-device support
-    flowType: 'implicit',
+    // Use PKCE flow for better security (recommended over implicit)
+    flowType: 'pkce',
   },
 });

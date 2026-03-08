@@ -123,7 +123,7 @@ serve(async (req) => {
     console.error("Error creating checkout session:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Une erreur est survenue lors de la création de la session de paiement." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
