@@ -19,10 +19,10 @@ export default {
 			}
 		},
 		extend: {
-		fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
-				heading: ['Clash Display', 'system-ui', 'sans-serif'],
-				mono: ['Space Mono', 'monospace'],
+			fontFamily: {
+				sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+				heading: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+				mono: ['SF Mono', 'Menlo', 'monospace'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
