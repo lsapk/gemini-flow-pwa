@@ -8,6 +8,8 @@ import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
 import EditTaskModal from "@/components/modals/EditTaskModal";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinBusy from "@/assets/penguin-busy.png";
 import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import {
   Tabs,
