@@ -338,7 +338,7 @@ Tu es en mode discussion - concentre-toi sur les conseils et l'analyse sans sugg
   } catch (error) {
     console.error('Error in gemini-chat-enhanced:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Une erreur interne est survenue.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

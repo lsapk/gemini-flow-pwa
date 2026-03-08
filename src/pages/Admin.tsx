@@ -93,14 +93,25 @@ export default function Admin() {
   const [serverVerifiedAdmin, setServerVerifiedAdmin] = useState<boolean | null>(null);
   const [verifyingAdmin, setVerifyingAdmin] = useState(true);
 
+  // Server-side admin verification — never trust client state alone
   useEffect(() => {
-    if (!isLoading) {
-      setServerVerifiedAdmin(clientIsAdmin);
-      setVerifyingAdmin(false);
-    }
-  }, [isLoading, clientIsAdmin]);
+    if (isLoading || !user) return;
+    const verifyAdmin = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-admin');
+        if (error) throw error;
+        setServerVerifiedAdmin(data?.isAdmin === true);
+      } catch (err) {
+        console.error('Admin verification failed:', err);
+        setServerVerifiedAdmin(false);
+      } finally {
+        setVerifyingAdmin(false);
+      }
+    };
+    verifyAdmin();
+  }, [isLoading, user]);
 
-  const isAdmin = serverVerifiedAdmin ?? clientIsAdmin;
+  const isAdmin = serverVerifiedAdmin === true;
 
   useEffect(() => {
     if (isAdmin && !verifyingAdmin) fetchUsers();
