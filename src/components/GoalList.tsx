@@ -123,7 +123,7 @@ function SortableGoalCard({
           {/* Subobjectives toggle */}
           <div className="pt-2 border-t">
             <button
-              onClick={() => onToggleExpanded(goal.id)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleExpanded(goal.id); }}
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
             >
               <span className="flex-1 text-left">Sous-objectifs</span>
