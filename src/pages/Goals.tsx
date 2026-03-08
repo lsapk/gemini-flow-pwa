@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinThinking from "@/assets/penguin-thinking.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
