@@ -84,6 +84,8 @@ function App() {
               <Sonner />
               <BrowserRouter>
                 <AuthProvider>
+                  <ErrorBoundary>
+                  <CookieConsent />
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       <Route path="/" element={<Index />} />
