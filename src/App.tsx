@@ -8,6 +8,8 @@ import { ThemeProvider } from "next-themes";
 import { DesignModeProvider } from "./contexts/DesignModeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { FoodNotificationProvider } from "./components/penguin/FoodNotification";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { CookieConsent } from "./components/CookieConsent";
 import AppLayout from "./components/layout/AppLayout";
 
 // Lazy loaded pages for better performance
