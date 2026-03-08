@@ -89,35 +89,56 @@ export default function Analysis() {
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Global Score */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="bg-gradient-to-br from-primary/10 via-background to-purple-500/10 border-primary/20 shadow-sm">
-          <CardContent className="py-4 md:py-6">
-            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+        <Card className="overflow-hidden border-border/30 shadow-lg bg-card/60 backdrop-blur-xl">
+          <CardContent className="py-5 md:py-7">
+            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8">
+              {/* Score Circle */}
               <div className="relative group">
-                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl shadow-primary/20 transition-transform duration-300 group-hover:scale-105">
-                  <div className="text-center">
-                    <span className="text-4xl md:text-5xl font-black text-white">{scores.overall}</span>
-                    <span className="text-sm md:text-base text-white/80 font-bold ml-0.5">%</span>
+                <div className="relative w-32 h-32 md:w-36 md:h-36">
+                  {/* Background ring */}
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" opacity="0.3" />
+                    <circle
+                      cx="60" cy="60" r="52" fill="none"
+                      stroke="url(#scoreGradient)" strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${scores.overall * 3.267} ${326.7 - scores.overall * 3.267}`}
+                      className="transition-all duration-1000 ease-out"
+                    />
+                    <defs>
+                      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" />
+                        <stop offset="100%" stopColor="hsl(var(--primary) / 0.6)" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  {/* Center text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">{scores.overall}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
                   </div>
                 </div>
-                <Badge className={`absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-lg border-2 border-background px-3 py-1 rounded-full text-white font-bold ${
-                  scores.overall >= 80 ? 'bg-green-500' : scores.overall >= 60 ? 'bg-blue-600' : scores.overall >= 40 ? 'bg-yellow-500' : 'bg-orange-500'
+                <Badge className={`absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-md border-2 border-background px-3 py-1 rounded-full font-semibold text-xs ${
+                  scores.overall >= 80 ? 'bg-green-500 text-white' : scores.overall >= 60 ? 'bg-primary text-primary-foreground' : scores.overall >= 40 ? 'bg-amber-500 text-white' : 'bg-orange-500 text-white'
                 }`}>
                   {scores.overall >= 80 ? '🏆 Excellent' : scores.overall >= 60 ? '👍 Bien' : scores.overall >= 40 ? '📈 Progresse' : '🎯 À améliorer'}
                 </Badge>
               </div>
-              <div className="flex-1 grid grid-cols-3 gap-4 w-full">
-                <div className="text-center p-4 bg-background/50 rounded-xl border">
-                  <Target className="h-6 w-6 mx-auto mb-2 text-green-500" />
-                  <div className="text-2xl font-bold">{scores.taskScore}%</div>
-                  <div className="text-xs text-muted-foreground">Tâches</div>
+
+              {/* Stats */}
+              <div className="flex-1 grid grid-cols-3 gap-3 w-full">
+                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
+                  <Target className="h-5 w-5 mx-auto mb-1.5 text-green-500" />
+                  <div className="text-xl font-bold tracking-tight">{scores.taskScore}%</div>
+                  <div className="text-[10px] text-muted-foreground font-medium">Tâches</div>
                 </div>
-                <div className="text-center p-4 bg-background/50 rounded-xl border">
-                  <Timer className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-                  <div className="text-2xl font-bold">{Math.round(totalFocusTime / 60)}h</div>
-                  <div className="text-xs text-muted-foreground">Focus</div>
+                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
+                  <Timer className="h-5 w-5 mx-auto mb-1.5 text-primary" />
+                  <div className="text-xl font-bold tracking-tight">{Math.round(totalFocusTime / 60)}h</div>
+                  <div className="text-[10px] text-muted-foreground font-medium">Focus</div>
                 </div>
-                <div className="text-center p-4 bg-background/50 rounded-xl border">
-                  <Flame className="h-6 w-6 mx-auto mb-2 text-orange-500" />
+                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
+                  <Flame className="h-5 w-5 mx-auto mb-1.5 text-orange-500" />
                   <div className="text-2xl font-bold">{streakCount}</div>
                   <div className="text-xs text-muted-foreground">Streak</div>
                 </div>
