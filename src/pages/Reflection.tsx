@@ -109,7 +109,7 @@ export default function Reflection() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-3 sm:p-6">
+    <div className="max-w-4xl mx-auto flex flex-col gap-5 p-3 sm:p-6 min-h-[calc(100vh-120px)]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
