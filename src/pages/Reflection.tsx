@@ -127,13 +127,13 @@ export default function Reflection() {
       </div>
 
       {/* Tabs: Réflexion | Historique */}
-      <Tabs defaultValue="reflect" className="w-full">
+      <Tabs defaultValue="reflect" className="w-full flex-1 flex flex-col">
         <TabsList className="grid w-full max-w-xs grid-cols-2">
           <TabsTrigger value="reflect">Réflexion</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="reflect">
+        <TabsContent value="reflect" className="flex-1 flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentQuestion}
@@ -141,31 +141,31 @@ export default function Reflection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3 }}
-              className="space-y-5"
+              className="flex-1 flex flex-col gap-4"
             >
               {/* Question Card */}
               <Card className="backdrop-blur-sm bg-gradient-to-br from-primary/5 to-primary/10 border-border/30 overflow-hidden">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="h-5 w-5 text-primary" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">Question du moment</p>
-                      <p className="text-lg sm:text-xl font-medium text-foreground leading-relaxed">{currentQuestion}</p>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Question du moment</p>
+                      <p className="text-base sm:text-lg font-medium text-foreground leading-relaxed">{currentQuestion}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Answer */}
-              <Card className="backdrop-blur-sm bg-card/80 border-border/40">
-                <CardContent className="p-5 sm:p-6 space-y-4">
+              {/* Answer — takes remaining space */}
+              <Card className="backdrop-blur-sm bg-card/80 border-border/40 flex-1 flex flex-col">
+                <CardContent className="p-4 sm:p-6 flex-1 flex flex-col gap-4">
                   <Textarea
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
                     placeholder="Prenez le temps de réfléchir et écrivez votre réponse..."
-                    className="min-h-[180px] text-base"
+                    className="flex-1 min-h-[50vh] text-base resize-none"
                   />
                   <div className="flex gap-2">
                     <Button onClick={saveReflection} disabled={isLoading || !answer.trim()} className="rounded-2xl active:scale-[0.95] transition-transform">
