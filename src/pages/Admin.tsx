@@ -13,8 +13,8 @@ import { useAdminStats } from "@/hooks/useAdminStats";
 import {
   Shield, Users, Search, Ban, UserCheck, Trophy, Target,
   CheckSquare, Timer, Sparkles, RefreshCw, Eye, Crown,
-  Coins, History, BarChart3, Download, UserPlus, Flame,
-  Activity, TrendingUp, Database
+  History, Download, UserPlus, Flame,
+  AlertTriangle, ToggleLeft, Send, FileText, Activity, Database
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader,
@@ -25,6 +25,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import penguinMascot from "@/assets/penguin-mascot.png";
@@ -48,12 +49,14 @@ interface UserStats {
   salmon_total: number;
   golden_fish_total: number;
   ai_credits: number;
+  journal_count: number;
+  subscription_tier: string;
 }
 
 export default function Admin() {
   const { user, isAdmin: clientIsAdmin, isLoading } = useAuth();
   const { stats: platformStats, logs: adminLogs, isLoading: statsLoading, logAction, refetch } = useAdminStats();
-  
+
   const [users, setUsers] = useState<UserData[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,26 +67,38 @@ export default function Admin() {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [userToBan, setUserToBan] = useState<UserData | null>(null);
   const [banReason, setBanReason] = useState("");
-  
+
+  // AI credits dialog
   const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
   const [creditsUser, setCreditsUser] = useState<UserData | null>(null);
   const [creditsAmount, setCreditsAmount] = useState<number>(0);
-  const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
-  
-  const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
-  const [userToPromote, setUserToPromote] = useState<UserData | null>(null);
-  
+
+  // Subscription dialog
+  const [subDialogOpen, setSubDialogOpen] = useState(false);
+  const [subUser, setSubUser] = useState<UserData | null>(null);
+  const [subTier, setSubTier] = useState<string>("basic");
+
+  // Reset penguin dialog
+  const [resetPenguinOpen, setResetPenguinOpen] = useState(false);
+  const [resetPenguinUser, setResetPenguinUser] = useState<UserData | null>(null);
+
+  // Announcement dialog
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementContent, setAnnouncementContent] = useState("");
+
+  // Mass action
+  const [massActionOpen, setMassActionOpen] = useState(false);
+
   const [serverVerifiedAdmin, setServerVerifiedAdmin] = useState<boolean | null>(null);
   const [verifyingAdmin, setVerifyingAdmin] = useState(true);
 
   useEffect(() => {
-    const verifyAdmin = async () => {
-      if (!user) { setServerVerifiedAdmin(false); setVerifyingAdmin(false); return; }
+    if (!isLoading) {
       setServerVerifiedAdmin(clientIsAdmin);
       setVerifyingAdmin(false);
-    };
-    if (!isLoading) verifyAdmin();
-  }, [user, isLoading, clientIsAdmin]);
+    }
+  }, [isLoading, clientIsAdmin]);
 
   const isAdmin = serverVerifiedAdmin ?? clientIsAdmin;
 
@@ -124,13 +139,15 @@ export default function Admin() {
   const fetchUserStats = async (userId: string) => {
     setStatsUserLoading(true);
     try {
-      const [tasksRes, habitsRes, goalsRes, focusRes, penguinRes, aiCreditsRes] = await Promise.allSettled([
+      const [tasksRes, habitsRes, goalsRes, focusRes, penguinRes, aiCreditsRes, journalRes, subRes] = await Promise.allSettled([
         supabase.from("tasks").select("id").eq("user_id", userId).eq("completed", true),
         supabase.from("habits").select("id").eq("user_id", userId),
         supabase.from("goals").select("id").eq("user_id", userId),
         supabase.from("focus_sessions").select("duration").eq("user_id", userId),
         supabase.from("penguin_profiles").select("stage, shrimp_total, salmon_total, golden_fish_total").eq("user_id", userId).single(),
         supabase.from("ai_credits").select("credits").eq("user_id", userId).single(),
+        supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("subscribers").select("subscription_tier").eq("user_id", userId).maybeSingle(),
       ]);
 
       const tasks = tasksRes.status === "fulfilled" ? tasksRes.value.data?.length || 0 : 0;
@@ -139,7 +156,9 @@ export default function Admin() {
       const focusSessions = focusRes.status === "fulfilled" ? focusRes.value.data || [] : [];
       const penguin = penguinRes.status === "fulfilled" ? penguinRes.value.data : null;
       const aiCredits = aiCreditsRes.status === "fulfilled" ? aiCreditsRes.value.data : null;
-      const totalMinutes = focusSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
+      const journalCount = journalRes.status === "fulfilled" ? journalRes.value.count || 0 : 0;
+      const sub = subRes.status === "fulfilled" ? subRes.value.data : null;
+      const totalMinutes = focusSessions.reduce((acc: number, s: { duration: number }) => acc + (s.duration || 0), 0);
 
       setUserStats({
         tasks_completed: tasks, habits_count: habits, goals_count: goals,
@@ -149,6 +168,8 @@ export default function Admin() {
         salmon_total: penguin?.salmon_total || 0,
         golden_fish_total: penguin?.golden_fish_total || 0,
         ai_credits: aiCredits?.credits || 0,
+        journal_count: journalCount,
+        subscription_tier: sub?.subscription_tier || 'basic',
       });
     } catch (error) {
       console.error("Error fetching user stats:", error);
@@ -178,51 +199,104 @@ export default function Admin() {
     } catch (error) { console.error("Error unbanning user:", error); toast.error("Erreur lors du débannissement"); }
   };
 
-  const handlePromoteToAdmin = async () => {
-    if (!userToPromote) return;
-    try {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userToPromote.id, role: "admin" });
-      if (error) throw error;
-      await logAction("promote_admin", userToPromote.id, userToPromote.email);
-      toast.success(`${userToPromote.email} est maintenant administrateur`);
-      setPromoteDialogOpen(false); setUserToPromote(null); fetchUsers();
-    } catch (error) { console.error("Error promoting user:", error); toast.error("Erreur lors de la promotion"); }
-  };
-
-  const handleDemoteAdmin = async (userData: UserData) => {
-    try {
-      const { error } = await supabase.from("user_roles").delete().eq("user_id", userData.id).eq("role", "admin");
-      if (error) throw error;
-      await logAction("demote_admin", userData.id, userData.email);
-      toast.success(`${userData.email} n'est plus administrateur`); fetchUsers();
-    } catch (error) { console.error("Error demoting user:", error); toast.error("Erreur lors de la rétrogradation"); }
-  };
-
+  // Give/remove AI credits
   const handleGiveCredits = async () => {
     if (!creditsUser || creditsAmount === 0) return;
     try {
-      if (creditType === 'game') {
-        const { data: profile } = await supabase.from("player_profiles").select("credits").eq("user_id", creditsUser.id).single();
-        const newCredits = Math.max(0, (profile?.credits || 0) + creditsAmount);
-        const { error } = await supabase.from("player_profiles").update({ credits: newCredits }).eq("user_id", creditsUser.id);
+      const { data: existing } = await supabase.from("ai_credits").select("credits").eq("user_id", creditsUser.id).maybeSingle();
+      const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
+      if (existing) {
+        const { error } = await supabase.from("ai_credits").update({ credits: newCredits, last_updated: new Date().toISOString() }).eq("user_id", creditsUser.id);
         if (error) throw error;
-        await logAction("modify_game_credits", creditsUser.id, creditsUser.email, { type: 'game', amount: creditsAmount, new_total: newCredits });
-        toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits jeu pour ${creditsUser.email}`);
       } else {
-        const { data: existing } = await supabase.from("ai_credits").select("credits").eq("user_id", creditsUser.id).maybeSingle();
-        const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
-        if (existing) {
-          const { error } = await supabase.from("ai_credits").update({ credits: newCredits, last_updated: new Date().toISOString() }).eq("user_id", creditsUser.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from("ai_credits").insert({ user_id: creditsUser.id, credits: newCredits });
-          if (error) throw error;
-        }
-        await logAction("modify_ai_credits", creditsUser.id, creditsUser.email, { type: 'ai', amount: creditsAmount, new_total: newCredits });
-        toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits IA pour ${creditsUser.email}`);
+        const { error } = await supabase.from("ai_credits").insert({ user_id: creditsUser.id, credits: newCredits });
+        if (error) throw error;
       }
+      await logAction("modify_ai_credits", creditsUser.id, creditsUser.email, { amount: creditsAmount, new_total: newCredits });
+      toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits IA pour ${creditsUser.email}`);
       setCreditsDialogOpen(false); setCreditsUser(null); setCreditsAmount(0);
-    } catch (error) { console.error("Error modifying credits:", error); toast.error("Erreur lors de la modification des crédits"); }
+    } catch (error) { console.error("Error modifying credits:", error); toast.error("Erreur lors de la modification"); }
+  };
+
+  // Change subscription tier
+  const handleChangeSubscription = async () => {
+    if (!subUser) return;
+    try {
+      const { data: existing } = await supabase.from("subscribers").select("id").eq("user_id", subUser.id).maybeSingle();
+      if (existing) {
+        await supabase.from("subscribers").update({
+          subscription_tier: subTier,
+          subscribed: subTier !== "basic",
+          subscription_end: subTier !== "basic" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", subUser.id);
+      } else {
+        await supabase.from("subscribers").insert([{
+          user_id: subUser.id,
+          subscription_tier: subTier,
+          subscribed: subTier !== "basic",
+          subscription_end: subTier !== "basic" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
+        }] as never[]);
+      }
+      await logAction("change_subscription", subUser.id, subUser.email, { tier: subTier });
+      toast.success(`Abonnement de ${subUser.email} → ${subTier}`);
+      setSubDialogOpen(false); setSubUser(null);
+    } catch (error) { toast.error("Erreur"); }
+  };
+
+  // Reset penguin
+  const handleResetPenguin = async () => {
+    if (!resetPenguinUser) return;
+    try {
+      await supabase.from("penguin_profiles").update({
+        stage: "egg", shrimp_total: 0, salmon_total: 0, golden_fish_total: 0,
+        shrimp_today: 0, iceberg_size: 1, climate_state: "idle",
+        has_radio: false, has_library: false, has_lounge_chair: false,
+        equipped_accessories: [],
+      }).eq("user_id", resetPenguinUser.id);
+      await supabase.from("penguin_accessories").delete().eq("user_id", resetPenguinUser.id);
+      await logAction("reset_penguin", resetPenguinUser.id, resetPenguinUser.email);
+      toast.success(`Pingouin de ${resetPenguinUser.email} réinitialisé`);
+      setResetPenguinOpen(false); setResetPenguinUser(null);
+    } catch (error) { toast.error("Erreur"); }
+  };
+
+  // Purge user data
+  const handlePurgeUserData = async (userData: UserData) => {
+    if (!confirm(`Purger TOUTES les données de ${userData.email} ? Cette action est irréversible.`)) return;
+    try {
+      const tablesToPurge = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions"] as const;
+      for (const table of tablesToPurge) {
+        await (supabase.from(table).delete() as any).eq("user_id", userData.id);
+      }
+      await logAction("purge_user_data", userData.id, userData.email);
+      toast.success(`Données de ${userData.email} purgées`);
+    } catch (error) { toast.error("Erreur lors de la purge"); }
+  };
+
+  // Send announcement
+  const handleSendAnnouncement = async () => {
+    if (!announcementTitle.trim() || !announcementContent.trim() || !user) return;
+    try {
+      await supabase.from("admin_announcements").insert({
+        title: announcementTitle, content: announcementContent,
+        created_by: user.id, is_active: true, announcement_type: "info",
+      });
+      await logAction("send_announcement", undefined, undefined, { title: announcementTitle });
+      toast.success("Annonce publiée");
+      setAnnouncementOpen(false); setAnnouncementTitle(""); setAnnouncementContent("");
+    } catch (error) { toast.error("Erreur"); }
+  };
+
+  // Mass reset daily usage
+  const handleMassResetUsage = async () => {
+    if (!confirm("Réinitialiser les compteurs quotidiens de tous les utilisateurs ?")) return;
+    try {
+      await supabase.from("daily_usage").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await logAction("mass_reset_daily_usage");
+      toast.success("Compteurs quotidiens réinitialisés");
+      setMassActionOpen(false);
+    } catch (error) { toast.error("Erreur"); }
   };
 
   const exportUsersCSV = () => {
@@ -237,10 +311,6 @@ export default function Admin() {
     logAction("export_users_csv", undefined, undefined, { count: users.length });
     toast.success("Export CSV téléchargé");
   };
-
-  const openBanDialog = (userData: UserData) => { setUserToBan(userData); setBanDialogOpen(true); };
-  const openCreditsDialog = (userData: UserData) => { setCreditsUser(userData); setCreditsAmount(0); setCreditType('game'); setCreditsDialogOpen(true); };
-  const openPromoteDialog = (userData: UserData) => { setUserToPromote(userData); setPromoteDialogOpen(true); };
 
   if (isLoading || verifyingAdmin) {
     return (<div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div></div>);
@@ -267,7 +337,7 @@ export default function Admin() {
         <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold">Admin</Badge>
       </div>
 
-      {/* Platform Stats - Improved grid */}
+      {/* Platform Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
           <CardContent className="p-4 text-center">
@@ -299,7 +369,7 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Secondary stats row */}
+      {/* Secondary stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
@@ -321,13 +391,37 @@ export default function Admin() {
         </Card>
       </div>
 
+      {/* Quick Admin Actions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4" /> Actions Rapides</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => setAnnouncementOpen(true)}>
+              <Send className="h-4 w-4 text-blue-500" />
+              <span className="text-[10px]">Annonce</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={exportUsersCSV}>
+              <Download className="h-4 w-4 text-emerald-500" />
+              <span className="text-[10px]">Export CSV</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => setMassActionOpen(true)}>
+              <ToggleLeft className="h-4 w-4 text-orange-500" />
+              <span className="text-[10px]">Actions Masse</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 text-purple-500" />
+              <span className="text-[10px]">Actualiser</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 h-12">
+        <TabsList className="grid w-full grid-cols-2 h-12">
           <TabsTrigger value="users" className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4" /><span className="hidden sm:inline">Utilisateurs</span>
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="flex items-center gap-2 text-sm">
-            <Crown className="h-4 w-4" /><span className="hidden sm:inline">Rôles</span>
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2 text-sm">
             <History className="h-4 w-4" /><span className="hidden sm:inline">Historique</span>
@@ -349,7 +443,6 @@ export default function Admin() {
                     <Input placeholder="Rechercher..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                   </div>
                   <Button variant="outline" size="icon" onClick={fetchUsers}><RefreshCw className="h-4 w-4" /></Button>
-                  <Button variant="outline" size="icon" onClick={exportUsersCSV}><Download className="h-4 w-4" /></Button>
                 </div>
               </div>
             </CardHeader>
@@ -357,7 +450,7 @@ export default function Admin() {
               {loading ? (
                 <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div></div>
               ) : (
-                <ScrollArea className="h-[400px]">
+                <ScrollArea className="h-[500px]">
                   <div className="space-y-2">
                     {filteredUsers.map((userData) => (
                       <div key={userData.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all hover:shadow-sm ${userData.is_banned ? "bg-red-500/5 border-red-500/20" : userData.is_admin ? "bg-amber-500/5 border-amber-500/20" : "bg-muted/20 border-border/50 hover:bg-muted/40"}`}>
@@ -374,14 +467,17 @@ export default function Admin() {
                             <p className="text-xs text-muted-foreground">{userData.display_name || "Sans nom"} • {format(new Date(userData.created_at), "d MMM yyyy", { locale: fr })}</p>
                           </div>
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewUser(userData)} title="Voir"><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => openCreditsDialog(userData)} title="Crédits"><Coins className="h-4 w-4" /></Button>
+                        <div className="flex gap-1 flex-wrap">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewUser(userData)} title="Voir détails"><Eye className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setCreditsUser(userData); setCreditsAmount(0); setCreditsDialogOpen(true); }} title="Crédits IA"><Sparkles className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setSubUser(userData); setSubTier("basic"); setSubDialogOpen(true); }} title="Abonnement"><Crown className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setResetPenguinUser(userData); setResetPenguinOpen(true); }} title="Reset pingouin"><img src={penguinMascot} alt="" className="h-4 w-4" /></Button>
                           {userData.is_banned ? (
                             <Button variant="ghost" size="icon" onClick={() => handleUnbanUser(userData)} className="text-emerald-600" title="Débannir"><UserCheck className="h-4 w-4" /></Button>
                           ) : (
-                            <Button variant="ghost" size="icon" onClick={() => openBanDialog(userData)} className="text-red-600" title="Bannir"><Ban className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => { setUserToBan(userData); setBanDialogOpen(true); }} className="text-red-600" title="Bannir"><Ban className="h-4 w-4" /></Button>
                           )}
+                          <Button variant="ghost" size="icon" onClick={() => handlePurgeUserData(userData)} className="text-red-600" title="Purger données"><AlertTriangle className="h-4 w-4" /></Button>
                         </div>
                       </div>
                     ))}
@@ -389,52 +485,6 @@ export default function Admin() {
                   </div>
                 </ScrollArea>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Roles Tab */}
-        <TabsContent value="roles">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-500" />Gestion des Rôles</CardTitle>
-              <CardDescription>Promouvoir ou rétrograder les administrateurs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Rechercher un utilisateur..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <h3 className="font-semibold flex items-center gap-2 text-sm"><Crown className="h-4 w-4 text-amber-500" />Administrateurs ({users.filter(u => u.is_admin).length})</h3>
-                    <ScrollArea className="h-[250px]">
-                      <div className="space-y-2">
-                        {users.filter(u => u.is_admin).map(userData => (
-                          <div key={userData.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                            <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-amber-500" /><span className="text-sm font-medium truncate">{userData.email}</span></div>
-                            {userData.id !== user?.id && <Button variant="ghost" size="sm" onClick={() => handleDemoteAdmin(userData)} className="text-red-600 text-xs">Rétrograder</Button>}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="font-semibold flex items-center gap-2 text-sm"><Users className="h-4 w-4" />Utilisateurs ({filteredUsers.filter(u => !u.is_admin).length})</h3>
-                    <ScrollArea className="h-[250px]">
-                      <div className="space-y-2">
-                        {filteredUsers.filter(u => !u.is_admin && !u.is_banned).slice(0, 20).map(userData => (
-                          <div key={userData.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/50">
-                            <span className="text-sm font-medium truncate flex-1">{userData.email}</span>
-                            <Button variant="outline" size="sm" onClick={() => openPromoteDialog(userData)} className="text-xs">Promouvoir</Button>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -452,7 +502,7 @@ export default function Admin() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px]">
+              <ScrollArea className="h-[500px]">
                 <div className="space-y-2">
                   {adminLogs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">Aucune action enregistrée</div>
@@ -478,7 +528,7 @@ export default function Admin() {
         </TabsContent>
       </Tabs>
 
-      {/* User Details Dialog - Now with penguin stats */}
+      {/* User Details Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -492,12 +542,10 @@ export default function Admin() {
               {selectedUser?.display_name || "Sans nom"} • Membre depuis le {selectedUser && format(new Date(selectedUser.created_at), "d MMMM yyyy", { locale: fr })}
             </DialogDescription>
           </DialogHeader>
-
           {statsUserLoading ? (
             <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div></div>
           ) : userStats ? (
             <div className="space-y-4">
-              {/* Productivity stats */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-center">
                   <CheckSquare className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
@@ -520,8 +568,6 @@ export default function Admin() {
                   <p className="text-[10px] text-muted-foreground">Focus</p>
                 </div>
               </div>
-
-              {/* Penguin stats */}
               <div className="p-4 rounded-xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 border border-sky-500/20">
                 <div className="flex items-center gap-3 mb-3">
                   <img src={penguinMascot} alt="" className="h-10 w-10 object-contain" />
@@ -536,37 +582,31 @@ export default function Admin() {
                   <div><span className="text-sm">✨🐠</span><div className="text-sm font-bold">{userStats.golden_fish_total}</div></div>
                 </div>
               </div>
-
-              {/* AI Credits */}
-              <div className="p-3 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Crédits IA</span>
-                </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /><span className="text-sm">Crédits IA</span></div>
                 <span className="font-bold text-primary">{userStats.ai_credits}</span>
               </div>
-
-              {selectedUser?.is_banned && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
-                  <Ban className="h-5 w-5 mx-auto mb-1 text-red-500" />
-                  <p className="text-sm font-medium text-red-500">Utilisateur banni</p>
-                </div>
-              )}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                <div className="flex items-center gap-2"><Crown className="h-4 w-4 text-amber-500" /><span className="text-sm">Abonnement</span></div>
+                <Badge variant="secondary">{userStats.subscription_tier}</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
+                <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Entrées journal</span></div>
+                <span className="font-bold">{userStats.journal_count}</span>
+              </div>
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
 
-      {/* Ban Confirmation Dialog */}
+      {/* Ban Dialog */}
       <AlertDialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Bannir cet utilisateur ?</AlertDialogTitle>
             <AlertDialogDescription>Êtes-vous sûr de vouloir bannir {userToBan?.email} ?</AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-2">
-            <Input placeholder="Raison du bannissement (optionnel)" value={banReason} onChange={(e) => setBanReason(e.target.value)} />
-          </div>
+          <Input placeholder="Raison (optionnel)" value={banReason} onChange={(e) => setBanReason(e.target.value)} />
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setBanReason("")}>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleBanUser} className="bg-red-500 hover:bg-red-600">Bannir</AlertDialogAction>
@@ -574,27 +614,23 @@ export default function Admin() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Credits Dialog */}
+      {/* AI Credits Dialog */}
       <Dialog open={creditsDialogOpen} onOpenChange={setCreditsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Coins className="h-5 w-5 text-amber-500" />Gérer les crédits</DialogTitle>
-            <DialogDescription>Ajouter ou retirer des crédits pour {creditsUser?.email}</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />Crédits IA</DialogTitle>
+            <DialogDescription>Modifier les crédits IA de {creditsUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex gap-2">
-              <Button variant={creditType === 'game' ? 'default' : 'outline'} size="sm" onClick={() => setCreditType('game')} className="flex-1"><Coins className="h-4 w-4 mr-2" />Crédits Jeu</Button>
-              <Button variant={creditType === 'ai' ? 'default' : 'outline'} size="sm" onClick={() => setCreditType('ai')} className="flex-1"><Sparkles className="h-4 w-4 mr-2" />Crédits IA</Button>
-            </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={() => setCreditsAmount(prev => prev - 100)}>-100</Button>
+              <Button variant="outline" onClick={() => setCreditsAmount(prev => prev - 50)}>-50</Button>
               <Button variant="outline" onClick={() => setCreditsAmount(prev => prev - 10)}>-10</Button>
               <Input type="number" value={creditsAmount} onChange={(e) => setCreditsAmount(parseInt(e.target.value) || 0)} className="text-center" />
               <Button variant="outline" onClick={() => setCreditsAmount(prev => prev + 10)}>+10</Button>
-              <Button variant="outline" onClick={() => setCreditsAmount(prev => prev + 100)}>+100</Button>
+              <Button variant="outline" onClick={() => setCreditsAmount(prev => prev + 50)}>+50</Button>
             </div>
             <p className="text-center text-sm text-muted-foreground">
-              {creditsAmount > 0 ? `Ajouter ${creditsAmount} crédits ${creditType === 'ai' ? 'IA' : 'jeu'}` : creditsAmount < 0 ? `Retirer ${Math.abs(creditsAmount)} crédits ${creditType === 'ai' ? 'IA' : 'jeu'}` : "Aucun changement"}
+              {creditsAmount > 0 ? `+${creditsAmount} crédits` : creditsAmount < 0 ? `${creditsAmount} crédits` : "Aucun changement"}
             </p>
           </div>
           <DialogFooter>
@@ -604,19 +640,81 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
-      {/* Promote Dialog */}
-      <AlertDialog open={promoteDialogOpen} onOpenChange={setPromoteDialogOpen}>
+      {/* Subscription Dialog */}
+      <Dialog open={subDialogOpen} onOpenChange={setSubDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Crown className="h-5 w-5 text-amber-500" />Abonnement</DialogTitle>
+            <DialogDescription>Changer l'abonnement de {subUser?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            <Button variant={subTier === "basic" ? "default" : "outline"} onClick={() => setSubTier("basic")} className="h-auto py-4 flex-col gap-1">
+              <span className="font-bold">Basic</span>
+              <span className="text-xs text-muted-foreground">Gratuit</span>
+            </Button>
+            <Button variant={subTier === "premium" ? "default" : "outline"} onClick={() => setSubTier("premium")} className="h-auto py-4 flex-col gap-1">
+              <Crown className="h-5 w-5 text-amber-500" />
+              <span className="font-bold">Premium</span>
+              <span className="text-xs text-muted-foreground">Illimité</span>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleChangeSubscription}>Confirmer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Penguin Dialog */}
+      <AlertDialog open={resetPenguinOpen} onOpenChange={setResetPenguinOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Promouvoir en administrateur ?</AlertDialogTitle>
-            <AlertDialogDescription>{userToPromote?.email} aura accès à toutes les fonctionnalités d'administration.</AlertDialogDescription>
+            <AlertDialogTitle>Réinitialiser le pingouin ?</AlertDialogTitle>
+            <AlertDialogDescription>Le pingouin de {resetPenguinUser?.email} sera remis à zéro (œuf, 0 nourriture, 0 accessoires).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePromoteToAdmin}>Promouvoir</AlertDialogAction>
+            <AlertDialogAction onClick={handleResetPenguin} className="bg-orange-500 hover:bg-orange-600">Réinitialiser</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Announcement Dialog */}
+      <Dialog open={announcementOpen} onOpenChange={setAnnouncementOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-blue-500" />Nouvelle Annonce</DialogTitle>
+            <DialogDescription>Envoyer une annonce à tous les utilisateurs</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input placeholder="Titre de l'annonce" value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} />
+            <Textarea placeholder="Contenu de l'annonce..." value={announcementContent} onChange={(e) => setAnnouncementContent(e.target.value)} rows={4} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnnouncementOpen(false)}>Annuler</Button>
+            <Button onClick={handleSendAnnouncement} disabled={!announcementTitle.trim() || !announcementContent.trim()}>Publier</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mass Action Dialog */}
+      <Dialog open={massActionOpen} onOpenChange={setMassActionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Database className="h-5 w-5 text-orange-500" />Actions de Masse</DialogTitle>
+            <DialogDescription>Actions appliquées à tous les utilisateurs</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <Button variant="outline" className="w-full justify-start gap-2 h-12" onClick={handleMassResetUsage}>
+              <ToggleLeft className="h-4 w-4 text-orange-500" />
+              <div className="text-left">
+                <p className="text-sm font-medium">Réinitialiser compteurs quotidiens</p>
+                <p className="text-xs text-muted-foreground">Remet à zéro les limites IA de tous les utilisateurs</p>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
