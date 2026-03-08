@@ -233,8 +233,7 @@ export default function AIAssistant() {
       </div>
 
       {/* Chat Tab */}
-      {activeTab === "chat" && (
-        <div className="flex flex-col flex-1 min-h-0 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/30 shadow-lg overflow-hidden">
+      <div className={cn("flex flex-col flex-1 min-h-0 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/30 shadow-lg overflow-hidden", activeTab !== "chat" && "hidden")}>
           {/* Mode Pills + Clear */}
           <div className="px-3 py-2.5 border-b border-border/20 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-full">
