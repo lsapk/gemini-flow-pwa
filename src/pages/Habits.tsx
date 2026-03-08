@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Target, Archive, RotateCcw, CalendarIcon } from "lucide-react";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinWorkout from "@/assets/penguin-workout.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -383,31 +385,17 @@ export default function Habits() {
                   ))}
                 </div>
               ) : currentHabits.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-6 md:py-12">
-                    {activeTab === "active" ? (
-                      <>
-                        <Target className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                        <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude active</h3>
-                        <p className="text-muted-foreground text-center mb-3 md:mb-4 px-4 text-sm md:text-base">
-                          Commencez à créer de bonnes habitudes pour améliorer votre productivité.
-                        </p>
-                        <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Créer votre première habitude
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Archive className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
-                        <h3 className="text-base md:text-lg font-semibold mb-2">Aucune habitude archivée</h3>
-                        <p className="text-muted-foreground text-center px-4 text-sm md:text-base">
-                          Les habitudes que vous archivez apparaîtront ici.
-                        </p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
+                <PagePenguinEmpty
+                  image={penguinWorkout}
+                  title={activeTab === "active" ? "Pas encore d'habitudes" : "Aucune habitude archivée"}
+                  description={activeTab === "active" ? "Créez de bonnes habitudes pour améliorer votre productivité." : "Les habitudes archivées apparaîtront ici."}
+                >
+                  {activeTab === "active" && (
+                    <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />Créer votre première habitude
+                    </Button>
+                  )}
+                </PagePenguinEmpty>
               ) : (
                 <HabitList 
                   habits={currentHabits}

@@ -8,6 +8,8 @@ import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
 import EditTaskModal from "@/components/modals/EditTaskModal";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinBusy from "@/assets/penguin-busy.png";
 import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import {
   Tabs,
@@ -378,16 +380,30 @@ export default function Tasks() {
               </TabsList>
 
               <TabsContent value={activeTab} className="mt-4">
-                <TaskList
-                  tasks={currentTasks}
-                  loading={isLoading}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onToggleComplete={handleToggleComplete}
-                  subtasks={subtasks}
-                  onRefreshSubtasks={handleRefreshSubtasks}
-                  onReorder={handleReorder}
-                />
+                {currentTasks.length === 0 && !isLoading ? (
+                  <PagePenguinEmpty
+                    image={penguinBusy}
+                    title={activeTab === "pending" ? "Pas encore de tâches" : "Aucune tâche terminée"}
+                    description={activeTab === "pending" ? "Créez votre première tâche pour commencer à organiser votre journée." : "Les tâches que vous terminez apparaîtront ici."}
+                  >
+                    {activeTab === "pending" && (
+                      <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />Nouvelle tâche
+                      </Button>
+                    )}
+                  </PagePenguinEmpty>
+                ) : (
+                  <TaskList
+                    tasks={currentTasks}
+                    loading={isLoading}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onToggleComplete={handleToggleComplete}
+                    subtasks={subtasks}
+                    onRefreshSubtasks={handleRefreshSubtasks}
+                    onReorder={handleReorder}
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </div>

@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Target, Timer, TrendingUp, CheckCircle2, Crown, Lock, Brain, Flame, Calendar } from "lucide-react";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinReading from "@/assets/penguin-reading.png";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
 import { motion } from "framer-motion";
@@ -67,15 +69,14 @@ export default function Analysis() {
 
   if (!canUseFeature("analysis") && !isPremium) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">Limite quotidienne atteinte</h3>
-            <p className="text-muted-foreground mb-6">Les utilisateurs Basic ont droit à 1 analyse par jour.</p>
-            <Button asChild size="lg"><Link to="/settings"><Crown className="h-4 w-4 mr-2" />Passer à Premium</Link></Button>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-4xl mx-auto p-6">
+        <PagePenguinEmpty
+          image={penguinReading}
+          title="Limite quotidienne atteinte"
+          description="Les utilisateurs Basic ont droit à 1 analyse par jour. Passez à Premium pour un accès illimité."
+        >
+          <Button asChild size="lg"><Link to="/settings"><Crown className="h-4 w-4 mr-2" />Passer à Premium</Link></Button>
+        </PagePenguinEmpty>
       </div>
     );
   }

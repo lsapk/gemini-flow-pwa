@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinThinking from "@/assets/penguin-thinking.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -189,31 +191,17 @@ export default function Goals() {
               ))}
             </div>
           ) : currentGoals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                {activeTab === "ongoing" ? (
-                  <>
-                    <Target className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucun objectif en cours</h3>
-                    <p className="text-muted-foreground text-center mb-4">
-                      Définissez vos objectifs pour atteindre vos ambitions.
-                    </p>
-                    <Button onClick={() => setIsCreateModalOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer votre premier objectif
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Trophy className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucun objectif terminé</h3>
-                    <p className="text-muted-foreground text-center">
-                      Vos objectifs accomplis apparaîtront ici.
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <PagePenguinEmpty
+              image={penguinThinking}
+              title={activeTab === "ongoing" ? "Pas encore d'objectifs" : "Aucun objectif terminé"}
+              description={activeTab === "ongoing" ? "Définissez vos objectifs pour atteindre vos ambitions." : "Vos objectifs accomplis apparaîtront ici."}
+            >
+              {activeTab === "ongoing" && (
+                <Button onClick={() => setIsCreateModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />Créer votre premier objectif
+                </Button>
+              )}
+            </PagePenguinEmpty>
           ) : (
             <GoalList 
               goals={currentGoals}
