@@ -68,10 +68,10 @@ interface ItemCardProps {
   className?: string;
 }
 
-const priorityBorderColors = {
-  high: 'border-l-red-500',
-  medium: 'border-l-yellow-500',
-  low: 'border-l-green-500',
+const priorityDotColors = {
+  high: 'bg-red-500',
+  medium: 'bg-yellow-500',
+  low: 'bg-green-500',
 };
 
 export function ItemCard({
@@ -105,7 +105,6 @@ export function ItemCard({
         opacity: isDragging ? 0.7 : 1, 
         y: 0,
         scale: isDragging ? 1.02 : 1,
-        rotate: isDragging ? 1 : 0,
       }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -117,21 +116,27 @@ export function ItemCard({
     >
       <Card
         className={cn(
-          'relative overflow-hidden transition-colors duration-200',
-          'hover:bg-muted/40',
-          'border-l-4',
-          // Priority-based border for tasks
-          taskData?.priority 
-            ? priorityBorderColors[taskData.priority] 
-            : 'border-l-transparent',
+          'relative overflow-hidden transition-all duration-200',
+          'backdrop-blur-sm bg-card/80 border-border/40',
+          'hover:bg-card/90 hover:shadow-md hover:shadow-black/[0.03]',
+          'active:scale-[0.98]',
           // Completed state
-          isCompleted && 'bg-muted/40 opacity-80',
+          isCompleted && 'bg-muted/30 opacity-75',
           // Archived state
           isArchived && 'opacity-60',
           // Dragging state
-          isDragging && 'shadow-lg ring-2 ring-primary/20'
+          isDragging && 'shadow-xl ring-2 ring-primary/20'
         )}
       >
+        {/* Priority dot indicator */}
+        {taskData?.priority && (
+          <div className={cn(
+            'absolute top-3 right-3 h-2 w-2 rounded-full',
+            priorityDotColors[taskData.priority],
+            'opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+          )} />
+        )}
+
         <CardContent className={cn(
           'p-4',
           variant === 'compact' && 'p-3'
@@ -185,7 +190,7 @@ export function ItemCard({
                 />
               </div>
 
-              {/* Description (for standard/expanded) */}
+              {/* Description */}
               {variant !== 'compact' && data.description && (
                 <p className={cn(
                   'text-xs sm:text-sm text-muted-foreground line-clamp-2',
@@ -196,8 +201,7 @@ export function ItemCard({
               )}
 
               {/* Badges Row */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Task-specific badges */}
+              <div className="flex flex-wrap items-center gap-1.5">
                 {taskData && (
                   <>
                     {taskData.priority && (
@@ -209,7 +213,6 @@ export function ItemCard({
                   </>
                 )}
 
-                {/* Habit-specific badges */}
                 {habitData && (
                   <>
                     <FrequencyBadge frequency={habitData.frequency} />
@@ -222,7 +225,6 @@ export function ItemCard({
                   </>
                 )}
 
-                {/* Goal-specific badges */}
                 {goalData && (
                   <>
                     {goalData.category && (
@@ -234,15 +236,14 @@ export function ItemCard({
                   </>
                 )}
 
-                {/* Subtask indicator */}
                 {subtaskCount > 0 && (
                   <SubtaskBadge completed={subtaskCompleted} total={subtaskCount} />
                 )}
               </div>
 
-              {/* Expandable content (children) - always render if present */}
+              {/* Expandable content */}
               {children && (
-                <div className={cn("mt-3", variant === 'expanded' && "pt-3 border-t border-border")}>
+                <div className={cn("mt-3", variant === 'expanded' && "pt-3 border-t border-border/30")}>
                   {children}
                 </div>
               )}
