@@ -103,7 +103,7 @@ function SortableTaskCard({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => onToggleExpanded(task.id)}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleExpanded(task.id); }}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {isExpanded ? (
