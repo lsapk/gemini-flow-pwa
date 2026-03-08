@@ -133,13 +133,60 @@ export default function Settings() {
     try { await signOut(); toast.success("Déconnexion réussie"); } catch (error) { toast.error("Erreur lors de la déconnexion"); }
   };
 
+  // Password change
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) { toast.error("Le mot de passe doit contenir au moins 6 caractères"); return; }
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Mot de passe modifié avec succès");
+      setNewPassword("");
+    } catch (err: any) { toast.error(err.message || "Erreur"); }
+    finally { setChangingPassword(false); }
+  };
+
+  // Account deletion
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const handleDeleteAccount = async () => {
+    try {
+      // Delete all user data from major tables
+      const tables = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions", "penguin_profiles", "ai_credits", "ai_requests", "daily_usage"] as const;
+      for (const table of tables) {
+        await (supabase.from(table).delete() as any).eq("user_id", user!.id);
+      }
+      await supabase.from("user_profiles").delete().eq("id", user!.id);
+      await supabase.from("user_settings").delete().eq("id", user!.id);
+      // Sign out after purge
+      await signOut();
+      toast.success("Compte supprimé. Adieu 🐧");
+    } catch (err) { toast.error("Erreur lors de la suppression du compte"); }
+  };
+
+  // Data export
+  const handleExportData = async () => {
+    if (!user) return;
+    try {
+      const [tasks, habits, goals, journal, focus] = await Promise.all([
+        supabase.from("tasks").select("*").eq("user_id", user.id),
+        supabase.from("habits").select("*").eq("user_id", user.id),
+        supabase.from("goals").select("*").eq("user_id", user.id),
+        supabase.from("journal_entries").select("*").eq("user_id", user.id),
+        supabase.from("focus_sessions").select("*").eq("user_id", user.id),
+      ]);
+      const exportData = { tasks: tasks.data, habits: habits.data, goals: goals.data, journal: journal.data, focus: focus.data, exported_at: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `deepflow_export_${new Date().toISOString().split("T")[0]}.json`;
+      link.click();
+      toast.success("Données exportées !");
+    } catch { toast.error("Erreur lors de l'export"); }
+  };
+
   const stageLabel = playerProfile?.stage === 'emperor' ? 'Empereur' : playerProfile?.stage === 'explorer' ? 'Explorateur' : playerProfile?.stage === 'chick' ? 'Poussin' : 'Œuf';
-
-  const copyEmail = () => { navigator.clipboard.writeText("deepflow.ia@gmail.com"); toast.success("Email copié !"); };
-
-  // AI credits progress (assuming max 200 for display purposes)
-  const maxCredits = 200;
-  const creditsProgress = aiCredits === Infinity ? 100 : Math.min((Number(aiCredits) / maxCredits) * 100, 100);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-8">
