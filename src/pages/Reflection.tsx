@@ -271,14 +271,11 @@ export default function Reflection() {
           </div>
           
           {reflections.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Aucune réflexion enregistrée pour le moment.
-                </p>
-              </CardContent>
-            </Card>
+            <PagePenguinEmpty
+              image={penguinReading}
+              title="Aucune réflexion"
+              description="Répondez à votre première question pour commencer votre parcours de réflexion."
+            />
           ) : (
             <div className="space-y-4">
               {reflections.map((reflection) => (

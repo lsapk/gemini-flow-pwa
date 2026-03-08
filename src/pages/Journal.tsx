@@ -165,12 +165,15 @@ export default function Journal() {
 
       <div className="space-y-4">
         {entries.length === 0 ? (
-          <Card><CardContent className="text-center py-8">
-            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Aucune entrée</h3>
-            <p className="text-muted-foreground mb-4">Commencez par créer votre première entrée !</p>
-            <Button onClick={() => setShowForm(true)}>Créer une entrée</Button>
-          </CardContent></Card>
+          <PagePenguinEmpty
+            image={penguinJournal}
+            title="Votre journal est vide"
+            description="Commencez par créer votre première entrée pour capturer vos pensées."
+          >
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />Créer une entrée
+            </Button>
+          </PagePenguinEmpty>
         ) : (
           entries.map(entry => (
             <JournalEntryCard key={entry.id} entry={entry} moods={moods} onEdit={handleEdit} onDelete={handleDelete} getMoodInfo={getMoodInfo} />
