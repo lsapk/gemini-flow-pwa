@@ -69,15 +69,14 @@ export default function Analysis() {
 
   if (!canUseFeature("analysis") && !isPremium) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">Limite quotidienne atteinte</h3>
-            <p className="text-muted-foreground mb-6">Les utilisateurs Basic ont droit à 1 analyse par jour.</p>
-            <Button asChild size="lg"><Link to="/settings"><Crown className="h-4 w-4 mr-2" />Passer à Premium</Link></Button>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 max-w-4xl mx-auto p-6">
+        <PagePenguinEmpty
+          image={penguinReading}
+          title="Limite quotidienne atteinte"
+          description="Les utilisateurs Basic ont droit à 1 analyse par jour. Passez à Premium pour un accès illimité."
+        >
+          <Button asChild size="lg"><Link to="/settings"><Crown className="h-4 w-4 mr-2" />Passer à Premium</Link></Button>
+        </PagePenguinEmpty>
       </div>
     );
   }
