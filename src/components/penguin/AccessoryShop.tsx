@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Check } from "lucide-react";
+import { Lock, Check, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Accessory {
@@ -55,7 +55,6 @@ export const AccessoryShop = () => {
     mutationFn: async (item: typeof SHOP_ITEMS[0]) => {
       if (!user || !profile) throw new Error("Not authenticated");
 
-      // For iceberg decorations, update profile flags
       if (['radio', 'library', 'lounge_chair'].includes(item.id)) {
         const flagKey = `has_${item.id}` as keyof typeof profile;
         await supabase.from("penguin_profiles").update({ [flagKey]: true }).eq("user_id", user.id);
@@ -67,9 +66,6 @@ export const AccessoryShop = () => {
         accessory_name: item.name,
         accessory_type: item.type,
       });
-
-      // Deduct salmon (simplified: we track but don't actually deduct from total since it's a cumulative counter)
-      // In a real system you'd have a separate "currency" field
     },
     onSuccess: (_, item) => {
       queryClient.invalidateQueries({ queryKey: ["penguin-accessories"] });
@@ -81,13 +77,16 @@ export const AccessoryShop = () => {
   const ownedIds = new Set(owned.map(a => a.accessory_id));
 
   return (
-    <Card className="border-purple-200/20 dark:border-purple-800/20">
+    <Card className="bg-[#1A1F26]/80 backdrop-blur-xl border-white/5">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">🎁 Boutique d'Accessoires</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-lg text-white/90">
+          <ShoppingBag className="w-5 h-5 text-purple-400" />
+          Boutique
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {SHOP_ITEMS.map((item, i) => {
+        <div className="grid grid-cols-2 gap-3">
+          {SHOP_ITEMS.slice(0, 6).map((item, i) => {
             const isOwned = ownedIds.has(item.id);
             const stageLocked = profile ? STAGE_ORDER[profile.stage] < STAGE_ORDER[item.stage_required] : true;
 
@@ -96,32 +95,32 @@ export const AccessoryShop = () => {
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className={`p-3 rounded-xl border text-center transition-all ${
+                transition={{ delay: i * 0.05 }}
+                className={`p-3 rounded-2xl border text-center backdrop-blur-sm transition-all ${
                   isOwned
-                    ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/30 dark:border-emerald-800/30'
+                    ? 'bg-emerald-500/10 border-emerald-500/20'
                     : stageLocked
-                    ? 'bg-muted/30 border-border/30 opacity-60'
-                    : 'bg-card border-border/30 hover:border-sky-300/50 dark:hover:border-sky-700/50'
+                    ? 'bg-white/5 border-white/5 opacity-50'
+                    : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-purple-500/5'
                 }`}
               >
                 <span className="text-2xl block mb-1">{item.emoji}</span>
-                <p className="text-xs font-medium mb-1">{item.name}</p>
-                <div className="text-[10px] text-muted-foreground mb-2">🐟 {item.cost_salmon} saumons</div>
+                <p className="text-xs font-medium text-white/80 mb-1">{item.name}</p>
+                <div className="text-[10px] text-white/40 mb-2">🐟 {item.cost_salmon}</div>
 
                 {isOwned ? (
-                  <Badge variant="secondary" className="text-[10px] bg-emerald-100 dark:bg-emerald-900/30">
+                  <Badge className="text-[10px] bg-emerald-500/20 border-emerald-500/30 text-emerald-300">
                     <Check className="h-3 w-3 mr-1" /> Obtenu
                   </Badge>
                 ) : stageLocked ? (
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge className="text-[10px] bg-white/10 border-white/10 text-white/50">
                     <Lock className="h-3 w-3 mr-1" /> {item.stage_required}
                   </Badge>
                 ) : (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs h-7 border-sky-300 dark:border-sky-700"
+                    className="text-xs h-7 bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20"
                     onClick={() => purchaseMutation.mutate(item)}
                     disabled={purchaseMutation.isPending}
                   >

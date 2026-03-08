@@ -6,31 +6,32 @@ interface PenguinAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   accessories?: string[];
   animated?: boolean;
+  hoverJump?: boolean;
 }
 
 const STAGE_CONFIG = {
   egg: {
     emoji: '🥚',
     useMascot: false,
-    bg: 'from-slate-200 to-slate-300 dark:from-slate-600 dark:to-slate-700',
+    bg: 'from-slate-600 to-slate-700',
     label: 'Œuf',
   },
   chick: {
     emoji: '🐣',
     useMascot: false,
-    bg: 'from-sky-200 to-sky-300 dark:from-sky-700 dark:to-sky-800',
+    bg: 'from-sky-600 to-sky-700',
     label: 'Poussin',
   },
   explorer: {
     emoji: null,
     useMascot: true,
-    bg: 'from-blue-300 to-indigo-400 dark:from-blue-700 dark:to-indigo-800',
+    bg: 'from-blue-600 to-indigo-700',
     label: 'Explorateur',
   },
   emperor: {
     emoji: null,
     useMascot: true,
-    bg: 'from-indigo-400 to-purple-500 dark:from-indigo-700 dark:to-purple-800',
+    bg: 'from-indigo-600 to-purple-700',
     label: 'Empereur',
   },
 };
@@ -41,7 +42,13 @@ const SIZE_MAP = {
   lg: { container: 'w-36 h-36', text: 'text-6xl', img: 'w-32 h-32' },
 };
 
-export const PenguinAvatar = ({ stage, size = 'md', accessories = [], animated = true }: PenguinAvatarProps) => {
+export const PenguinAvatar = ({ 
+  stage, 
+  size = 'md', 
+  accessories = [], 
+  animated = true,
+  hoverJump = true 
+}: PenguinAvatarProps) => {
   const config = STAGE_CONFIG[stage];
   const sizeConfig = SIZE_MAP[size];
 
@@ -50,6 +57,11 @@ export const PenguinAvatar = ({ stage, size = 'md', accessories = [], animated =
       className="relative inline-flex items-center justify-center"
       animate={animated ? { y: [0, -4, 0] } : undefined}
       transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      whileHover={hoverJump ? { 
+        y: -12, 
+        scale: 1.05,
+        transition: { type: "spring", stiffness: 400, damping: 10 }
+      } : undefined}
     >
       {/* Glow effect */}
       <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${config.bg} blur-xl opacity-30`} />
@@ -68,7 +80,16 @@ export const PenguinAvatar = ({ stage, size = 'md', accessories = [], animated =
         
         {/* Emperor crown */}
         {stage === 'emperor' && (
-          <span className="absolute -top-2 text-lg">👑</span>
+          <motion.span 
+            className="absolute -top-2 text-lg"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, 5, -5, 0],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            👑
+          </motion.span>
         )}
         
         {/* Accessories */}
@@ -85,7 +106,7 @@ export const PenguinAvatar = ({ stage, size = 'md', accessories = [], animated =
       
       {/* Stage label */}
       <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
-        <span className="text-[10px] font-medium text-muted-foreground bg-background/80 px-2 py-0.5 rounded-full border border-border/30">
+        <span className="text-[10px] font-medium text-white/70 bg-white/10 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10">
           {config.label}
         </span>
       </div>
