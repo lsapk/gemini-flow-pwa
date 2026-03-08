@@ -294,3 +294,35 @@
     display: none;
   }
 }
+
+/* Penguin Sprite Animations */
+@keyframes sprite-horizontal {
+  to { background-position: -800px 0; }
+}
+
+@keyframes sprite-vertical {
+  to { background-position: 0 -800px; }
+}
+
+@keyframes penguin-jump {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes aurora-glow {
+  0%, 100% { opacity: 0.3; transform: translateX(0); }
+  50% { opacity: 0.6; transform: translateX(30px); }
+}
+
+.animate-penguin-jump:hover {
+  animation: penguin-jump 0.4s ease-in-out;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
