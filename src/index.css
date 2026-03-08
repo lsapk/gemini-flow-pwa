@@ -4,130 +4,7 @@
 
 @layer base {
   :root {
-    /* Light mode - Futuristic theme */
-    --background: 220 25% 97%;
-    --foreground: 222 47% 11%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 258 90% 76%;
-    
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    
-    --accent: 210 40% 94%;
-    --accent-foreground: 222 47% 11%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 258 90% 66%;
-    
-    --radius: 1rem;
-    
-    /* Success colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-    --success-muted: 142 76% 96%;
-    --success-glow: 142 76% 46%;
-    
-    /* Warning colors */
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-    --warning-muted: 48 96% 96%;
-    --warning-glow: 38 92% 60%;
-    
-    /* Info colors */
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 98%;
-    --info-muted: 199 89% 96%;
-    --info-glow: 199 89% 58%;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 258 90% 66%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 258 90% 66%;
-  }
-
-  .dark {
-    /* Dark mode - Futuristic theme */
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-    
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-    
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 258 90% 76%;
-    
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    
-    --destructive: 0 62.8% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 258 90% 66%;
-    
-    /* Success colors */
-    --success: 142 70% 45%;
-    --success-foreground: 0 0% 98%;
-    --success-muted: 142 70% 15%;
-    --success-glow: 142 70% 55%;
-    
-    /* Warning colors */
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 98%;
-    --warning-muted: 38 92% 15%;
-    --warning-glow: 38 92% 65%;
-    
-    /* Info colors */
-    --info: 199 89% 58%;
-    --info-foreground: 0 0% 98%;
-    --info-muted: 199 89% 15%;
-    --info-glow: 199 89% 68%;
-
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 258 90% 66%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 258 90% 66%;
-  }
-
-  /* =====================================================
-     APPLE DESIGN MODE - Minimalist Interface (ChatGPT-inspired)
-     ===================================================== */
-  .design-apple {
-    /* Apple color overrides - Clean white */
+    /* Light mode - Apple Clean */
     --background: 0 0% 100%;
     --foreground: 0 0% 11%;
     
@@ -145,48 +22,99 @@
     --secondary-foreground: 0 0% 11%;
     
     --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 53%;
+    --muted-foreground: 0 0% 45%;
     
     --accent: 0 0% 96%;
     --accent-foreground: 0 0% 11%;
     
-    --border: 0 0% 92%;
-    --input: 0 0% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
     --ring: 211 100% 50%;
     
-    /* Apple-style slightly more rounded */
-    --radius: 1rem;
+    --radius: 0.875rem;
     
+    /* Status colors */
     --success: 142 70% 45%;
+    --success-foreground: 0 0% 98%;
+    --success-muted: 142 70% 96%;
+    --success-glow: 142 70% 55%;
+    
     --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+    --warning-muted: 48 96% 96%;
+    --warning-glow: 38 92% 60%;
+    
     --info: 211 100% 50%;
+    --info-foreground: 0 0% 98%;
+    --info-muted: 211 100% 96%;
+    --info-glow: 211 100% 60%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 11%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 11%;
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 211 100% 50%;
   }
-  
-  .dark.design-apple {
-    /* Dark mode - ChatGPT-inspired dark */
-    --background: 0 0% 8%;
+
+  .dark {
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
     
-    --card: 0 0% 13%;
+    --card: 0 0% 11%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 0 0% 13%;
+    --popover: 0 0% 11%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 211 100% 60%;
     
-    --secondary: 0 0% 18%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
     
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 55%;
     
-    --accent: 0 0% 18%;
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 98%;
     
-    --border: 0 0% 22%;
-    --input: 0 0% 18%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 0 0% 18%;
+    --input: 0 0% 15%;
+    --ring: 211 100% 50%;
+    
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 98%;
+    --success-muted: 142 70% 15%;
+    --success-glow: 142 70% 55%;
+    
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 98%;
+    --warning-muted: 38 92% 15%;
+    --warning-glow: 38 92% 65%;
+    
+    --info: 211 100% 58%;
+    --info-foreground: 0 0% 98%;
+    --info-muted: 211 100% 15%;
+    --info-glow: 211 100% 68%;
+
+    --sidebar-background: 0 0% 9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 211 100% 50%;
   }
 }
 
@@ -197,134 +125,69 @@
 
   html {
     @apply scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground antialiased min-h-screen;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
-  }
-  
-  /* Futuristic mode body background */
-  .design-futuristic body,
-  body:not(.design-apple body) {
-    background: 
-      radial-gradient(circle at 10% 20%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 90% 80%, hsl(var(--info) / 0.06) 0%, transparent 50%),
-      hsl(var(--background));
-    background-attachment: fixed;
-  }
-  
-  /* Apple mode body - pure clean background */
-  .design-apple body {
-    background: hsl(var(--background));
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-feature-settings: "ss01", "ss02", "cv01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-  }
-  
-  /* Apple mode typography - use system font */
-  .design-apple h1,
-  .design-apple h2,
-  .design-apple h3,
-  .design-apple h4,
-  .design-apple h5,
-  .design-apple h6 {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
   }
-  
-  .design-apple body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Global smooth transitions for interactive elements */
+  button, a, [role="button"] {
+    transition: all 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  input, textarea, select, [role="combobox"] {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 }
 
 @layer components {
   .glass-nav {
-    @apply fixed z-50 w-full bg-card/70 backdrop-blur-xl border-b border-border/50 shadow-sm;
-  }
-  
-  /* Apple mode nav - cleaner blur */
-  .design-apple .glass-nav {
-    @apply bg-card/90 backdrop-blur-2xl border-b border-border/20;
+    @apply fixed z-50 w-full bg-card/90 backdrop-blur-2xl border-b border-border/30 shadow-none;
   }
   
   .glass-container {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg p-6
-           hover:shadow-xl hover:border-primary/30 transition-all duration-300;
-  }
-  
-  /* Apple mode container - minimal shadow, no hover effects */
-  .design-apple .glass-container {
-    @apply bg-card border border-border/30 rounded-2xl shadow-sm p-5
-           hover:shadow-sm hover:border-border/30;
+    @apply bg-card border border-border/40 rounded-2xl shadow-none p-5
+           hover:bg-muted/30 transition-colors duration-200;
   }
   
   .dashboard-card {
-    @apply bg-card/70 backdrop-blur-md border border-border/40 rounded-2xl shadow-md p-6 
-           transition-all duration-300 hover:shadow-xl hover:border-primary/30 hover:scale-[1.02];
-  }
-  
-  /* Apple mode card - flat, minimal, elegant */
-  .design-apple .dashboard-card {
-    @apply bg-card border border-border/30 rounded-2xl shadow-none p-5
-           transition-all duration-200 hover:bg-muted/50 hover:scale-100;
+    @apply bg-card border border-border/40 rounded-2xl shadow-none p-5
+           transition-all duration-200 hover:bg-muted/30;
   }
 
   .glass-morphism {
-    @apply bg-card/50 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl;
-  }
-  
-  .design-apple .glass-morphism {
-    @apply bg-card/95 backdrop-blur-2xl border border-border/20 rounded-2xl shadow-lg;
+    @apply bg-card/95 backdrop-blur-2xl border border-border/30 rounded-2xl shadow-lg;
   }
   
   .glass-card {
-    @apply bg-card/60 backdrop-blur-md border border-border/30 rounded-2xl shadow-lg
-           hover:shadow-xl transition-all duration-300;
-  }
-  
-  .design-apple .glass-card {
-    @apply bg-card border border-border/30 rounded-2xl shadow-none hover:bg-muted/30;
+    @apply bg-card border border-border/30 rounded-2xl shadow-none
+           hover:bg-muted/30 transition-colors duration-200;
   }
   
   .hover-scale {
-    @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
-  }
-  
-  /* Apple mode - subtle hover, no scale */
-  .design-apple .hover-scale {
-    @apply transition-all duration-150 hover:scale-100 hover:opacity-80;
+    @apply transition-all duration-150 hover:opacity-80;
   }
   
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-glow to-info;
+    @apply text-primary;
   }
   
-  /* Apple mode - no gradient text, solid color */
-  .design-apple .gradient-text {
-    @apply text-primary bg-none;
-    -webkit-text-fill-color: unset;
-  }
-  
-  .glow-effect {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
-  }
-  
-  /* Apple mode - no glow effects */
-  .design-apple .glow-effect,
-  .design-apple .glow-effect-primary,
-  .design-apple .glow-effect-success {
-    box-shadow: none;
-  }
-  
-  .glow-effect-primary {
-    box-shadow: 0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2);
-  }
-  
+  .glow-effect,
+  .glow-effect-primary,
   .glow-effect-success {
-    box-shadow: 0 0 20px hsl(var(--success-glow) / 0.4);
+    box-shadow: none;
   }
   
   .animated-border {
@@ -332,115 +195,70 @@
   }
   
   .animated-border::before {
-    content: '';
-    @apply absolute inset-0 rounded-2xl;
-    background: linear-gradient(90deg, 
-      transparent, 
-      hsl(var(--primary) / 0.5), 
-      transparent
-    );
-    transform: translateX(-100%);
-    animation: shimmer 3s infinite;
-  }
-  
-  /* Apple mode - no animated borders */
-  .design-apple .animated-border::before {
     display: none;
   }
-  
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  
-  /* =====================================================
-     APPLE MODE - Component Overrides (Clean, Minimal)
-     ===================================================== */
-  
-  /* Primary buttons - solid fill, no glow */
-  .design-apple button[data-variant="default"],
-  .design-apple .bg-primary {
+
+  /* Clean inputs */
+  input,
+  textarea,
+  select,
+  [role="combobox"] {
     @apply shadow-none;
   }
   
-  /* Secondary/Ghost buttons - transparent with subtle border */
-  .design-apple button[data-variant="outline"],
-  .design-apple button[data-variant="ghost"],
-  .design-apple button[data-variant="secondary"] {
-    @apply border border-border/50 bg-transparent;
+  /* Clean cards */
+  [class*="Card"],
+  .card {
+    @apply shadow-none;
   }
   
-  /* Inputs - clean, subtle */
-  .design-apple input,
-  .design-apple textarea,
-  .design-apple select,
-  .design-apple [role="combobox"] {
-    @apply border border-border/40 bg-muted/50 shadow-none;
+  /* Clean dialogs */
+  [role="dialog"] {
+    @apply rounded-2xl border border-border/40 shadow-2xl;
   }
   
-  /* Cards - subtle border, no shadow */
-  .design-apple [class*="Card"],
-  .design-apple .card {
-    @apply border border-border/30 shadow-none;
-  }
-  
-  /* Sidebar items - clean list style */
-  .design-apple [data-sidebar="menu-button"] {
-    @apply rounded-lg;
-  }
-  
-  /* Dialogs/Modals - clean rounded */
-  .design-apple [role="dialog"] {
-    @apply rounded-2xl border border-border/30 shadow-2xl;
-  }
-  
-  /* Dropdowns - subtle */
-  .design-apple [role="menu"],
-  .design-apple [role="listbox"] {
-    @apply rounded-xl border border-border/30 shadow-lg backdrop-blur-xl;
+  /* Clean dropdowns */
+  [role="menu"],
+  [role="listbox"] {
+    @apply rounded-xl border border-border/40 shadow-lg backdrop-blur-2xl;
     background-color: hsl(var(--card) / 0.98);
   }
   
-  /* Tabs - clean style */
-  .design-apple [role="tablist"] {
-    @apply bg-muted/50 rounded-lg p-1;
+  /* iOS-style tabs */
+  [role="tablist"] {
+    @apply bg-muted/60 rounded-lg p-1;
   }
   
-  .design-apple [role="tab"] {
+  [role="tab"] {
     @apply rounded-md;
   }
   
-  .design-apple [role="tab"][data-state="active"] {
+  [role="tab"][data-state="active"] {
     @apply bg-card shadow-sm;
   }
   
-  /* Switch - iOS style */
-  .design-apple [role="switch"] {
+  /* iOS-style switch */
+  [role="switch"] {
     @apply rounded-full;
   }
   
-  /* Avatar - clean circle */
-  .design-apple [class*="Avatar"] {
-    @apply ring-0;
-  }
-  
-  /* Scrollbar - minimal */
-  .design-apple ::-webkit-scrollbar {
+  /* Minimal scrollbar */
+  ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   
-  .design-apple ::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     background: transparent;
   }
   
-  .design-apple ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
     border-radius: 6px;
   }
   
-  .design-apple ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 }
 

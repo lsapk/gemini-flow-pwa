@@ -276,7 +276,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder, onRefres
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={filteredGoals.map(g => g.id)} strategy={verticalListSortingStrategy}>
-          <motion.div layout className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3">
             <AnimatePresence mode="popLayout">
               {filteredGoals.map((goal) => (
                 <SortableGoalCard

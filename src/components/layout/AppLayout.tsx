@@ -15,31 +15,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Gradient de fond animé */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 animate-pulse" style={{ animationDuration: '8s' }}></div>
-      </div>
-      
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
       
       {/* Mobile Navigation Sheet */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <SheetContent side="left" className="p-0 w-64 bg-card/95 backdrop-blur-xl border-border/50">
+        <SheetContent side="left" className="p-0 w-72 bg-card border-border/30">
           <Sidebar className="border-0 static bg-transparent" onItemClick={closeMobileMenu} />
         </SheetContent>
       </Sheet>
 
-      <div className="flex relative z-10">
+      <div className="flex">
         {/* Desktop Sidebar - Fixed position */}
         <div className="hidden md:block">
           <Sidebar className="fixed top-0 left-0 h-full z-40" />
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen transition-all duration-300">
-          <div className="px-3 py-4 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
+        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen">
+          <div className="px-4 py-5 sm:p-5 md:p-8 lg:p-10 max-w-[1400px] mx-auto">
             {children || <Outlet />}
           </div>
         </main>

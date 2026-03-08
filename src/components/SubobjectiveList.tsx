@@ -23,7 +23,7 @@ interface SubobjectiveListProps {
 export const SubobjectiveList = ({ goalId }: SubobjectiveListProps) => {
   const { user } = useAuth();
   const [subobjectives, setSubobjectives] = useState<Subobjective[]>([]);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingSubobjective, setEditingSubobjective] = useState<Subobjective | null>(null);
   const [isLoading, setIsLoading] = useState(false);

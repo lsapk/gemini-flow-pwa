@@ -11,9 +11,7 @@ import {
   Settings,
   MessageSquare,
   Timer,
-  Award,
   Brain,
-  User,
   LogOut,
   Calendar,
   Gamepad2,
@@ -47,7 +45,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
 
-  // Add admin link if user is admin
   const allNavItems = isAdmin 
     ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
     : navItems;
@@ -58,65 +55,65 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   };
 
   return (
-    <div className={cn("w-64 h-screen bg-card/80 backdrop-blur-xl border-r border-border/50 sticky top-0 flex flex-col shadow-lg", className)}>
-      <div className="p-5 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent">
+    <div className={cn("w-64 h-screen bg-card border-r border-border/40 sticky top-0 flex flex-col", className)}>
+      {/* Logo */}
+      <div className="p-5 border-b border-border/30">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-10 w-10 rounded-xl object-contain bg-white/90 dark:bg-white/10 dark:invert p-1 ring-2 ring-primary/20" />
-            <div className="absolute inset-0 rounded-xl bg-primary/20 blur-md -z-10"></div>
-          </div>
-          <h1 className="text-xl font-heading font-bold gradient-text tracking-tight">DeepFlow</h1>
+          <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-xl object-contain bg-muted/50 p-1" />
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">DeepFlow</h1>
         </div>
       </div>
       
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-hidden">
+      {/* Navigation */}
+      <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto scrollbar-hidden">
         {allNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           const isAdminItem = item.path === "/admin";
           return (
-            <Button
+            <button
               key={item.path}
-              variant={isActive ? "secondary" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 h-12 font-medium transition-all duration-300 rounded-xl group",
-                isActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary shadow-md border border-primary/20 glow-effect",
-                isAdminItem && !isActive && "text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                "w-full flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-medium transition-colors duration-150",
+                isActive 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                isAdminItem && !isActive && "text-destructive hover:text-destructive hover:bg-destructive/10",
+                "active:scale-[0.98]"
               )}
               onClick={() => handleItemClick(item.path)}
             >
+              {/* Active indicator bar */}
+              {isActive && (
+                <div className="absolute left-0 w-[3px] h-6 rounded-r-full bg-primary" />
+              )}
               {(item as any).isPenguin ? (
-                <img src={penguinMascot} alt="" className={cn(
-                  "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110 object-contain",
-                )} />
+                <img src={penguinMascot} alt="" className="h-[18px] w-[18px] flex-shrink-0 object-contain" />
               ) : (
                 <item.icon className={cn(
-                  "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
+                  "h-[18px] w-[18px] flex-shrink-0",
                   isActive && "text-primary",
-                  isAdminItem && !isActive && "text-red-500"
+                  isAdminItem && !isActive && "text-destructive"
                 )} />
               )}
               <span className="truncate">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto h-2 w-2 rounded-full bg-primary animate-glow-pulse"></div>
-              )}
-            </Button>
+            </button>
           );
         })}
       </nav>
       
-      <div className="p-3 border-t border-border/30 bg-gradient-to-br from-muted/30 to-transparent">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive hover:bg-destructive/10 font-medium rounded-xl transition-all duration-300 hover:scale-105"
+      {/* Logout */}
+      <div className="p-2.5 border-t border-border/30">
+        <button
+          className="w-full flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors duration-150 active:scale-[0.98]"
           onClick={async () => {
             await signOut();
             navigate('/login');
             onItemClick?.();
           }}
         >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
+          <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
           Déconnexion
-        </Button>
+        </button>
       </div>
     </div>
   );

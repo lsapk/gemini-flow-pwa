@@ -1,37 +1,20 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-
-type DesignMode = "futuristic" | "apple";
+import { createContext, useContext, useEffect, ReactNode } from "react";
 
 interface DesignModeContextType {
-  designMode: DesignMode;
-  setDesignMode: (mode: DesignMode) => void;
+  designMode: "apple";
+  setDesignMode: (mode: "apple") => void;
 }
 
 const DesignModeContext = createContext<DesignModeContextType | undefined>(undefined);
 
 export function DesignModeProvider({ children }: { children: ReactNode }) {
-  const [designMode, setDesignMode] = useState<DesignMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("design-mode") as DesignMode) || "futuristic";
-    }
-    return "futuristic";
-  });
-
   useEffect(() => {
-    const root = document.documentElement;
-    
-    // Remove previous design mode classes
-    root.classList.remove("design-futuristic", "design-apple");
-    
-    // Add current design mode class
-    root.classList.add(`design-${designMode}`);
-    
-    // Persist choice
-    localStorage.setItem("design-mode", designMode);
-  }, [designMode]);
+    document.documentElement.classList.add("design-apple");
+    localStorage.setItem("design-mode", "apple");
+  }, []);
 
   return (
-    <DesignModeContext.Provider value={{ designMode, setDesignMode }}>
+    <DesignModeContext.Provider value={{ designMode: "apple", setDesignMode: () => {} }}>
       {children}
     </DesignModeContext.Provider>
   );
