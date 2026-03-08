@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import { Plus, BookOpen } from "lucide-react";
+import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
+import penguinJournal from "@/assets/penguin-journal.png";
 import { JournalEntry } from "@/types";
 import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { format } from "date-fns";
