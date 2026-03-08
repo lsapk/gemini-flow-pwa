@@ -83,7 +83,7 @@ export default function Gamification() {
           <div className="flex items-center gap-5">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
-              <AnimatedPenguin variant="king" size="lg" />
+              <AnimatedPenguin size="lg" />
               <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-amber-500/20 border-amber-500/30 text-amber-400 text-[10px] whitespace-nowrap">
                 {stageInfo.emoji} {stageInfo.label}
               </Badge>

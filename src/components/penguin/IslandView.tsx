@@ -95,7 +95,7 @@ export const IslandView = () => {
         transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
       >
         <div className="relative flex flex-col items-center">
-          <AnimatedPenguin variant="king" size="xl" />
+          <AnimatedPenguin size="xl" />
           
           {/* Title Badge */}
           <motion.div
