@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 export default function Cookies() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
@@ -21,101 +20,68 @@ export default function Cookies() {
       </header>
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">
-            Politique des Cookies
-          </h1>
-          <p className="text-muted-foreground mb-8">Dernière mise à jour : Janvier 2025</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Politique des Cookies</h1>
+          <p className="text-muted-foreground mb-8">Dernière mise à jour : Mars 2026</p>
 
           <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
             <section>
               <h2 className="text-2xl font-bold mb-4">1. Qu'est-ce qu'un cookie ?</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Un cookie est un petit fichier texte stocké sur votre appareil lorsque vous visitez un site web. Les cookies permettent au site de mémoriser vos actions et préférences sur une période donnée.
+                Un cookie est un petit fichier texte stocké sur votre appareil lorsque vous visitez un site web. DeepFlow utilise également le stockage local (localStorage) du navigateur pour stocker des données techniques nécessaires au fonctionnement de l'application.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">2. Cookies utilisés par DeepFlow</h2>
-              
+              <h2 className="text-2xl font-bold mb-4">2. Cookies et stockage utilisés</h2>
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <h3 className="font-bold text-foreground mb-2">Cookies essentiels</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Nécessaires au fonctionnement de l'application. Incluent l'authentification et les préférences de session.
+                  <h3 className="font-bold text-foreground mb-2">Cookies essentiels / Stockage technique</h3>
+                  <p className="text-muted-foreground text-sm mb-3">
+                    Nécessaires au fonctionnement de l'application. Ne peuvent pas être désactivés.
                   </p>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    <span className="inline-block px-2 py-1 rounded bg-success/10 text-success">Obligatoires</span>
-                  </div>
+                  <table className="w-full text-xs text-muted-foreground">
+                    <thead><tr className="border-b border-border/30"><th className="text-left py-1 text-foreground">Clé</th><th className="text-left py-1 text-foreground">Usage</th></tr></thead>
+                    <tbody>
+                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow-auth-session</td><td className="py-1">Session d'authentification Supabase</td></tr>
+                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow_remember_me</td><td className="py-1">Persistance de la connexion</td></tr>
+                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow_cookie_consent</td><td className="py-1">Choix du bandeau cookies</td></tr>
+                    </tbody>
+                  </table>
+                  <div className="mt-2"><span className="inline-block px-2 py-1 rounded bg-success/10 text-success text-xs">Obligatoires</span></div>
                 </div>
 
                 <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
                   <h3 className="font-bold text-foreground mb-2">Cookies de préférences</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Mémorisent vos préférences (thème, langue, design mode) pour personnaliser votre expérience.
+                  <p className="text-muted-foreground text-sm mb-3">
+                    Mémorisent vos préférences (thème, style de design) pour personnaliser votre expérience.
                   </p>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    <span className="inline-block px-2 py-1 rounded bg-primary/10 text-primary">Fonctionnels</span>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <h3 className="font-bold text-foreground mb-2">Cookies d'analyse</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Nous aident à comprendre comment vous utilisez l'application pour l'améliorer. Données anonymisées.
-                  </p>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    <span className="inline-block px-2 py-1 rounded bg-info/10 text-info">Optionnels</span>
-                  </div>
+                  <table className="w-full text-xs text-muted-foreground">
+                    <thead><tr className="border-b border-border/30"><th className="text-left py-1 text-foreground">Clé</th><th className="text-left py-1 text-foreground">Usage</th></tr></thead>
+                    <tbody>
+                      <tr className="border-b border-border/20"><td className="py-1 font-mono">theme</td><td className="py-1">Thème clair/sombre</td></tr>
+                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow-design-mode</td><td className="py-1">Style de design (futuriste/minimal)</td></tr>
+                    </tbody>
+                  </table>
+                  <div className="mt-2"><span className="inline-block px-2 py-1 rounded bg-primary/10 text-primary text-xs">Fonctionnels</span></div>
                 </div>
               </div>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">3. Stockage local (localStorage)</h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                En plus des cookies, nous utilisons le stockage local de votre navigateur pour :
-              </p>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li>Sauvegarder vos données hors ligne</li>
-                <li>Mémoriser l'option "Se souvenir de moi"</li>
-                <li>Stocker les préférences de l'application</li>
-                <li>Mettre en cache les données pour des performances optimales</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">4. Durée de conservation</h2>
+              <h2 className="text-2xl font-bold mb-4">3. Durée de conservation</h2>
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/50">
-                    <th className="text-left py-2 text-foreground">Type de cookie</th>
-                    <th className="text-left py-2 text-foreground">Durée</th>
-                  </tr>
-                </thead>
+                <thead><tr className="border-b border-border/50"><th className="text-left py-2 text-foreground">Type</th><th className="text-left py-2 text-foreground">Durée</th></tr></thead>
                 <tbody className="text-muted-foreground">
-                  <tr className="border-b border-border/30">
-                    <td className="py-2">Session d'authentification</td>
-                    <td className="py-2">7 jours (ou 30 si "Se souvenir de moi")</td>
-                  </tr>
-                  <tr className="border-b border-border/30">
-                    <td className="py-2">Préférences utilisateur</td>
-                    <td className="py-2">1 an</td>
-                  </tr>
-                  <tr className="border-b border-border/30">
-                    <td className="py-2">Données hors ligne</td>
-                    <td className="py-2">Jusqu'à synchronisation</td>
-                  </tr>
+                  <tr className="border-b border-border/30"><td className="py-2">Session d'authentification</td><td className="py-2">7 jours (ou 30 si « Se souvenir de moi »)</td></tr>
+                  <tr className="border-b border-border/30"><td className="py-2">Préférences utilisateur</td><td className="py-2">1 an</td></tr>
+                  <tr className="border-b border-border/30"><td className="py-2">Consentement cookies</td><td className="py-2">1 an</td></tr>
                 </tbody>
               </table>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">5. Gérer vos cookies</h2>
+              <h2 className="text-2xl font-bold mb-4">4. Gérer vos cookies</h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Vous pouvez contrôler et supprimer les cookies via les paramètres de votre navigateur :
               </p>
@@ -131,20 +97,16 @@ export default function Cookies() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">6. Contact</h2>
+              <h2 className="text-2xl font-bold mb-4">5. Contact</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Pour toute question concernant notre utilisation des cookies, contactez-nous à : <a href="mailto:deepflow.ia@gmail.com" className="text-primary hover:underline">deepflow.ia@gmail.com</a>
+                Pour toute question : <a href="mailto:deepflow.ia@gmail.com" className="text-primary hover:underline">deepflow.ia@gmail.com</a>
               </p>
             </section>
           </div>
 
           <div className="mt-12 pt-8 border-t border-border/50 flex gap-4">
-            <Button asChild variant="outline">
-              <Link to="/legal/privacy">Politique de confidentialité</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/legal/terms">Conditions d'utilisation</Link>
-            </Button>
+            <Button asChild variant="outline"><Link to="/legal/privacy">Politique de confidentialité</Link></Button>
+            <Button asChild variant="outline"><Link to="/legal/terms">Conditions d'utilisation</Link></Button>
           </div>
         </motion.div>
       </main>

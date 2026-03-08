@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 export default function Terms() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
@@ -21,15 +20,9 @@ export default function Terms() {
       </header>
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">
-            Conditions d'Utilisation
-          </h1>
-          <p className="text-muted-foreground mb-8">Dernière mise à jour : Janvier 2025</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Conditions d'Utilisation</h1>
+          <p className="text-muted-foreground mb-8">Dernière mise à jour : Mars 2026</p>
 
           <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
             <section>
@@ -71,7 +64,7 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-bold mb-4">5. Abonnements et paiements</h2>
               <p className="text-muted-foreground leading-relaxed">
-                DeepFlow propose des formules gratuites et premium. Les abonnements sont facturés mensuellement ou annuellement. Vous pouvez annuler à tout moment, mais les paiements effectués ne sont pas remboursables, sauf dans les cas prévus par la loi.
+                DeepFlow propose des formules gratuites et premium. Les paiements sont traités de manière sécurisée par Stripe ou PayPal. Vous pouvez annuler à tout moment, mais les paiements effectués ne sont pas remboursables, sauf dans les cas prévus par la loi.
               </p>
             </section>
 
@@ -90,21 +83,14 @@ export default function Terms() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">8. Modification des conditions</h2>
+              <h2 className="text-2xl font-bold mb-4">8. Résiliation et suppression de compte</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Nous nous réservons le droit de modifier ces conditions à tout moment. Les modifications importantes seront notifiées par email ou via l'application.
+                Nous pouvons suspendre ou résilier votre compte en cas de violation de ces conditions. Vous pouvez supprimer votre compte à tout moment depuis Paramètres → Données & Compte. Cette action supprime définitivement toutes vos données.
               </p>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4">9. Résiliation</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Nous pouvons suspendre ou résilier votre compte en cas de violation de ces conditions. Vous pouvez supprimer votre compte à tout moment depuis les paramètres.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">10. Droit applicable</h2>
+              <h2 className="text-2xl font-bold mb-4">9. Droit applicable</h2>
               <p className="text-muted-foreground leading-relaxed">
                 Ces conditions sont régies par le droit français. Tout litige sera soumis aux tribunaux compétents de Paris, France.
               </p>
@@ -112,12 +98,8 @@ export default function Terms() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-border/50 flex gap-4">
-            <Button asChild variant="outline">
-              <Link to="/legal/privacy">Politique de confidentialité</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/legal/cookies">Politique des cookies</Link>
-            </Button>
+            <Button asChild variant="outline"><Link to="/legal/privacy">Politique de confidentialité</Link></Button>
+            <Button asChild variant="outline"><Link to="/legal/cookies">Politique des cookies</Link></Button>
           </div>
         </motion.div>
       </main>
