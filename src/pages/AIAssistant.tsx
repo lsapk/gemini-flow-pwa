@@ -404,8 +404,7 @@ export default function AIAssistant() {
               )}
             </div>
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Analysis Tab */}
       <div className={cn("flex-1 overflow-y-auto animate-fade-in", activeTab !== "analysis" && "hidden")}>
