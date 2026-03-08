@@ -260,7 +260,7 @@ export default function Settings() {
                 Crédits IA
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold text-primary">{aiCredits === Infinity ? "∞" : aiCredits}</div>
@@ -270,15 +270,35 @@ export default function Settings() {
                   <Link to="/gamification"><Gamepad2 className="h-4 w-4 mr-2" />Boutique</Link>
                 </Button>
               </div>
-              {aiCredits !== Infinity && (
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Utilisés</span>
-                    <span>{Number(aiCredits)}/{maxCredits}</span>
-                  </div>
-                  <Progress value={creditsProgress} className="h-2.5" />
-                </div>
-              )}
+            </CardContent>
+          </Card>
+
+          {/* Password Change */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg"><Key className="h-5 w-5 text-primary" />Mot de passe</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input type="password" placeholder="Nouveau mot de passe (min. 6 car.)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <Button onClick={handleChangePassword} disabled={changingPassword || newPassword.length < 6} className="w-full">
+                {changingPassword ? "Modification..." : "Modifier le mot de passe"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Data & Account Management */}
+          <Card className="border-destructive/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg"><Shield className="h-5 w-5 text-destructive" />Données & Compte</CardTitle>
+              <CardDescription>Export RGPD et suppression de compte</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={handleExportData}>
+                <Download className="h-4 w-4" /> Exporter mes données (JSON)
+              </Button>
+              <Button variant="destructive" className="w-full justify-start gap-2" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Supprimer mon compte
+              </Button>
             </CardContent>
           </Card>
           
