@@ -1,181 +1,87 @@
 
-# Plan : Credits Admin, Logo, Fond Auth, Parametres, Legal
 
-## 1. Credits Admin - Fonctionnel pour credits IA ET jeu
+# Plan: Refonte complète du calendrier Apple-style + Illustrations pingouin
 
-**Probleme actuel :** La fonction `handleGiveCredits` dans `Admin.tsx` (ligne 315-347) modifie uniquement les credits **de jeu** dans `player_profiles.credits`, mais pas les **credits IA** dans la table `ai_credits`. L'admin n'a aucun moyen de gerer les credits IA des utilisateurs.
+## 1. Refonte du Calendrier (from scratch)
 
-**Solution :**
-- Modifier le dialog de credits admin pour offrir **2 onglets** : "Credits Jeu" et "Credits IA"
-- Ajouter une fonction `handleGiveAICredits` qui insere/met a jour la table `ai_credits`
-- La fonction existante `handleGiveCredits` reste pour les credits de jeu
-- Afficher dans le profil utilisateur les 2 types de credits (jeu + IA)
+Le calendrier actuel est composé de 5 fichiers redondants et incohérents (`GoogleCalendarView`, `ProfessionalWeekCalendar`, `WeekCalendarView`, `CalendarDayView`, `GoogleCalendarHeader`). On simplifie en 2 composants propres + 1 page.
 
-**Fichier :** `src/pages/Admin.tsx`
+### Architecture cible
 
----
+- **`Calendar.tsx` (page)** : Logique de connexion Google + state management. Interface unifiée sans duplication.
+- **`AppleCalendarView.tsx` (nouveau)** : Composant unique pour vue semaine/jour avec grille horaire, current-time indicator, events positionnés absolument. Remplace `GoogleCalendarView` + `ProfessionalWeekCalendar` + `WeekCalendarView`.
+- **`GoogleCalendarEventModal.tsx`** : Nettoyé avec style Apple cohérent (inputs filled, rounded-2xl).
+- **Supprimer** : `GoogleCalendarHeader.tsx` (intégré dans AppleCalendarView), `CalendarDayView.tsx`, `WeekCalendarView.tsx`, `ProfessionalWeekCalendar.tsx`.
 
-## 2. Changement du logo
+### Design Apple du calendrier
 
-**Situation actuelle :** Le logo utilise `src/assets/deepflow-logo.jpg` dans la Sidebar et le MobileHeader. Les pages Login/Register/ForgotPassword utilisent des icones Lucide (`Zap`, `Sparkles`) au lieu du vrai logo.
+- **Header** : Barre compacte avec mois/année en gros (SF, -0.025em), flèches gauche/droite, bouton "Aujourd'hui" pill, toggle Jour/Semaine sous forme de segmented control (comme iOS Calendar).
+- **Grille semaine** : 
+  - Colonne heures à gauche (texte 11px, muted)
+  - 7 colonnes jour avec en-tête : abréviation 3 lettres + numéro dans un cercle (bleu si aujourd'hui)
+  - Lignes horaires fines (`border-border/20`), demi-heures en pointillé subtil
+  - Cellules cliquables avec `+` au hover (opacity transition)
+  - Events positionnés en absolu avec `top/height` calculés, coins arrondis `rounded-xl`, couleurs douces pastelles (pas saturées)
+  - Current time : ligne rouge fine avec point, comme Apple Calendar
+- **Vue jour** : Même grille mais une seule colonne, events plus larges
+- **Scroll auto** : Au chargement, scroll automatique à l'heure courante - 2h
+- **Mobile** : En mode mobile, afficher uniquement la vue jour avec swipe gauche/droite pour changer de jour. Header simplifié.
+- **FAB** : Bouton flottant `+` en bas droite, `rounded-full`, shadow Apple douce
+- **Section IA** : Panneau rétractable en bas (collapsible) au lieu d'un bloc fixe. Icone sparkles, s'ouvre en slide-up.
+- **Empty state calendrier non connecté** : Utiliser l'image pingouin-calendar avec `PagePenguinEmpty`.
 
-**Solution :**
-- Copier l'image du "D" brush (image-5.png) vers `src/assets/deepflow-logo.png`
-- Remplacer la reference dans `Sidebar.tsx` et `MobileHeader.tsx`
-- Le logo a un fond blanc, donc pour le theme sombre : ajouter `rounded-xl` avec un fond transparent et une ombre pour bien integrer
-- Mettre a jour les pages Login, Register et ForgotPassword pour utiliser le nouveau logo au lieu des icones Lucide
-- Ajouter un filtre CSS `dark:invert` sur le logo pour qu'il s'adapte au theme sombre (le "D" noir passe en blanc)
+### Couleurs events (pastelles Apple)
+- Tâches : `bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300`
+- Habitudes : `bg-purple-100 text-purple-700`
+- Objectifs : `bg-amber-100 text-amber-700`
+- Google events : `bg-green-100 text-green-700`
 
-**Fichiers :** `src/components/layout/Sidebar.tsx`, `src/components/layout/MobileHeader.tsx`, `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`
+## 2. Images pingouin partout (empty states + décorations)
 
----
+### Copier les nouvelles images uploadées
 
-## 3. Image de fond pour les pages de connexion/inscription
+Copier les 8 images uploadées dans `src/assets/` :
+- `Designer_9-2.png` → `penguin-busy.png` (pingouin débordé avec post-its = page Tâches)
+- `Designer_8-2.png` → `penguin-calendar.png` (remplacer l'existant, meilleure version avec calendrier)
+- `Designer_7-2.png` → `penguin-thinking.png` (remplacer, version avec bulles de pensée = Dashboard/AI)
+- `Designer_6-2.png` → `penguin-workout.png` (remplacer, version avec haltères = Habitudes)
+- `Designer_5-2.png` → `penguin-reading.png` (remplacer, version livre = Journal)
+- `Designer_4-2.png` → `penguin-focus.png` (remplacer, version casque = Focus)
+- `Gemini_Generated_Image_7et0cg7et0cg7et0_1-2.png` → `penguin-journal.png` (remplacer, version écriture)
+- `image_2026-03-02_193848709-2.png` → `penguin-mascot.png` (remplacer, version simple)
 
-**Situation actuelle :** Les pages Login, Register, ForgotPassword ont un fond abstrait avec des gradients et un motif de grille. Aucune image de fond.
+### Ajouter PagePenguinEmpty aux pages
 
-**Solution :**
-- Copier l'image de l'oeil bleu (1770368575206~2_1.jpg) vers `public/images/auth-bg.jpg` (dans public car c'est utilise en CSS)
-- Ajouter l'image en arriere-plan sur les pages Login, Register, ForgotPassword et ResetPassword
-- L'image sera affichee en `cover` avec un overlay sombre semi-transparent pour la lisibilite
-- Le formulaire restera au centre avec l'effet glassmorphism par-dessus
+| Page | Image | Titre | Condition |
+|------|-------|-------|-----------|
+| Tasks.tsx | penguin-busy | "Pas encore de tâches" | tasks.length === 0 |
+| Habits.tsx | penguin-workout | "Pas encore d'habitudes" | habits.length === 0 |
+| Goals.tsx | penguin-thinking | "Pas encore d'objectifs" | goals.length === 0 |
+| Journal.tsx | penguin-journal | "Votre journal est vide" | entries.length === 0 |
+| Focus.tsx | penguin-focus | "Prêt à vous concentrer ?" | no sessions yet |
+| Calendar.tsx | penguin-calendar | "Connectez votre calendrier" | !isConnected |
+| Analysis.tsx | penguin-reading | "Pas encore de données" | no data |
+| Reflection.tsx | penguin-reading | "Aucune réflexion" | reflections.length === 0 |
+| Badges.tsx | penguin-mascot | "Aucun badge débloqué" | badges empty |
 
-**Fichiers :** `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`, `src/pages/ResetPassword.tsx`
+## 3. Fichiers modifiés/créés
 
----
+| Fichier | Action |
+|---------|--------|
+| `src/components/AppleCalendarView.tsx` | **Créer** — Vue calendrier unique Apple |
+| `src/pages/Calendar.tsx` | **Réécrire** — Intégrer AppleCalendarView |
+| `src/components/GoogleCalendarEventModal.tsx` | **Modifier** — Style Apple inputs |
+| `src/components/GoogleCalendarHeader.tsx` | **Supprimer** — Intégré dans AppleCalendarView |
+| `src/components/CalendarDayView.tsx` | **Supprimer** — Remplacé |
+| `src/components/WeekCalendarView.tsx` | **Supprimer** — Remplacé |
+| `src/components/ProfessionalWeekCalendar.tsx` | **Supprimer** — Remplacé |
+| `src/pages/Tasks.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Habits.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Goals.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Journal.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Focus.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Analysis.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Reflection.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| `src/pages/Badges.tsx` | **Modifier** — Ajouter PagePenguinEmpty |
+| Assets (8 images) | **Copier** — Nouvelles illustrations pingouin |
 
-## 4. Photo de profil et preferences qui fonctionnent
-
-### Photo de profil zoomee
-**Probleme :** L'avatar dans `ProfileEditForm.tsx` utilise `<AvatarImage>` qui applique `object-cover` par defaut dans Radix. La photo apparat zoomee car le composant `Avatar` fait 96x96px (`h-24 w-24`) et force un recadrage.
-
-**Solution :**
-- Ajouter `className="object-cover"` sur `AvatarImage` pour s'assurer du bon cadrage
-- Verifier que le composant Avatar de Radix n'a pas de styles conflictuels
-- Dans le profil Settings (ligne 234), la photo de l'utilisateur est un simple cercle avec l'initiale -- il faut aussi y afficher la photo si elle existe
-
-### Theme sombre/clair pour les 2 designs
-**Probleme actuel :** Le `ThemeProvider` utilise `next-themes` (dans `App.tsx` ligne 68) mais le Settings utilise le `useTheme` de `@/components/theme-provider` local (ligne 13). Ces deux providers sont differents -- l'un vient de `next-themes`, l'autre du composant local. Il y a conflit.
-
-**Solution :** 
-- L'import dans `App.tsx` utilise `import { ThemeProvider } from "next-themes"` 
-- L'import dans Settings utilise `import { useTheme } from "@/components/theme-provider"` qui est un provider **different** jamais rendu dans l'arbre
-- Corriger Settings pour utiliser `useTheme` de `next-themes` directement
-- Le composant local `theme-provider.tsx` est redondant -- on le garde mais on s'assure que Settings utilise le bon provider
-
-### Notifications et Ne pas deranger
-**Probleme :** Les switches changent le state local mais l'utilisateur doit cliquer "Sauvegarder les preferences" separement. 
-
-**Solution :** Faire un auto-save quand un switch change (debounce de 500ms), avec confirmation toast immediate.
-
-**Fichiers :** `src/components/settings/ProfileEditForm.tsx`, `src/pages/Settings.tsx`
-
----
-
-## 5. Section legale dans les Parametres
-
-**Situation actuelle :** Les pages legales existent (`/legal/privacy`, `/legal/terms`, `/legal/cookies`) mais ne sont pas accessibles depuis les Parametres. Le Footer existe mais il n'est pas visible dans l'app connectee. L'email de contact est `contact@deepflow.app` au lieu de `deepflow.ia@gmail.com`.
-
-**Solution :**
-- Ajouter un **4eme onglet** dans Settings : "A propos" avec une icone `Info`
-- Contenu de ce tab :
-  - **Mentions legales** : editeur, hebergeur, email de contact
-  - **Liens rapides** : Privacy, Terms, Cookies (vers les pages existantes)
-  - **FAQ** basique (5-6 questions/reponses les plus courantes dans un Accordion)
-  - **Nous contacter** : afficher deepflow.ia@gmail.com avec un bouton copier/mailto
-  - **Version de l'app** (badge)
-- Mettre a jour le Footer avec `deepflow.ia@gmail.com`
-- Mettre a jour les pages legales (Privacy, Terms, Cookies) avec la bonne adresse email
-
-**Fichiers :** `src/pages/Settings.tsx`, `src/components/layout/Footer.tsx`, `src/pages/legal/Privacy.tsx`, `src/pages/legal/Terms.tsx`, `src/pages/legal/Cookies.tsx`
-
----
-
-## Details Techniques
-
-### Fichiers a modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/Admin.tsx` | Ajouter gestion credits IA (table `ai_credits`) + tabs dans le dialog |
-| `src/assets/deepflow-logo.png` | **NOUVEAU** - Copie de image-5.png |
-| `public/images/auth-bg.jpg` | **NOUVEAU** - Copie de l'image oeil bleu |
-| `src/components/layout/Sidebar.tsx` | Nouveau logo avec gestion theme |
-| `src/components/layout/MobileHeader.tsx` | Nouveau logo avec gestion theme |
-| `src/pages/Login.tsx` | Nouveau logo + image de fond |
-| `src/pages/Register.tsx` | Nouveau logo + image de fond |
-| `src/pages/ForgotPassword.tsx` | Nouveau logo + image de fond |
-| `src/pages/ResetPassword.tsx` | Image de fond |
-| `src/components/settings/ProfileEditForm.tsx` | Fix photo zoomee |
-| `src/pages/Settings.tsx` | Fix theme provider, auto-save preferences, nouvel onglet "A propos" avec FAQ/Legal/Contact |
-| `src/components/layout/Footer.tsx` | Email mis a jour |
-| `src/pages/legal/Privacy.tsx` | Email mis a jour |
-| `src/pages/legal/Terms.tsx` | Email mis a jour |
-| `src/pages/legal/Cookies.tsx` | Email mis a jour |
-
-### Ordre d'implementation
-
-| Etape | Modification | Impact |
-|-------|-------------|--------|
-| 1 | Copier les 2 images (logo + fond) | Prerequis pour tout le reste |
-| 2 | Mettre a jour le logo (Sidebar, MobileHeader, pages auth) | Branding |
-| 3 | Ajouter image de fond aux pages auth | Visuel |
-| 4 | Fix credits admin (IA + jeu) | Fonctionnel |
-| 5 | Fix theme provider dans Settings | Fonctionnel |
-| 6 | Fix photo profil + auto-save preferences | UX |
-| 7 | Ajouter onglet "A propos" + mettre a jour emails | Legal |
-
-### Credits Admin - Detail technique
-
-Dans le dialog de credits (`Admin.tsx` lignes 843-879), ajouter un systeme a 2 types :
-
-```typescript
-// Nouveau state
-const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
-
-// Nouvelle fonction pour credits IA
-const handleGiveAICredits = async () => {
-  if (!creditsUser || creditsAmount === 0) return;
-  
-  const { data: existing } = await supabase
-    .from("ai_credits")
-    .select("credits")
-    .eq("user_id", creditsUser.id)
-    .maybeSingle();
-  
-  const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
-  
-  if (existing) {
-    await supabase.from("ai_credits")
-      .update({ credits: newCredits })
-      .eq("user_id", creditsUser.id);
-  } else {
-    await supabase.from("ai_credits")
-      .insert({ user_id: creditsUser.id, credits: newCredits });
-  }
-  
-  await logAction("modify_ai_credits", ...);
-};
-```
-
-### Fix Theme - Detail technique
-
-Le probleme est que `App.tsx` utilise `import { ThemeProvider } from "next-themes"` mais `Settings.tsx` importe `useTheme` depuis `@/components/theme-provider` qui est un provider local jamais monte dans l'arbre de composants.
-
-**Solution :** Changer l'import dans Settings.tsx :
-```typescript
-// Avant
-import { useTheme } from "@/components/theme-provider";
-// Apres
-import { useTheme } from "next-themes";
-```
-
-### FAQ - Contenu
-
-Questions prevues pour la FAQ :
-1. Comment fonctionne DeepFlow ?
-2. Qu'est-ce que les credits IA ?
-3. Comment gagner des credits de jeu ?
-4. Mes donnees sont-elles securisees ?
-5. Comment contacter le support ?
-6. Puis-je utiliser DeepFlow hors ligne ?
