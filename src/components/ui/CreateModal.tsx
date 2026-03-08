@@ -49,24 +49,10 @@ export function CreateModal({ isOpen, onClose, title, children, hasUnsavedChange
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={() => {}} modal>
-        <DialogContent 
-          className="sm:max-w-md" 
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }} modal>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{title}</DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClose}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           {children}
         </DialogContent>
