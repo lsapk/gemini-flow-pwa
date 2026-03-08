@@ -100,15 +100,15 @@ export function ItemCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ 
         opacity: isDragging ? 0.7 : 1, 
         y: 0,
         scale: isDragging ? 1.02 : 1,
         rotate: isDragging ? 1 : 0,
       }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={cn(
         'group',
         isDragging && 'z-50',
@@ -117,8 +117,8 @@ export function ItemCard({
     >
       <Card
         className={cn(
-          'relative overflow-hidden transition-all duration-200',
-          'hover:shadow-md',
+          'relative overflow-hidden transition-colors duration-200',
+          'hover:bg-muted/40',
           'border-l-4',
           // Priority-based border for tasks
           taskData?.priority 
@@ -133,10 +133,10 @@ export function ItemCard({
         )}
       >
         <CardContent className={cn(
-          'p-3 sm:p-4',
-          variant === 'compact' && 'p-2 sm:p-3'
+          'p-4',
+          variant === 'compact' && 'p-3'
         )}>
-          <div className="flex items-start gap-2 sm:gap-3">
+          <div className="flex items-start gap-3">
             {/* Drag Handle */}
             {dragHandleProps && (
               <DragHandle 
@@ -196,7 +196,7 @@ export function ItemCard({
               )}
 
               {/* Badges Row */}
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Task-specific badges */}
                 {taskData && (
                   <>

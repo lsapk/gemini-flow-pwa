@@ -10,14 +10,22 @@ interface MobileHeaderProps {
 
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-border/30 md:hidden">
-      <div className="flex h-14 items-center justify-between px-4 max-w-7xl mx-auto">
+    <header 
+      className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 md:hidden"
+      style={{ 
+        background: 'hsl(var(--background) / 0.72)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+      }}
+    >
+      <div className="flex h-12 items-center justify-between px-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
-            className="h-9 w-9 rounded-xl active:scale-[0.95]"
+            className="h-11 w-11 rounded-xl"
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Ouvrir le menu</span>
@@ -31,7 +39,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
         </div>
         
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" asChild className="h-9 w-9 rounded-xl active:scale-[0.95]">
+          <Button variant="ghost" size="icon" asChild className="h-11 w-11 rounded-xl">
             <Link to="/settings">
               <Settings className="h-[18px] w-[18px] text-muted-foreground" />
               <span className="sr-only">Paramètres</span>
