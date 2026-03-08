@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Goal } from "@/types";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface CreateGoalFormProps {
   onSuccess: () => void;
@@ -23,6 +26,7 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
   const [completed, setCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const { suggest, isLoading: isAILoading } = useAIItemAssistant();
 
   useEffect(() => {
     if (initialGoal) {
@@ -33,6 +37,18 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
       setCompleted(initialGoal.completed);
     }
   }, [initialGoal]);
+
+  const handleAISuggest = async () => {
+    if (!title.trim()) {
+      toast.error("Entrez d'abord un titre.");
+      return;
+    }
+    const result = await suggest({ type: "goal", title });
+    if (result && 'milestones' in result) {
+      if (result.description) setDescription(result.description);
+      if (result.category) setCategory(result.category);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,14 +67,12 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
 
       let error;
       if (initialGoal) {
-        // Update existing goal
         ({ error } = await supabase
           .from('goals')
           .update(goalData)
           .eq('id', initialGoal.id)
           .eq('user_id', user.id));
       } else {
-        // Create new goal
         ({ error } = await supabase
           .from('goals')
           .insert(goalData));
@@ -90,27 +104,54 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description de votre objectif (optionnel)"
-        />
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description">Description</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAISuggest}
+            disabled={isAILoading || !title.trim()}
+            className="h-7 gap-1.5 text-xs text-primary hover:text-primary/80"
+          >
+            {isAILoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            {isAILoading ? "Génération..." : "✨ Remplir avec l'IA"}
+          </Button>
+        </div>
+        {isAILoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        ) : (
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description de votre objectif (optionnel)"
+          />
+        )}
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="category">Catégorie *</Label>
-        <Select value={category} onValueChange={setCategory} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner une catégorie" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="personal">Personnel</SelectItem>
-            <SelectItem value="professional">Professionnel</SelectItem>
-            <SelectItem value="health">Santé</SelectItem>
-          </SelectContent>
-        </Select>
+        {isAILoading ? (
+          <Skeleton className="h-10 w-full rounded-xl" />
+        ) : (
+          <Select value={category} onValueChange={setCategory} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une catégorie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="personal">Personnel</SelectItem>
+              <SelectItem value="professional">Professionnel</SelectItem>
+              <SelectItem value="health">Santé</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {initialGoal && (

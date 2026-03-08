@@ -6,10 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Habit } from "@/types";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface CreateHabitFormProps {
   onSuccess: () => void;
@@ -36,6 +39,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { suggest, isLoading: isAILoading } = useAIItemAssistant();
 
   useEffect(() => {
     if (habit) {
@@ -48,8 +52,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         linked_goal_id: 'none',
         days_of_week: habit.days_of_week || []
       });
-      
-      // Charger la liaison avec l'objectif pour les habitudes existantes
       fetchHabitGoalLink(habit.id);
     } else {
       setFormData({
@@ -62,13 +64,11 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         days_of_week: []
       });
     }
-
     fetchGoals();
   }, [habit]);
 
   const fetchHabitGoalLink = async (habitId: string) => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('habits')
@@ -76,24 +76,15 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         .eq('id', habitId)
         .eq('user_id', user.id)
         .single();
-
       if (error) throw error;
-      setFormData(prev => ({
-        ...prev,
-        linked_goal_id: data?.linked_goal_id || 'none'
-      }));
+      setFormData(prev => ({ ...prev, linked_goal_id: data?.linked_goal_id || 'none' }));
     } catch (error) {
       console.error('Error fetching habit goal link:', error);
-      setFormData(prev => ({
-        ...prev,
-        linked_goal_id: 'none'
-      }));
     }
   };
 
   const fetchGoals = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('goals')
@@ -101,7 +92,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         .eq('user_id', user.id)
         .eq('completed', false)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setGoals(data || []);
     } catch (error) {
@@ -109,15 +99,26 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
     }
   };
 
+  const handleAISuggest = async () => {
+    if (!formData.title.trim()) {
+      toast({ title: "Erreur", description: "Entrez d'abord un titre.", variant: "destructive" });
+      return;
+    }
+    const result = await suggest({ type: "habit", title: formData.title });
+    if (result && 'frequency' in result) {
+      setFormData(prev => ({
+        ...prev,
+        description: result.description || prev.description,
+        frequency: result.frequency || prev.frequency,
+        category: result.category || prev.category,
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!user || !formData.title.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le titre est obligatoire.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Le titre est obligatoire.", variant: "destructive" });
       return;
     }
 
@@ -135,44 +136,22 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       };
 
       if (habit) {
-        // Modifier l'habitude existante
         const { error } = await supabase
           .from('habits')
-          .update({
-            ...habitData,
-            updated_at: new Date().toISOString()
-          })
+          .update({ ...habitData, updated_at: new Date().toISOString() })
           .eq('id', habit.id)
           .eq('user_id', user.id);
-
         if (error) throw error;
-
-        toast({
-          title: "Habitude modifiée",
-          description: "Votre habitude a été mise à jour avec succès.",
-        });
+        toast({ title: "Habitude modifiée", description: "Votre habitude a été mise à jour avec succès." });
       } else {
-        // Créer une nouvelle habitude
-        const { error } = await supabase
-          .from('habits')
-          .insert(habitData);
-
+        const { error } = await supabase.from('habits').insert(habitData);
         if (error) throw error;
-
-        toast({
-          title: "Habitude créée",
-          description: "Votre nouvelle habitude a été créée avec succès.",
-        });
+        toast({ title: "Habitude créée", description: "Votre nouvelle habitude a été créée avec succès." });
       }
-
       onSuccess();
     } catch (error) {
       console.error('Error saving habit:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder l'habitude.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Impossible de sauvegarder l'habitude.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -192,41 +171,73 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="Description optionnelle de l'habitude"
-          rows={3}
-        />
+        <div className="flex items-center justify-between mb-1">
+          <Label htmlFor="description">Description</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAISuggest}
+            disabled={isAILoading || !formData.title.trim()}
+            className="h-7 gap-1.5 text-xs text-primary hover:text-primary/80"
+          >
+            {isAILoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            {isAILoading ? "Génération..." : "✨ Remplir avec l'IA"}
+          </Button>
+        </div>
+        {isAILoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl" />
+            <Skeleton className="h-4 w-2/3 rounded-lg" />
+          </div>
+        ) : (
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Description optionnelle de l'habitude"
+            rows={3}
+          />
+        )}
       </div>
 
       <div>
         <Label htmlFor="frequency">Fréquence *</Label>
-        <Select
-          value={formData.frequency}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choisir la fréquence" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Quotidienne</SelectItem>
-            <SelectItem value="weekly">Hebdomadaire</SelectItem>
-            <SelectItem value="monthly">Mensuelle</SelectItem>
-          </SelectContent>
-        </Select>
+        {isAILoading ? (
+          <Skeleton className="h-10 w-full rounded-xl" />
+        ) : (
+          <Select
+            value={formData.frequency}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choisir la fréquence" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Quotidienne</SelectItem>
+              <SelectItem value="weekly">Hebdomadaire</SelectItem>
+              <SelectItem value="monthly">Mensuelle</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div>
         <Label htmlFor="category">Catégorie</Label>
-        <Input
-          id="category"
-          value={formData.category}
-          onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-          placeholder="Ex: Santé, Travail, Personnel"
-        />
+        {isAILoading ? (
+          <Skeleton className="h-10 w-full rounded-xl" />
+        ) : (
+          <Input
+            id="category"
+            value={formData.category}
+            onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+            placeholder="Ex: Santé, Travail, Personnel"
+          />
+        )}
       </div>
 
       <div>
