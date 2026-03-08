@@ -77,16 +77,16 @@ export const AccessoryShop = () => {
   const ownedIds = new Set(owned.map(a => a.accessory_id));
 
   return (
-    <Card className="bg-[#1A1F26]/80 backdrop-blur-xl border-white/5">
+    <Card className="bg-card/80 backdrop-blur-xl border-border/30">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg text-white/90">
+        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
           <ShoppingBag className="w-5 h-5 text-purple-400" />
           Boutique
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3">
-          {SHOP_ITEMS.slice(0, 6).map((item, i) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {SHOP_ITEMS.map((item, i) => {
             const isOwned = ownedIds.has(item.id);
             const stageLocked = profile ? STAGE_ORDER[profile.stage] < STAGE_ORDER[item.stage_required] : true;
 
@@ -95,32 +95,33 @@ export const AccessoryShop = () => {
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className={`p-3 rounded-2xl border text-center backdrop-blur-sm transition-all ${
+                transition={{ delay: i * 0.04, type: "spring", stiffness: 300, damping: 25 }}
+                whileHover={{ scale: isOwned || stageLocked ? 1 : 1.03, y: isOwned || stageLocked ? 0 : -2 }}
+                className={`p-3 rounded-2xl border text-center backdrop-blur-sm transition-colors ${
                   isOwned
-                    ? 'bg-emerald-500/10 border-emerald-500/20'
+                    ? 'bg-success/10 border-success/20'
                     : stageLocked
-                    ? 'bg-white/5 border-white/5 opacity-50'
-                    : 'bg-white/5 border-white/10 hover:border-purple-500/30 hover:bg-purple-500/5'
+                    ? 'bg-muted/30 border-border/10 opacity-60'
+                    : 'bg-card/60 border-border/20 hover:border-purple-500/30 hover:bg-purple-500/5'
                 }`}
               >
                 <span className="text-2xl block mb-1">{item.emoji}</span>
-                <p className="text-xs font-medium text-white/80 mb-1">{item.name}</p>
-                <div className="text-[10px] text-white/40 mb-2">🐟 {item.cost_salmon}</div>
+                <p className="text-xs font-medium text-foreground/80 mb-1 truncate">{item.name}</p>
+                <div className="text-[10px] text-muted-foreground mb-2">🐟 {item.cost_salmon}</div>
 
                 {isOwned ? (
-                  <Badge className="text-[10px] bg-emerald-500/20 border-emerald-500/30 text-emerald-300">
+                  <Badge className="text-[10px] bg-success/20 border-success/30 text-success">
                     <Check className="h-3 w-3 mr-1" /> Obtenu
                   </Badge>
                 ) : stageLocked ? (
-                  <Badge className="text-[10px] bg-white/10 border-white/10 text-white/50">
+                  <Badge variant="secondary" className="text-[10px] bg-muted/50 border-0 text-muted-foreground">
                     <Lock className="h-3 w-3 mr-1" /> {item.stage_required}
                   </Badge>
                 ) : (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs h-7 bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20"
+                    className="text-xs h-7 bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
                     onClick={() => purchaseMutation.mutate(item)}
                     disabled={purchaseMutation.isPending}
                   >
