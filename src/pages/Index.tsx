@@ -90,7 +90,7 @@ const Index = () => {
                 <Link to="/register">
                   <Button 
                     size="lg" 
-                    className="text-lg px-10 py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-105"
+                    className="text-lg px-10 py-5 sm:py-7 font-semibold bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-105"
                   >
                     Reprendre le contrôle
                     <ArrowRight className="ml-3 h-6 w-6" />
