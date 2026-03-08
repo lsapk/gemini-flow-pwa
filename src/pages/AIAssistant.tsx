@@ -409,18 +409,14 @@ export default function AIAssistant() {
       )}
 
       {/* Analysis Tab */}
-      {activeTab === "analysis" && (
-        <div className="flex-1 overflow-y-auto animate-fade-in">
-          <Analysis />
-        </div>
-      )}
+      <div className={cn("flex-1 overflow-y-auto animate-fade-in", activeTab !== "analysis" && "hidden")}>
+        <Analysis />
+      </div>
 
       {/* Profile Tab */}
-      {activeTab === "profile" && (
-        <div className="flex-1 overflow-y-auto animate-fade-in">
-          <Profile />
-        </div>
-      )}
+      <div className={cn("flex-1 overflow-y-auto animate-fade-in", activeTab !== "profile" && "hidden")}>
+        <Profile />
+      </div>
 
       <AISuggestionDialog
         suggestion={currentSuggestion}
