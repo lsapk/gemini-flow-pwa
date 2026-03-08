@@ -295,34 +295,90 @@
   }
 }
 
-/* Penguin Sprite Animations */
-@keyframes sprite-horizontal {
+/* ===== Penguin Sprite Animations ===== */
+
+/* 8-frame sprite animation using CSS steps */
+@keyframes penguin-wave {
+  from { background-position: 0 0; }
+  to { background-position: -800px 0; } /* 8 frames × 100px */
+}
+
+@keyframes penguin-walk {
+  from { background-position: 0 0; }
   to { background-position: -800px 0; }
 }
 
-@keyframes sprite-vertical {
-  to { background-position: 0 -800px; }
-}
-
+/* Jump animation for hover interactions */
 @keyframes penguin-jump {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  0%, 100% { 
+    transform: translateY(0); 
+  }
+  50% { 
+    transform: translateY(-12px); 
+  }
 }
 
+/* Breathing/idle animation */
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
+  0%, 100% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.03); 
+  }
 }
 
+/* Aurora borealis background effect */
 @keyframes aurora-glow {
-  0%, 100% { opacity: 0.3; transform: translateX(0); }
-  50% { opacity: 0.6; transform: translateX(30px); }
+  0%, 100% { 
+    opacity: 0.3; 
+    transform: translateX(0); 
+  }
+  50% { 
+    opacity: 0.6; 
+    transform: translateX(30px); 
+  }
 }
 
+/* Pulse animation for interactive zones */
+@keyframes zone-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+    opacity: 0.4; 
+  }
+  50% { 
+    transform: scale(1.3); 
+    opacity: 0; 
+  }
+}
+
+/* Sprite animation classes */
+.penguin-sprite-wave {
+  width: 100px;
+  height: 100px;
+  background-repeat: no-repeat;
+  background-size: 800px 100px;
+  animation: penguin-wave 0.6s steps(8) infinite;
+}
+
+.penguin-sprite-walk {
+  width: 100px;
+  height: 100px;
+  background-repeat: no-repeat;
+  background-size: 800px 100px;
+  animation: penguin-walk 0.8s steps(8) infinite;
+}
+
+/* Hover triggered animations */
 .animate-penguin-jump:hover {
-  animation: penguin-jump 0.4s ease-in-out;
+  animation: penguin-jump 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .animate-breathe {
   animation: breathe 3s ease-in-out infinite;
+}
+
+/* Zone pulse effect */
+.animate-zone-pulse {
+  animation: zone-pulse 2.5s ease-out infinite;
 }

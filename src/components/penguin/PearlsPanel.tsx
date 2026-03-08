@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { Gem } from "lucide-react";
 
 interface Pearl {
   id: string;
@@ -17,9 +18,9 @@ interface Pearl {
 }
 
 const PEARL_CONFIG = {
-  efficiency: { emoji: '💎', label: 'Efficacité', color: 'text-sky-500 bg-sky-50 dark:bg-sky-950/20 border-sky-200/30 dark:border-sky-800/30' },
-  resilience: { emoji: '🔮', label: 'Résilience', color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/20 border-purple-200/30 dark:border-purple-800/30' },
-  necklace: { emoji: '📿', label: 'Collier', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/20 border-amber-200/30 dark:border-amber-800/30' },
+  efficiency: { emoji: '💎', label: 'Efficacité', colorClass: 'bg-sky-500/10 border-sky-500/20 text-sky-400' },
+  resilience: { emoji: '🔮', label: 'Résilience', colorClass: 'bg-purple-500/10 border-purple-500/20 text-purple-400' },
+  necklace: { emoji: '📿', label: 'Collier', colorClass: 'bg-amber-500/10 border-amber-500/20 text-amber-400' },
 };
 
 export const PearlsPanel = () => {
@@ -42,18 +43,19 @@ export const PearlsPanel = () => {
   });
 
   return (
-    <Card className="border-amber-200/20 dark:border-amber-800/20">
+    <Card className="bg-card/80 backdrop-blur-xl border-border/30">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          💎 Perles d'Insights
+        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+          <Gem className="w-5 h-5 text-amber-400" />
+          Perles d'Insights
         </CardTitle>
       </CardHeader>
       <CardContent>
         {pearls.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <span className="text-4xl block mb-3">💎</span>
-            <p className="text-sm">Aucune perle trouvée encore</p>
-            <p className="text-xs mt-1">Continuez votre productivité pour découvrir des insights</p>
+          <div className="text-center py-10 text-muted-foreground">
+            <span className="text-5xl block mb-3">💎</span>
+            <p className="text-sm font-medium">Aucune perle trouvée</p>
+            <p className="text-xs mt-1 text-muted-foreground/70">Continuez votre productivité pour découvrir des insights</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -65,18 +67,20 @@ export const PearlsPanel = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className={`p-3 rounded-xl border ${config.color}`}
+                  className={`p-4 rounded-2xl border backdrop-blur-sm ${config.colorClass.split(' ').slice(0, 2).join(' ')}`}
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="text-lg mt-0.5">{config.emoji}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-[10px]">{config.label}</Badge>
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0">{config.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Badge variant="secondary" className="text-[10px] bg-muted/50 border-0">
+                          {config.label}
+                        </Badge>
                         <span className="text-[10px] text-muted-foreground">
                           {formatDistanceToNow(new Date(pearl.created_at), { addSuffix: true, locale: fr })}
                         </span>
                       </div>
-                      <p className="text-sm">{pearl.message}</p>
+                      <p className="text-sm text-foreground/90 leading-relaxed">{pearl.message}</p>
                     </div>
                   </div>
                 </motion.div>
