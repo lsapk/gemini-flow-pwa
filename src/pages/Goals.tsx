@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Plus, Target, Trophy, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { Plus, Target, Trophy } from "lucide-react";
 import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
 import penguinThinking from "@/assets/penguin-thinking.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateGoalForm from "@/components/modals/CreateGoalForm";
+import { motion, AnimatePresence } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
 import { 
   Dialog, 
   DialogContent, 
@@ -47,9 +48,10 @@ export default function Goals() {
   const [activeTab, setActiveTab] = useState("ongoing");
   const { user } = useAuth();
 
+  const avgProgress = goals.length > 0 ? Math.round(goals.reduce((sum, g) => sum + (g.progress || 0), 0) / goals.length) : 0;
+
   const fetchGoals = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('goals')
@@ -60,7 +62,6 @@ export default function Goals() {
 
       if (error) throw error;
 
-      // Séparer les objectifs en cours et terminés
       const ongoing = (data || []).filter(g => !g.completed);
       const completed = (data || []).filter(g => g.completed);
       
@@ -74,32 +75,16 @@ export default function Goals() {
     }
   };
 
-  useEffect(() => {
-    fetchGoals();
-  }, [user]);
+  useEffect(() => { fetchGoals(); }, [user]);
 
-  const handleEdit = (goal: Goal) => {
-    setEditingGoal(goal);
-    setIsEditModalOpen(true);
-  };
-
-  const requestDelete = (goalId: string) => {
-    setGoalToDelete(goalId);
-    setIsDeleteDialogOpen(true);
-  };
+  const handleEdit = (goal: Goal) => { setEditingGoal(goal); setIsEditModalOpen(true); };
+  const requestDelete = (goalId: string) => { setGoalToDelete(goalId); setIsDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
     if (!user || !goalToDelete) return;
-
     try {
-      const { error } = await supabase
-        .from('goals')
-        .delete()
-        .eq('id', goalToDelete)
-        .eq('user_id', user.id);
-
+      const { error } = await supabase.from('goals').delete().eq('id', goalToDelete).eq('user_id', user.id);
       if (error) throw error;
-
       toast.success('Objectif supprimé !');
       fetchGoals();
     } catch (error) {
@@ -111,35 +96,17 @@ export default function Goals() {
     }
   };
 
-  const handleCreateSuccess = () => {
-    setIsCreateModalOpen(false);
-    fetchGoals();
-  };
-
-  const handleEditSuccess = () => {
-    setIsEditModalOpen(false);
-    setEditingGoal(null);
-    fetchGoals();
-  };
+  const handleCreateSuccess = () => { setIsCreateModalOpen(false); fetchGoals(); };
+  const handleEditSuccess = () => { setIsEditModalOpen(false); setEditingGoal(null); fetchGoals(); };
 
   const handleReorder = async (reorderedGoals: Goal[]) => {
-    // Update local state immediately
-    if (activeTab === "ongoing") {
-      setGoals(reorderedGoals);
-    } else {
-      setCompletedGoals(reorderedGoals);
-    }
+    if (activeTab === "ongoing") setGoals(reorderedGoals);
+    else setCompletedGoals(reorderedGoals);
 
-    // Save to database
     try {
       const updates = reorderedGoals.map((goal, index) => 
-        supabase
-          .from('goals')
-          .update({ sort_order: index })
-          .eq('id', goal.id)
-          .eq('user_id', user?.id)
+        supabase.from('goals').update({ sort_order: index }).eq('id', goal.id).eq('user_id', user?.id)
       );
-      
       await Promise.all(updates);
     } catch (error) {
       console.error('Error saving goal order:', error);
@@ -152,85 +119,94 @@ export default function Goals() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
-        <h1 className="text-lg md:text-2xl font-bold tracking-tight">Objectifs</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="w-full sm:w-auto text-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Objectifs</h1>
+          {goals.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                Progression moyenne : {avgProgress}%
+              </span>
+              <Progress value={avgProgress} className="w-24 h-1.5" />
+            </div>
+          )}
+        </div>
+        <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
           <Plus className="h-4 w-4 mr-1" />
-          <span className="sm:hidden">Nouvel</span>
           <span className="hidden sm:inline">Nouvel objectif</span>
+          <span className="sm:hidden">Nouveau</span>
         </Button>
       </div>
 
-      {/* Tabs pour en cours/terminés */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-8 md:h-9">
-          <TabsTrigger value="ongoing" className="flex items-center gap-1 text-xs md:text-sm py-1">
-            <Target className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">En cours</span>
-            <span className="xs:hidden">En cours</span>
-            <span className="ml-1">({goals.length})</span>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ongoing" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            En cours ({goals.length})
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-1 text-xs md:text-sm py-1">
-            <Trophy className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">Terminés</span>
-            <span className="xs:hidden">Term.</span>
-            <span className="ml-1">({completedGoals.length})</span>
+          <TabsTrigger value="completed" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Terminés ({completedGoals.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-3 md:mt-4">
-          {isLoading ? (
-            <div className="grid gap-4 md:gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-6">
-                    <div className="h-6 bg-muted rounded mb-4"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : currentGoals.length === 0 ? (
-            <PagePenguinEmpty
-              image={penguinThinking}
-              title={activeTab === "ongoing" ? "Pas encore d'objectifs" : "Aucun objectif terminé"}
-              description={activeTab === "ongoing" ? "Définissez vos objectifs pour atteindre vos ambitions." : "Vos objectifs accomplis apparaîtront ici."}
-            >
-              {activeTab === "ongoing" && (
-                <Button onClick={() => setIsCreateModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />Créer votre premier objectif
-                </Button>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            <TabsContent value={activeTab} className="mt-4">
+              {isLoading ? (
+                <div className="grid gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="animate-pulse backdrop-blur-sm bg-card/60">
+                      <CardContent className="p-4">
+                        <div className="h-5 bg-muted/60 rounded-xl mb-3"></div>
+                        <div className="h-4 bg-muted/40 rounded-xl w-2/3"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : currentGoals.length === 0 ? (
+                <PagePenguinEmpty
+                  image={penguinThinking}
+                  title={activeTab === "ongoing" ? "Pas encore d'objectifs" : "Aucun objectif terminé"}
+                  description={activeTab === "ongoing" ? "Définissez vos objectifs pour atteindre vos ambitions." : "Vos objectifs accomplis apparaîtront ici."}
+                >
+                  {activeTab === "ongoing" && (
+                    <Button onClick={() => setIsCreateModalOpen(true)} className="rounded-xl">
+                      <Plus className="h-4 w-4 mr-2" />Créer votre premier objectif
+                    </Button>
+                  )}
+                </PagePenguinEmpty>
+              ) : (
+                <GoalList 
+                  goals={currentGoals}
+                  loading={false}
+                  onEdit={handleEdit}
+                  onDelete={requestDelete}
+                  onReorder={handleReorder}
+                  onRefresh={fetchGoals}
+                />
               )}
-            </PagePenguinEmpty>
-          ) : (
-            <GoalList 
-              goals={currentGoals}
-              loading={false}
-              onEdit={handleEdit}
-              onDelete={requestDelete}
-              onReorder={handleReorder}
-              onRefresh={fetchGoals}
-            />
-          )}
-        </TabsContent>
+            </TabsContent>
+          </motion.div>
+        </AnimatePresence>
       </Tabs>
 
-      {isCreateModalOpen && (
-        <CreateModal 
-          type="goal"
-          onSuccess={handleCreateSuccess}
-        />
-      )}
+      {isCreateModalOpen && <CreateModal type="goal" onSuccess={handleCreateSuccess} />}
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier l'objectif</DialogTitle>
           </DialogHeader>
-          <CreateGoalForm 
-            onSuccess={handleEditSuccess}
-            initialGoal={editingGoal}
-          />
+          <CreateGoalForm onSuccess={handleEditSuccess} initialGoal={editingGoal} />
         </DialogContent>
       </Dialog>
       
