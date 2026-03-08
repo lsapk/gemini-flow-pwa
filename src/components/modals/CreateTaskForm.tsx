@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Task } from "@/types";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface CreateTaskFormProps {
   onSuccess: () => void;
@@ -29,6 +32,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const { suggest, isLoading: isAILoading } = useAIItemAssistant();
 
   useEffect(() => {
     if (task) {
@@ -36,17 +40,13 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setDescription(task.description || "");
       setPriority(task.priority);
       setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "");
-      
-      // Charger la liaison avec l'objectif pour les tâches existantes
       fetchTaskGoalLink(task.id);
     }
-
     fetchGoals();
   }, [task]);
 
   const fetchTaskGoalLink = async (taskId: string) => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -54,7 +54,6 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
         .eq('id', taskId)
         .eq('user_id', user.id)
         .single();
-
       if (error) throw error;
       setLinkedGoalId(data?.linked_goal_id || "none");
     } catch (error) {
@@ -65,7 +64,6 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
 
   const fetchGoals = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('goals')
@@ -73,11 +71,22 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
         .eq('user_id', user.id)
         .eq('completed', false)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setGoals(data || []);
     } catch (error) {
       console.error('Error fetching goals:', error);
+    }
+  };
+
+  const handleAISuggest = async () => {
+    if (!title.trim()) {
+      toast.error("Entrez d'abord un titre.");
+      return;
+    }
+    const result = await suggest({ type: "task", title });
+    if (result && 'priority' in result) {
+      if (result.description) setDescription(result.description);
+      if (result.priority) setPriority(result.priority);
     }
   };
 
@@ -98,14 +107,12 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
 
       let error;
       if (task) {
-        // Update existing task
         ({ error } = await supabase
           .from('tasks')
           .update(taskData)
           .eq('id', task.id)
           .eq('user_id', user.id));
       } else {
-        // Create new task
         ({ error } = await supabase
           .from('tasks')
           .insert(taskData));
@@ -137,27 +144,54 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description de votre tâche (optionnel)"
-        />
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description">Description</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAISuggest}
+            disabled={isAILoading || !title.trim()}
+            className="h-7 gap-1.5 text-xs text-primary hover:text-primary/80"
+          >
+            {isAILoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            {isAILoading ? "Génération..." : "✨ Remplir avec l'IA"}
+          </Button>
+        </div>
+        {isAILoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+        ) : (
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description de votre tâche (optionnel)"
+          />
+        )}
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="priority">Priorité *</Label>
-        <Select value={priority} onValueChange={(value: "high" | "medium" | "low") => setPriority(value)} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner une priorité" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="high">Haute</SelectItem>
-            <SelectItem value="medium">Moyenne</SelectItem>
-            <SelectItem value="low">Basse</SelectItem>
-          </SelectContent>
-        </Select>
+        {isAILoading ? (
+          <Skeleton className="h-10 w-full rounded-xl" />
+        ) : (
+          <Select value={priority} onValueChange={(value: "high" | "medium" | "low") => setPriority(value)} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une priorité" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="high">Haute</SelectItem>
+              <SelectItem value="medium">Moyenne</SelectItem>
+              <SelectItem value="low">Basse</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -172,10 +206,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
 
       <div className="space-y-2">
         <Label htmlFor="linked_goal">Lier à un objectif</Label>
-        <Select
-          value={linkedGoalId}
-          onValueChange={setLinkedGoalId}
-        >
+        <Select value={linkedGoalId} onValueChange={setLinkedGoalId}>
           <SelectTrigger>
             <SelectValue placeholder="Choisir un objectif (optionnel)" />
           </SelectTrigger>
