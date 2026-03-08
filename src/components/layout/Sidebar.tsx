@@ -1,5 +1,4 @@
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import penguinMascot from "@/assets/penguin-mascot.png";
 import { 
@@ -57,7 +56,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   return (
     <div className={cn("w-64 h-screen bg-card border-r border-border/40 sticky top-0 flex flex-col", className)}>
       {/* Logo */}
-      <div className="p-5 border-b border-border/30">
+      <div className="p-4 border-b border-border/30">
         <div className="flex items-center gap-3">
           <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-xl object-contain bg-muted/50 p-1" />
           <h1 className="text-lg font-semibold tracking-tight text-foreground">DeepFlow</h1>
@@ -65,7 +64,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto scrollbar-hidden">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-hidden">
         {allNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           const isAdminItem = item.path === "/admin";
@@ -73,7 +72,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
             <button
               key={item.path}
               className={cn(
-                "w-full flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-medium transition-colors duration-150",
+                "w-full flex items-center gap-3 h-11 px-4 rounded-xl text-sm font-medium transition-colors duration-200",
                 isActive 
                   ? "bg-primary/10 text-primary" 
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -102,9 +101,9 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
       </nav>
       
       {/* Logout */}
-      <div className="p-2.5 border-t border-border/30">
+      <div className="p-3 border-t border-border/30">
         <button
-          className="w-full flex items-center gap-3 h-11 px-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors duration-150 active:scale-[0.98]"
+          className="w-full flex items-center gap-3 h-11 px-4 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors duration-200 active:scale-[0.98]"
           onClick={async () => {
             await signOut();
             navigate('/login');

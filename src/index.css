@@ -83,7 +83,7 @@
     --muted-foreground: 0 0% 55%;
     
     --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent-foreground: 0 0% 11%;
     
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 98%;
@@ -130,45 +130,57 @@
 
   body {
     @apply bg-background text-foreground antialiased min-h-screen;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-feature-settings: "ss01", "ss02", "cv01";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     font-weight: 600;
     letter-spacing: -0.025em;
   }
 
-  /* Global smooth transitions for interactive elements */
+  /* iOS spring transitions for all interactive elements */
   button, a, [role="button"] {
-    transition: all 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   input, textarea, select, [role="combobox"] {
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 
 @layer components {
+  /* ===== Liquid Glass ===== */
+  .liquid-glass {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
   .glass-nav {
-    @apply fixed z-50 w-full bg-card/90 backdrop-blur-2xl border-b border-border/30 shadow-none;
+    @apply fixed z-50 w-full border-b border-border/30 shadow-none;
+    background: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   
   .glass-container {
-    @apply bg-card border border-border/40 rounded-2xl shadow-none p-5
+    @apply bg-card border border-border/40 rounded-2xl shadow-none p-4
            hover:bg-muted/30 transition-colors duration-200;
   }
   
   .dashboard-card {
-    @apply bg-card border border-border/40 rounded-2xl shadow-none p-5
-           transition-all duration-200 hover:bg-muted/30;
+    @apply bg-card border border-border/40 rounded-2xl shadow-none p-4
+           transition-colors duration-200 hover:bg-muted/30;
   }
 
   .glass-morphism {
-    @apply bg-card/95 backdrop-blur-2xl border border-border/30 rounded-2xl shadow-lg;
+    @apply border border-border/30 rounded-2xl shadow-lg;
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   
   .glass-card {
@@ -177,7 +189,7 @@
   }
   
   .hover-scale {
-    @apply transition-all duration-150 hover:opacity-80;
+    @apply transition-all duration-200 hover:opacity-80;
   }
   
   .gradient-text {
@@ -198,7 +210,7 @@
     display: none;
   }
 
-  /* Clean inputs */
+  /* Clean inputs — filled style (iOS) */
   input,
   textarea,
   select,
@@ -206,31 +218,33 @@
     @apply shadow-none;
   }
   
-  /* Clean cards */
+  /* Clean cards — deference: no shadow */
   [class*="Card"],
   .card {
     @apply shadow-none;
   }
   
-  /* Clean dialogs */
+  /* Liquid Glass dialogs */
   [role="dialog"] {
     @apply rounded-2xl border border-border/40 shadow-2xl;
   }
   
-  /* Clean dropdowns */
+  /* Liquid Glass dropdowns */
   [role="menu"],
   [role="listbox"] {
-    @apply rounded-xl border border-border/40 shadow-lg backdrop-blur-2xl;
-    background-color: hsl(var(--card) / 0.98);
+    @apply rounded-xl border border-border/40 shadow-lg;
+    background: hsl(var(--card) / 0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   
   /* iOS-style tabs */
   [role="tablist"] {
-    @apply bg-muted/60 rounded-lg p-1;
+    @apply bg-muted/60 rounded-xl p-1;
   }
   
   [role="tab"] {
-    @apply rounded-md;
+    @apply rounded-lg;
   }
   
   [role="tab"][data-state="active"] {
@@ -253,12 +267,20 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.2);
+    background: hsl(var(--muted-foreground) / 0.15);
     border-radius: 6px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.4);
+    background: hsl(var(--muted-foreground) / 0.3);
+  }
+
+  /* Dark mode adaptive tint on cards */
+  .dark .dashboard-card,
+  .dark .glass-container,
+  .dark .glass-card {
+    background: hsl(var(--card) / 1);
+    box-shadow: inset 0 0 0 1px hsl(211 100% 50% / 0.03);
   }
 }
 
