@@ -23,31 +23,31 @@ export function PriorityBadge({ priority, compact = false }: PriorityBadgeProps)
     high: {
       icon: AlertCircle,
       label: 'Haute',
-      className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800',
+      className: 'bg-red-100/70 text-red-700 border-red-200/50 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800/30',
     },
     medium: {
       icon: Clock,
       label: 'Moyenne',
-      className: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800',
+      className: 'bg-yellow-100/70 text-yellow-700 border-yellow-200/50 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-800/30',
     },
     low: {
       icon: CheckSquare,
       label: 'Basse',
-      className: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800',
+      className: 'bg-green-100/70 text-green-700 border-green-200/50 dark:bg-green-950/40 dark:text-green-400 dark:border-green-800/30',
     },
   };
 
   const { icon: Icon, label, className } = config[priority as keyof typeof config] || config.low;
 
   return (
-    <Badge variant="outline" className={cn('gap-1 text-xs font-medium', className)}>
+    <Badge variant="outline" className={cn('gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5', className)}>
       <Icon className="h-3 w-3" />
       {!compact && <span>{label}</span>}
     </Badge>
   );
 }
 
-// Due Date Badge with smart labels
+// Due Date Badge
 interface DueDateBadgeProps {
   dueDate: string;
   compact?: boolean;
@@ -62,30 +62,30 @@ export function DueDateBadge({ dueDate, compact = false }: DueDateBadgeProps) {
 
   if (isPast(date) && !isToday(date)) {
     label = 'En retard';
-    className = 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400';
+    className = 'bg-red-100/70 text-red-700 border-red-200/50 dark:bg-red-950/40 dark:text-red-400';
   } else if (isToday(date)) {
     label = "Aujourd'hui";
-    className = 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400';
+    className = 'bg-orange-100/70 text-orange-700 border-orange-200/50 dark:bg-orange-950/40 dark:text-orange-400';
   } else if (isTomorrow(date)) {
     label = 'Demain';
-    className = 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400';
+    className = 'bg-yellow-100/70 text-yellow-700 border-yellow-200/50 dark:bg-yellow-950/40 dark:text-yellow-400';
   } else if (daysUntil <= 7) {
     label = `J-${daysUntil}`;
-    className = 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400';
+    className = 'bg-blue-100/70 text-blue-700 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400';
   } else {
     label = format(date, 'dd MMM', { locale: fr });
-    className = 'bg-muted text-muted-foreground border-border';
+    className = 'bg-muted/50 text-muted-foreground border-border/30';
   }
 
   return (
-    <Badge variant="outline" className={cn('gap-1 text-xs font-medium', className)}>
+    <Badge variant="outline" className={cn('gap-1 text-[11px] font-medium rounded-full px-2.5 py-0.5', className)}>
       <Calendar className="h-3 w-3" />
       {!compact && <span>{label}</span>}
     </Badge>
   );
 }
 
-// Streak Badge with flame animation
+// Streak Badge
 interface StreakBadgeProps {
   streak: number;
   compact?: boolean;
@@ -100,10 +100,10 @@ export function StreakBadge({ streak, compact = false }: StreakBadgeProps) {
     <Badge 
       variant="outline" 
       className={cn(
-        'gap-1 text-xs font-semibold',
+        'gap-1 text-[11px] font-semibold rounded-full px-2.5 py-0.5',
         isHotStreak 
-          ? 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400' 
-          : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400'
+          ? 'bg-orange-100/70 text-orange-700 border-orange-200/50 dark:bg-orange-950/40 dark:text-orange-400' 
+          : 'bg-amber-50/70 text-amber-600 border-amber-200/50 dark:bg-amber-950/40 dark:text-amber-400'
       )}
     >
       <Flame className={cn('h-3 w-3', isHotStreak && 'animate-pulse text-orange-500')} />
@@ -119,15 +119,15 @@ interface FrequencyBadgeProps {
 
 export function FrequencyBadge({ frequency }: FrequencyBadgeProps) {
   const config = {
-    daily: { label: 'Quotidien', className: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400' },
-    weekly: { label: 'Hebdo', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' },
-    monthly: { label: 'Mensuel', className: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400' },
+    daily: { label: 'Quotidien', className: 'bg-green-100/70 text-green-700 dark:bg-green-950/40 dark:text-green-400' },
+    weekly: { label: 'Hebdo', className: 'bg-blue-100/70 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' },
+    monthly: { label: 'Mensuel', className: 'bg-purple-100/70 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' },
   };
 
   const { label, className } = config[frequency as keyof typeof config] || config.daily;
 
   return (
-    <Badge variant="outline" className={cn('text-xs font-medium', className)}>
+    <Badge variant="outline" className={cn('text-[11px] font-medium rounded-full px-2.5 py-0.5 border-transparent', className)}>
       {label}
     </Badge>
   );
@@ -140,7 +140,7 @@ interface CategoryBadgeProps {
 
 export function CategoryBadge({ category }: CategoryBadgeProps) {
   return (
-    <Badge variant="outline" className="text-xs font-medium bg-muted/50">
+    <Badge variant="outline" className="text-[11px] font-medium rounded-full px-2.5 py-0.5 bg-muted/40 border-border/20">
       <Target className="h-3 w-3 mr-1" />
       {category}
     </Badge>
@@ -159,11 +159,11 @@ export function SubtaskBadge({ completed, total }: SubtaskBadgeProps) {
   const percentage = Math.round((completed / total) * 100);
   
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <span>{completed}/{total}</span>
-      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+      <span className="font-medium">{completed}/{total}</span>
+      <div className="w-16 h-1.5 bg-muted/50 rounded-full overflow-hidden">
         <div 
-          className="h-full bg-primary rounded-full transition-all duration-300"
+          className="h-full bg-primary/80 rounded-full transition-all duration-500 ease-out"
           style={{ width: `${percentage}%` }}
         />
       </div>

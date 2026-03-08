@@ -13,15 +13,15 @@ interface CheckCircleProps {
 }
 
 const sizeClasses = {
-  sm: 'h-5 w-5',
-  md: 'h-6 w-6',
+  sm: 'h-6 w-6',
+  md: 'h-7 w-7',
   lg: 'h-8 w-8',
 };
 
 const iconSizes = {
   sm: 'h-3 w-3',
-  md: 'h-4 w-4',
-  lg: 'h-5 w-5',
+  md: 'h-3.5 w-3.5',
+  lg: 'h-4 w-4',
 };
 
 export function CheckCircle({
@@ -40,12 +40,12 @@ export function CheckCircle({
       disabled={disabled}
       onClick={onChange}
       className={cn(
-        'relative rounded-full border-2 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
+        'relative rounded-full border-2 transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/40 active:scale-90',
         sizeClasses[size],
         {
-          'border-muted-foreground/30 hover:border-muted-foreground/50 bg-transparent': !checked,
-          'border-green-500 bg-green-500 hover:bg-green-600 hover:border-green-600': checked && variant === 'success',
-          'border-primary bg-primary hover:bg-primary/90': checked && variant === 'primary',
+          'border-muted-foreground/20 hover:border-muted-foreground/40 bg-transparent': !checked,
+          'border-green-500 bg-green-500 hover:bg-green-600 hover:border-green-600 shadow-[0_0_12px_rgba(34,197,94,0.3)]': checked && variant === 'success',
+          'border-primary bg-primary hover:bg-primary/90 shadow-[0_0_12px_hsl(var(--primary)/0.3)]': checked && variant === 'primary',
           'opacity-50 cursor-not-allowed': disabled,
           'cursor-pointer': !disabled,
         },
@@ -58,7 +58,7 @@ export function CheckCircle({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             className="flex items-center justify-center"
           >
             <Check className={cn('text-white', iconSizes[size])} strokeWidth={3} />
@@ -70,10 +70,10 @@ export function CheckCircle({
       <AnimatePresence>
         {checked && (
           <motion.div
-            initial={{ scale: 0.8, opacity: 0.5 }}
-            animate={{ scale: 2, opacity: 0 }}
+            initial={{ scale: 0.8, opacity: 0.4 }}
+            animate={{ scale: 2.2, opacity: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
             className="absolute inset-0 rounded-full bg-green-400"
           />
         )}
