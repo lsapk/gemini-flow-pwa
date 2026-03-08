@@ -265,9 +265,9 @@ export default function Admin() {
   const handlePurgeUserData = async (userData: UserData) => {
     if (!confirm(`Purger TOUTES les données de ${userData.email} ? Cette action est irréversible.`)) return;
     try {
-      const tables = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions"];
-      for (const table of tables) {
-        await supabase.from(table).delete().eq("user_id", userData.id);
+      const tablesToPurge = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions"] as const;
+      for (const table of tablesToPurge) {
+        await (supabase.from(table).delete() as any).eq("user_id", userData.id);
       }
       await logAction("purge_user_data", userData.id, userData.email);
       toast.success(`Données de ${userData.email} purgées`);
