@@ -1,17 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAICredits } from "@/hooks/useAICredits";
 import { Markdown } from "@/components/Markdown";
@@ -19,6 +12,7 @@ import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 import Analysis from "./Analysis";
 import Profile from "./Profile";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -37,7 +31,16 @@ interface AISuggestion {
   reasoning: string;
 }
 
+type ChatMode = 'discussion' | 'analysis' | 'creation';
+
 const STORAGE_KEY = 'deepflow_ai_conversation';
+
+const QUICK_ACTIONS = [
+  { icon: BarChart3, label: "Analyse ma semaine", emoji: "📊" },
+  { icon: Target, label: "Que faire maintenant ?", emoji: "🎯" },
+  { icon: Sparkles, label: "Crée un plan", emoji: "✨" },
+  { icon: Lightbulb, label: "Conseils personnalisés", emoji: "💡" },
+];
 
 export default function AIAssistant() {
   const { user } = useAuth();
@@ -48,17 +51,13 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
-  const [creationModeEnabled, setCreationModeEnabled] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>('discussion');
   const [activeTab, setActiveTab] = useState("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll chat container to top when switching to analysis tab
   useEffect(() => {
-    if (activeTab === 'analysis') {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    if (activeTab === 'analysis') window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
 
   const {
@@ -66,11 +65,9 @@ export default function AIAssistant() {
     taskCompletionRate, totalFocusTime, streakCount, refetch
   } = useAnalyticsData();
 
-  // Load saved conversation
   useEffect(() => {
     if (user) {
-      const storageKey = `${STORAGE_KEY}_${user.id}`;
-      const saved = localStorage.getItem(storageKey);
+      const saved = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -80,18 +77,14 @@ export default function AIAssistant() {
     }
   }, [user]);
 
-  // Save conversation
   useEffect(() => {
     if (user && messages.length > 0) {
       localStorage.setItem(`${STORAGE_KEY}_${user.id}`, JSON.stringify(messages));
     }
   }, [messages, user]);
 
-  // Auto-scroll chat to bottom
   useEffect(() => {
-    if (activeTab === 'chat') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (activeTab === 'chat') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeTab]);
 
   const clearConversation = () => {
@@ -125,14 +118,15 @@ export default function AIAssistant() {
     } catch { return {}; }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !user) return;
+  const sendMessage = async (overrideInput?: string) => {
+    const text = overrideInput || input;
+    if (!text.trim() || !user) return;
     if (!canUseFeature("chat")) {
       toast.error("Limite quotidienne atteinte. Passez à Premium !");
       return;
     }
 
-    const newMessage: Message = { id: Date.now().toString(), content: input, role: 'user', timestamp: new Date() };
+    const newMessage: Message = { id: Date.now().toString(), content: text, role: 'user', timestamp: new Date() };
     setMessages(prev => [...prev, newMessage]);
     setInput("");
     setIsLoading(true);
@@ -141,13 +135,13 @@ export default function AIAssistant() {
     try {
       const userData = await getUserData();
       const recentMessages = messages.slice(-10).map(msg => ({ role: msg.role, content: msg.content }));
-      let finalMessage = input;
-      if (analysisMode) finalMessage = `[MODE ANALYSE] ${input} - Analyse approfondie.`;
-      else if (creationModeEnabled) finalMessage = `[MODE CRÉATION] ${input}`;
-      else finalMessage = `[MODE DISCUSSION] ${input}`;
+      let finalMessage = text;
+      if (chatMode === 'analysis') finalMessage = `[MODE ANALYSE] ${text} - Analyse approfondie.`;
+      else if (chatMode === 'creation') finalMessage = `[MODE CRÉATION] ${text}`;
+      else finalMessage = `[MODE DISCUSSION] ${text}`;
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
-        body: { message: finalMessage, context: { user_data: userData, recent_messages: recentMessages, creation_mode: creationModeEnabled, analysis_mode: analysisMode } }
+        body: { message: finalMessage, context: { user_data: userData, recent_messages: recentMessages, creation_mode: chatMode === 'creation', analysis_mode: chatMode === 'analysis' } }
       });
       if (error) throw error;
 
@@ -156,7 +150,7 @@ export default function AIAssistant() {
 
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), content, role: 'assistant', timestamp: new Date() }]);
 
-      if (creationModeEnabled && data?.suggestion?.type && data?.suggestion?.title && data?.suggestion?.reasoning) {
+      if (chatMode === 'creation' && data?.suggestion?.type && data?.suggestion?.title && data?.suggestion?.reasoning) {
         setCurrentSuggestion(data.suggestion);
         setIsSuggestionDialogOpen(true);
       }
@@ -173,167 +167,267 @@ export default function AIAssistant() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const getPlaceholder = () => {
-    if (analysisMode) return "Demandez une analyse approfondie...";
-    if (creationModeEnabled) return "Décrivez ce que vous souhaitez créer...";
-    return "Posez vos questions sur la productivité...";
+  const handleQuickAction = (label: string) => {
+    setInput(label);
+    sendMessage(label);
   };
+
+  const tabs = [
+    { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "analysis", label: "Analyse", icon: BarChart3 },
+    { id: "profile", label: "Profil IA", icon: Brain },
+  ];
+
+  const modes: { id: ChatMode; label: string; icon: React.ElementType }[] = [
+    { id: 'discussion', label: 'Discussion', icon: MessageSquare },
+    { id: 'analysis', label: 'Analyse', icon: BarChart3 },
+    { id: 'creation', label: 'Création', icon: Sparkles },
+  ];
 
   return (
     <div className="flex flex-col max-w-7xl mx-auto h-[calc(100vh-120px)] md:h-[calc(100vh-100px)]">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col w-full h-full">
-        {/* Header */}
-        <div className="flex flex-col mb-3 space-y-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-purple-600 shadow-md shadow-primary/20">
-                <Brain className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold tracking-tight leading-tight">Intelligence IA</h1>
-                <p className="text-[10px] text-muted-foreground hidden sm:block">Votre coach personnel propulsé par l'IA</p>
-              </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative h-11 w-11 rounded-2xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-sm">
+            <Brain className="h-5 w-5 text-primary" />
+            <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight leading-none">Intelligence IA</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Coach personnel</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="h-8 px-3 rounded-xl font-medium bg-secondary/60 backdrop-blur-sm border-border/30">
+            <Zap className="h-3.5 w-3.5 mr-1.5 text-amber-500 fill-amber-500" />
+            {isAIAdmin ? "∞" : aiCredits}
+          </Badge>
+          {isPremium && (
+            <Badge className="h-8 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none shadow-sm">
+              <Crown className="h-3.5 w-3.5 mr-1 fill-white" />Pro
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Segmented Control */}
+      <div className="bg-secondary/40 backdrop-blur-xl p-1 rounded-2xl mb-3 shrink-0 border border-border/20">
+        <div className="grid grid-cols-3 gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-300",
+                activeTab === tab.id
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Tab */}
+      {activeTab === "chat" && (
+        <div className="flex flex-col flex-1 min-h-0 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/30 shadow-lg overflow-hidden">
+          {/* Mode Pills + Clear */}
+          <div className="px-3 py-2.5 border-b border-border/20 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-full">
+              {modes.map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setChatMode(mode.id)}
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200",
+                    chatMode === mode.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <mode.icon className="h-3 w-3" />
+                  <span className="hidden sm:inline">{mode.label}</span>
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-1.5">
-              <Badge variant={isAIAdmin ? "default" : aiCredits <= 10 ? "destructive" : "secondary"} className="h-7 px-3 rounded-full font-medium">
-                <Zap className="h-3.5 w-3.5 mr-1 text-amber-500 fill-amber-500" />
-                {isAIAdmin ? "Illimité" : `${aiCredits}`}
-              </Badge>
-              {isPremium && (
-                <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none h-7 px-3 rounded-full shadow-sm">
-                  <Crown className="h-3.5 w-3.5 mr-1 fill-white" />Premium
+            <button
+              onClick={clearConversation}
+              disabled={messages.length === 0}
+              className="h-8 w-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-0">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                <div className="relative">
+                  <div className="h-20 w-20 rounded-3xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-lg">
+                    <Bot className="h-9 w-9 text-primary" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
+                    <Sparkles className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <div className="space-y-1.5 max-w-xs">
+                  <h3 className="text-base font-bold tracking-tight">Comment puis-je vous aider ?</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Votre assistant IA analyse vos données pour des conseils personnalisés.
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+                  {QUICK_ACTIONS.map((action) => (
+                    <button
+                      key={action.label}
+                      onClick={() => handleQuickAction(action.label)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/30 text-xs font-medium text-foreground hover:scale-[1.03] hover:shadow-md active:scale-[0.97] transition-all duration-200"
+                    >
+                      <span>{action.emoji}</span>
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <AnimatePresence initial={false}>
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+                  className={cn("flex gap-2.5", message.role === 'user' ? "justify-end" : "justify-start")}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="h-7 w-7 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                  )}
+                  <div className="group flex flex-col max-w-[80%] md:max-w-[70%]">
+                    <div className={cn(
+                      "px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm",
+                      message.role === 'user'
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-card/80 backdrop-blur-sm border border-border/30 rounded-bl-md"
+                    )}>
+                      {message.role === 'assistant' ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:my-1">
+                          <Markdown content={message.content} />
+                        </div>
+                      ) : (
+                        <p>{message.content}</p>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground/40 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="h-7 w-7 rounded-xl bg-primary flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="h-3.5 w-3.5 text-primary-foreground" />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {isLoading && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5">
+                <div className="h-7 w-7 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                  <Bot className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="flex items-center gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick actions above input when conversation has messages */}
+          {messages.length > 0 && messages.length < 3 && (
+            <div className="px-3 pb-1 flex gap-1.5 overflow-x-auto shrink-0">
+              {QUICK_ACTIONS.slice(0, 3).map((action) => (
+                <button
+                  key={action.label}
+                  onClick={() => handleQuickAction(action.label)}
+                  className="whitespace-nowrap flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/40 border border-border/20 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all shrink-0"
+                >
+                  <span>{action.emoji}</span>{action.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input Bar */}
+          <div className="p-3 shrink-0 border-t border-border/20">
+            <div className="relative flex items-center bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20 pr-1.5">
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder={chatMode === 'analysis' ? "Demandez une analyse..." : chatMode === 'creation' ? "Décrivez ce que vous souhaitez créer..." : "Message..."}
+                disabled={isLoading}
+                className="flex-1 bg-transparent h-11 px-4 text-sm placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
+                autoFocus
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={isLoading || !input.trim()}
+                className={cn(
+                  "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+                  input.trim()
+                    ? "bg-primary text-primary-foreground shadow-sm active:scale-[0.92]"
+                    : "text-muted-foreground/40"
+                )}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            <div className="flex items-center justify-between mt-1.5 px-1">
+              <p className="text-[10px] text-muted-foreground/40">L'IA peut faire des erreurs</p>
+              {!isPremium && (
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-transparent text-muted-foreground/40 border-none">
+                  {getRemainingUses("chat")}/5
                 </Badge>
               )}
             </div>
           </div>
-
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl h-10">
-            <TabsTrigger value="chat" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2 py-1">
-              <MessageSquare className="h-3.5 w-3.5" /><span className="text-xs font-medium">Assistant</span>
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2 py-1">
-              <BarChart3 className="h-3.5 w-3.5" /><span className="text-xs font-medium">Analyse</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2 py-1">
-              <User className="h-3.5 w-3.5" /><span className="text-xs font-medium">Profil IA</span>
-            </TabsTrigger>
-          </TabsList>
         </div>
+      )}
 
-        {/* CHAT TAB — fills remaining height, input stays at bottom */}
-        <TabsContent value="chat" className="flex-1 mt-0 focus-visible:outline-none data-[state=inactive]:hidden min-h-0">
-          <div className="flex flex-col bg-card/30 backdrop-blur-sm rounded-2xl border shadow-xl h-full">
-            {/* Toolbar */}
-            <div className="px-3 md:px-4 py-2 border-b bg-muted/10 flex items-center justify-between flex-wrap gap-2 shrink-0">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="flex items-center gap-1.5 bg-background/50 p-1.5 pr-2 rounded-lg border shadow-sm">
-                  <BarChart3 className={`h-3.5 w-3.5 transition-colors ${analysisMode ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <Label htmlFor="analysis-mode" className="text-[10px] font-bold uppercase tracking-wider cursor-pointer">Analyse</Label>
-                  <Switch id="analysis-mode" checked={analysisMode} onCheckedChange={(c) => { setAnalysisMode(c); if (c) setCreationModeEnabled(false); }} className="scale-[0.6] origin-left" />
-                </div>
-                <div className="flex items-center gap-1.5 bg-background/50 p-1.5 pr-2 rounded-lg border shadow-sm">
-                  <Sparkles className={`h-3.5 w-3.5 transition-colors ${creationModeEnabled ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <Label htmlFor="creation-mode" className="text-[10px] font-bold uppercase tracking-wider cursor-pointer">Création</Label>
-                  <Switch id="creation-mode" checked={creationModeEnabled} onCheckedChange={(c) => { setCreationModeEnabled(c); if (c) setAnalysisMode(false); }} className="scale-[0.6] origin-left" />
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={clearConversation} disabled={messages.length === 0} className="h-7 text-[10px] uppercase font-bold tracking-wider hover:bg-destructive/10 hover:text-destructive rounded-md px-2">
-                <Trash2 className="h-3 w-3 mr-1" />Effacer
-              </Button>
-            </div>
-
-            {/* Messages — scrollable area */}
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-0">
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center space-y-4 max-w-md mx-auto">
-                  <div className="p-6 bg-primary/5 rounded-full ring-1 ring-primary/10 animate-pulse">
-                    <Bot className="h-12 w-12 text-primary/60" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold tracking-tight">Prêt à booster votre productivité ?</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {analysisMode ? "Envoyez un message pour lancer une analyse." :
-                       creationModeEnabled ? "Décrivez ce que vous souhaitez organiser." :
-                       "Posez-moi n'importe quelle question."}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <AnimatePresence initial={false}>
-                {messages.map((message) => (
-                  <motion.div key={message.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <Avatar className={`w-8 h-8 rounded-lg shadow-sm border shrink-0 flex items-center justify-center ${message.role === 'user' ? 'bg-primary' : 'bg-background'}`}>
-                      {message.role === 'assistant' ? <Bot className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-primary-foreground" />}
-                    </Avatar>
-                    <div className={`flex flex-col space-y-1 max-w-[85%] md:max-w-[75%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className={`px-3 py-2.5 rounded-2xl shadow-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted/50 backdrop-blur-sm border rounded-tl-sm'}`}>
-                        {message.role === 'assistant' ? (
-                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed"><Markdown content={message.content} /></div>
-                        ) : (
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                        )}
-                      </div>
-                      <span className="text-[10px] opacity-50 px-1 font-medium">{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-
-              {isLoading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
-                  <Avatar className="w-8 h-8 rounded-lg shadow-sm bg-background border flex items-center justify-center shrink-0"><Bot className="h-4 w-4 text-primary" /></Avatar>
-                  <div className="bg-muted/50 rounded-2xl rounded-tl-none px-4 py-3 border">
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-                      </div>
-                      <span className="text-xs font-medium text-muted-foreground">{analysisMode ? "Analyse..." : "Réflexion..."}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input — fixed at bottom of chat container */}
-            <div className="p-3 md:p-4 border-t bg-background/80 backdrop-blur-md shrink-0">
-              <div className="relative flex items-center max-w-4xl mx-auto gap-2">
-                <div className="relative flex-1">
-                  <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={handleKeyPress} placeholder={getPlaceholder()} disabled={isLoading}
-                    className="pr-12 h-11 rounded-xl border-muted-foreground/20 focus-visible:ring-primary shadow-md bg-background/80 text-base" autoFocus />
-                  {!isPremium && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 opacity-70">{getRemainingUses("chat")}/5</Badge>
-                    </div>
-                  )}
-                </div>
-                <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-11 w-11 rounded-xl shadow-lg shadow-primary/20 shrink-0 bg-primary hover:bg-primary/90">
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-[10px] text-center mt-2 text-muted-foreground/60 font-medium">DeepFlow AI peut faire des erreurs.</p>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ANALYSIS TAB */}
-        <TabsContent value="analysis" className="flex-1 mt-0 overflow-y-auto focus-visible:outline-none data-[state=inactive]:hidden">
+      {/* Analysis Tab */}
+      {activeTab === "analysis" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
           <Analysis />
-        </TabsContent>
+        </div>
+      )}
 
-        {/* PROFILE TAB */}
-        <TabsContent value="profile" className="flex-1 mt-0 overflow-y-auto focus-visible:outline-none data-[state=inactive]:hidden">
+      {/* Profile Tab */}
+      {activeTab === "profile" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
           <Profile />
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
-      <AISuggestionDialog suggestion={currentSuggestion} isOpen={isSuggestionDialogOpen}
+      <AISuggestionDialog
+        suggestion={currentSuggestion}
+        isOpen={isSuggestionDialogOpen}
         onClose={() => { setIsSuggestionDialogOpen(false); setCurrentSuggestion(null); }}
-        onConfirm={() => { refetch(); toast.success("Élément créé ! 🎉"); }} />
+        onConfirm={() => { refetch(); toast.success("Élément créé ! 🎉"); }}
+      />
     </div>
   );
 }
