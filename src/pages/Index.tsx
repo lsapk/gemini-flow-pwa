@@ -71,7 +71,7 @@ const Index = () => {
           <div className="container max-w-6xl mx-auto px-6 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               {/* Value Proposition - A à B */}
-              <h1 className="text-5xl md:text-7xl font-heading font-bold mb-8 leading-tight">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl font-heading font-bold mb-8 leading-tight">
                 <span className="text-foreground">Passez du </span>
                 <span className="text-muted-foreground line-through decoration-2">chaos mental</span>
                 <br />
