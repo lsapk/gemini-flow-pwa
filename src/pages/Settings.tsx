@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
@@ -21,11 +22,17 @@ import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import penguinMascot from "@/assets/penguin-mascot.png";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { 
   Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain, Trophy,
   Gamepad2, Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
-  Apple, Wand2, Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle
+  Apple, Wand2, Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
+  Key, Trash2, Download
 } from "lucide-react";
 
 interface UserSettings {
