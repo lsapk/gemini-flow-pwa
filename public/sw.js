@@ -1,6 +1,6 @@
 
-const CACHE_NAME = 'deepflow-v5';
-const STATIC_CACHE_NAME = 'deepflow-static-v5';
+const CACHE_NAME = 'deepflow-v7';
+const STATIC_CACHE_NAME = 'deepflow-static-v7';
 
 const urlsToCache = [
   '/',
