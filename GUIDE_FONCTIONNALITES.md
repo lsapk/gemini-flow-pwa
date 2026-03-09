@@ -231,4 +231,3 @@ Ce rythme suffit souvent à créer une progression visible en quelques semaines.
 
 ---
 
-Si vous le souhaitez, je peux aussi vous préparer une version “présentation commerciale” (plus marketing), ou une version “guide d’onboarding” en 1 page pour vos nouveaux utilisateurs.
