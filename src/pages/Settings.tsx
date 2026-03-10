@@ -128,6 +128,10 @@ export default function Settings() {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     autoSavePreferences(newFormData);
+    // Sync sound setting with SoundService
+    if (key === 'sound_enabled') {
+      SoundService.getInstance().setEnabled(value);
+    }
   };
 
   const handleLogout = async () => {
