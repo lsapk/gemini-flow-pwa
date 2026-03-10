@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import SoundService from "@/services/soundService";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -127,6 +128,10 @@ export default function Settings() {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     autoSavePreferences(newFormData);
+    // Sync sound setting with SoundService
+    if (key === 'sound_enabled') {
+      SoundService.getInstance().setEnabled(value);
+    }
   };
 
   const handleLogout = async () => {

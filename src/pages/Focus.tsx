@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History, Plus, Calendar, Timer } from "lucide-react";
+import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History, Plus, Calendar, Timer, PictureInPicture2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePenguinRewards } from "@/hooks/usePenguinRewards";
+import { useSoundService } from "@/hooks/useSoundService";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SimpleBarChart } from "@/components/ui/charts/SimpleBarChart";
@@ -43,11 +44,15 @@ export default function Focus() {
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState("09:00");
   const [isAddingManual, setIsAddingManual] = useState(false);
+  const [isPipActive, setIsPipActive] = useState(false);
+  const pipWindowRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { rewardFocusSession } = usePenguinRewards();
+  const sound = useSoundService();
 
-  // --- All business logic stays the same ---
   useEffect(() => { if (!currentSessionId) setTimeLeft(duration * 60); }, [duration, currentSessionId]);
   useEffect(() => { if (user) { loadSessionsToday(); checkActiveSession(); loadSessionsHistory(); loadWeeklyData(); loadTasks(); } }, [user]);
 
@@ -76,11 +81,23 @@ export default function Focus() {
     let interval: NodeJS.Timeout;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(prev => { if (prev <= 1) { setIsActive(false); handleTimerComplete(); return 0; } const n = prev - 1; saveSessionState({ timeLeft: n }); return n; });
+        setTimeLeft(prev => { 
+          if (prev <= 1) { setIsActive(false); handleTimerComplete(); return 0; } 
+          const n = prev - 1; 
+          saveSessionState({ timeLeft: n }); 
+          return n; 
+        });
       }, 1000);
     }
     return () => { if (interval) clearInterval(interval); };
   }, [isActive, timeLeft]);
+
+  // Update PiP canvas when time changes
+  useEffect(() => {
+    if (isPipActive && canvasRef.current) {
+      drawPipCanvas(canvasRef.current, timeLeft, duration * 60, sessionTitle, isActive);
+    }
+  }, [timeLeft, isActive, isPipActive, sessionTitle, duration]);
 
   const saveSessionState = (updates: Partial<ActiveFocusSession>) => { const s = localStorage.getItem('active_focus_session'); if (s) { localStorage.setItem('active_focus_session', JSON.stringify({ ...JSON.parse(s), ...updates })); } };
   const formatTime = (t: number) => `${Math.floor(t / 60).toString().padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`;
@@ -91,10 +108,17 @@ export default function Focus() {
     const sessionId = `focus_${Date.now()}`; const startTime = new Date();
     setIsActive(true); setCurrentSessionId(sessionId); setTimeLeft(duration * 60);
     localStorage.setItem('active_focus_session', JSON.stringify({ id: sessionId, title: sessionTitle, duration, startTime: startTime.getTime(), isActive: true, timeLeft: duration * 60, userId: user.id }));
+    sound.playTimerStart();
     toast({ title: "Session démarrée", description: `Session de ${duration} minutes commencée.` });
   };
 
-  const pauseTimer = () => { const n = !isActive; setIsActive(n); saveSessionState({ isActive: n, timeLeft }); toast({ title: n ? "Session reprise" : "Session en pause" }); };
+  const pauseTimer = () => { 
+    const n = !isActive; 
+    setIsActive(n); 
+    saveSessionState({ isActive: n, timeLeft }); 
+    sound.playTimerPause();
+    toast({ title: n ? "Session reprise" : "Session en pause" }); 
+  };
 
   const stopTimer = async () => {
     if (!currentSessionId || !user) return;
@@ -103,8 +127,9 @@ export default function Focus() {
     try {
       const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: Math.floor(completed / 60), started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
       if (error) throw error;
+      sound.playDelete();
       toast({ title: "Session arrêtée", description: `Session enregistrée de ${Math.floor(completed / 60)} minutes.` }); loadSessionsToday();
-    } catch (error) { console.error('Error stopping session:', error); toast({ variant: "destructive", title: "Erreur lors de l'arrêt" }); } finally { localStorage.removeItem('active_focus_session'); resetSession(); }
+    } catch (error) { console.error('Error stopping session:', error); toast({ variant: "destructive", title: "Erreur lors de l'arrêt" }); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); }
   };
 
   const handleTimerComplete = async () => {
@@ -114,9 +139,10 @@ export default function Focus() {
     try {
       await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: sd.duration, started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
       rewardFocusSession(sd.duration);
+      sound.playTimerComplete();
       toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${duration} minutes complétée.` });
       if ('Notification' in window && Notification.permission === 'granted') { new Notification('Session terminée !', { body: `"${sessionTitle}" terminée.`, icon: '/icons/icon-192x192.png' }); }
-    } catch (error) { console.error('Error completing session:', error); } finally { localStorage.removeItem('active_focus_session'); resetSession(); loadSessionsToday(); }
+    } catch (error) { console.error('Error completing session:', error); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); }
   };
 
   const resetSession = () => { setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); setLinkedTaskId(null); };
@@ -143,7 +169,7 @@ export default function Focus() {
 
   const completeLinkedTask = async () => {
     if (!linkedTaskId || !user) return;
-    try { const { error } = await supabase.from('tasks').update({ completed: true }).eq('id', linkedTaskId).eq('user_id', user.id); if (error) throw error; toast({ title: "Tâche complétée !" }); loadTasks(); } catch (error) { console.error(error); }
+    try { const { error } = await supabase.from('tasks').update({ completed: true }).eq('id', linkedTaskId).eq('user_id', user.id); if (error) throw error; sound.playComplete(); toast({ title: "Tâche complétée !" }); loadTasks(); } catch (error) { console.error(error); }
   };
 
   const addManualSession = async () => {
@@ -155,13 +181,181 @@ export default function Focus() {
       const start = new Date(`${manualDate}T${manualTime}`); const dur = parseInt(manualDuration); const end = new Date(start.getTime() + dur * 60 * 1000);
       const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: manualTitle.trim(), duration: dur, started_at: start.toISOString(), completed_at: end.toISOString() });
       if (error) throw error; rewardFocusSession(dur);
+      sound.playCreate();
       toast({ title: "Session ajoutée !", description: `Session de ${dur} minutes enregistrée.` });
       setManualTitle(""); setManualDuration(""); setManualDate(new Date().toISOString().split('T')[0]); setManualTime("09:00");
       loadSessionsToday(); loadSessionsHistory(); loadWeeklyData();
     } catch (error) { console.error(error); toast({ variant: "destructive", title: "Erreur" }); } finally { setIsAddingManual(false); }
   };
 
-  // --- SVG Timer calculations ---
+  // === Picture-in-Picture ===
+  const drawPipCanvas = (canvas: HTMLCanvasElement, timeLeftVal: number, totalSecondsVal: number, title: string, active: boolean) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    // Background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, w, h);
+    
+    // Progress ring
+    const cx = w / 2;
+    const cy = h / 2 - 10;
+    const r = Math.min(w, h) * 0.3;
+    const progressVal = totalSecondsVal > 0 ? (totalSecondsVal - timeLeftVal) / totalSecondsVal : 0;
+    
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#333355';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    
+    // Progress arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + progressVal * Math.PI * 2);
+    ctx.strokeStyle = '#6077f5';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    
+    // Time text
+    const mins = Math.floor(timeLeftVal / 60).toString().padStart(2, '0');
+    const secs = (timeLeftVal % 60).toString().padStart(2, '0');
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${mins}:${secs}`, cx, cy);
+    
+    // Status text
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = active ? '#4ade80' : '#facc15';
+    ctx.fillText(active ? '● En cours' : '⏸ Pause', cx, cy + r + 20);
+    
+    // Title
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#a0a0c0';
+    const truncTitle = title.length > 25 ? title.substring(0, 22) + '...' : title;
+    ctx.fillText(truncTitle, cx, h - 12);
+  };
+
+  const openPip = async () => {
+    try {
+      // Create a canvas to render the timer
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 300;
+      canvasRef.current = canvas;
+      
+      // Draw initial frame
+      drawPipCanvas(canvas, timeLeft, duration * 60, sessionTitle, isActive);
+      
+      // Create video from canvas stream
+      const stream = canvas.captureStream(30);
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      videoRef.current = video;
+      
+      await video.play();
+      
+      // Try Document PiP API first (Chrome 116+)
+      if ('documentPictureInPicture' in window) {
+        const pipWin = await (window as any).documentPictureInPicture.requestWindow({
+          width: 300,
+          height: 340,
+        });
+        pipWindowRef.current = pipWin;
+        
+        // Style the PiP window
+        const style = pipWin.document.createElement('style');
+        style.textContent = `
+          body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: system-ui, sans-serif; color: white; overflow: hidden; }
+          canvas { width: 100%; height: auto; }
+          .controls { display: flex; gap: 8px; margin-top: 8px; }
+          button { padding: 6px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+          .pause-btn { background: #6077f5; color: white; }
+          .stop-btn { background: #ef4444; color: white; }
+          button:hover { opacity: 0.9; }
+        `;
+        pipWin.document.head.appendChild(style);
+        
+        // Add canvas
+        pipWin.document.body.appendChild(canvas);
+        
+        // Add controls
+        const controls = pipWin.document.createElement('div');
+        controls.className = 'controls';
+        
+        const pauseBtn = pipWin.document.createElement('button');
+        pauseBtn.className = 'pause-btn';
+        pauseBtn.textContent = isActive ? '⏸ Pause' : '▶ Reprendre';
+        pauseBtn.onclick = () => { pauseTimer(); pauseBtn.textContent = !isActive ? '⏸ Pause' : '▶ Reprendre'; };
+        
+        const stopBtn = pipWin.document.createElement('button');
+        stopBtn.className = 'stop-btn';
+        stopBtn.textContent = '⏹ Arrêter';
+        stopBtn.onclick = () => { stopTimer(); };
+        
+        controls.appendChild(pauseBtn);
+        controls.appendChild(stopBtn);
+        pipWin.document.body.appendChild(controls);
+        
+        pipWin.addEventListener('pagehide', () => {
+          setIsPipActive(false);
+          pipWindowRef.current = null;
+        });
+        
+        setIsPipActive(true);
+      } 
+      // Fallback to standard PiP API
+      else if (video.requestPictureInPicture) {
+        // Need to add video to DOM temporarily
+        video.style.position = 'fixed';
+        video.style.opacity = '0';
+        video.style.pointerEvents = 'none';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        document.body.appendChild(video);
+        
+        await video.requestPictureInPicture();
+        setIsPipActive(true);
+        
+        video.addEventListener('leavepictureinpicture', () => {
+          setIsPipActive(false);
+          video.remove();
+          videoRef.current = null;
+        });
+      } else {
+        toast({ title: "PiP non supporté", description: "Votre navigateur ne supporte pas le Picture-in-Picture.", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+      toast({ title: "Erreur PiP", description: "Impossible d'activer le mode Picture-in-Picture.", variant: "destructive" });
+    }
+  };
+
+  const closePip = () => {
+    if (pipWindowRef.current) {
+      try { pipWindowRef.current.close(); } catch {}
+      pipWindowRef.current = null;
+    }
+    if (document.pictureInPictureElement) {
+      try { document.exitPictureInPicture(); } catch {}
+    }
+    if (videoRef.current) {
+      try { videoRef.current.remove(); } catch {}
+      videoRef.current = null;
+    }
+    canvasRef.current = null;
+    setIsPipActive(false);
+  };
+
+  // SVG Timer calculations
   const totalSeconds = duration * 60;
   const progress = currentSessionId ? ((totalSeconds - timeLeft) / totalSeconds) : 0;
   const radius = 140;
@@ -329,7 +523,7 @@ export default function Focus() {
                   </div>
 
                   {/* Controls */}
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3 justify-center">
                     <Button onClick={pauseTimer} variant="outline" size="lg" className="rounded-2xl h-12 px-6 active:scale-[0.95] transition-transform">
                       {isActive ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />Reprendre</>}
                     </Button>
@@ -341,6 +535,16 @@ export default function Focus() {
                         <CheckCircle2 className="mr-2 h-4 w-4" />Terminer tâche
                       </Button>
                     )}
+                    <Button 
+                      onClick={isPipActive ? closePip : openPip} 
+                      variant="outline" 
+                      size="lg" 
+                      className={`rounded-2xl h-12 px-6 active:scale-[0.95] transition-transform ${isPipActive ? 'border-primary text-primary' : ''}`}
+                      title="Picture-in-Picture"
+                    >
+                      <PictureInPicture2 className="mr-2 h-4 w-4" />
+                      PiP
+                    </Button>
                   </div>
                 </motion.div>
               )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Target, Archive, CalendarIcon } from "lucide-react";
 import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
 import penguinWorkout from "@/assets/penguin-workout.png";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePenguinRewards } from "@/hooks/usePenguinRewards";
+import { useSoundService } from "@/hooks/useSoundService";
+import { calculateStreak } from "@/services/streakCalculator";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -55,6 +57,12 @@ export default function Habits() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
   const { rewardHabitComplete, rewardStreak } = usePenguinRewards();
+  const sound = useSoundService();
+
+  // Keep a stable reference to today's date string to avoid drift
+  const todayStr = useRef(new Date().toISOString().split('T')[0]);
+
+  const isViewingToday = selectedDate.toISOString().split('T')[0] === todayStr.current;
 
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
@@ -107,7 +115,11 @@ export default function Habits() {
     }
   };
 
-  useEffect(() => { fetchHabits(); }, [user, selectedDate]);
+  useEffect(() => {
+    // Update todayStr on mount
+    todayStr.current = new Date().toISOString().split('T')[0];
+    fetchHabits();
+  }, [user, selectedDate]);
 
   const handleEdit = (habit: Habit) => { setEditingHabit(habit); setIsEditModalOpen(true); };
   const requestDelete = (habitId: string) => { setHabitToDelete(habitId); setIsDeleteDialogOpen(true); };
@@ -117,6 +129,7 @@ export default function Habits() {
     try {
       const { error } = await supabase.from('habits').delete().eq('id', habitToDelete).eq('user_id', user.id);
       if (error) throw error;
+      sound.playDelete();
       toast.success('Habitude supprimée !');
       fetchHabits();
     } catch (error) {
@@ -150,59 +163,83 @@ export default function Habits() {
     if (habit?.days_of_week && habit.days_of_week.length > 0) {
       const selectedDay = currentSelectedDate.getDay();
       if (!habit.days_of_week.includes(selectedDay)) {
+        sound.playError();
         toast.error("Cette habitude n'est pas prévue pour cette date");
         return;
       }
     }
-    const isToday = targetDate === new Date().toISOString().split('T')[0];
 
+    // Optimistic update
     setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: !isCompleted } : h));
 
     try {
       if (isCompleted) {
-        const { error: deleteError } = await supabase.from('habit_completions').delete().eq('habit_id', habitId).eq('user_id', user.id).eq('completed_date', targetDate);
+        // Uncheck: delete completion
+        const { error: deleteError } = await supabase
+          .from('habit_completions')
+          .delete()
+          .eq('habit_id', habitId)
+          .eq('user_id', user.id)
+          .eq('completed_date', targetDate);
         if (deleteError) throw deleteError;
-        
-        if (isToday) {
-          const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
-          const hasProtection = await checkStreakProtection(user.id);
-          if (hasProtection) {
-            toast.info("Bouclier de streak activé ! Votre streak est protégé.");
-          } else {
-            const newStreak = Math.max(0, (currentHabit?.streak || 0) - 1);
-            await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
-          }
-        }
+
+        sound.playUncomplete();
+
+        // Recalculate streak from actual data
+        const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        const { error } = await supabase.from('habit_completions').insert({ habit_id: habitId, user_id: user.id, completed_date: targetDate });
+        // Check: insert completion
+        const { error } = await supabase
+          .from('habit_completions')
+          .insert({ habit_id: habitId, user_id: user.id, completed_date: targetDate });
         if (error) throw error;
 
-        if (isToday) {
-          const { data: currentHabit } = await supabase.from('habits').select('streak').eq('id', habitId).single();
-          const newStreak = (currentHabit?.streak || 0) + 1;
-          await supabase.from('habits').update({ last_completed_at: new Date().toISOString(), streak: newStreak }).eq('id', habitId);
+        sound.playComplete();
+
+        // Recalculate streak from actual data
+        const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        await supabase.from('habits').update({ 
+          last_completed_at: new Date().toISOString(), 
+          streak: newStreak 
+        }).eq('id', habitId);
+
+        // Rewards only when viewing today
+        if (isViewingToday) {
           rewardHabitComplete();
           rewardStreak(newStreak);
         }
+
+        // Check streak milestones
+        if (newStreak > 0 && newStreak % 7 === 0) {
+          sound.playStreakMilestone();
+        }
+
         toast.success('Habitude complétée !');
+      }
+
+      // Check if all habits are now completed
+      const updatedHabits = habits.map(h => h.id === habitId ? { ...h, is_completed_today: !isCompleted } : h);
+      const allDone = updatedHabits.length > 0 && updatedHabits.every(h => h.is_completed_today);
+      if (allDone && !isCompleted) {
+        setTimeout(() => sound.playSuccess(), 300);
       }
     } catch (error) {
       console.error('Error toggling habit completion:', error);
+      // Revert optimistic update
       setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: isCompleted } : h));
+      sound.playError();
       toast.error("Erreur lors de la mise à jour de l'habitude");
     }
   };
 
-  const checkStreakProtection = async (userId: string): Promise<boolean> => {
-    try {
-      const { data: activePowerUps } = await supabase.from("active_powerups").select("*").eq("user_id", userId).gt("expires_at", new Date().toISOString());
-      if (!activePowerUps) return false;
-      return activePowerUps.some((p) => p.powerup_type === "streak_shield" || p.powerup_type === "streak_mega_shield");
-    } catch { return false; }
+  const handleCreateSuccess = () => { 
+    setIsCreateModalOpen(false); 
+    sound.playCreate();
+    fetchHabits(); 
   };
-
-  const handleCreateSuccess = () => { setIsCreateModalOpen(false); fetchHabits(); };
   const handleEditSuccess = () => { setIsEditModalOpen(false); setEditingHabit(null); fetchHabits(); };
 
   const handleReorder = async (reorderedHabits: Habit[]) => {
@@ -233,13 +270,23 @@ export default function Habits() {
             {habits.length > 0 && (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">
-                  {completedToday}/{habits.length} aujourd'hui
+                  {completedToday}/{habits.length} {isViewingToday ? "aujourd'hui" : format(selectedDate, "dd/MM", { locale: fr })}
                 </span>
                 <Progress value={completionRate} className="w-24 h-1.5" />
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
+            {!isViewingToday && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-primary"
+                onClick={() => setSelectedDate(new Date())}
+              >
+                Aujourd'hui
+              </Button>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -273,6 +320,13 @@ export default function Habits() {
             </Button>
           </div>
         </div>
+
+        {/* Date indicator when not viewing today */}
+        {!isViewingToday && (
+          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 text-center">
+            📅 Vous consultez le {format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })}
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
