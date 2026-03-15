@@ -26,7 +26,7 @@ export function JournalStats({ entries }: JournalStatsProps) {
       .map(entry => format(new Date(entry.created_at), 'yyyy-MM-dd'));
     
     let streak = 0;
-    let currentDate = new Date();
+    const currentDate = new Date();
     
     for (let i = 0; i < sortedEntries.length; i++) {
       const entryDate = format(currentDate, 'yyyy-MM-dd');

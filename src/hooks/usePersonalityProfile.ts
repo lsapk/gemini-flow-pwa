@@ -306,7 +306,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
         });
 
         if (!error && data?.response) {
-          let responseText = data.response;
+          const responseText = data.response;
           console.log('Réponse IA reçue:', responseText);
           
           if (typeof responseText === 'string') {

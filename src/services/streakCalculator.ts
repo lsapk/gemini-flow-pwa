@@ -29,7 +29,7 @@ export async function calculateStreak(
   today.setHours(0, 0, 0, 0);
 
   // Start checking from today backward
-  let checkDate = new Date(today);
+  const checkDate = new Date(today);
   const todayStr = formatDate(checkDate);
 
   // If today is a scheduled day and not yet completed, check if yesterday was completed

@@ -546,7 +546,7 @@ ${(() => {
     }
 
     const aiData = await aiResponse.json();
-    let responseText = aiData.choices?.[0]?.message?.content || '';
+    const responseText = aiData.choices?.[0]?.message?.content || '';
 
     // Parse JSON response
     let parsedResult;
