@@ -145,12 +145,19 @@ serve(async (req) => {
       // If user has reached the base limit, try to use AI credits
       if (requestsToday >= BASE_FREE_REQUESTS) {
         if (bonusRequests > 0 && requestsToday < totalAllowedRequests) {
-          // Deduct 25 credits for this extra request
-          const newCredits = aiCredits - 25;
-          await supabase
-            .from('ai_credits')
-            .update({ credits: newCredits, last_updated: new Date().toISOString() })
-            .eq('user_id', userId);
+          // Deduct 25 credits for this extra request atomically using RPC
+          const { data: newCredits, error: rpcError } = await supabase
+            .rpc('decrement_ai_credits', { p_user_id: userId, amount: 25 });
+
+          if (rpcError) {
+            console.error("Error decrementing AI credits:", rpcError);
+            throw new Error("Failed to consume AI credits");
+          }
+
+          if (newCredits === null) {
+              // This can happen if another request raced us and consumed the credits
+              throw new Error("Insufficient AI credits");
+          }
             
           console.log(`Used 25 AI credits for bonus request. Credits remaining: ${newCredits}`);
         } else if (requestsToday >= totalAllowedRequests) {

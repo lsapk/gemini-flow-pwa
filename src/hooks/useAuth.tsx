@@ -81,14 +81,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoading(false);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         if (newSession?.user) {
-          // Defer admin check to avoid deadlocks
-          setTimeout(() => {
-            if (mounted) {
-              checkAdminRole(newSession.user.id);
-            }
-          }, 0);
+          // Immediately perform admin check, then stop loading
+          checkAdminRole(newSession.user.id).finally(() => {
+            if (mounted) setIsLoading(false);
+          });
+        } else {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     });
 
@@ -112,10 +111,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (existingSession?.user) {
             await checkAdminRole(existingSession.user.id);
           }
-          setIsLoading(false);
         }
       } catch (error) {
         console.error("Error checking auth:", error);
+      } finally {
         if (mounted) setIsLoading(false);
       }
     };
