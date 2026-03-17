@@ -93,7 +93,8 @@ export default function Badges() {
     focusSessions: 0,
     totalFocusMinutes: 0,
     loginStreak: 0,
-    totalUsageDays: 0
+    totalUsageDays: 0,
+    maxHabitStreak: 0
   });
   const [karmaPoints, setKarmaPoints] = useState(0);
   const { user } = useAuth();
@@ -213,9 +214,9 @@ export default function Badges() {
       const totalFocusMinutes = focus.data?.reduce((sum, session) => sum + (session.duration || 0), 0) || 0;
 
       const activityDateKeys = [
-        ...(allTasks.data || []).map(item => item.created_at),
-        ...(allHabits.data || []).map(item => item.created_at),
-        ...(allGoals.data || []).map(item => item.created_at),
+        ...(allTasks.data || []).map(item => item.updated_at || item.created_at),
+        ...(allHabits.data || []).map(item => item.updated_at || item.created_at),
+        ...(allGoals.data || []).map(item => item.updated_at || item.created_at),
         ...(journal.data || []).map(item => item.created_at),
         ...(focus.data || []).map(item => item.created_at),
         ...(habitCompletions.data || []).map(item => item.completed_date),
@@ -223,8 +224,10 @@ export default function Badges() {
       ].filter(Boolean) as string[];
 
       const normalizedActivityDays = activityDateKeys.map(toDateKey);
-      const loginStreak = calculateConsecutiveStreak(normalizedActivityDays);
+      const activityStreak = calculateConsecutiveStreak(normalizedActivityDays);
       const totalUsageDays = new Set(normalizedActivityDays).size;
+      const maxHabitStreak = Math.max(...(allHabits.data || []).map(item => item.streak || 0), 0);
+      const loginStreak = Math.max(activityStreak, maxHabitStreak);
 
       const stats = {
         tasksCreated: allTasks.data?.length || 0,
@@ -237,7 +240,8 @@ export default function Badges() {
         focusSessions: focus.data?.length || 0,
         totalFocusMinutes,
         loginStreak,
-        totalUsageDays
+        totalUsageDays,
+        maxHabitStreak
       };
 
       setUserStats(stats);
