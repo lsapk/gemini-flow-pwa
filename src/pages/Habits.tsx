@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Target, Archive, CalendarIcon } from "lucide-react";
 import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
 import penguinWorkout from "@/assets/penguin-workout.png";
@@ -44,6 +44,12 @@ import {
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -67,6 +73,46 @@ export default function Habits() {
 
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
+
+  const updateHabitInLists = useCallback((habitId: string, updates: Partial<Habit>) => {
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+    setArchivedHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+  }, []);
+
+  const hasAttemptedStreakRepair = useRef(false);
+
+  const repairHabitsStreaks = useCallback(async (habitsToRepair: Habit[]) => {
+    if (!user || habitsToRepair.length === 0 || hasAttemptedStreakRepair.current) return;
+
+    hasAttemptedStreakRepair.current = true;
+
+    const repaired = await Promise.all(
+      habitsToRepair.map(async (habit) => {
+        const computedStreak = await calculateStreak(habit.id, user.id, habit.days_of_week);
+        const storedStreak = habit.streak || 0;
+
+        if (computedStreak === storedStreak) return null;
+
+        const { error: updateError } = await supabase
+          .from('habits')
+          .update({ streak: computedStreak })
+          .eq('id', habit.id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error(`Unable to repair streak for habit ${habit.id}:`, updateError);
+          return null;
+        }
+
+        return { habitId: habit.id, streak: computedStreak };
+      })
+    );
+
+    repaired.filter(Boolean).forEach((item) => {
+      if (!item) return;
+      updateHabitInLists(item.habitId, { streak: item.streak });
+    });
+  }, [user, updateHabitInLists]);
 
   const fetchHabits = async (dateToUse: Date = selectedDate) => {
     if (!user) return;
@@ -106,8 +152,15 @@ export default function Habits() {
       const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
-      setHabits(active.map(({ should_show_today, ...habit }) => habit as Habit));
-      setArchivedHabits(archived.map(({ should_show_today, ...habit }) => habit as Habit));
+      const normalizedActive = active.map(({ should_show_today, ...habit }) => habit as Habit);
+      const normalizedArchived = archived.map(({ should_show_today, ...habit }) => habit as Habit);
+
+      setHabits(normalizedActive);
+      setArchivedHabits(normalizedArchived);
+
+      if (isViewingToday) {
+        void repairHabitsStreaks([...(normalizedActive || []), ...(normalizedArchived || [])]);
+      }
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast.error('Erreur lors du chargement des habitudes');
@@ -115,6 +168,10 @@ export default function Habits() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    hasAttemptedStreakRepair.current = false;
+  }, [user?.id]);
 
   useEffect(() => {
     // Update todayStr on mount
@@ -171,7 +228,7 @@ export default function Habits() {
     }
 
     // Optimistic update
-    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: !isCompleted } : h));
+    updateHabitInLists(habitId, { is_completed_today: !isCompleted });
 
     try {
       if (isCompleted) {
@@ -189,6 +246,7 @@ export default function Habits() {
         // Recalculate streak from actual data
         const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
         await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        updateHabitInLists(habitId, { streak: newStreak });
 
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
@@ -202,10 +260,15 @@ export default function Habits() {
 
         // Recalculate streak from actual data
         const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        const completedAt = new Date().toISOString();
         await supabase.from('habits').update({ 
-          last_completed_at: new Date().toISOString(), 
+          last_completed_at: completedAt, 
           streak: newStreak 
         }).eq('id', habitId);
+        updateHabitInLists(habitId, {
+          streak: newStreak,
+          last_completed_at: completedAt,
+        });
 
         // Rewards only when viewing today
         if (isViewingToday) {
@@ -230,7 +293,7 @@ export default function Habits() {
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       // Revert optimistic update
-      setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: isCompleted } : h));
+      updateHabitInLists(habitId, { is_completed_today: isCompleted });
       sound.playError();
       toast.error("Erreur lors de la mise à jour de l'habitude");
     }
