@@ -61,9 +61,9 @@ export default function Habits() {
   const sound = useSoundService();
 
   // Keep a stable reference to today's date string to avoid drift
-  const todayStr = useRef(new Date().toISOString().split('T')[0]);
+  const todayStr = useRef(formatLocalDate(new Date()));
 
-  const isViewingToday = selectedDate.toISOString().split('T')[0] === todayStr.current;
+  const isViewingToday = formatLocalDate(selectedDate) === todayStr.current;
 
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
@@ -72,7 +72,7 @@ export default function Habits() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const targetDate = dateToUse.toISOString().split('T')[0];
+      const targetDate = formatLocalDate(dateToUse);
       const { data, error } = await supabase
         .from('habits')
         .select('*')
@@ -118,7 +118,7 @@ export default function Habits() {
 
   useEffect(() => {
     // Update todayStr on mount
-    todayStr.current = new Date().toISOString().split('T')[0];
+    todayStr.current = formatLocalDate(new Date());
     fetchHabits();
   }, [user, selectedDate]);
 
@@ -158,7 +158,7 @@ export default function Habits() {
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
     const currentSelectedDate = new Date(selectedDate);
-    const targetDate = currentSelectedDate.toISOString().split('T')[0];
+    const targetDate = formatLocalDate(currentSelectedDate);
 
     const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
     if (habit?.days_of_week && habit.days_of_week.length > 0) {
