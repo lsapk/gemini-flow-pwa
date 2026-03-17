@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Target, Archive, CalendarIcon } from "lucide-react";
 import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
 import penguinWorkout from "@/assets/penguin-workout.png";
@@ -68,10 +68,45 @@ export default function Habits() {
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
 
-  const updateHabitInLists = (habitId: string, updates: Partial<Habit>) => {
+  const updateHabitInLists = useCallback((habitId: string, updates: Partial<Habit>) => {
     setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
     setArchivedHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
-  };
+  }, []);
+
+  const hasAttemptedStreakRepair = useRef(false);
+
+  const repairHabitsStreaks = useCallback(async (habitsToRepair: Habit[]) => {
+    if (!user || habitsToRepair.length === 0 || hasAttemptedStreakRepair.current) return;
+
+    hasAttemptedStreakRepair.current = true;
+
+    const repaired = await Promise.all(
+      habitsToRepair.map(async (habit) => {
+        const computedStreak = await calculateStreak(habit.id, user.id, habit.days_of_week);
+        const storedStreak = habit.streak || 0;
+
+        if (computedStreak === storedStreak) return null;
+
+        const { error: updateError } = await supabase
+          .from('habits')
+          .update({ streak: computedStreak })
+          .eq('id', habit.id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error(`Unable to repair streak for habit ${habit.id}:`, updateError);
+          return null;
+        }
+
+        return { habitId: habit.id, streak: computedStreak };
+      })
+    );
+
+    repaired.filter(Boolean).forEach((item) => {
+      if (!item) return;
+      updateHabitInLists(item.habitId, { streak: item.streak });
+    });
+  }, [user, updateHabitInLists]);
 
   const fetchHabits = async (dateToUse: Date = selectedDate) => {
     if (!user) return;
@@ -143,8 +178,15 @@ export default function Habits() {
       const active = repairedHabits.filter(h => !h.is_archived && h.should_show_today);
       const archived = repairedHabits.filter(h => h.is_archived);
       
-      setHabits(active.map(({ should_show_today, ...habit }) => habit as Habit));
-      setArchivedHabits(archived.map(({ should_show_today, ...habit }) => habit as Habit));
+      const normalizedActive = active.map(({ should_show_today, ...habit }) => habit as Habit);
+      const normalizedArchived = archived.map(({ should_show_today, ...habit }) => habit as Habit);
+
+      setHabits(normalizedActive);
+      setArchivedHabits(normalizedArchived);
+
+      if (isViewingToday) {
+        void repairHabitsStreaks([...(normalizedActive || []), ...(normalizedArchived || [])]);
+      }
     } catch (error) {
       console.error('Error fetching habits:', error);
       toast.error('Erreur lors du chargement des habitudes');
@@ -152,6 +194,10 @@ export default function Habits() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    hasAttemptedStreakRepair.current = false;
+  }, [user?.id]);
 
   useEffect(() => {
     // Update todayStr on mount
