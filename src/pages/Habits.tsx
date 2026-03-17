@@ -143,8 +143,40 @@ export default function Habits() {
         })
       );
 
-      const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
-      const archived = habitsWithCompletion.filter(h => h.is_archived);
+      // Backfill streaks from real completion history if stored values are out-of-sync
+      const streakFixes = await Promise.all(
+        habitsWithCompletion.map(async (habit) => {
+          const computedStreak = await calculateStreak(habit.id, user.id, habit.days_of_week);
+          const storedStreak = habit.streak || 0;
+          if (computedStreak === storedStreak) {
+            return null;
+          }
+
+          const { error: updateError } = await supabase
+            .from('habits')
+            .update({ streak: computedStreak })
+            .eq('id', habit.id)
+            .eq('user_id', user.id);
+
+          if (updateError) {
+            console.error(`Unable to repair streak for habit ${habit.id}:`, updateError);
+            return null;
+          }
+
+          return {
+            ...habit,
+            streak: computedStreak,
+          };
+        })
+      );
+
+      const repairedHabits = habitsWithCompletion.map((habit) => {
+        const repaired = streakFixes.find(item => item?.id === habit.id);
+        return repaired || habit;
+      });
+
+      const active = repairedHabits.filter(h => !h.is_archived && h.should_show_today);
+      const archived = repairedHabits.filter(h => h.is_archived);
       
       const normalizedActive = active.map(({ should_show_today, ...habit }) => habit as Habit);
       const normalizedArchived = archived.map(({ should_show_today, ...habit }) => habit as Habit);
