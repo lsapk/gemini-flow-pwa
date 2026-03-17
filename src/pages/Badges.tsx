@@ -10,6 +10,52 @@ import penguinMascot from "@/assets/penguin-mascot.png";
 import { BadgeProgressBar } from "@/components/ui/BadgeProgressBar";
 import { BadgeCheck } from "lucide-react";
 
+const dateToLocalKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toDateKey = (dateValue: string): string => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  return dateToLocalKey(new Date(dateValue));
+};
+
+const calculateConsecutiveStreak = (dateKeys: string[]): number => {
+  if (dateKeys.length === 0) return 0;
+
+  const uniqueDays = new Set(dateKeys);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const cursor = new Date(today);
+  const todayKey = dateToLocalKey(cursor);
+
+  // Si l'utilisateur n'a pas encore d'activité aujourd'hui,
+  // on part d'hier sans casser la série en cours.
+  if (!uniqueDays.has(todayKey)) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
+  let lookback = 730;
+
+  while (lookback > 0) {
+    const key = dateToLocalKey(cursor);
+    if (!uniqueDays.has(key)) break;
+
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+    lookback -= 1;
+  }
+
+  return streak;
+};
+
 interface UserBadge {
   id: string;
   name: string;
@@ -46,7 +92,8 @@ export default function Badges() {
     journalEntries: 0,
     focusSessions: 0,
     totalFocusMinutes: 0,
-    loginStreak: 0
+    loginStreak: 0,
+    totalUsageDays: 0
   });
   const [karmaPoints, setKarmaPoints] = useState(0);
   const { user } = useAuth();
@@ -149,7 +196,8 @@ export default function Badges() {
         allGoals,
         completedGoals,
         journal,
-        focus
+        focus,
+        dailyUsage
       ] = await Promise.all([
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('tasks').select('*').eq('user_id', user.id).eq('completed', true),
@@ -158,10 +206,25 @@ export default function Badges() {
         supabase.from('goals').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id).eq('completed', true),
         supabase.from('journal_entries').select('*').eq('user_id', user.id),
-        supabase.from('focus_sessions').select('duration').eq('user_id', user.id)
+        supabase.from('focus_sessions').select('duration, created_at').eq('user_id', user.id),
+        supabase.from('daily_usage').select('usage_date').eq('user_id', user.id)
       ]);
 
       const totalFocusMinutes = focus.data?.reduce((sum, session) => sum + (session.duration || 0), 0) || 0;
+
+      const activityDateKeys = [
+        ...(allTasks.data || []).map(item => item.created_at),
+        ...(allHabits.data || []).map(item => item.created_at),
+        ...(allGoals.data || []).map(item => item.created_at),
+        ...(journal.data || []).map(item => item.created_at),
+        ...(focus.data || []).map(item => item.created_at),
+        ...(habitCompletions.data || []).map(item => item.completed_date),
+        ...(dailyUsage.data || []).map(item => item.usage_date),
+      ].filter(Boolean) as string[];
+
+      const normalizedActivityDays = activityDateKeys.map(toDateKey);
+      const loginStreak = calculateConsecutiveStreak(normalizedActivityDays);
+      const totalUsageDays = new Set(normalizedActivityDays).size;
 
       const stats = {
         tasksCreated: allTasks.data?.length || 0,
@@ -173,7 +236,8 @@ export default function Badges() {
         journalEntries: journal.data?.length || 0,
         focusSessions: focus.data?.length || 0,
         totalFocusMinutes,
-        loginStreak: 0 // TODO: Calculate actual streak
+        loginStreak,
+        totalUsageDays
       };
 
       setUserStats(stats);
@@ -262,11 +326,11 @@ export default function Badges() {
       if (badge.id === "explorer") earned = userStats.tasksCreated > 0 && userStats.habitsCreated > 0 && userStats.goalsCreated > 0 && userStats.journalEntries > 0 && userStats.focusSessions > 0;
       if (badge.id === "organized") earned = (userStats.tasksCreated - userStats.tasksCompleted) >= 10;
       if (badge.id === "balanced") earned = userStats.tasksCreated > 0 && userStats.habitsCreated > 0 && userStats.goalsCreated > 0;
-      if (badge.id === "dedicated") earned = false; // TODO: Track total usage days
-      if (badge.id === "veteran") earned = false; // TODO: Track total usage days
+      if (badge.id === "dedicated") earned = userStats.totalUsageDays >= 30;
+      if (badge.id === "veteran") earned = userStats.totalUsageDays >= 100;
       if (badge.id === "productivity_pro") earned = userStats.tasksCompleted >= 100 && userStats.habitsCompleted >= 50;
       if (badge.id === "zen_master") earned = userStats.totalFocusMinutes >= 3000 && userStats.journalEntries >= 50;
-      if (badge.id === "completionist") earned = badges.filter(b => b.earned).length >= 30;
+      if (badge.id === "completionist") earned = false;
       
       return {
         ...badge,
@@ -275,7 +339,21 @@ export default function Badges() {
       };
     });
     
-    setBadges(earnedBadges);
+    const earnedCountExcludingCompletionist = earnedBadges.filter(
+      (badge) => badge.id !== "completionist" && badge.earned
+    ).length;
+
+    setBadges(
+      earnedBadges.map((badge) =>
+        badge.id === "completionist"
+          ? {
+              ...badge,
+              earned: earnedCountExcludingCompletionist >= 30,
+              earnedAt: earnedCountExcludingCompletionist >= 30 ? new Date().toISOString() : undefined,
+            }
+          : badge
+      )
+    );
   };
 
   // Util pour grouper par catégorie
