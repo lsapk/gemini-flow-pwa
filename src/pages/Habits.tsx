@@ -44,6 +44,7 @@ import {
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
+
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [archivedHabits, setArchivedHabits] = useState<Habit[]>([]);
