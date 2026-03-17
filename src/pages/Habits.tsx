@@ -68,6 +68,11 @@ export default function Habits() {
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
 
+  const updateHabitInLists = (habitId: string, updates: Partial<Habit>) => {
+    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+    setArchivedHabits(prev => prev.map(h => h.id === habitId ? { ...h, ...updates } : h));
+  };
+
   const fetchHabits = async (dateToUse: Date = selectedDate) => {
     if (!user) return;
     setIsLoading(true);
@@ -103,8 +108,40 @@ export default function Habits() {
         })
       );
 
-      const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
-      const archived = habitsWithCompletion.filter(h => h.is_archived);
+      // Backfill streaks from real completion history if stored values are out-of-sync
+      const streakFixes = await Promise.all(
+        habitsWithCompletion.map(async (habit) => {
+          const computedStreak = await calculateStreak(habit.id, user.id, habit.days_of_week);
+          const storedStreak = habit.streak || 0;
+          if (computedStreak === storedStreak) {
+            return null;
+          }
+
+          const { error: updateError } = await supabase
+            .from('habits')
+            .update({ streak: computedStreak })
+            .eq('id', habit.id)
+            .eq('user_id', user.id);
+
+          if (updateError) {
+            console.error(`Unable to repair streak for habit ${habit.id}:`, updateError);
+            return null;
+          }
+
+          return {
+            ...habit,
+            streak: computedStreak,
+          };
+        })
+      );
+
+      const repairedHabits = habitsWithCompletion.map((habit) => {
+        const repaired = streakFixes.find(item => item?.id === habit.id);
+        return repaired || habit;
+      });
+
+      const active = repairedHabits.filter(h => !h.is_archived && h.should_show_today);
+      const archived = repairedHabits.filter(h => h.is_archived);
       
       setHabits(active.map(({ should_show_today, ...habit }) => habit as Habit));
       setArchivedHabits(archived.map(({ should_show_today, ...habit }) => habit as Habit));
@@ -171,7 +208,7 @@ export default function Habits() {
     }
 
     // Optimistic update
-    setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: !isCompleted } : h));
+    updateHabitInLists(habitId, { is_completed_today: !isCompleted });
 
     try {
       if (isCompleted) {
@@ -189,6 +226,7 @@ export default function Habits() {
         // Recalculate streak from actual data
         const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
         await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        updateHabitInLists(habitId, { streak: newStreak });
 
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
@@ -202,10 +240,15 @@ export default function Habits() {
 
         // Recalculate streak from actual data
         const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        const completedAt = new Date().toISOString();
         await supabase.from('habits').update({ 
-          last_completed_at: new Date().toISOString(), 
+          last_completed_at: completedAt, 
           streak: newStreak 
         }).eq('id', habitId);
+        updateHabitInLists(habitId, {
+          streak: newStreak,
+          last_completed_at: completedAt,
+        });
 
         // Rewards only when viewing today
         if (isViewingToday) {
@@ -230,7 +273,7 @@ export default function Habits() {
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       // Revert optimistic update
-      setHabits(prev => prev.map(h => h.id === habitId ? { ...h, is_completed_today: isCompleted } : h));
+      updateHabitInLists(habitId, { is_completed_today: isCompleted });
       sound.playError();
       toast.error("Erreur lors de la mise à jour de l'habitude");
     }
