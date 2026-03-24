@@ -1,0 +1,1177 @@
+[
+  {
+    "file": "/app/src/components/AIConfirmation.tsx",
+    "errors": [
+      {
+        "line": 12,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/GoogleCalendarEventModal.tsx",
+    "errors": [
+      {
+        "line": 148,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/JournalMoodSummary.tsx",
+    "errors": [
+      {
+        "line": 49,
+        "rule": "no-irregular-whitespace",
+        "msg": "Irregular whitespace not allowed."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/SubobjectiveList.tsx",
+    "errors": [
+      {
+        "line": 51,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchSubobjectives'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/TaskList.tsx",
+    "errors": [
+      {
+        "line": 44,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 54,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/analysis/LifeWheelChart.tsx",
+    "errors": [
+      {
+        "line": 97,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/dashboard/MonthlyAIReport.tsx",
+    "errors": [
+      {
+        "line": 122,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/layout/Sidebar.tsx",
+    "errors": [
+      {
+        "line": 88,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/modals/CreateHabitForm.tsx",
+    "errors": [
+      {
+        "line": 68,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'fetchGoals' and 'fetchHabitGoalLink'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/modals/CreateTaskForm.tsx",
+    "errors": [
+      {
+        "line": 46,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'fetchGoals' and 'fetchTaskGoalLink'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/penguin/FoodNotification.tsx",
+    "errors": [
+      {
+        "line": 19,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/settings/ProfileEditForm.tsx",
+    "errors": [
+      {
+        "line": 45,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 101,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 139,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 215,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/shared/DragHandle.tsx",
+    "errors": [
+      {
+        "line": 6,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 7,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/shared/ItemCard.tsx",
+    "errors": [
+      {
+        "line": 62,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 63,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 264,
+        "rule": "react-refresh/only-export-components",
+        "msg": "This rule can't verify that `export *` only exports components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/theme-provider.tsx",
+    "errors": [
+      {
+        "line": 66,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/CreateModal.tsx",
+    "errors": [
+      {
+        "line": 47,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'handleClose'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/JournalStats.tsx",
+    "errors": [
+      {
+        "line": 9,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 21,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 44,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 67,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 75,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 85,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 103,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/badge.tsx",
+    "errors": [
+      {
+        "line": 36,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/button.tsx",
+    "errors": [
+      {
+        "line": 56,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/charts/types.ts",
+    "errors": [
+      {
+        "line": 5,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/command.tsx",
+    "errors": [
+      {
+        "line": 24,
+        "rule": "@typescript-eslint/no-empty-object-type",
+        "msg": "An interface declaring no members is equivalent to its supertype."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/custom-charts.tsx",
+    "errors": [
+      {
+        "line": 36,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 86,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 129,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 176,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/form.tsx",
+    "errors": [
+      {
+        "line": 168,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/navigation-menu.tsx",
+    "errors": [
+      {
+        "line": 119,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/sidebar.tsx",
+    "errors": [
+      {
+        "line": 760,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/sonner.tsx",
+    "errors": [
+      {
+        "line": 29,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/textarea.tsx",
+    "errors": [
+      {
+        "line": 5,
+        "rule": "@typescript-eslint/no-empty-object-type",
+        "msg": "An interface declaring no members is equivalent to its supertype."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/components/ui/toggle.tsx",
+    "errors": [
+      {
+        "line": 43,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/contexts/DesignModeContext.tsx",
+    "errors": [
+      {
+        "line": 23,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/use-mobile.ts",
+    "errors": [
+      {
+        "line": 81,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 118,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 119,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 122,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 125,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 130,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAIDailyBriefing.ts",
+    "errors": [
+      {
+        "line": 117,
+        "rule": "@typescript-eslint/no-unused-expressions",
+        "msg": "Expected an assignment or function call and instead saw an expression."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAIInsightsEngine.ts",
+    "errors": [
+      {
+        "line": 115,
+        "rule": "@typescript-eslint/no-unused-expressions",
+        "msg": "Expected an assignment or function call and instead saw an expression."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAIItemAssistant.ts",
+    "errors": [
+      {
+        "line": 66,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAdminAnnouncements.ts",
+    "errors": [
+      {
+        "line": 28,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 47,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 80,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 104,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAnalyticsData.tsx",
+    "errors": [
+      {
+        "line": 226,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 246,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useCallback has missing dependencies: 'activityData.length', 'focusData.length', 'habitsData.length', and 'tasksData.length'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useAuth.tsx",
+    "errors": [
+      {
+        "line": 12,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 13,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 16,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 17,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 19,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 21,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 22,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 188,
+        "rule": "react-refresh/only-export-components",
+        "msg": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useCalendarData.ts",
+    "errors": [
+      {
+        "line": 27,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'loadCalendarData'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 65,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 79,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 130,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useEnsurePenguinProfile.ts",
+    "errors": [
+      {
+        "line": 43,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'user'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useGoogleCalendar.ts",
+    "errors": [
+      {
+        "line": 24,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'checkConnection'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useGoogleTasks.ts",
+    "errors": [
+      {
+        "line": 26,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'checkConnection'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/usePersonalityProfile.ts",
+    "errors": [
+      {
+        "line": 403,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 428,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 438,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 447,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 456,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 464,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 470,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 478,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 484,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 490,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 495,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 502,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 510,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 515,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 521,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 529,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 538,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 546,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 554,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 560,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 569,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useProductivityInsights.tsx",
+    "errors": [
+      {
+        "line": 18,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 207,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useMemo has an unnecessary dependency: 'streakCount'. Either exclude it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/hooks/useProductivityScoreAI.tsx",
+    "errors": [
+      {
+        "line": 53,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'calculateProductivityWithAI' and 'isCalculating'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/lib/api.ts",
+    "errors": [
+      {
+        "line": 54,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 69,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 118,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 133,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 182,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 197,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Admin.tsx",
+    "errors": [
+      {
+        "line": 281,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Analysis.tsx",
+    "errors": [
+      {
+        "line": 27,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'canUseFeature', 'isPremium', and 'trackUsage'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Badges.tsx",
+    "errors": [
+      {
+        "line": 182,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'loadUserStats'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 186,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'calculateBadges'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Calendar.tsx",
+    "errors": [
+      {
+        "line": 32,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 34,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 40,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'checkConnection'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 44,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'loadEvents'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 132,
+        "rule": "no-empty",
+        "msg": "Empty block statement."
+      },
+      {
+        "line": 140,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 143,
+        "rule": "no-empty",
+        "msg": "Empty block statement."
+      },
+      {
+        "line": 155,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Focus.tsx",
+    "errors": [
+      {
+        "line": 38,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 48,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 57,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'loadSessionsHistory', 'loadSessionsToday', 'loadTasks', and 'loadWeeklyData'. Either include them or remove the dependency array."
+      },
+      {
+        "line": 93,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'handleTimerComplete'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 268,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 344,
+        "rule": "no-empty",
+        "msg": "Empty block statement."
+      },
+      {
+        "line": 348,
+        "rule": "no-empty",
+        "msg": "Empty block statement."
+      },
+      {
+        "line": 351,
+        "rule": "no-empty",
+        "msg": "Empty block statement."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Goals.tsx",
+    "errors": [
+      {
+        "line": 78,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchGoals'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Habits.tsx",
+    "errors": [
+      {
+        "line": 212,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchHabits'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Journal.tsx",
+    "errors": [
+      {
+        "line": 63,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchEntries'. Either include it or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Reflection.tsx",
+    "errors": [
+      {
+        "line": 100,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'fetchReflections' and 'generateNewQuestion'. Either include them or remove the dependency array."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Register.tsx",
+    "errors": [
+      {
+        "line": 41,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Settings.tsx",
+    "errors": [
+      {
+        "line": 80,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has missing dependencies: 'fetchSettings', 'fetchStats', and 'fetchUserProfile'. Either include them or remove the dependency array."
+      },
+      {
+        "line": 124,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 152,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 163,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/pages/Tasks.tsx",
+    "errors": [
+      {
+        "line": 81,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'googleTasks'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 138,
+        "rule": "react-hooks/exhaustive-deps",
+        "msg": "React Hook useEffect has a missing dependency: 'fetchSubtasks'. Either include it or remove the dependency array."
+      },
+      {
+        "line": 148,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 159,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/types/index.ts",
+    "errors": [
+      {
+        "line": 48,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 68,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/src/utils/aiRequestQueue.ts",
+    "errors": [
+      {
+        "line": 5,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 6,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 7,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/supabase/functions/ai-cross-analysis/index.ts",
+    "errors": [
+      {
+        "line": 9,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 10,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 11,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 12,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 13,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 14,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 15,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 16,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 21,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/supabase/functions/calendar-ai-suggestions/index.ts",
+    "errors": [
+      {
+        "line": 77,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 83,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 127,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 128,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 129,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 130,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 192,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 215,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 216,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 227,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/supabase/functions/gemini-analysis/index.ts",
+    "errors": [
+      {
+        "line": 13,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 22,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 28,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 33,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 38,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      },
+      {
+        "line": 43,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/supabase/functions/gemini-chat-enhanced/index.ts",
+    "errors": [
+      {
+        "line": 231,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/supabase/functions/paypal-create-order/index.ts",
+    "errors": [
+      {
+        "line": 139,
+        "rule": "@typescript-eslint/no-explicit-any",
+        "msg": "Unexpected any. Specify a different type."
+      }
+    ]
+  },
+  {
+    "file": "/app/tailwind.config.ts",
+    "errors": [
+      {
+        "line": 142,
+        "rule": "@typescript-eslint/no-require-imports",
+        "msg": "A `require()` style import is forbidden."
+      }
+    ]
+  }
+]
