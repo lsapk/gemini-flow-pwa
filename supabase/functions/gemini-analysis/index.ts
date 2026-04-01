@@ -218,7 +218,7 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    const { data: authData, error: userError } = await supabaseAuth.auth.getUser(token);
     if (userError || !userData?.user?.id) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
