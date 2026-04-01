@@ -76,8 +76,14 @@ export default function Settings() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); }
+    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); fetchPlayerProfile(); }
   }, [user]);
+
+  const fetchPlayerProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('penguin_profiles').select('*').eq('user_id', user.id).maybeSingle();
+    if (data) setPlayerProfile(data);
+  };
 
   const fetchUserProfile = async () => {
     if (!user) return;

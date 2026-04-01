@@ -332,7 +332,7 @@ serve(async (req) => {
     }
 
     // Create the custom prompt based on user's language and data
-    const customPrompt = createCustomPrompt(prompt, userData, userLanguage);
+    const customPrompt = createCustomPrompt(prompt, userContextData, userLanguage);
     
     // Call Lovable AI gateway
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
