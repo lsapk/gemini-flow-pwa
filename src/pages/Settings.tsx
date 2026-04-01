@@ -34,6 +34,8 @@ import {
   Key, Trash2, Download
 } from "lucide-react";
 
+const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+
 interface UserSettings {
   id: string;
   notifications_enabled?: boolean;
