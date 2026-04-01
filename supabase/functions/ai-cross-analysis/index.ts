@@ -70,7 +70,9 @@ Deno.serve(async (req) => {
       goalsResult,
       journalResult,
       focusResult,
-      habitCompletionsResult
+      habitCompletionsResult,
+      questsResult,
+      playerProfileResult
     ] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
       supabase.from('habits').select('*').eq('user_id', userId),
