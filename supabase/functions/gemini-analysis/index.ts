@@ -268,7 +268,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!tasksError) {
-      userData.tasks = tasksData || [];
+      userContextData.tasks = tasksData || [];
     }
     
     // Fetch habits data
