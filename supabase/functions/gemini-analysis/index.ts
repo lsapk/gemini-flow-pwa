@@ -252,7 +252,7 @@ serve(async (req) => {
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
 
     // Fetch user data to provide context
-    const userData = {
+    const userContextData: Record<string, any[]> = {
       tasks: [],
       habits: [],
       journal: [],
