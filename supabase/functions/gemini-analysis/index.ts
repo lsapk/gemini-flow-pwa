@@ -290,7 +290,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!journalError) {
-      userData.journal = journalData || [];
+      userContextData.journal = journalData || [];
     }
     
     // Fetch goals
