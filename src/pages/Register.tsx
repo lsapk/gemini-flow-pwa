@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
 
+const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255),
   password: z.string().min(8, { message: "Min. 8 caractères." }).max(100).regex(/[A-Z]/, { message: "Une majuscule requise." }).regex(/[a-z]/, { message: "Une minuscule requise." }).regex(/[0-9]/, { message: "Un chiffre requis." }),

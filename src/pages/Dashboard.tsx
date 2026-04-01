@@ -16,6 +16,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
+const penguinThinking = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+
 export default function Dashboard() {
   const [insightsOpen, setInsightsOpen] = useState(false);
 
