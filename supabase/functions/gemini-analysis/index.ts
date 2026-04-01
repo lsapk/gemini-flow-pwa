@@ -301,7 +301,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!goalsError) {
-      userData.goals = goalsData || [];
+      userContextData.goals = goalsData || [];
     }
     
     // Fetch focus sessions
