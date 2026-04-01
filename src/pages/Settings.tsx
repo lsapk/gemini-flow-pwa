@@ -64,6 +64,7 @@ export default function Settings() {
   });
 
   const [userProfile, setUserProfile] = useState<{ display_name: string | null; photo_url: string | null } | null>(null);
+  const [playerProfile, setPlayerProfile] = useState<any>(null);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
