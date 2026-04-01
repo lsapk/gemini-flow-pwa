@@ -70,9 +70,7 @@ Deno.serve(async (req) => {
       goalsResult,
       journalResult,
       focusResult,
-      habitCompletionsResult,
-      questsResult,
-      playerProfileResult
+      habitCompletionsResult
     ] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
       supabase.from('habits').select('*').eq('user_id', userId),
@@ -181,9 +179,6 @@ DONNÉES UTILISATEUR:
 - Humeurs récentes: ${recentMoods.join(', ') || 'non renseigné'}
 - Durée moyenne de focus: ${avgFocusDuration} minutes
 - Habitudes actives: ${userData.habits.length}
-- Quêtes actives: ${userData.quests.map(q => `${q.title} (${q.current_progress}/${q.target_value})`).join(', ') || 'aucune'}
-- Niveau joueur: ${userData.player_profile?.level || 1}
-- XP: ${userData.player_profile?.experience_points || 0}
 
 Génère un briefing JSON ultra-personnalisé.`;
         break;

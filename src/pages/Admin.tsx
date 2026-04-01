@@ -28,7 +28,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import penguinMascot from "@/assets/penguin-mascot.png";
 
 interface UserData {
   id: string;

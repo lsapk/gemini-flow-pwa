@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
-import { PenguinDashboardWidget } from "@/components/penguin/PenguinDashboardWidget";
-import { useEnsurePenguinProfile } from "@/hooks/useEnsurePenguinProfile";
 import { AdminAnnouncementPanel } from "@/components/dashboard/AdminAnnouncementPanel";
 import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
 import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
@@ -17,10 +15,8 @@ import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import penguinThinking from "@/assets/penguin-thinking.png";
 
 export default function Dashboard() {
-  useEnsurePenguinProfile();
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   const { 
@@ -177,7 +173,6 @@ export default function Dashboard() {
       <DailyBriefingCard />
 
       {/* 7. Gamification Widget */}
-      <PenguinDashboardWidget />
 
       {/* 8. Insights IA (collapsible pour réduire le scroll) */}
       <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen}>

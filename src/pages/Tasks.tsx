@@ -8,9 +8,6 @@ import TaskList from "@/components/TaskList";
 import { useQuery } from "@tanstack/react-query";
 import CreateModal from "@/components/modals/CreateModal";
 import EditTaskModal from "@/components/modals/EditTaskModal";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinBusy from "@/assets/penguin-busy.png";
-import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Tabs,
@@ -59,7 +56,6 @@ interface Subtask {
 export default function Tasks() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { rewardTaskComplete } = usePenguinRewards();
   
   const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -153,7 +149,7 @@ export default function Tasks() {
       const task = tasks.find(t => t.id === id);
       const { error } = await supabase.from('tasks').update({ completed: !completed }).eq('id', id);
       if (error) throw new Error(error.message);
-      if (!completed && task) rewardTaskComplete();
+
       toast({ title: 'Success', description: 'Task updated successfully' });
       refetch();
     } catch (error: any) { toast({ title: 'Error', description: error.message }); }
@@ -275,17 +271,18 @@ export default function Tasks() {
               >
                 <TabsContent value={activeTab} className="mt-4">
                   {currentTasks.length === 0 && !isLoading ? (
-                    <PagePenguinEmpty
-                      image={penguinBusy}
-                      title={activeTab === "pending" ? "Pas encore de tâches" : "Aucune tâche terminée"}
-                      description={activeTab === "pending" ? "Créez votre première tâche pour commencer à organiser votre journée." : "Les tâches que vous terminez apparaîtront ici."}
-                    >
+                    <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                        <CheckCircle2 className="w-8 h-8 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-2">{activeTab === "pending" ? "Pas encore de tâches" : "Aucune tâche terminée"}</h3>
+                      <p className="text-muted-foreground mb-6 max-w-sm">{activeTab === "pending" ? "Créez votre première tâche pour commencer à organiser votre journée." : "Les tâches que vous terminez apparaîtront ici."}</p>
                       {activeTab === "pending" && (
                         <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
                           <Plus className="h-4 w-4 mr-2" />Nouvelle tâche
                         </Button>
                       )}
-                    </PagePenguinEmpty>
+                    </div>
                   ) : (
                     <TaskList
                       tasks={currentTasks}

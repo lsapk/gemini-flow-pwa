@@ -15,14 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "next-themes";
 import { useDesignMode } from "@/contexts/DesignModeContext";
-import { usePenguinProfile } from "@/hooks/usePenguinProfile";
 import { useAICredits } from "@/hooks/useAICredits";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Link, useSearchParams } from "react-router-dom";
 import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import penguinMascot from "@/assets/penguin-mascot.png";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -47,7 +45,6 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { designMode, setDesignMode } = useDesignMode();
-  const { profile: playerProfile } = usePenguinProfile();
   const { credits: aiCredits } = useAICredits();
   const { handleManageSubscription } = useSubscription();
   const [searchParams] = useSearchParams();

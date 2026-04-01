@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Lock, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import penguinMascot from "@/assets/penguin-mascot.png";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
