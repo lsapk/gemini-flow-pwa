@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { motion } from "framer-motion";
-import penguinMascot from "@/assets/penguin-mascot.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -102,20 +101,9 @@ export default function Login() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}
             >
-              <motion.img 
-                src={penguinMascot} 
-                alt="DeepFlow Penguin" 
-                className="h-28 w-28 sm:h-32 sm:w-32 object-contain drop-shadow-2xl"
-                animate={{ 
-                  y: [0, -8, 0],
-                  rotate: [0, -3, 3, 0],
-                }}
-                transition={{ 
-                  duration: 4, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                }}
-              />
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-primary/10 flex items-center justify-center mb-4 border border-primary/20 shadow-xl backdrop-blur-sm z-10 relative">
+                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60">DF</span>
+              </div>
             </motion.div>
             <motion.h1 
               className="text-3xl sm:text-4xl font-bold text-white font-heading"

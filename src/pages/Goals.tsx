@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy } from "lucide-react";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinThinking from "@/assets/penguin-thinking.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -173,17 +171,18 @@ export default function Goals() {
                   ))}
                 </div>
               ) : currentGoals.length === 0 ? (
-                <PagePenguinEmpty
-                  image={penguinThinking}
-                  title={activeTab === "ongoing" ? "Pas encore d'objectifs" : "Aucun objectif terminé"}
-                  description={activeTab === "ongoing" ? "Définissez vos objectifs pour atteindre vos ambitions." : "Vos objectifs accomplis apparaîtront ici."}
-                >
+                <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Target className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{activeTab === "ongoing" ? "Pas encore d'objectifs" : "Aucun objectif terminé"}</h3>
+                  <p className="text-muted-foreground mb-6 max-w-sm">{activeTab === "ongoing" ? "Définissez vos objectifs pour atteindre vos ambitions." : "Vos objectifs accomplis apparaîtront ici."}</p>
                   {activeTab === "ongoing" && (
                     <Button onClick={() => setIsCreateModalOpen(true)} className="rounded-xl">
                       <Plus className="h-4 w-4 mr-2" />Créer votre premier objectif
                     </Button>
                   )}
-                </PagePenguinEmpty>
+                </div>
               ) : (
                 <GoalList 
                   goals={currentGoals}

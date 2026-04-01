@@ -8,10 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import { Plus, BookOpen, X } from "lucide-react";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinJournal from "@/assets/penguin-journal.png";
 import { JournalEntry } from "@/types";
-import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +36,6 @@ const moods = [
 
 export default function Journal() {
   const { user } = useAuth();
-  const { rewardJournalEntry } = usePenguinRewards();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -171,9 +167,14 @@ export default function Journal() {
       {/* Entries */}
       <div className="space-y-3">
         {entries.length === 0 ? (
-          <PagePenguinEmpty image={penguinJournal} title="Votre journal est vide" description="Commencez par créer votre première entrée.">
+          <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <BookOpen className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Votre journal est vide</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm">Commencez par créer votre première entrée.</p>
             <Button onClick={() => setShowForm(true)} className="rounded-2xl"><Plus className="h-4 w-4 mr-2" />Créer une entrée</Button>
-          </PagePenguinEmpty>
+          </div>
         ) : (
           entries.map((entry, i) => (
             <JournalEntryCard key={entry.id} entry={entry} moods={moods} onEdit={handleEdit} onDelete={handleDelete} getMoodInfo={getMoodInfo} />

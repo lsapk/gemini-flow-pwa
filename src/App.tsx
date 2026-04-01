@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { DesignModeProvider } from "./contexts/DesignModeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-import { FoodNotificationProvider } from "./components/penguin/FoodNotification";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { CookieConsent } from "./components/CookieConsent";
 import AppLayout from "./components/layout/AppLayout";
@@ -29,7 +28,6 @@ const Reflection = lazy(() => import("./pages/Reflection"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Calendar = lazy(() => import("./pages/Calendar"));
-const Gamification = lazy(() => import("./pages/Gamification"));
 const Admin = lazy(() => import("./pages/Admin"));
 
 // Legal pages
@@ -79,7 +77,6 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <DesignModeProvider>
           <TooltipProvider>
-            <FoodNotificationProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -112,7 +109,6 @@ function App() {
                         <Route path="/reflection" element={<Reflection />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/calendar" element={<Calendar />} />
-                        <Route path="/gamification" element={<Gamification />} />
                         <Route path="/admin" element={<Admin />} />
                       </Route>
                       
@@ -128,7 +124,6 @@ function App() {
                   </ErrorBoundary>
                 </AuthProvider>
               </BrowserRouter>
-            </FoodNotificationProvider>
           </TooltipProvider>
         </DesignModeProvider>
       </ThemeProvider>

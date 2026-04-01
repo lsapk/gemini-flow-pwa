@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, Target, Archive, CalendarIcon } from "lucide-react";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinWorkout from "@/assets/penguin-workout.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { useSoundService } from "@/hooks/useSoundService";
 import { calculateStreak } from "@/services/streakCalculator";
 import CreateModal from "@/components/modals/CreateModal";
@@ -63,7 +60,6 @@ export default function Habits() {
   const [activeTab, setActiveTab] = useState("active");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { user } = useAuth();
-  const { rewardHabitComplete, rewardStreak } = usePenguinRewards();
   const sound = useSoundService();
 
   // Keep a stable reference to today's date string to avoid drift
@@ -304,8 +300,6 @@ export default function Habits() {
 
         // Rewards only when viewing today
         if (isViewingToday) {
-          rewardHabitComplete();
-          rewardStreak(newStreak);
         }
 
         // Check streak milestones
@@ -458,17 +452,18 @@ export default function Habits() {
                     ))}
                   </div>
                 ) : currentHabits.length === 0 ? (
-                  <PagePenguinEmpty
-                    image={penguinWorkout}
-                    title={activeTab === "active" ? "Pas encore d'habitudes" : "Aucune habitude archivée"}
-                    description={activeTab === "active" ? "Créez de bonnes habitudes pour améliorer votre productivité." : "Les habitudes archivées apparaîtront ici."}
-                  >
+                  <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                      <RefreshCw className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">{activeTab === "active" ? "Pas encore d'habitudes" : "Aucune habitude archivée"}</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm">{activeTab === "active" ? "Créez de bonnes habitudes pour améliorer votre productivité." : "Les habitudes archivées apparaîtront ici."}</p>
                     {activeTab === "active" && (
                       <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
                         <Plus className="h-4 w-4 mr-2" />Créer votre première habitude
                       </Button>
                     )}
-                  </PagePenguinEmpty>
+                  </div>
                 ) : (
                   <HabitList 
                     habits={currentHabits}

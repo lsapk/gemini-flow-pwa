@@ -11,7 +11,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
-import penguinMascot from "@/assets/penguin-mascot.png";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255),

@@ -1,6 +1,5 @@
 
 import { cn } from "@/lib/utils";
-import penguinMascot from "@/assets/penguin-mascot.png";
 import { 
   Home, 
   CheckSquare, 
@@ -32,7 +31,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
-    { icon: Gamepad2, label: "Mon Pingouin", path: "/gamification", isPenguin: true },
     { icon: CheckSquare, label: "Tâches", path: "/tasks" },
     { icon: BarChart3, label: "Habitudes", path: "/habits" },
     { icon: Target, label: "Objectifs", path: "/goals" },
@@ -85,15 +83,11 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
               {isActive && (
                 <div className="absolute left-0 w-[3px] h-6 rounded-r-full bg-primary" />
               )}
-              {(item as any).isPenguin ? (
-                <img src={penguinMascot} alt="" className="h-[18px] w-[18px] flex-shrink-0 object-contain" />
-              ) : (
-                <item.icon className={cn(
-                  "h-[18px] w-[18px] flex-shrink-0",
-                  isActive && "text-primary",
-                  isAdminItem && !isActive && "text-destructive"
-                )} />
-              )}
+              <item.icon className={cn(
+                "h-[18px] w-[18px] flex-shrink-0",
+                isActive && "text-primary",
+                isAdminItem && !isActive && "text-destructive"
+              )} />
               <span className="truncate">{item.label}</span>
             </button>
           );

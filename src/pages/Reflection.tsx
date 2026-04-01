@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Send, Sparkles, RefreshCw } from "lucide-react";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinReading from "@/assets/penguin-reading.png";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -184,7 +182,13 @@ export default function Reflection() {
         <TabsContent value="history">
           <div className="space-y-3">
             {reflections.length === 0 ? (
-              <PagePenguinEmpty image={penguinReading} title="Aucune réflexion" description="Répondez à votre première question pour commencer." />
+              <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Lightbulb className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Aucune réflexion</h3>
+                <p className="text-muted-foreground mb-6 max-w-sm">Répondez à votre première question pour commencer.</p>
+              </div>
             ) : (
               reflections.map((r, i) => (
                 <motion.div

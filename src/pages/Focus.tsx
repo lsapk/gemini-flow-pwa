@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Play, Pause, Square, TrendingUp, CheckCircle2, Target, ListTodo, History, Plus, Calendar, Timer, PictureInPicture2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { usePenguinRewards } from "@/hooks/usePenguinRewards";
 import { useSoundService } from "@/hooks/useSoundService";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,7 +49,6 @@ export default function Focus() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { rewardFocusSession } = usePenguinRewards();
   const sound = useSoundService();
 
   useEffect(() => { if (!currentSessionId) setTimeLeft(duration * 60); }, [duration, currentSessionId]);
@@ -138,7 +136,6 @@ export default function Focus() {
     const sd: ActiveFocusSession = JSON.parse(raw);
     try {
       await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: sd.duration, started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
-      rewardFocusSession(sd.duration);
       sound.playTimerComplete();
       toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${duration} minutes complétée.` });
       if ('Notification' in window && Notification.permission === 'granted') { new Notification('Session terminée !', { body: `"${sessionTitle}" terminée.`, icon: '/icons/icon-192x192.png' }); }
@@ -180,7 +177,6 @@ export default function Focus() {
     try {
       const start = new Date(`${manualDate}T${manualTime}`); const dur = parseInt(manualDuration); const end = new Date(start.getTime() + dur * 60 * 1000);
       const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: manualTitle.trim(), duration: dur, started_at: start.toISOString(), completed_at: end.toISOString() });
-      if (error) throw error; rewardFocusSession(dur);
       sound.playCreate();
       toast({ title: "Session ajoutée !", description: `Session de ${dur} minutes enregistrée.` });
       setManualTitle(""); setManualDuration(""); setManualDate(new Date().toISOString().split('T')[0]); setManualTime("09:00");

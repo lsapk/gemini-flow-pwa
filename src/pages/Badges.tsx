@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Award, Badge as BadgeIcon, Flame, Star, Users, Trophy, Zap, Check } from "lucide-react";
 import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinMascot from "@/assets/penguin-mascot.png";
 import { BadgeProgressBar } from "@/components/ui/BadgeProgressBar";
 import { BadgeCheck } from "lucide-react";
 

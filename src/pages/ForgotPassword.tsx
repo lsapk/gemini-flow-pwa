@@ -8,7 +8,6 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import penguinMascot from "@/assets/penguin-mascot.png";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -42,8 +41,9 @@ export default function ForgotPassword() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="text-center mb-8">
             <motion.div className="flex justify-center mb-5" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, type: "spring" }}>
-              <motion.img src={penguinMascot} alt="DeepFlow Penguin" className="h-24 w-24 object-contain drop-shadow-2xl"
-                animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} />
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-primary/10 flex items-center justify-center mb-4 border border-primary/20 shadow-xl backdrop-blur-sm z-10 relative">
+                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60">DF</span>
+              </div>
             </motion.div>
             <motion.h1 className="text-3xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>DeepFlow</motion.h1>
           </div>

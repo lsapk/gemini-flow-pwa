@@ -10,8 +10,6 @@ import { AppleCalendarView } from "@/components/AppleCalendarView";
 import { GoogleCalendarEventModal, EventFormData } from "@/components/GoogleCalendarEventModal";
 import { AISuggestedEvents } from "@/components/AISuggestedEvents";
 import { Markdown } from "@/components/Markdown";
-import { PagePenguinEmpty } from "@/components/penguin/PagePenguinEmpty";
-import penguinCalendar from "@/assets/penguin-calendar.png";
 
 interface CalendarEvent {
   id: string;
@@ -223,16 +221,15 @@ export default function CalendarPage() {
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
       {!isConnected ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <PagePenguinEmpty
-            image={penguinCalendar}
-            title="Connectez votre calendrier"
-            description="Synchronisez votre compte Google pour voir vos événements et obtenir des suggestions personnalisées."
-          >
-            <Button onClick={connectGoogle} disabled={isConnecting} className="mt-2">
-              {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion...</> : "Connecter Google Calendar"}
-            </Button>
-          </PagePenguinEmpty>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm min-h-[500px] text-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <CalendarIcon className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Connectez votre calendrier</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm">Synchronisez votre compte Google pour voir vos événements et obtenir des suggestions personnalisées.</p>
+          <Button onClick={connectGoogle} disabled={isConnecting} className="mt-2">
+            {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion...</> : "Connecter Google Calendar"}
+          </Button>
         </div>
       ) : (
         <>
