@@ -279,7 +279,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!habitsError) {
-      userData.habits = habitsData || [];
+      userContextData.habits = habitsData || [];
     }
     
     // Fetch journal entries
