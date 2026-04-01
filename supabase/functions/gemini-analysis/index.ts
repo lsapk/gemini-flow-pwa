@@ -219,14 +219,14 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: authData, error: userError } = await supabaseAuth.auth.getUser(token);
-    if (userError || !userData?.user?.id) {
+    if (userError || !authData?.user?.id) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = userData.user.id;
+    const userId = authData.user.id;
 
     // Parse request body
     const { prompt } = await req.json();
