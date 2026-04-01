@@ -170,7 +170,7 @@ serve(async (req) => {
           };
           
           return new Response(
-            JSON.stringify({ response: limitMessage[userLanguage] || limitMessage.fr }),
+            JSON.stringify({ response: limitMessage[userLanguage as LanguageCode] || limitMessage.fr }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }

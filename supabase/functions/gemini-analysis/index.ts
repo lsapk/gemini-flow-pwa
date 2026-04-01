@@ -312,7 +312,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!focusError) {
-      userData.focus = focusData || [];
+      userContextData.focus = focusData || [];
     }
 
     // ALL USERS ARE CONSIDERED PREMIUM NOW - Removing the premium check

@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in verify-admin:', error);
     return new Response(
-      JSON.stringify({ isAdmin: false, error: error.message }),
+      JSON.stringify({ isAdmin: false, error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
