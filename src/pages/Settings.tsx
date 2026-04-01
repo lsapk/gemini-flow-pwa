@@ -34,6 +34,8 @@ import {
   Key, Trash2, Download
 } from "lucide-react";
 
+const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+
 interface UserSettings {
   id: string;
   notifications_enabled?: boolean;
@@ -62,6 +64,7 @@ export default function Settings() {
   });
 
   const [userProfile, setUserProfile] = useState<{ display_name: string | null; photo_url: string | null } | null>(null);
+  const [playerProfile, setPlayerProfile] = useState<any>(null);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -73,8 +76,14 @@ export default function Settings() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); }
+    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); fetchPlayerProfile(); }
   }, [user]);
+
+  const fetchPlayerProfile = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('penguin_profiles').select('*').eq('user_id', user.id).maybeSingle();
+    if (data) setPlayerProfile(data);
+  };
 
   const fetchUserProfile = async () => {
     if (!user) return;

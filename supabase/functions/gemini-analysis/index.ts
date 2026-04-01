@@ -218,15 +218,15 @@ serve(async (req) => {
     });
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
-    if (userError || !userData?.user?.id) {
+    const { data: authData, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError || !authData?.user?.id) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = userData.user.id;
+    const userId = authData.user.id;
 
     // Parse request body
     const { prompt } = await req.json();
@@ -252,7 +252,7 @@ serve(async (req) => {
     const userLanguage = userSettings?.language || "fr" as LanguageCode;
 
     // Fetch user data to provide context
-    const userData = {
+    const userContextData: Record<string, any[]> = {
       tasks: [],
       habits: [],
       journal: [],
@@ -268,7 +268,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!tasksError) {
-      userData.tasks = tasksData || [];
+      userContextData.tasks = tasksData || [];
     }
     
     // Fetch habits data
@@ -279,7 +279,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!habitsError) {
-      userData.habits = habitsData || [];
+      userContextData.habits = habitsData || [];
     }
     
     // Fetch journal entries
@@ -290,7 +290,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!journalError) {
-      userData.journal = journalData || [];
+      userContextData.journal = journalData || [];
     }
     
     // Fetch goals
@@ -301,7 +301,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!goalsError) {
-      userData.goals = goalsData || [];
+      userContextData.goals = goalsData || [];
     }
     
     // Fetch focus sessions
@@ -312,7 +312,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false });
     
     if (!focusError) {
-      userData.focus = focusData || [];
+      userContextData.focus = focusData || [];
     }
 
     // ALL USERS ARE CONSIDERED PREMIUM NOW - Removing the premium check
@@ -332,7 +332,7 @@ serve(async (req) => {
     }
 
     // Create the custom prompt based on user's language and data
-    const customPrompt = createCustomPrompt(prompt, userData, userLanguage);
+    const customPrompt = createCustomPrompt(prompt, userContextData, userLanguage);
     
     // Call Lovable AI gateway
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

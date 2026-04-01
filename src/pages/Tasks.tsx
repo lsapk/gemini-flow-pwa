@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Cloud, CloudOff, RefreshCw, CheckSquare, Clock } from "lucide-react";
+import { Plus, Cloud, CloudOff, RefreshCw, CheckSquare, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";

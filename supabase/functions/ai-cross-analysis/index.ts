@@ -70,7 +70,9 @@ Deno.serve(async (req) => {
       goalsResult,
       journalResult,
       focusResult,
-      habitCompletionsResult
+      habitCompletionsResult,
+      questsResult,
+      playerProfileResult
     ] = await Promise.all([
       supabase.from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
       supabase.from('habits').select('*').eq('user_id', userId),
@@ -578,7 +580,7 @@ ${(() => {
   } catch (error) {
     console.error('Error in ai-cross-analysis:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
