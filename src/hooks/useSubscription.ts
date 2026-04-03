@@ -63,7 +63,7 @@ export const useSubscription = () => {
     queryKey: ["daily-usage", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey();
       const { data, error } = await supabase
         .from("daily_usage")
         .select("*")
