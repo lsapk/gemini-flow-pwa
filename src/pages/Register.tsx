@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
 
-const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+import { penguinMascot } from "@/constants/assets";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255),

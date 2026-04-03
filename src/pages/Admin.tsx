@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+import { penguinMascot } from "@/constants/assets";
 
 interface UserData {
   id: string;
