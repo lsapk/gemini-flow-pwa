@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 export type SubscriptionTier = "basic" | "premium" | "admin";
 
