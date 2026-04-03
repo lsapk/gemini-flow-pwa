@@ -9,7 +9,7 @@ import { Eye, EyeOff, Loader2, Lock, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
-const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+import { penguinMascot } from "@/constants/assets";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");

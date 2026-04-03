@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -50,6 +51,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </AnimatePresence>
         </main>
       </div>
+      <KeyboardShortcutsModal />
     </div>
   );
 }

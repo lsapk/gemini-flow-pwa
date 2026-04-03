@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, createCustomerPortal } from "@/services/billing";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 export type SubscriptionTier = "basic" | "premium" | "admin";
 
@@ -62,7 +63,7 @@ export const useSubscription = () => {
     queryKey: ["daily-usage", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey();
       const { data, error } = await supabase
         .from("daily_usage")
         .select("*")
@@ -91,7 +92,7 @@ export const useSubscription = () => {
 
   const trackUsage = async (type: "chat" | "analysis") => {
     if (!user || limits.isUnlimited) return;
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalDateKey();
     const { data: existing } = await supabase
       .from("daily_usage")
       .select("*")
