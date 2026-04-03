@@ -34,7 +34,7 @@ import {
   Key, Trash2, Download
 } from "lucide-react";
 
-const penguinMascot = "https://cdn-icons-png.flaticon.com/512/1864/1864514.png";
+import { penguinMascot } from "@/constants/assets";
 
 interface UserSettings {
   id: string;
