@@ -6,131 +6,116 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Interface for expected request body
 interface ContactRequest {
   name: string;
   email: string;
   message: string;
+  website?: string; // honeypot field
 }
 
-// Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Input constraints
 const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_MESSAGE_LENGTH = 10000;
 
+// Simple in-memory rate limiter (per edge function instance)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { name, email, message } = await req.json() as ContactRequest;
+    // Rate limit by IP
+    const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
+      || req.headers.get("cf-connecting-ip") 
+      || "unknown";
+
+    if (isRateLimited(clientIP)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { name, email, message, website } = await req.json() as ContactRequest;
+
+    // Honeypot: if the hidden "website" field is filled, it's a bot
+    if (website && website.trim().length > 0) {
+      // Silently accept to not tip off bots
+      return new Response(
+        JSON.stringify({ success: true, message: "Your message has been sent to DeepFlow.ia@gmail.com" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
-    // Validate required fields presence
     if (!name || !email || !message) {
       return new Response(
         JSON.stringify({ error: "Name, email, and message are required fields" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate input types
     if (typeof name !== 'string' || typeof email !== 'string' || typeof message !== 'string') {
       return new Response(
         JSON.stringify({ error: "Invalid input types" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Trim inputs
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
     const trimmedMessage = message.trim();
 
-    // Validate email format
     if (!EMAIL_REGEX.test(trimmedEmail)) {
       return new Response(
         JSON.stringify({ error: "Invalid email format" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate length limits
-    if (trimmedName.length > MAX_NAME_LENGTH) {
+    if (trimmedName.length > MAX_NAME_LENGTH || trimmedEmail.length > MAX_EMAIL_LENGTH || trimmedMessage.length > MAX_MESSAGE_LENGTH) {
       return new Response(
-        JSON.stringify({ error: `Name must be less than ${MAX_NAME_LENGTH} characters` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Input exceeds maximum length" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (trimmedEmail.length > MAX_EMAIL_LENGTH) {
-      return new Response(
-        JSON.stringify({ error: `Email must be less than ${MAX_EMAIL_LENGTH} characters` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    if (trimmedMessage.length > MAX_MESSAGE_LENGTH) {
-      return new Response(
-        JSON.stringify({ error: `Message must be less than ${MAX_MESSAGE_LENGTH} characters` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Validate non-empty after trim
     if (trimmedName.length === 0 || trimmedEmail.length === 0 || trimmedMessage.length === 0) {
       return new Response(
         JSON.stringify({ error: "Name, email, and message cannot be empty" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    // Log contact form submission (sanitized for security)
     console.log(`Contact form submission received from: ${trimmedEmail.substring(0, 50)}`);
     
-    // For now, simulate success
     return new Response(
       JSON.stringify({ 
         success: true,
         message: "Your message has been sent to DeepFlow.ia@gmail.com"
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in send-contact function:", error);
+    console.error("Error in send-contact function:", (error as Error).message);
     return new Response(
       JSON.stringify({ error: "An error occurred processing your request" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

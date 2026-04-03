@@ -5,6 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Security: Allowlist of valid redirect origins
+const ALLOWED_ORIGINS = [
+  'https://deepflowia.lovable.app',
+  'https://id-preview--fa41ffac-18ed-45b6-963f-8f73e3ad9383.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+function getSafeRedirectUri(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  const safeOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return `${safeOrigin}/calendar`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -24,7 +38,7 @@ Deno.serve(async (req) => {
       throw new Error('Google OAuth credentials not configured');
     }
 
-    // SECURITY FIX: Authenticate user from JWT token instead of trusting request body
+    // Authenticate user from JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -33,7 +47,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create authenticated Supabase client to get user from JWT
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -48,16 +61,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use the authenticated user's ID instead of request body
     const authenticatedUserId = user.id;
     console.log('Authenticated user:', authenticatedUserId);
 
-    // Generate auth URL
+    const REDIRECT_URI = getSafeRedirectUri(req);
+
     if (action === 'get_auth_url') {
-      const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
       const SCOPE = 'https://www.googleapis.com/auth/calendar';
       
-      // SECURITY: Use authenticated user ID in state, not from request body
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${CLIENT_ID}&` +
         `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
@@ -83,8 +94,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const REDIRECT_URI = `${req.headers.get('origin')}/calendar`;
-
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -105,16 +114,13 @@ Deno.serve(async (req) => {
 
     const tokens = await tokenResponse.json();
 
-    // SECURITY FIX: Use service role to store tokens, but only for the authenticated user
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     const expiryDate = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // SECURITY: Only store tokens for the authenticated user's ID
     const { error: dbError } = await supabaseAdmin
       .from('google_calendar_tokens')
       .upsert({
-        user_id: authenticatedUserId, // Use authenticated ID, NOT from request body
+        user_id: authenticatedUserId,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         token_expiry: expiryDate.toISOString(),
