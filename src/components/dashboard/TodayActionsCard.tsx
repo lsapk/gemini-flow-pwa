@@ -38,7 +38,7 @@ export const TodayActionsCard = () => {
       setIsLoading(true);
       
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateKey();
         
         // Fetch tasks due today
         const { data: tasksData } = await supabase
