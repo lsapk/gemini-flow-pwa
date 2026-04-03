@@ -92,7 +92,7 @@ export const useSubscription = () => {
 
   const trackUsage = async (type: "chat" | "analysis") => {
     if (!user || limits.isUnlimited) return;
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalDateKey();
     const { data: existing } = await supabase
       .from("daily_usage")
       .select("*")
