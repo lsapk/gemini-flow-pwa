@@ -292,7 +292,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Input type="password" placeholder="Nouveau mot de passe (min. 8 car., maj/min/chiffre)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-              <Button onClick={handleChangePassword} disabled={changingPassword || newPassword.length < 6} className="w-full">
+              <Button onClick={handleChangePassword} disabled={changingPassword || newPassword.length < 8} className="w-full">
                 {changingPassword ? "Modification..." : "Modifier le mot de passe"}
               </Button>
             </CardContent>
