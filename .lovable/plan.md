@@ -1,181 +1,98 @@
 
-# Plan : Credits Admin, Logo, Fond Auth, Parametres, Legal
 
-## 1. Credits Admin - Fonctionnel pour credits IA ET jeu
+# Plan: Améliorations Code, Sécurité et Fonctionnalités DeepFlow
 
-**Probleme actuel :** La fonction `handleGiveCredits` dans `Admin.tsx` (ligne 315-347) modifie uniquement les credits **de jeu** dans `player_profiles.credits`, mais pas les **credits IA** dans la table `ai_credits`. L'admin n'a aucun moyen de gerer les credits IA des utilisateurs.
+## Audit rapide — Problèmes identifiés
 
-**Solution :**
-- Modifier le dialog de credits admin pour offrir **2 onglets** : "Credits Jeu" et "Credits IA"
-- Ajouter une fonction `handleGiveAICredits` qui insere/met a jour la table `ai_credits`
-- La fonction existante `handleGiveCredits` reste pour les credits de jeu
-- Afficher dans le profil utilisateur les 2 types de credits (jeu + IA)
+### SÉCURITÉ (priorité haute)
 
-**Fichier :** `src/pages/Admin.tsx`
+**S1 — Tokens OAuth stockés en clair**
+- `encrypt_token()` dans la migration SQL renvoie le token tel quel (`encrypted_token := token`)
+- Impact : si la base est compromise, tous les tokens Google sont lisibles
+- Fix : utiliser `pgcrypto` avec `pgp_sym_encrypt` + clé secrète en variable d'environnement
 
----
+**S2 — Redirect URI OAuth dérivée de `Origin`**
+- `google-calendar-oauth` : `REDIRECT_URI = req.headers.get('origin') + '/calendar'`
+- Un attaquant peut forger l'Origin pour rediriger vers un domaine malveillant
+- Fix : utiliser une allowlist de domaines autorisés (production + preview)
 
-## 2. Changement du logo
+**S3 — `send-contact` sans rate limiting**
+- `Access-Control-Allow-Origin: *`, pas d'auth, pas de captcha
+- Risque de spam massif et coûts
+- Fix : ajouter un rate limit par IP (stocké en mémoire ou via compteur Supabase) + honeypot field
 
-**Situation actuelle :** Le logo utilise `src/assets/deepflow-logo.jpg` dans la Sidebar et le MobileHeader. Les pages Login/Register/ForgotPassword utilisent des icones Lucide (`Zap`, `Sparkles`) au lieu du vrai logo.
+**S4 — Incohérence mot de passe**
+- Inscription exige 8+ caractères avec maj/min/chiffre (`Register.tsx`)
+- Changement de mot de passe dans Settings accepte 6 caractères minimum
+- Fix : aligner sur les mêmes règles (8+ avec complexité)
 
-**Solution :**
-- Copier l'image du "D" brush (image-5.png) vers `src/assets/deepflow-logo.png`
-- Remplacer la reference dans `Sidebar.tsx` et `MobileHeader.tsx`
-- Le logo a un fond blanc, donc pour le theme sombre : ajouter `rounded-xl` avec un fond transparent et une ombre pour bien integrer
-- Mettre a jour les pages Login, Register et ForgotPassword pour utiliser le nouveau logo au lieu des icones Lucide
-- Ajouter un filtre CSS `dark:invert` sur le logo pour qu'il s'adapte au theme sombre (le "D" noir passe en blanc)
+### BUGS FONCTIONNELS
 
-**Fichiers :** `src/components/layout/Sidebar.tsx`, `src/components/layout/MobileHeader.tsx`, `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`
+**B1 — Stripe checkout avec price IDs placeholder**
+- `create-checkout` utilise `"price_monthly"`, `"price_yearly"`, `"price_lifetime"` — ce ne sont pas de vrais IDs Stripe
+- Fix : les lire depuis des variables d'environnement (`STRIPE_PRICE_MONTHLY`, etc.)
 
----
+**B2 — Dates timezone-unsafe avec `toISOString().split('T')[0]`**
+- 48 occurrences dans le code — peut décaler d'un jour selon le fuseau de l'utilisateur
+- Exemple : à 23h en UTC+2, `toISOString()` donne le jour suivant en UTC
+- Fix : créer un helper `toLocalDateKey(date)` et remplacer toutes les occurrences
 
-## 3. Image de fond pour les pages de connexion/inscription
+**B3 — `gemini-chat` ignore l'historique (déjà noté dans l'audit)**
+- Le body reçoit `chatHistory` mais seul le message courant est envoyé au modèle
+- Fix : inclure les N derniers messages comme dans `gemini-chat-enhanced`
 
-**Situation actuelle :** Les pages Login, Register, ForgotPassword ont un fond abstrait avec des gradients et un motif de grille. Aucune image de fond.
+### AMÉLIORATIONS DE CODE
 
-**Solution :**
-- Copier l'image de l'oeil bleu (1770368575206~2_1.jpg) vers `public/images/auth-bg.jpg` (dans public car c'est utilise en CSS)
-- Ajouter l'image en arriere-plan sur les pages Login, Register, ForgotPassword et ResetPassword
-- L'image sera affichee en `cover` avec un overlay sombre semi-transparent pour la lisibilite
-- Le formulaire restera au centre avec l'effet glassmorphism par-dessus
+**C1 — Bundle trop lourd (chunks > 500kB)**
+- Lazy-loader les pages lourdes (Analysis, AIAssistant, Journal) avec `React.lazy` + `Suspense`
+- Splitter la dépendance Markdown en chunk séparé
 
-**Fichiers :** `src/pages/Login.tsx`, `src/pages/Register.tsx`, `src/pages/ForgotPassword.tsx`, `src/pages/ResetPassword.tsx`
+**C2 — Code mort : `validate-purchase`**
+- Retourne systématiquement `410 Gone`, plus référencé nulle part côté client
+- Supprimer la fonction
 
----
+**C3 — `penguinMascot` / `penguinThinking` définis en dur dans 5+ fichiers**
+- Centraliser dans un fichier `src/constants/assets.ts`
 
-## 4. Photo de profil et preferences qui fonctionnent
+### AMÉLIORATIONS FONCTIONNELLES
 
-### Photo de profil zoomee
-**Probleme :** L'avatar dans `ProfileEditForm.tsx` utilise `<AvatarImage>` qui applique `object-cover` par defaut dans Radix. La photo apparat zoomee car le composant `Avatar` fait 96x96px (`h-24 w-24`) et force un recadrage.
+**F1 — Notifications push navigateur**
+- Rappels pour les habitudes quotidiennes et les tâches à échéance
+- Utiliser l'API Notification du navigateur avec permission utilisateur + toggle dans Settings
 
-**Solution :**
-- Ajouter `className="object-cover"` sur `AvatarImage` pour s'assurer du bon cadrage
-- Verifier que le composant Avatar de Radix n'a pas de styles conflictuels
-- Dans le profil Settings (ligne 234), la photo de l'utilisateur est un simple cercle avec l'initiale -- il faut aussi y afficher la photo si elle existe
+**F2 — Export PDF du rapport mensuel IA**
+- Le composant `MonthlyAIReport` génère du texte mais pas d'export
+- Ajouter un bouton "Télécharger PDF" utilisant `html2canvas` + `jspdf`
 
-### Theme sombre/clair pour les 2 designs
-**Probleme actuel :** Le `ThemeProvider` utilise `next-themes` (dans `App.tsx` ligne 68) mais le Settings utilise le `useTheme` de `@/components/theme-provider` local (ligne 13). Ces deux providers sont differents -- l'un vient de `next-themes`, l'autre du composant local. Il y a conflit.
+**F3 — Mode hors-ligne amélioré**
+- Le service worker cache les pages mais les données ne sont pas disponibles offline
+- Stocker les données critiques (tâches du jour, habitudes) dans IndexedDB pour consultation offline
 
-**Solution :** 
-- L'import dans `App.tsx` utilise `import { ThemeProvider } from "next-themes"` 
-- L'import dans Settings utilise `import { useTheme } from "@/components/theme-provider"` qui est un provider **different** jamais rendu dans l'arbre
-- Corriger Settings pour utiliser `useTheme` de `next-themes` directement
-- Le composant local `theme-provider.tsx` est redondant -- on le garde mais on s'assure que Settings utilise le bon provider
+**F4 — Raccourcis clavier affichés**
+- `useKeyboardShortcuts` existe mais pas de modale "?" pour lister les raccourcis disponibles
+- Ajouter une modale d'aide accessible via "?" ou un bouton dans le footer
 
-### Notifications et Ne pas deranger
-**Probleme :** Les switches changent le state local mais l'utilisateur doit cliquer "Sauvegarder les preferences" separement. 
+## Fichiers impactés
 
-**Solution :** Faire un auto-save quand un switch change (debounce de 500ms), avec confirmation toast immediate.
+| Fichier | Action |
+|---------|--------|
+| `supabase/functions/google-calendar-oauth/index.ts` | Allowlist pour redirect URI |
+| `supabase/functions/send-contact/index.ts` | Rate limit + honeypot |
+| `supabase/functions/create-checkout/index.ts` | Env vars pour price IDs |
+| `supabase/functions/gemini-chat/index.ts` | Inclure chatHistory dans les messages |
+| `supabase/functions/validate-purchase/index.ts` | Supprimer |
+| `src/pages/Settings.tsx` | Aligner validation mot de passe (8+ complexe) |
+| `src/constants/assets.ts` | **Nouveau** — Centraliser URLs assets |
+| `src/utils/dateUtils.ts` | **Nouveau** — Helper `toLocalDateKey()` |
+| `src/App.tsx` | Lazy-load pages lourdes |
+| Migration SQL | `encrypt_token` avec pgcrypto |
+| Pages utilisant `toISOString().split` | Remplacer par `toLocalDateKey` |
+| Pages utilisant `penguinMascot` | Importer depuis constants |
 
-**Fichiers :** `src/components/settings/ProfileEditForm.tsx`, `src/pages/Settings.tsx`
+## Priorité d'implémentation
 
----
+1. Sécurité (S1-S4) — critique
+2. Bugs fonctionnels (B1-B3) — bloquants en prod
+3. Code quality (C1-C3) — maintenabilité
+4. Fonctionnalités (F1-F4) — valeur ajoutée
 
-## 5. Section legale dans les Parametres
-
-**Situation actuelle :** Les pages legales existent (`/legal/privacy`, `/legal/terms`, `/legal/cookies`) mais ne sont pas accessibles depuis les Parametres. Le Footer existe mais il n'est pas visible dans l'app connectee. L'email de contact est `contact@deepflow.app` au lieu de `deepflow.ia@gmail.com`.
-
-**Solution :**
-- Ajouter un **4eme onglet** dans Settings : "A propos" avec une icone `Info`
-- Contenu de ce tab :
-  - **Mentions legales** : editeur, hebergeur, email de contact
-  - **Liens rapides** : Privacy, Terms, Cookies (vers les pages existantes)
-  - **FAQ** basique (5-6 questions/reponses les plus courantes dans un Accordion)
-  - **Nous contacter** : afficher deepflow.ia@gmail.com avec un bouton copier/mailto
-  - **Version de l'app** (badge)
-- Mettre a jour le Footer avec `deepflow.ia@gmail.com`
-- Mettre a jour les pages legales (Privacy, Terms, Cookies) avec la bonne adresse email
-
-**Fichiers :** `src/pages/Settings.tsx`, `src/components/layout/Footer.tsx`, `src/pages/legal/Privacy.tsx`, `src/pages/legal/Terms.tsx`, `src/pages/legal/Cookies.tsx`
-
----
-
-## Details Techniques
-
-### Fichiers a modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/Admin.tsx` | Ajouter gestion credits IA (table `ai_credits`) + tabs dans le dialog |
-| `src/assets/deepflow-logo.png` | **NOUVEAU** - Copie de image-5.png |
-| `public/images/auth-bg.jpg` | **NOUVEAU** - Copie de l'image oeil bleu |
-| `src/components/layout/Sidebar.tsx` | Nouveau logo avec gestion theme |
-| `src/components/layout/MobileHeader.tsx` | Nouveau logo avec gestion theme |
-| `src/pages/Login.tsx` | Nouveau logo + image de fond |
-| `src/pages/Register.tsx` | Nouveau logo + image de fond |
-| `src/pages/ForgotPassword.tsx` | Nouveau logo + image de fond |
-| `src/pages/ResetPassword.tsx` | Image de fond |
-| `src/components/settings/ProfileEditForm.tsx` | Fix photo zoomee |
-| `src/pages/Settings.tsx` | Fix theme provider, auto-save preferences, nouvel onglet "A propos" avec FAQ/Legal/Contact |
-| `src/components/layout/Footer.tsx` | Email mis a jour |
-| `src/pages/legal/Privacy.tsx` | Email mis a jour |
-| `src/pages/legal/Terms.tsx` | Email mis a jour |
-| `src/pages/legal/Cookies.tsx` | Email mis a jour |
-
-### Ordre d'implementation
-
-| Etape | Modification | Impact |
-|-------|-------------|--------|
-| 1 | Copier les 2 images (logo + fond) | Prerequis pour tout le reste |
-| 2 | Mettre a jour le logo (Sidebar, MobileHeader, pages auth) | Branding |
-| 3 | Ajouter image de fond aux pages auth | Visuel |
-| 4 | Fix credits admin (IA + jeu) | Fonctionnel |
-| 5 | Fix theme provider dans Settings | Fonctionnel |
-| 6 | Fix photo profil + auto-save preferences | UX |
-| 7 | Ajouter onglet "A propos" + mettre a jour emails | Legal |
-
-### Credits Admin - Detail technique
-
-Dans le dialog de credits (`Admin.tsx` lignes 843-879), ajouter un systeme a 2 types :
-
-```typescript
-// Nouveau state
-const [creditType, setCreditType] = useState<'game' | 'ai'>('game');
-
-// Nouvelle fonction pour credits IA
-const handleGiveAICredits = async () => {
-  if (!creditsUser || creditsAmount === 0) return;
-  
-  const { data: existing } = await supabase
-    .from("ai_credits")
-    .select("credits")
-    .eq("user_id", creditsUser.id)
-    .maybeSingle();
-  
-  const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
-  
-  if (existing) {
-    await supabase.from("ai_credits")
-      .update({ credits: newCredits })
-      .eq("user_id", creditsUser.id);
-  } else {
-    await supabase.from("ai_credits")
-      .insert({ user_id: creditsUser.id, credits: newCredits });
-  }
-  
-  await logAction("modify_ai_credits", ...);
-};
-```
-
-### Fix Theme - Detail technique
-
-Le probleme est que `App.tsx` utilise `import { ThemeProvider } from "next-themes"` mais `Settings.tsx` importe `useTheme` depuis `@/components/theme-provider` qui est un provider local jamais monte dans l'arbre de composants.
-
-**Solution :** Changer l'import dans Settings.tsx :
-```typescript
-// Avant
-import { useTheme } from "@/components/theme-provider";
-// Apres
-import { useTheme } from "next-themes";
-```
-
-### FAQ - Contenu
-
-Questions prevues pour la FAQ :
-1. Comment fonctionne DeepFlow ?
-2. Qu'est-ce que les credits IA ?
-3. Comment gagner des credits de jeu ?
-4. Mes donnees sont-elles securisees ?
-5. Comment contacter le support ?
-6. Puis-je utiliser DeepFlow hors ligne ?
