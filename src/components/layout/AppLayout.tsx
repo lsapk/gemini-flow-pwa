@@ -51,6 +51,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </AnimatePresence>
         </main>
       </div>
+      <KeyboardShortcutsModal />
     </div>
   );
 }
