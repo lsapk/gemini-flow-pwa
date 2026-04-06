@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays, startOfToday, parseISO } from "date-fns";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 type AnalyticsDataType = {
   // Types de données pour les graphiques
