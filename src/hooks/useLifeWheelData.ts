@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 interface LifeCategory {
   category: string;
