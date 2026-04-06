@@ -113,7 +113,7 @@ function App() {
                       </Route>
                       
                       {/* Redirects */}
-                      <Route path="/badges" element={<Navigate to="/gamification" replace />} />
+                      <Route path="/badges" element={<Navigate to="/dashboard" replace />} />
                       <Route path="/profile" element={<Navigate to="/ai-assistant" replace />} />
                       <Route path="/analysis" element={<Navigate to="/ai-assistant" replace />} />
                       

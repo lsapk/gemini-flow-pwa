@@ -86,7 +86,7 @@ export const useLifeWheelData = () => {
           supabase.from('habits').select('*').eq('user_id', user.id).eq('is_archived', false),
           supabase.from('goals').select('*').eq('user_id', user.id),
           supabase.from('habit_completions').select('habit_id').eq('user_id', user.id)
-            .gte('completed_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .gte('completed_date', toLocalDateKey(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))
         ]);
 
         const habits = habitsResult.data || [];

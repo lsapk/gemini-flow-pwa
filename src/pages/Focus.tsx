@@ -180,7 +180,7 @@ export default function Focus() {
       const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: manualTitle.trim(), duration: dur, started_at: start.toISOString(), completed_at: end.toISOString() });
       sound.playCreate();
       toast({ title: "Session ajoutée !", description: `Session de ${dur} minutes enregistrée.` });
-      setManualTitle(""); setManualDuration(""); setManualDate(new Date().toISOString().split('T')[0]); setManualTime("09:00");
+      setManualTitle(""); setManualDuration(""); setManualDate(toLocalDateKey()); setManualTime("09:00");
       loadSessionsToday(); loadSessionsHistory(); loadWeeklyData();
     } catch (error) { console.error(error); toast({ variant: "destructive", title: "Erreur" }); } finally { setIsAddingManual(false); }
   };

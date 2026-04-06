@@ -40,7 +40,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setTitle(task.title);
       setDescription(task.description || "");
       setPriority(task.priority);
-      setDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "");
+      setDueDate(task.due_date ? toLocalDateKey(new Date(task.due_date)) : "");
       fetchTaskGoalLink(task.id);
     }
     fetchGoals();

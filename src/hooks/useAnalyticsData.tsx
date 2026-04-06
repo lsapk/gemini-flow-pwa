@@ -199,10 +199,10 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       
       // Combine all activity data
       const allActivityData = [
-        ...(habitsActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(tasksActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] })),
-        ...(journalActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
+        ...(habitsActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
+        ...(tasksActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
+        ...(focusActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.created_at)) })),
+        ...(journalActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.created_at)) }))
       ];
       
       // Mapper les activités par jour
