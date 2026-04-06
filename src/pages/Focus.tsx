@@ -41,7 +41,7 @@ export default function Focus() {
   const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
   const [manualTitle, setManualTitle] = useState("");
   const [manualDuration, setManualDuration] = useState("");
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualDate, setManualDate] = useState(toLocalDateKey());
   const [manualTime, setManualTime] = useState("09:00");
   const [isAddingManual, setIsAddingManual] = useState(false);
   const [isPipActive, setIsPipActive] = useState(false);
