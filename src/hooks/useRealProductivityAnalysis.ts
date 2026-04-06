@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 interface ProductivityAnalysis {
   score: number;
@@ -71,7 +72,7 @@ export const useRealProductivityAnalysis = () => {
           supabase.from('goals').select('*').eq('user_id', user.id),
           supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30),
           supabase.from('focus_sessions').select('*').eq('user_id', user.id),
-          supabase.from('habit_completions').select('*').eq('user_id', user.id).gte('completed_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          supabase.from('habit_completions').select('*').eq('user_id', user.id).gte('completed_date', toLocalDateKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
         ]);
 
         const userData = {

@@ -26,21 +26,40 @@ export default function Register() {
   const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
+
+  // Anti-bot: honeypot + timing
+  const [honeypot, setHoneypot] = useState("");
+  const [loadTime] = useState(Date.now());
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "", displayName: "" },
   });
 
+  const isCoolingDown = Date.now() < cooldownUntil;
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Anti-bot checks
+    if (honeypot) return; // Honeypot filled = bot
+    if (Date.now() - loadTime < 3000) return; // Too fast = bot
+
+    if (isCoolingDown) return;
+
     setIsLoading(true);
     try {
       const { error } = await signUp(values.email, values.password);
-      if (error) { toast({ variant: "destructive", title: "Erreur", description: error.message }); return; }
+      if (error) {
+        toast({ variant: "destructive", title: "Erreur", description: error.message });
+        // Cooldown 30s after failure
+        setCooldownUntil(Date.now() + 30000);
+        return;
+      }
       toast({ title: "Inscription réussie !", description: "Vous pouvez maintenant vous connecter." });
       navigate("/login");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erreur", description: error?.message || "Une erreur s'est produite." });
+      setCooldownUntil(Date.now() + 30000);
     } finally { setIsLoading(false); }
   }
 
@@ -76,6 +95,20 @@ export default function Register() {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {/* Honeypot field — invisible to users, bots fill it */}
+                    <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+                      <label htmlFor="website">Website</label>
+                      <input
+                        id="website"
+                        name="website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                      />
+                    </div>
+
                     <FormField control={form.control} name="displayName" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-sky-100/80">Nom d'utilisateur</FormLabel>
@@ -105,8 +138,8 @@ export default function Register() {
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-medium shadow-lg shadow-sky-500/20 text-base" disabled={isLoading}>
-                      {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Inscription...</>) : (<><Zap className="mr-2 h-4 w-4" />Créer mon compte</>)}
+                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-medium shadow-lg shadow-sky-500/20 text-base" disabled={isLoading || isCoolingDown}>
+                      {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Inscription...</>) : isCoolingDown ? "Veuillez patienter..." : (<><Zap className="mr-2 h-4 w-4" />Créer mon compte</>)}
                     </Button>
                   </form>
                 </Form>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { toLocalDateKey } from "@/utils/dateUtils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,7 @@ export default function Focus() {
   const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
   const [manualTitle, setManualTitle] = useState("");
   const [manualDuration, setManualDuration] = useState("");
-  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualDate, setManualDate] = useState(toLocalDateKey());
   const [manualTime, setManualTime] = useState("09:00");
   const [isAddingManual, setIsAddingManual] = useState(false);
   const [isPipActive, setIsPipActive] = useState(false);
@@ -179,7 +180,7 @@ export default function Focus() {
       const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: manualTitle.trim(), duration: dur, started_at: start.toISOString(), completed_at: end.toISOString() });
       sound.playCreate();
       toast({ title: "Session ajoutée !", description: `Session de ${dur} minutes enregistrée.` });
-      setManualTitle(""); setManualDuration(""); setManualDate(new Date().toISOString().split('T')[0]); setManualTime("09:00");
+      setManualTitle(""); setManualDuration(""); setManualDate(toLocalDateKey()); setManualTime("09:00");
       loadSessionsToday(); loadSessionsHistory(); loadWeeklyData();
     } catch (error) { console.error(error); toast({ variant: "destructive", title: "Erreur" }); } finally { setIsAddingManual(false); }
   };

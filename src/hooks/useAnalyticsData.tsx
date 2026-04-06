@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays, startOfToday, parseISO } from "date-fns";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 type AnalyticsDataType = {
   // Types de données pour les graphiques
@@ -152,7 +153,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       const last7DaysDates = [...Array(7)].map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        return date.toISOString().split('T')[0];
+        return toLocalDateKey(date);
       }).reverse();
       
       // Compter toutes les activités par jour en utilisant des requêtes directes
@@ -198,10 +199,10 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       
       // Combine all activity data
       const allActivityData = [
-        ...(habitsActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(tasksActivityData || []).map(item => ({ date: new Date(item.updated_at).toISOString().split('T')[0] })),
-        ...(focusActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] })),
-        ...(journalActivityData || []).map(item => ({ date: new Date(item.created_at).toISOString().split('T')[0] }))
+        ...(habitsActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
+        ...(tasksActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
+        ...(focusActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.created_at)) })),
+        ...(journalActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.created_at)) }))
       ];
       
       // Mapper les activités par jour

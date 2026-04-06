@@ -25,7 +25,7 @@ export default function ResetPassword() {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get('access_token');
     const type = hashParams.get('type');
-    if (type === 'recovery' && accessToken) console.log('Password recovery session detected');
+    // Recovery session detected — no action needed, Supabase handles the token
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

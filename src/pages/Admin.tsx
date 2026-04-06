@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,8 @@ import {
   Shield, Users, Search, Ban, UserCheck, Trophy, Target,
   CheckSquare, Timer, Sparkles, RefreshCw, Eye, Crown,
   History, Download, UserPlus, Flame,
-  AlertTriangle, ToggleLeft, Send, FileText, Activity, Database
+  AlertTriangle, Send, FileText, Activity,
+  ShieldAlert, BookOpen, Star, ToggleLeft
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader,
@@ -54,13 +55,27 @@ interface UserStats {
   subscription_tier: string;
 }
 
+type UserFilter = "all" | "admins" | "banned" | "premium" | "new";
+
+const LOG_ICONS: Record<string, { icon: typeof Shield; color: string }> = {
+  ban_user: { icon: Ban, color: "text-red-500" },
+  unban_user: { icon: UserCheck, color: "text-emerald-500" },
+  modify_ai_credits: { icon: Sparkles, color: "text-violet-500" },
+  send_announcement: { icon: Send, color: "text-blue-500" },
+  purge_user_data: { icon: AlertTriangle, color: "text-orange-500" },
+  reset_penguin: { icon: RefreshCw, color: "text-amber-500" },
+  change_subscription: { icon: Crown, color: "text-amber-500" },
+  export_users_csv: { icon: Download, color: "text-emerald-500" },
+  mass_reset_daily_usage: { icon: ToggleLeft, color: "text-orange-500" },
+};
+
 export default function Admin() {
-  const { user, isAdmin: clientIsAdmin, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const { stats: platformStats, logs: adminLogs, isLoading: statsLoading, logAction, refetch } = useAdminStats();
 
   const [users, setUsers] = useState<UserData[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userFilter, setUserFilter] = useState<UserFilter>("all");
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -68,33 +83,21 @@ export default function Admin() {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [userToBan, setUserToBan] = useState<UserData | null>(null);
   const [banReason, setBanReason] = useState("");
-
-  // AI credits dialog
   const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
   const [creditsUser, setCreditsUser] = useState<UserData | null>(null);
   const [creditsAmount, setCreditsAmount] = useState<number>(0);
-
-  // Subscription dialog
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [subUser, setSubUser] = useState<UserData | null>(null);
   const [subTier, setSubTier] = useState<string>("basic");
-
-  // Reset penguin dialog
   const [resetPenguinOpen, setResetPenguinOpen] = useState(false);
   const [resetPenguinUser, setResetPenguinUser] = useState<UserData | null>(null);
-
-  // Announcement dialog
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
 
-  // Mass action
-  const [massActionOpen, setMassActionOpen] = useState(false);
-
   const [serverVerifiedAdmin, setServerVerifiedAdmin] = useState<boolean | null>(null);
   const [verifyingAdmin, setVerifyingAdmin] = useState(true);
 
-  // Server-side admin verification — never trust client state alone
   useEffect(() => {
     if (isLoading || !user) return;
     const verifyAdmin = async () => {
@@ -105,9 +108,7 @@ export default function Admin() {
       } catch (err) {
         console.error('Admin verification failed:', err);
         setServerVerifiedAdmin(false);
-      } finally {
-        setVerifyingAdmin(false);
-      }
+      } finally { setVerifyingAdmin(false); }
     };
     verifyAdmin();
   }, [isLoading, user]);
@@ -118,14 +119,41 @@ export default function Admin() {
     if (isAdmin && !verifyingAdmin) fetchUsers();
   }, [isAdmin, verifyingAdmin]);
 
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
-    } else {
+  // Filter users based on search + filter pills
+  const filteredUsers = useMemo(() => {
+    let result = users;
+    
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      setFilteredUsers(users.filter(u => u.email.toLowerCase().includes(query) || (u.display_name && u.display_name.toLowerCase().includes(query))));
+      result = result.filter(u => u.email.toLowerCase().includes(query) || (u.display_name && u.display_name.toLowerCase().includes(query)));
     }
-  }, [searchQuery, users]);
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    switch (userFilter) {
+      case "admins": result = result.filter(u => u.is_admin); break;
+      case "banned": result = result.filter(u => u.is_banned); break;
+      case "new": result = result.filter(u => new Date(u.created_at) > oneWeekAgo); break;
+      default: break;
+    }
+
+    return result;
+  }, [users, searchQuery, userFilter]);
+
+  // Security stats
+  const securityStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    return {
+      createdToday: users.filter(u => new Date(u.created_at) >= today).length,
+      createdThisWeek: users.filter(u => new Date(u.created_at) >= oneWeekAgo).length,
+      bannedUsers: users.filter(u => u.is_banned),
+    };
+  }, [users]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -141,7 +169,6 @@ export default function Admin() {
         created_at: p.created_at, is_banned: bannedIds.has(p.id), is_admin: adminIds.has(p.id),
       }));
       setUsers(usersWithStatus);
-      setFilteredUsers(usersWithStatus);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Erreur lors du chargement des utilisateurs");
@@ -161,27 +188,18 @@ export default function Admin() {
         supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", userId),
         supabase.from("subscribers").select("subscription_tier").eq("user_id", userId).maybeSingle(),
       ]);
-
-      const tasks = tasksRes.status === "fulfilled" ? tasksRes.value.data?.length || 0 : 0;
-      const habits = habitsRes.status === "fulfilled" ? habitsRes.value.data?.length || 0 : 0;
-      const goals = goalsRes.status === "fulfilled" ? goalsRes.value.data?.length || 0 : 0;
-      const focusSessions = focusRes.status === "fulfilled" ? focusRes.value.data || [] : [];
-      const penguin = penguinRes.status === "fulfilled" ? penguinRes.value.data : null;
-      const aiCredits = aiCreditsRes.status === "fulfilled" ? aiCreditsRes.value.data : null;
-      const journalCount = journalRes.status === "fulfilled" ? journalRes.value.count || 0 : 0;
-      const sub = subRes.status === "fulfilled" ? subRes.value.data : null;
-      const totalMinutes = focusSessions.reduce((acc: number, s: { duration: number }) => acc + (s.duration || 0), 0);
-
       setUserStats({
-        tasks_completed: tasks, habits_count: habits, goals_count: goals,
-        focus_minutes: totalMinutes,
-        penguin_stage: penguin?.stage || 'egg',
-        shrimp_total: penguin?.shrimp_total || 0,
-        salmon_total: penguin?.salmon_total || 0,
-        golden_fish_total: penguin?.golden_fish_total || 0,
-        ai_credits: aiCredits?.credits || 0,
-        journal_count: journalCount,
-        subscription_tier: sub?.subscription_tier || 'basic',
+        tasks_completed: tasksRes.status === "fulfilled" ? tasksRes.value.data?.length || 0 : 0,
+        habits_count: habitsRes.status === "fulfilled" ? habitsRes.value.data?.length || 0 : 0,
+        goals_count: goalsRes.status === "fulfilled" ? goalsRes.value.data?.length || 0 : 0,
+        focus_minutes: (focusRes.status === "fulfilled" ? focusRes.value.data || [] : []).reduce((acc: number, s: { duration: number }) => acc + (s.duration || 0), 0),
+        penguin_stage: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.stage || 'egg',
+        shrimp_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.shrimp_total || 0,
+        salmon_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.salmon_total || 0,
+        golden_fish_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.golden_fish_total || 0,
+        ai_credits: (aiCreditsRes.status === "fulfilled" ? aiCreditsRes.value.data : null)?.credits || 0,
+        journal_count: journalRes.status === "fulfilled" ? journalRes.value.count || 0 : 0,
+        subscription_tier: (subRes.status === "fulfilled" ? subRes.value.data : null)?.subscription_tier || 'basic',
       });
     } catch (error) {
       console.error("Error fetching user stats:", error);
@@ -208,10 +226,9 @@ export default function Admin() {
       if (error) throw error;
       await logAction("unban_user", userData.id, userData.email);
       toast.success(`${userData.email} a été débanni`); fetchUsers();
-    } catch (error) { console.error("Error unbanning user:", error); toast.error("Erreur lors du débannissement"); }
+    } catch (error) { toast.error("Erreur lors du débannissement"); }
   };
 
-  // Give/remove AI credits
   const handleGiveCredits = async () => {
     if (!creditsUser || creditsAmount === 0) return;
     try {
@@ -227,26 +244,22 @@ export default function Admin() {
       await logAction("modify_ai_credits", creditsUser.id, creditsUser.email, { amount: creditsAmount, new_total: newCredits });
       toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits IA pour ${creditsUser.email}`);
       setCreditsDialogOpen(false); setCreditsUser(null); setCreditsAmount(0);
-    } catch (error) { console.error("Error modifying credits:", error); toast.error("Erreur lors de la modification"); }
+    } catch (error) { toast.error("Erreur lors de la modification"); }
   };
 
-  // Change subscription tier
   const handleChangeSubscription = async () => {
     if (!subUser) return;
     try {
       const { data: existing } = await supabase.from("subscribers").select("id").eq("user_id", subUser.id).maybeSingle();
       if (existing) {
         await supabase.from("subscribers").update({
-          subscription_tier: subTier,
-          subscribed: subTier !== "basic",
+          subscription_tier: subTier, subscribed: subTier !== "basic",
           subscription_end: subTier !== "basic" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
           updated_at: new Date().toISOString(),
         }).eq("user_id", subUser.id);
       } else {
         await supabase.from("subscribers").insert([{
-          user_id: subUser.id,
-          subscription_tier: subTier,
-          subscribed: subTier !== "basic",
+          user_id: subUser.id, subscription_tier: subTier, subscribed: subTier !== "basic",
           subscription_end: subTier !== "basic" ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
         }] as never[]);
       }
@@ -256,15 +269,13 @@ export default function Admin() {
     } catch (error) { toast.error("Erreur"); }
   };
 
-  // Reset penguin
   const handleResetPenguin = async () => {
     if (!resetPenguinUser) return;
     try {
       await supabase.from("penguin_profiles").update({
         stage: "egg", shrimp_total: 0, salmon_total: 0, golden_fish_total: 0,
         shrimp_today: 0, iceberg_size: 1, climate_state: "idle",
-        has_radio: false, has_library: false, has_lounge_chair: false,
-        equipped_accessories: [],
+        has_radio: false, has_library: false, has_lounge_chair: false, equipped_accessories: [],
       }).eq("user_id", resetPenguinUser.id);
       await supabase.from("penguin_accessories").delete().eq("user_id", resetPenguinUser.id);
       await logAction("reset_penguin", resetPenguinUser.id, resetPenguinUser.email);
@@ -273,7 +284,6 @@ export default function Admin() {
     } catch (error) { toast.error("Erreur"); }
   };
 
-  // Purge user data
   const handlePurgeUserData = async (userData: UserData) => {
     if (!confirm(`Purger TOUTES les données de ${userData.email} ? Cette action est irréversible.`)) return;
     try {
@@ -286,7 +296,6 @@ export default function Admin() {
     } catch (error) { toast.error("Erreur lors de la purge"); }
   };
 
-  // Send announcement
   const handleSendAnnouncement = async () => {
     if (!announcementTitle.trim() || !announcementContent.trim() || !user) return;
     try {
@@ -300,14 +309,12 @@ export default function Admin() {
     } catch (error) { toast.error("Erreur"); }
   };
 
-  // Mass reset daily usage
   const handleMassResetUsage = async () => {
     if (!confirm("Réinitialiser les compteurs quotidiens de tous les utilisateurs ?")) return;
     try {
       await supabase.from("daily_usage").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       await logAction("mass_reset_daily_usage");
       toast.success("Compteurs quotidiens réinitialisés");
-      setMassActionOpen(false);
     } catch (error) { toast.error("Erreur"); }
   };
 
@@ -334,19 +341,50 @@ export default function Admin() {
 
   const STAGE_LABELS: Record<string, string> = { egg: '🥚 Œuf', chick: '🐣 Poussin', explorer: '🐧 Explorateur', emperor: '👑 Empereur' };
 
+  const getLogIcon = (action: string) => {
+    const config = LOG_ICONS[action];
+    if (config) {
+      const Icon = config.icon;
+      return <Icon className={`h-4 w-4 ${config.color}`} />;
+    }
+    return <Shield className="h-4 w-4 text-primary" />;
+  };
+
+  const getLogBgColor = (action: string) => {
+    const colorMap: Record<string, string> = {
+      ban_user: "bg-red-500/10",
+      unban_user: "bg-emerald-500/10",
+      modify_ai_credits: "bg-violet-500/10",
+      send_announcement: "bg-blue-500/10",
+      purge_user_data: "bg-orange-500/10",
+      reset_penguin: "bg-amber-500/10",
+      change_subscription: "bg-amber-500/10",
+    };
+    return colorMap[action] || "bg-primary/10";
+  };
+
+  const filterPills: { key: UserFilter; label: string; count?: number }[] = [
+    { key: "all", label: "Tous", count: users.length },
+    { key: "admins", label: "Admins", count: users.filter(u => u.is_admin).length },
+    { key: "banned", label: "Bannis", count: users.filter(u => u.is_banned).length },
+    { key: "new", label: "Nouveaux (7j)", count: platformStats.newUsersThisWeek },
+  ];
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Header with date + admin name */}
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20">
           <Shield className="h-7 w-7 text-white" />
         </div>
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold font-heading">Administration</h1>
-          <p className="text-muted-foreground text-sm">Gestion complète de la plateforme DeepFlow</p>
+          <p className="text-muted-foreground text-sm">
+            {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} • {user?.email}
+          </p>
         </div>
         <img src={penguinMascot} alt="" className="h-12 w-12 object-contain opacity-60 hidden md:block" />
-        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold">Admin</Badge>
+        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold">Admin ✓</Badge>
       </div>
 
       {/* Platform Stats */}
@@ -381,7 +419,7 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Secondary stats */}
+      {/* Secondary stats — replaced "Credits Admin ∞" with Journal + Subscribers */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
@@ -391,19 +429,19 @@ export default function Admin() {
         </Card>
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10"><Target className="h-4 w-4 text-primary" /></div>
-            <div><div className="text-lg font-bold">{statsLoading ? '...' : platformStats.totalGoals}</div><p className="text-xs text-muted-foreground">Objectifs</p></div>
+            <div className="p-2 rounded-lg bg-primary/10"><BookOpen className="h-4 w-4 text-primary" /></div>
+            <div><div className="text-lg font-bold">{statsLoading ? '...' : platformStats.totalJournalEntries}</div><p className="text-xs text-muted-foreground">Entrées journal</p></div>
           </CardContent>
         </Card>
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-yellow-500/10"><Trophy className="h-4 w-4 text-yellow-500" /></div>
-            <div><div className="text-lg font-bold">∞</div><p className="text-xs text-muted-foreground">Crédits Admin</p></div>
+            <div className="p-2 rounded-lg bg-amber-500/10"><Star className="h-4 w-4 text-amber-500" /></div>
+            <div><div className="text-lg font-bold">{statsLoading ? '...' : platformStats.totalSubscribers}</div><p className="text-xs text-muted-foreground">Abonnés Premium</p></div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Admin Actions */}
+      {/* Quick Actions — merged mass action inline */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4" /> Actions Rapides</CardTitle>
@@ -411,32 +449,31 @@ export default function Admin() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => setAnnouncementOpen(true)}>
-              <Send className="h-4 w-4 text-blue-500" />
-              <span className="text-[10px]">Annonce</span>
+              <Send className="h-4 w-4 text-blue-500" /><span className="text-[10px]">Annonce</span>
             </Button>
             <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={exportUsersCSV}>
-              <Download className="h-4 w-4 text-emerald-500" />
-              <span className="text-[10px]">Export CSV</span>
+              <Download className="h-4 w-4 text-emerald-500" /><span className="text-[10px]">Export CSV</span>
             </Button>
-            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => setMassActionOpen(true)}>
-              <ToggleLeft className="h-4 w-4 text-orange-500" />
-              <span className="text-[10px]">Actions Masse</span>
+            <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={handleMassResetUsage}>
+              <ToggleLeft className="h-4 w-4 text-orange-500" /><span className="text-[10px]">Reset compteurs</span>
             </Button>
             <Button variant="outline" size="sm" className="h-auto py-3 flex-col gap-1" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 text-purple-500" />
-              <span className="text-[10px]">Actualiser</span>
+              <RefreshCw className="h-4 w-4 text-purple-500" /><span className="text-[10px]">Actualiser</span>
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 h-12">
+        <TabsList className="grid w-full grid-cols-3 h-12">
           <TabsTrigger value="users" className="flex items-center gap-2 text-sm">
             <Users className="h-4 w-4" /><span className="hidden sm:inline">Utilisateurs</span>
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-2 text-sm">
             <History className="h-4 w-4" /><span className="hidden sm:inline">Historique</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2 text-sm">
+            <ShieldAlert className="h-4 w-4" /><span className="hidden sm:inline">Sécurité</span>
           </TabsTrigger>
         </TabsList>
 
@@ -456,6 +493,21 @@ export default function Admin() {
                   </div>
                   <Button variant="outline" size="icon" onClick={fetchUsers}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
+              </div>
+              {/* Filter pills */}
+              <div className="flex gap-2 flex-wrap mt-3">
+                {filterPills.map(pill => (
+                  <Button
+                    key={pill.key}
+                    variant={userFilter === pill.key ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs rounded-full gap-1.5"
+                    onClick={() => setUserFilter(pill.key)}
+                  >
+                    {pill.label}
+                    {pill.count !== undefined && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[18px] rounded-full">{pill.count}</Badge>}
+                  </Button>
+                ))}
               </div>
             </CardHeader>
             <CardContent>
@@ -501,7 +553,7 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Logs Tab */}
+        {/* Logs Tab — with colored icons */}
         <TabsContent value="logs">
           <Card>
             <CardHeader>
@@ -520,11 +572,13 @@ export default function Admin() {
                     <div className="text-center py-8 text-muted-foreground">Aucune action enregistrée</div>
                   ) : (
                     adminLogs.map(log => (
-                      <div key={log.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/20 border border-border/30">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><Shield className="h-4 w-4 text-primary" /></div>
+                      <div key={log.id} className={`flex items-start gap-3 p-3 rounded-xl border border-border/30 ${getLogBgColor(log.action)}`}>
+                        <div className="h-8 w-8 rounded-lg bg-background/80 flex items-center justify-center flex-shrink-0">
+                          {getLogIcon(log.action)}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">{log.action}</span>
+                            <span className="font-medium text-sm">{log.action.replace(/_/g, ' ')}</span>
                             {log.target_user_email && <Badge variant="outline" className="text-xs">{log.target_user_email}</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground">Par {log.admin_email} • {format(new Date(log.created_at), "d MMM yyyy à HH:mm", { locale: fr })}</p>
@@ -537,6 +591,70 @@ export default function Admin() {
               </ScrollArea>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Card className="border-blue-500/20">
+                <CardContent className="p-4 text-center">
+                  <UserPlus className="h-6 w-6 mx-auto mb-2 text-blue-500" />
+                  <div className="text-2xl font-bold">{securityStats.createdToday}</div>
+                  <p className="text-xs text-muted-foreground">Comptes créés aujourd'hui</p>
+                </CardContent>
+              </Card>
+              <Card className="border-emerald-500/20">
+                <CardContent className="p-4 text-center">
+                  <Users className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
+                  <div className="text-2xl font-bold">{securityStats.createdThisWeek}</div>
+                  <p className="text-xs text-muted-foreground">Comptes créés cette semaine</p>
+                </CardContent>
+              </Card>
+              <Card className="border-red-500/20">
+                <CardContent className="p-4 text-center">
+                  <Ban className="h-6 w-6 mx-auto mb-2 text-red-500" />
+                  <div className="text-2xl font-bold">{securityStats.bannedUsers.length}</div>
+                  <p className="text-xs text-muted-foreground">Utilisateurs bannis</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {securityStats.bannedUsers.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2"><Ban className="h-4 w-4 text-red-500" /> Utilisateurs bannis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {securityStats.bannedUsers.map(u => (
+                      <div key={u.id} className="flex items-center justify-between p-3 rounded-xl bg-red-500/5 border border-red-500/20">
+                        <div>
+                          <p className="text-sm font-medium">{u.email}</p>
+                          <p className="text-xs text-muted-foreground">{u.display_name || "Sans nom"} • inscrit le {format(new Date(u.created_at), "d MMM yyyy", { locale: fr })}</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => handleUnbanUser(u)} className="text-emerald-600">
+                          <UserCheck className="h-4 w-4 mr-1" />Débannir
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {securityStats.createdToday > 10 && (
+              <Card className="border-orange-500/30 bg-orange-500/5">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <AlertTriangle className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Anomalie détectée</p>
+                    <p className="text-xs text-muted-foreground">{securityStats.createdToday} comptes créés aujourd'hui — surveillez les inscriptions suspectes.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -661,13 +779,10 @@ export default function Admin() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 py-4">
             <Button variant={subTier === "basic" ? "default" : "outline"} onClick={() => setSubTier("basic")} className="h-auto py-4 flex-col gap-1">
-              <span className="font-bold">Basic</span>
-              <span className="text-xs text-muted-foreground">Gratuit</span>
+              <span className="font-bold">Basic</span><span className="text-xs text-muted-foreground">Gratuit</span>
             </Button>
             <Button variant={subTier === "premium" ? "default" : "outline"} onClick={() => setSubTier("premium")} className="h-auto py-4 flex-col gap-1">
-              <Crown className="h-5 w-5 text-amber-500" />
-              <span className="font-bold">Premium</span>
-              <span className="text-xs text-muted-foreground">Illimité</span>
+              <Crown className="h-5 w-5 text-amber-500" /><span className="font-bold">Premium</span><span className="text-xs text-muted-foreground">Illimité</span>
             </Button>
           </div>
           <DialogFooter>
@@ -682,7 +797,7 @@ export default function Admin() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Réinitialiser le pingouin ?</AlertDialogTitle>
-            <AlertDialogDescription>Le pingouin de {resetPenguinUser?.email} sera remis à zéro (œuf, 0 nourriture, 0 accessoires).</AlertDialogDescription>
+            <AlertDialogDescription>Le pingouin de {resetPenguinUser?.email} sera remis à zéro.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
@@ -706,25 +821,6 @@ export default function Admin() {
             <Button variant="outline" onClick={() => setAnnouncementOpen(false)}>Annuler</Button>
             <Button onClick={handleSendAnnouncement} disabled={!announcementTitle.trim() || !announcementContent.trim()}>Publier</Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Mass Action Dialog */}
-      <Dialog open={massActionOpen} onOpenChange={setMassActionOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Database className="h-5 w-5 text-orange-500" />Actions de Masse</DialogTitle>
-            <DialogDescription>Actions appliquées à tous les utilisateurs</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <Button variant="outline" className="w-full justify-start gap-2 h-12" onClick={handleMassResetUsage}>
-              <ToggleLeft className="h-4 w-4 text-orange-500" />
-              <div className="text-left">
-                <p className="text-sm font-medium">Réinitialiser compteurs quotidiens</p>
-                <p className="text-xs text-muted-foreground">Remet à zéro les limites IA de tous les utilisateurs</p>
-              </div>
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
