@@ -153,7 +153,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       const last7DaysDates = [...Array(7)].map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - i);
-        return date.toISOString().split('T')[0];
+        return toLocalDateKey(date);
       }).reverse();
       
       // Compter toutes les activités par jour en utilisant des requêtes directes
