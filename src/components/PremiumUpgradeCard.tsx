@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Sparkles, Zap, Brain, Trophy, Lock, CreditCard } from "lucide-react";
+import { Check, Crown, Sparkles, Zap, Brain, Lock, CreditCard } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 
 interface PremiumUpgradeCardProps {
@@ -42,7 +42,7 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {["Chat IA illimité", "Analyses illimitées", "Profil IA personnalisé", "Gamification complète"].map(f => (
+            {["Chat IA illimité", "Analyses illimitées", "Profil IA personnalisé", "Rapports IA mensuels"].map(f => (
               <div key={f} className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-success" />
                 <span>{f}</span>
@@ -76,7 +76,6 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Current usage */}
         <div className="p-4 rounded-lg bg-muted/50">
           <h4 className="font-medium mb-2">Utilisation aujourd'hui</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -95,7 +94,6 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
           </div>
         </div>
 
-        {/* Features */}
         <div className="space-y-4">
           <h4 className="font-medium">Ce que vous obtenez avec Premium:</h4>
           <div className="grid gap-3">
@@ -103,7 +101,7 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
               { icon: Zap, title: "Chat IA illimité", sub: "Au lieu de 5/jour" },
               { icon: Brain, title: "Analyses illimitées", sub: "Au lieu de 1/jour" },
               { icon: Sparkles, title: "Profil IA personnalisé", sub: "Analyse psychologique complète" },
-              { icon: Trophy, title: "Gamification complète", sub: "Quêtes, achievements et récompenses" },
+              { icon: Crown, title: "Rapports IA mensuels", sub: "Résumés et insights avancés" },
             ].map(f => (
               <div key={f.title} className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-primary/10">
@@ -118,22 +116,12 @@ export const PremiumUpgradeCard: React.FC<PremiumUpgradeCardProps> = ({ onUpgrad
           </div>
         </div>
 
-        {/* Pricing */}
         <div className="grid grid-cols-2 gap-4">
-          <Button
-            onClick={() => handleUpgrade("premium_monthly")}
-            disabled={isLoading}
-            className="flex flex-col h-auto py-4"
-          >
+          <Button onClick={() => handleUpgrade("premium_monthly")} disabled={isLoading} className="flex flex-col h-auto py-4">
             <span className="text-lg font-bold">4,99€</span>
             <span className="text-xs opacity-80">/mois</span>
           </Button>
-          <Button
-            onClick={() => handleUpgrade("premium_yearly")}
-            disabled={isLoading}
-            variant="default"
-            className="flex flex-col h-auto py-4 relative"
-          >
+          <Button onClick={() => handleUpgrade("premium_yearly")} disabled={isLoading} variant="default" className="flex flex-col h-auto py-4 relative">
             <Badge className="absolute -top-2 -right-2 bg-success">-17%</Badge>
             <span className="text-lg font-bold">49,99€</span>
             <span className="text-xs opacity-80">/an</span>
@@ -154,11 +142,10 @@ export const FeatureLockedOverlay: React.FC<{
 }> = ({ feature, children }) => {
   const { canUseFeature, isPremium } = useSubscription();
 
-  const featureMap: Record<string, "chat" | "analysis" | "ai_profile" | "gamification"> = {
+  const featureMap: Record<string, "chat" | "analysis" | "ai_profile"> = {
     chat: "chat",
     analysis: "analysis",
     ai_profile: "ai_profile",
-    gamification: "gamification",
   };
 
   const mappedFeature = featureMap[feature];
@@ -173,9 +160,7 @@ export const FeatureLockedOverlay: React.FC<{
         <div className="text-center p-6">
           <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="font-semibold mb-2">
-            {feature === "ai_profile" ? "Profil IA Premium" :
-             feature === "gamification" ? "Gamification Premium" :
-             "Limite quotidienne atteinte"}
+            {feature === "ai_profile" ? "Profil IA Premium" : "Limite quotidienne atteinte"}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
             {isPremium

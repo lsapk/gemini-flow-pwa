@@ -35,7 +35,7 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-bold mb-4">2. Description du service</h2>
               <p className="text-muted-foreground leading-relaxed">
-                DeepFlow est une application de productivité augmentée par l'intelligence artificielle. Elle offre des fonctionnalités de gestion de tâches, suivi d'habitudes, sessions de focus, journaling et gamification pour améliorer votre productivité quotidienne.
+                DeepFlow est une application de productivité augmentée par l'intelligence artificielle. Elle offre des fonctionnalités de gestion de tâches, suivi d'habitudes, sessions de focus, journaling et insights IA pour améliorer votre productivité quotidienne.
               </p>
             </section>
 

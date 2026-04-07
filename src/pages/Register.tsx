@@ -11,8 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
-
-import { penguinMascot } from "@/constants/assets";
+import deepflowLogo from "@/assets/deepflow-logo.png";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255),
@@ -40,10 +39,8 @@ export default function Register() {
   const isCoolingDown = Date.now() < cooldownUntil;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Anti-bot checks
-    if (honeypot) return; // Honeypot filled = bot
-    if (Date.now() - loadTime < 3000) return; // Too fast = bot
-
+    if (honeypot) return;
+    if (Date.now() - loadTime < 3000) return;
     if (isCoolingDown) return;
 
     setIsLoading(true);
@@ -51,7 +48,6 @@ export default function Register() {
       const { error } = await signUp(values.email, values.password);
       if (error) {
         toast({ variant: "destructive", title: "Erreur", description: error.message });
-        // Cooldown 30s after failure
         setCooldownUntil(Date.now() + 30000);
         return;
       }
@@ -74,12 +70,10 @@ export default function Register() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="text-center mb-8">
             <motion.div className="flex justify-center mb-5" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
-              <motion.img 
-                src={penguinMascot} 
-                alt="DeepFlow Penguin" 
-                className="h-24 w-24 sm:h-28 sm:w-28 object-contain drop-shadow-2xl"
-                animate={{ y: [0, -8, 0], rotate: [0, -3, 3, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              <img 
+                src={deepflowLogo} 
+                alt="DeepFlow Logo" 
+                className="h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-2xl rounded-2xl"
               />
             </motion.div>
             <motion.h1 className="text-3xl sm:text-4xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
@@ -95,18 +89,10 @@ export default function Register() {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    {/* Honeypot field — invisible to users, bots fill it */}
+                    {/* Honeypot field */}
                     <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
                       <label htmlFor="website">Website</label>
-                      <input
-                        id="website"
-                        name="website"
-                        type="text"
-                        tabIndex={-1}
-                        autoComplete="off"
-                        value={honeypot}
-                        onChange={(e) => setHoneypot(e.target.value)}
-                      />
+                      <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
                     </div>
 
                     <FormField control={form.control} name="displayName" render={({ field }) => (

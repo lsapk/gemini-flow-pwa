@@ -12,7 +12,6 @@ import {
   Brain,
   LogOut,
   Calendar,
-  Gamepad2,
   Shield
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -53,7 +52,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
 
   return (
     <div className={cn("w-64 h-screen bg-card border-r border-border/40 sticky top-0 flex flex-col", className)}>
-      {/* Logo */}
       <div className="p-4 border-b border-border/30">
         <div className="flex items-center gap-3">
           <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-xl object-contain bg-muted/50 p-1" />
@@ -61,7 +59,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
         </div>
       </div>
       
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-hidden">
         {allNavItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -79,7 +76,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
               )}
               onClick={() => handleItemClick(item.path)}
             >
-              {/* Active indicator bar */}
               {isActive && (
                 <div className="absolute left-0 w-[3px] h-6 rounded-r-full bg-primary" />
               )}
@@ -94,7 +90,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
         })}
       </nav>
       
-      {/* Logout */}
       <div className="p-3 border-t border-border/30">
         <button
           className="w-full flex items-center gap-3 h-11 px-4 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors duration-200 active:scale-[0.98]"

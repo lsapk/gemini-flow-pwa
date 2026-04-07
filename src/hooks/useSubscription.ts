@@ -11,7 +11,6 @@ export interface SubscriptionLimits {
   dailyAIChats: number;
   dailyAnalyses: number;
   hasAIProfile: boolean;
-  hasFullGamification: boolean;
   isUnlimited: boolean;
 }
 
@@ -20,21 +19,18 @@ const TIER_LIMITS: Record<SubscriptionTier, SubscriptionLimits> = {
     dailyAIChats: 5,
     dailyAnalyses: 1,
     hasAIProfile: false,
-    hasFullGamification: false,
     isUnlimited: false,
   },
   premium: {
     dailyAIChats: Infinity,
     dailyAnalyses: Infinity,
     hasAIProfile: true,
-    hasFullGamification: true,
     isUnlimited: true,
   },
   admin: {
     dailyAIChats: Infinity,
     dailyAnalyses: Infinity,
     hasAIProfile: true,
-    hasFullGamification: true,
     isUnlimited: true,
   },
 };
@@ -119,13 +115,12 @@ export const useSubscription = () => {
     queryClient.invalidateQueries({ queryKey: ["daily-usage", user?.id] });
   };
 
-  const canUseFeature = (type: "chat" | "analysis" | "ai_profile" | "gamification"): boolean => {
+  const canUseFeature = (type: "chat" | "analysis" | "ai_profile"): boolean => {
     if (limits.isUnlimited) return true;
     switch (type) {
       case "chat": return (dailyUsage?.ai_chat_count || 0) < limits.dailyAIChats;
       case "analysis": return (dailyUsage?.ai_analysis_count || 0) < limits.dailyAnalyses;
       case "ai_profile": return limits.hasAIProfile;
-      case "gamification": return limits.hasFullGamification;
       default: return false;
     }
   };
@@ -139,11 +134,9 @@ export const useSubscription = () => {
     return Math.max(0, limit - used);
   };
 
-  // Stripe checkout
   const handleStripeCheckout = async (plan: "premium_monthly" | "premium_yearly") => {
     try {
-      const planType = plan === "premium_yearly" ? "premium" : "premium";
-      const { url, error } = await createCheckoutSession(planType);
+      const { url, error } = await createCheckoutSession(plan);
       if (error) throw new Error(error);
       if (url) window.location.href = url;
     } catch (error) {
@@ -155,7 +148,6 @@ export const useSubscription = () => {
     }
   };
 
-  // Stripe customer portal
   const handleManageSubscription = async () => {
     try {
       const { url, error } = await createCustomerPortal();

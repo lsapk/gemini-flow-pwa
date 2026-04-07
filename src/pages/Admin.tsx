@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import {
-  Shield, Users, Search, Ban, UserCheck, Trophy, Target,
+  Shield, Users, Search, Ban, UserCheck, Target,
   CheckSquare, Timer, Sparkles, RefreshCw, Eye, Crown,
   History, Download, UserPlus, Flame,
   AlertTriangle, Send, FileText, Activity,
@@ -30,8 +30,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { penguinMascot } from "@/constants/assets";
-
 interface UserData {
   id: string;
   email: string;
@@ -46,16 +44,12 @@ interface UserStats {
   habits_count: number;
   goals_count: number;
   focus_minutes: number;
-  penguin_stage: string;
-  shrimp_total: number;
-  salmon_total: number;
-  golden_fish_total: number;
   ai_credits: number;
   journal_count: number;
   subscription_tier: string;
 }
 
-type UserFilter = "all" | "admins" | "banned" | "premium" | "new";
+type UserFilter = "all" | "admins" | "banned" | "new";
 
 const LOG_ICONS: Record<string, { icon: typeof Shield; color: string }> = {
   ban_user: { icon: Ban, color: "text-red-500" },
@@ -63,7 +57,6 @@ const LOG_ICONS: Record<string, { icon: typeof Shield; color: string }> = {
   modify_ai_credits: { icon: Sparkles, color: "text-violet-500" },
   send_announcement: { icon: Send, color: "text-blue-500" },
   purge_user_data: { icon: AlertTriangle, color: "text-orange-500" },
-  reset_penguin: { icon: RefreshCw, color: "text-amber-500" },
   change_subscription: { icon: Crown, color: "text-amber-500" },
   export_users_csv: { icon: Download, color: "text-emerald-500" },
   mass_reset_daily_usage: { icon: ToggleLeft, color: "text-orange-500" },
@@ -89,8 +82,6 @@ export default function Admin() {
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [subUser, setSubUser] = useState<UserData | null>(null);
   const [subTier, setSubTier] = useState<string>("basic");
-  const [resetPenguinOpen, setResetPenguinOpen] = useState(false);
-  const [resetPenguinUser, setResetPenguinUser] = useState<UserData | null>(null);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
@@ -119,35 +110,26 @@ export default function Admin() {
     if (isAdmin && !verifyingAdmin) fetchUsers();
   }, [isAdmin, verifyingAdmin]);
 
-  // Filter users based on search + filter pills
   const filteredUsers = useMemo(() => {
     let result = users;
-    
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(u => u.email.toLowerCase().includes(query) || (u.display_name && u.display_name.toLowerCase().includes(query)));
     }
-
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
     switch (userFilter) {
       case "admins": result = result.filter(u => u.is_admin); break;
       case "banned": result = result.filter(u => u.is_banned); break;
       case "new": result = result.filter(u => new Date(u.created_at) > oneWeekAgo); break;
       default: break;
     }
-
     return result;
   }, [users, searchQuery, userFilter]);
 
-  // Security stats
   const securityStats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     return {
       createdToday: users.filter(u => new Date(u.created_at) >= today).length,
       createdThisWeek: users.filter(u => new Date(u.created_at) >= oneWeekAgo).length,
@@ -158,17 +140,16 @@ export default function Admin() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data: profiles, error: profilesError } = await supabase.from("user_profiles").select("id, email, display_name, created_at").order("created_at", { ascending: false });
-      if (profilesError) throw profilesError;
+      const { data: profiles, error } = await supabase.from("user_profiles").select("id, email, display_name, created_at").order("created_at", { ascending: false });
+      if (error) throw error;
       const { data: bannedUsers } = await supabase.from("banned_users").select("user_id");
       const { data: adminUsers } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
       const bannedIds = new Set(bannedUsers?.map(b => b.user_id) || []);
       const adminIds = new Set(adminUsers?.map(a => a.user_id) || []);
-      const usersWithStatus: UserData[] = (profiles || []).map(p => ({
+      setUsers((profiles || []).map(p => ({
         id: p.id, email: p.email || "", display_name: p.display_name,
         created_at: p.created_at, is_banned: bannedIds.has(p.id), is_admin: adminIds.has(p.id),
-      }));
-      setUsers(usersWithStatus);
+      })));
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Erreur lors du chargement des utilisateurs");
@@ -178,12 +159,11 @@ export default function Admin() {
   const fetchUserStats = async (userId: string) => {
     setStatsUserLoading(true);
     try {
-      const [tasksRes, habitsRes, goalsRes, focusRes, penguinRes, aiCreditsRes, journalRes, subRes] = await Promise.allSettled([
+      const [tasksRes, habitsRes, goalsRes, focusRes, aiCreditsRes, journalRes, subRes] = await Promise.allSettled([
         supabase.from("tasks").select("id").eq("user_id", userId).eq("completed", true),
         supabase.from("habits").select("id").eq("user_id", userId),
         supabase.from("goals").select("id").eq("user_id", userId),
         supabase.from("focus_sessions").select("duration").eq("user_id", userId),
-        supabase.from("penguin_profiles").select("stage, shrimp_total, salmon_total, golden_fish_total").eq("user_id", userId).single(),
         supabase.from("ai_credits").select("credits").eq("user_id", userId).single(),
         supabase.from("journal_entries").select("id", { count: "exact", head: true }).eq("user_id", userId),
         supabase.from("subscribers").select("subscription_tier").eq("user_id", userId).maybeSingle(),
@@ -193,16 +173,11 @@ export default function Admin() {
         habits_count: habitsRes.status === "fulfilled" ? habitsRes.value.data?.length || 0 : 0,
         goals_count: goalsRes.status === "fulfilled" ? goalsRes.value.data?.length || 0 : 0,
         focus_minutes: (focusRes.status === "fulfilled" ? focusRes.value.data || [] : []).reduce((acc: number, s: { duration: number }) => acc + (s.duration || 0), 0),
-        penguin_stage: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.stage || 'egg',
-        shrimp_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.shrimp_total || 0,
-        salmon_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.salmon_total || 0,
-        golden_fish_total: (penguinRes.status === "fulfilled" ? penguinRes.value.data : null)?.golden_fish_total || 0,
         ai_credits: (aiCreditsRes.status === "fulfilled" ? aiCreditsRes.value.data : null)?.credits || 0,
         journal_count: journalRes.status === "fulfilled" ? journalRes.value.count || 0 : 0,
         subscription_tier: (subRes.status === "fulfilled" ? subRes.value.data : null)?.subscription_tier || 'basic',
       });
     } catch (error) {
-      console.error("Error fetching user stats:", error);
       toast.error("Erreur lors du chargement des statistiques");
     } finally { setStatsUserLoading(false); }
   };
@@ -217,7 +192,7 @@ export default function Admin() {
       await logAction("ban_user", userToBan.id, userToBan.email, { reason: banReason });
       toast.success(`${userToBan.email} a été banni`);
       setBanDialogOpen(false); setUserToBan(null); setBanReason(""); fetchUsers();
-    } catch (error) { console.error("Error banning user:", error); toast.error("Erreur lors du bannissement"); }
+    } catch (error) { toast.error("Erreur lors du bannissement"); }
   };
 
   const handleUnbanUser = async (userData: UserData) => {
@@ -235,11 +210,9 @@ export default function Admin() {
       const { data: existing } = await supabase.from("ai_credits").select("credits").eq("user_id", creditsUser.id).maybeSingle();
       const newCredits = Math.max(0, (existing?.credits || 0) + creditsAmount);
       if (existing) {
-        const { error } = await supabase.from("ai_credits").update({ credits: newCredits, last_updated: new Date().toISOString() }).eq("user_id", creditsUser.id);
-        if (error) throw error;
+        await supabase.from("ai_credits").update({ credits: newCredits, last_updated: new Date().toISOString() }).eq("user_id", creditsUser.id);
       } else {
-        const { error } = await supabase.from("ai_credits").insert({ user_id: creditsUser.id, credits: newCredits });
-        if (error) throw error;
+        await supabase.from("ai_credits").insert({ user_id: creditsUser.id, credits: newCredits });
       }
       await logAction("modify_ai_credits", creditsUser.id, creditsUser.email, { amount: creditsAmount, new_total: newCredits });
       toast.success(`${creditsAmount > 0 ? "+" : ""}${creditsAmount} crédits IA pour ${creditsUser.email}`);
@@ -266,21 +239,6 @@ export default function Admin() {
       await logAction("change_subscription", subUser.id, subUser.email, { tier: subTier });
       toast.success(`Abonnement de ${subUser.email} → ${subTier}`);
       setSubDialogOpen(false); setSubUser(null);
-    } catch (error) { toast.error("Erreur"); }
-  };
-
-  const handleResetPenguin = async () => {
-    if (!resetPenguinUser) return;
-    try {
-      await supabase.from("penguin_profiles").update({
-        stage: "egg", shrimp_total: 0, salmon_total: 0, golden_fish_total: 0,
-        shrimp_today: 0, iceberg_size: 1, climate_state: "idle",
-        has_radio: false, has_library: false, has_lounge_chair: false, equipped_accessories: [],
-      }).eq("user_id", resetPenguinUser.id);
-      await supabase.from("penguin_accessories").delete().eq("user_id", resetPenguinUser.id);
-      await logAction("reset_penguin", resetPenguinUser.id, resetPenguinUser.email);
-      toast.success(`Pingouin de ${resetPenguinUser.email} réinitialisé`);
-      setResetPenguinOpen(false); setResetPenguinUser(null);
     } catch (error) { toast.error("Erreur"); }
   };
 
@@ -323,8 +281,7 @@ export default function Admin() {
     const rows = users.map(u => [u.email, u.display_name || "", new Date(u.created_at).toLocaleDateString("fr-FR"), u.is_banned ? "Oui" : "Non", u.is_admin ? "Oui" : "Non"]);
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
     link.download = `users_export_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     logAction("export_users_csv", undefined, undefined, { count: users.length });
@@ -339,26 +296,17 @@ export default function Admin() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const STAGE_LABELS: Record<string, string> = { egg: '🥚 Œuf', chick: '🐣 Poussin', explorer: '🐧 Explorateur', emperor: '👑 Empereur' };
-
   const getLogIcon = (action: string) => {
     const config = LOG_ICONS[action];
-    if (config) {
-      const Icon = config.icon;
-      return <Icon className={`h-4 w-4 ${config.color}`} />;
-    }
+    if (config) { const Icon = config.icon; return <Icon className={`h-4 w-4 ${config.color}`} />; }
     return <Shield className="h-4 w-4 text-primary" />;
   };
 
   const getLogBgColor = (action: string) => {
     const colorMap: Record<string, string> = {
-      ban_user: "bg-red-500/10",
-      unban_user: "bg-emerald-500/10",
-      modify_ai_credits: "bg-violet-500/10",
-      send_announcement: "bg-blue-500/10",
-      purge_user_data: "bg-orange-500/10",
-      reset_penguin: "bg-amber-500/10",
-      change_subscription: "bg-amber-500/10",
+      ban_user: "bg-red-500/10", unban_user: "bg-emerald-500/10",
+      modify_ai_credits: "bg-violet-500/10", send_announcement: "bg-blue-500/10",
+      purge_user_data: "bg-orange-500/10", change_subscription: "bg-amber-500/10",
     };
     return colorMap[action] || "bg-primary/10";
   };
@@ -372,7 +320,7 @@ export default function Admin() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header with date + admin name */}
+      {/* Header */}
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20">
           <Shield className="h-7 w-7 text-white" />
@@ -383,7 +331,6 @@ export default function Admin() {
             {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} • {user?.email}
           </p>
         </div>
-        <img src={penguinMascot} alt="" className="h-12 w-12 object-contain opacity-60 hidden md:block" />
         <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold">Admin ✓</Badge>
       </div>
 
@@ -419,7 +366,7 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Secondary stats — replaced "Credits Admin ∞" with Journal + Subscribers */}
+      {/* Secondary stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
@@ -441,7 +388,7 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Quick Actions — merged mass action inline */}
+      {/* Quick Actions */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4" /> Actions Rapides</CardTitle>
@@ -466,15 +413,9 @@ export default function Admin() {
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 h-12">
-          <TabsTrigger value="users" className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4" /><span className="hidden sm:inline">Utilisateurs</span>
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center gap-2 text-sm">
-            <History className="h-4 w-4" /><span className="hidden sm:inline">Historique</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2 text-sm">
-            <ShieldAlert className="h-4 w-4" /><span className="hidden sm:inline">Sécurité</span>
-          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2 text-sm"><Users className="h-4 w-4" /><span className="hidden sm:inline">Utilisateurs</span></TabsTrigger>
+          <TabsTrigger value="logs" className="flex items-center gap-2 text-sm"><History className="h-4 w-4" /><span className="hidden sm:inline">Historique</span></TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4" /><span className="hidden sm:inline">Sécurité</span></TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -494,16 +435,9 @@ export default function Admin() {
                   <Button variant="outline" size="icon" onClick={fetchUsers}><RefreshCw className="h-4 w-4" /></Button>
                 </div>
               </div>
-              {/* Filter pills */}
               <div className="flex gap-2 flex-wrap mt-3">
                 {filterPills.map(pill => (
-                  <Button
-                    key={pill.key}
-                    variant={userFilter === pill.key ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 text-xs rounded-full gap-1.5"
-                    onClick={() => setUserFilter(pill.key)}
-                  >
+                  <Button key={pill.key} variant={userFilter === pill.key ? "default" : "outline"} size="sm" className="h-7 text-xs rounded-full gap-1.5" onClick={() => setUserFilter(pill.key)}>
                     {pill.label}
                     {pill.count !== undefined && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 min-w-[18px] rounded-full">{pill.count}</Badge>}
                   </Button>
@@ -535,7 +469,6 @@ export default function Admin() {
                           <Button variant="ghost" size="icon" onClick={() => handleViewUser(userData)} title="Voir détails"><Eye className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setCreditsUser(userData); setCreditsAmount(0); setCreditsDialogOpen(true); }} title="Crédits IA"><Sparkles className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setSubUser(userData); setSubTier("basic"); setSubDialogOpen(true); }} title="Abonnement"><Crown className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setResetPenguinUser(userData); setResetPenguinOpen(true); }} title="Reset pingouin"><img src={penguinMascot} alt="" className="h-4 w-4" /></Button>
                           {userData.is_banned ? (
                             <Button variant="ghost" size="icon" onClick={() => handleUnbanUser(userData)} className="text-emerald-600" title="Débannir"><UserCheck className="h-4 w-4" /></Button>
                           ) : (
@@ -553,7 +486,7 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Logs Tab — with colored icons */}
+        {/* Logs Tab */}
         <TabsContent value="logs">
           <Card>
             <CardHeader>
@@ -573,9 +506,7 @@ export default function Admin() {
                   ) : (
                     adminLogs.map(log => (
                       <div key={log.id} className={`flex items-start gap-3 p-3 rounded-xl border border-border/30 ${getLogBgColor(log.action)}`}>
-                        <div className="h-8 w-8 rounded-lg bg-background/80 flex items-center justify-center flex-shrink-0">
-                          {getLogIcon(log.action)}
-                        </div>
+                        <div className="h-8 w-8 rounded-lg bg-background/80 flex items-center justify-center flex-shrink-0">{getLogIcon(log.action)}</div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm">{log.action.replace(/_/g, ' ')}</span>
@@ -622,9 +553,7 @@ export default function Admin() {
 
             {securityStats.bannedUsers.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2"><Ban className="h-4 w-4 text-red-500" /> Utilisateurs bannis</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Ban className="h-4 w-4 text-red-500" /> Utilisateurs bannis</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {securityStats.bannedUsers.map(u => (
@@ -633,9 +562,7 @@ export default function Admin() {
                           <p className="text-sm font-medium">{u.email}</p>
                           <p className="text-xs text-muted-foreground">{u.display_name || "Sans nom"} • inscrit le {format(new Date(u.created_at), "d MMM yyyy", { locale: fr })}</p>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => handleUnbanUser(u)} className="text-emerald-600">
-                          <UserCheck className="h-4 w-4 mr-1" />Débannir
-                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleUnbanUser(u)} className="text-emerald-600"><UserCheck className="h-4 w-4 mr-1" />Débannir</Button>
                       </div>
                     ))}
                   </div>
@@ -688,7 +615,7 @@ export default function Admin() {
                   <p className="text-[10px] text-muted-foreground">Habitudes</p>
                 </div>
                 <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
-                  <Trophy className="h-4 w-4 mx-auto mb-1 text-amber-500" />
+                  <Target className="h-4 w-4 mx-auto mb-1 text-amber-500" />
                   <div className="text-lg font-bold">{userStats.goals_count}</div>
                   <p className="text-[10px] text-muted-foreground">Objectifs</p>
                 </div>
@@ -696,20 +623,6 @@ export default function Admin() {
                   <Timer className="h-4 w-4 mx-auto mb-1 text-purple-500" />
                   <div className="text-lg font-bold">{Math.round(userStats.focus_minutes / 60)}h</div>
                   <p className="text-[10px] text-muted-foreground">Focus</p>
-                </div>
-              </div>
-              <div className="p-4 rounded-xl bg-gradient-to-r from-sky-500/10 to-indigo-500/10 border border-sky-500/20">
-                <div className="flex items-center gap-3 mb-3">
-                  <img src={penguinMascot} alt="" className="h-10 w-10 object-contain" />
-                  <div>
-                    <p className="text-sm font-semibold">{STAGE_LABELS[userStats.penguin_stage] || userStats.penguin_stage}</p>
-                    <p className="text-xs text-muted-foreground">Pingouin</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div><span className="text-sm">🦐</span><div className="text-sm font-bold">{userStats.shrimp_total}</div></div>
-                  <div><span className="text-sm">🐟</span><div className="text-sm font-bold">{userStats.salmon_total}</div></div>
-                  <div><span className="text-sm">✨🐠</span><div className="text-sm font-bold">{userStats.golden_fish_total}</div></div>
                 </div>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
@@ -791,20 +704,6 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Reset Penguin Dialog */}
-      <AlertDialog open={resetPenguinOpen} onOpenChange={setResetPenguinOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Réinitialiser le pingouin ?</AlertDialogTitle>
-            <AlertDialogDescription>Le pingouin de {resetPenguinUser?.email} sera remis à zéro.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetPenguin} className="bg-orange-500 hover:bg-orange-600">Réinitialiser</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Announcement Dialog */}
       <Dialog open={announcementOpen} onOpenChange={setAnnouncementOpen}>
