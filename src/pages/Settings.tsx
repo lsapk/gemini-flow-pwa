@@ -28,30 +28,20 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { 
-  Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain, Trophy,
-  Gamepad2, Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
-  Apple, Wand2, Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
-  Key, Trash2, Download
+  Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain,
+  Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
+  Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
+  Key, Trash2, Download, BarChart3
 } from "lucide-react";
-
-import { penguinMascot } from "@/constants/assets";
-
-interface UserSettings {
-  id: string;
-  notifications_enabled?: boolean;
-  sound_enabled?: boolean;
-  focus_mode?: boolean;
-}
 
 export default function Settings() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { designMode, setDesignMode } = useDesignMode();
   const { credits: aiCredits } = useAICredits();
-  const { handleManageSubscription } = useSubscription();
+  const { handleManageSubscription, isPremium } = useSubscription();
   const [searchParams] = useSearchParams();
   
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     notifications_enabled: true,
     sound_enabled: true,
@@ -64,7 +54,6 @@ export default function Settings() {
   });
 
   const [userProfile, setUserProfile] = useState<{ display_name: string | null; photo_url: string | null } | null>(null);
-  const [playerProfile, setPlayerProfile] = useState<any>(null);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -76,14 +65,8 @@ export default function Settings() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); fetchPlayerProfile(); }
+    if (user) { fetchSettings(); fetchStats(); fetchUserProfile(); }
   }, [user]);
-
-  const fetchPlayerProfile = async () => {
-    if (!user) return;
-    const { data } = await supabase.from('penguin_profiles').select('*').eq('user_id', user.id).maybeSingle();
-    if (data) setPlayerProfile(data);
-  };
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -134,7 +117,6 @@ export default function Settings() {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     autoSavePreferences(newFormData);
-    // Sync sound setting with SoundService
     if (key === 'sound_enabled') {
       SoundService.getInstance().setEnabled(value);
     }
@@ -144,7 +126,6 @@ export default function Settings() {
     try { await signOut(); toast.success("Déconnexion réussie"); } catch (error) { toast.error("Erreur lors de la déconnexion"); }
   };
 
-  // Password change
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const handleChangePassword = async () => {
@@ -160,24 +141,20 @@ export default function Settings() {
     finally { setChangingPassword(false); }
   };
 
-  // Account deletion
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const handleDeleteAccount = async () => {
     try {
-      // Delete all user data from major tables
-      const tables = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions", "penguin_profiles", "ai_credits", "ai_requests", "daily_usage"] as const;
+      const tables = ["tasks", "habits", "goals", "focus_sessions", "journal_entries", "daily_reflections", "habit_completions", "ai_credits", "ai_requests", "daily_usage"] as const;
       for (const table of tables) {
         await (supabase.from(table).delete() as any).eq("user_id", user!.id);
       }
       await supabase.from("user_profiles").delete().eq("id", user!.id);
       await supabase.from("user_settings").delete().eq("id", user!.id);
-      // Sign out after purge
       await signOut();
-      toast.success("Compte supprimé. Adieu 🐧");
+      toast.success("Compte supprimé");
     } catch (err) { toast.error("Erreur lors de la suppression du compte"); }
   };
 
-  // Data export
   const handleExportData = async () => {
     if (!user) return;
     try {
@@ -197,8 +174,6 @@ export default function Settings() {
       toast.success("Données exportées !");
     } catch { toast.error("Erreur lors de l'export"); }
   };
-
-  const stageLabel = playerProfile?.stage === 'emperor' ? 'Empereur' : playerProfile?.stage === 'explorer' ? 'Explorateur' : playerProfile?.stage === 'chick' ? 'Poussin' : 'Œuf';
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-8">
@@ -224,7 +199,7 @@ export default function Settings() {
             <span className="hidden sm:inline">Préférences</span>
           </TabsTrigger>
           <TabsTrigger value="stats" className="gap-1.5 text-xs sm:text-sm">
-            <Trophy className="h-4 w-4" />
+            <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Stats</span>
           </TabsTrigger>
           <TabsTrigger value="about" className="gap-1.5 text-xs sm:text-sm">
@@ -247,17 +222,13 @@ export default function Settings() {
                   </Avatar>
                   <div className="min-w-0">
                     <h2 className="font-semibold text-lg truncate">{userProfile?.display_name || user?.email}</h2>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                      <img src={penguinMascot} alt="" className="h-4 w-4 object-contain" />
-                      <span>{stageLabel}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="hidden sm:inline">🐟 {playerProfile?.salmon_total || 0} saumons</span>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant={isPremium ? "default" : "secondary"} className="text-xs">
+                        {isPremium ? "Premium ✨" : "Basic"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" asChild className="self-start">
-                  <Link to="/gamification"><Trophy className="h-4 w-4 mr-2" />Mon Pingouin</Link>
-                </Button>
               </div>
             </div>
           </Card>
@@ -278,9 +249,6 @@ export default function Settings() {
                   <div className="text-3xl font-bold text-primary">{aiCredits === Infinity ? "∞" : aiCredits}</div>
                   <p className="text-xs text-muted-foreground">crédits disponibles</p>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/gamification"><Gamepad2 className="h-4 w-4 mr-2" />Boutique</Link>
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -319,7 +287,6 @@ export default function Settings() {
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-5">
-          {/* Apparence */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg"><Palette className="h-5 w-5 text-primary" />Apparence</CardTitle>
@@ -342,7 +309,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Notifications */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg"><Bell className="h-5 w-5 text-primary" />Notifications</CardTitle>
@@ -381,7 +347,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Productivité */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg"><Brain className="h-5 w-5 text-primary" />Productivité</CardTitle>
@@ -406,7 +371,7 @@ export default function Settings() {
         <TabsContent value="stats" className="space-y-5">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" />Statistiques</CardTitle>
+              <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Statistiques</CardTitle>
               <CardDescription>Votre activité sur DeepFlow</CardDescription>
             </CardHeader>
             <CardContent>
@@ -449,40 +414,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Penguin gamification */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <img src={penguinMascot} alt="" className="h-5 w-5 object-contain" />
-                Progression Pingouin
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center p-4 rounded-xl bg-sky-500/5 border border-sky-500/10">
-                  <span className="text-xl block mb-1">🐧</span>
-                  <div className="text-lg font-bold">{stageLabel}</div>
-                  <div className="text-xs text-muted-foreground">Stade</div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                  <span className="text-xl block mb-1">🦐</span>
-                  <div className="text-lg font-bold">{playerProfile?.shrimp_total || 0}</div>
-                  <div className="text-xs text-muted-foreground">Crevettes</div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
-                  <span className="text-xl block mb-1">🐟</span>
-                  <div className="text-lg font-bold">{playerProfile?.salmon_total || 0}</div>
-                  <div className="text-xs text-muted-foreground">Saumons</div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                  <span className="text-xl block mb-1">✨🐠</span>
-                  <div className="text-lg font-bold">{playerProfile?.golden_fish_total || 0}</div>
-                  <div className="text-xs text-muted-foreground">Poissons Dorés</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Button variant="outline" onClick={fetchStats} className="w-full">
             <RefreshCw className="h-4 w-4 mr-2" />Actualiser
           </Button>
@@ -516,21 +447,17 @@ export default function Settings() {
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="1">
                   <AccordionTrigger className="text-sm">Comment fonctionne DeepFlow ?</AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">DeepFlow combine gestion de tâches, habitudes, focus, journaling et gamification. L'IA analyse vos données pour des insights personnalisés.</AccordionContent>
+                  <AccordionContent className="text-sm text-muted-foreground">DeepFlow combine gestion de tâches, habitudes, focus, journaling et productivité augmentée par IA pour améliorer votre quotidien.</AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="2">
                   <AccordionTrigger className="text-sm">Qu'est-ce que les crédits IA ?</AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground">Les crédits IA permettent d'utiliser les fonctionnalités d'intelligence artificielle. Chaque requête consomme des crédits. Vous en recevez 50 au départ.</AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="3">
-                  <AccordionTrigger className="text-sm">Comment nourrir mon pingouin ?</AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">Complétez des tâches pour des crevettes 🦐, des sessions de focus (+1h) pour du saumon 🐟, et maintenez des séries pour des poissons dorés ✨🐠.</AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="4">
                   <AccordionTrigger className="text-sm">Mes données sont-elles sécurisées ?</AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground">Oui. Chiffrement en transit et au repos via Supabase. Données jamais partagées sans consentement.</AccordionContent>
                 </AccordionItem>
-                <AccordionItem value="5">
+                <AccordionItem value="4">
                   <AccordionTrigger className="text-sm">Puis-je utiliser DeepFlow hors ligne ?</AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground">Oui, grâce au mode PWA. Les données se synchronisent automatiquement à la reconnexion.</AccordionContent>
                 </AccordionItem>
@@ -577,7 +504,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer votre compte ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Toutes vos données (tâches, habitudes, journal, pingouin…) seront définitivement supprimées.
+              Cette action est irréversible. Toutes vos données seront définitivement supprimées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

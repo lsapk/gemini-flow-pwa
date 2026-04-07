@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle2, Target, Clock, Brain, Zap, BookOpen, ListTodo, Flame, Trophy, ChevronDown
+  CheckCircle2, Target, Clock, Brain, Zap, BookOpen, ListTodo, Flame, ChevronDown
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
 import { Link } from "react-router-dom";
@@ -15,8 +15,6 @@ import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-
-import { penguinThinking } from "@/constants/assets";
 
 export default function Dashboard() {
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -31,7 +29,6 @@ export default function Dashboard() {
     isLoading 
   } = useAnalyticsData();
 
-  // Calculs pour les métriques rapides
   const activeHabits = habitsData?.length || 0;
 
   if (isLoading) {
@@ -47,12 +44,11 @@ export default function Dashboard() {
     );
   }
 
-  // Calcul du score de productivité réaliste
   const productivityScore = Math.round(
-    (taskCompletionRate * 0.4) + // 40% basé sur la complétion des tâches
-    (Math.min((totalFocusTime / 300) * 100, 100) * 0.3) + // 30% basé sur 5h de focus
-    (Math.min(streakCount * 10, 100) * 0.2) + // 20% basé sur la série
-    (Math.min(activeHabits * 10, 100) * 0.1) // 10% basé sur les habitudes
+    (taskCompletionRate * 0.4) +
+    (Math.min((totalFocusTime / 300) * 100, 100) * 0.3) +
+    (Math.min(streakCount * 10, 100) * 0.2) +
+    (Math.min(activeHabits * 10, 100) * 0.1)
   );
 
   const getScoreLevel = (score: number) => {
@@ -70,15 +66,13 @@ export default function Dashboard() {
     { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
     { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
     { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
-    { icon: Trophy, label: "Pingouin", path: "/gamification", color: "bg-warning/10 text-warning" },
+    { icon: Zap, label: "Analyse IA", path: "/ai-assistant", color: "bg-amber-500/10 text-amber-500" },
   ];
 
   return (
     <div className="space-y-6 md:space-y-10">
-      {/* 1. Admin Announcements Panel - At the very top */}
       <AdminAnnouncementPanel />
 
-      {/* 2. En-tête avec gradient moderne */}
       <div className="mb-4 flex items-center gap-3">
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold gradient-text mb-1 animate-fade-in">
@@ -86,10 +80,8 @@ export default function Dashboard() {
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">Vue d'ensemble de votre productivité</p>
         </div>
-        <img src={penguinThinking} alt="" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md hidden sm:block" />
       </div>
 
-      {/* 3. Raccourcis rapides avec design moderne */}
       <div className="space-y-3">
         <h2 className="text-lg font-heading font-semibold">Accès rapide</h2>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
@@ -108,7 +100,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 4. Score de productivité moderne */}
       <Card className="dashboard-card border-primary/20 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         <CardHeader className="pb-3 relative z-10">
@@ -140,7 +131,6 @@ export default function Dashboard() {
               </div>
               <div className="text-xl font-bold text-success">{Math.round(taskCompletionRate)}%</div>
             </div>
-            
             <div className="space-y-1 p-3 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-4 w-4 text-primary" />
@@ -148,7 +138,6 @@ export default function Dashboard() {
               </div>
               <div className="text-xl font-bold text-primary">{Math.round(totalFocusTime / 60)}h</div>
             </div>
-            
             <div className="space-y-1 p-3 rounded-xl bg-warning/5 hover:bg-warning/10 transition-colors border border-warning/20">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Zap className="h-4 w-4 text-warning" />
@@ -156,7 +145,6 @@ export default function Dashboard() {
               </div>
               <div className="text-xl font-bold text-warning">{streakCount}j</div>
             </div>
-            
             <div className="space-y-1 p-3 rounded-xl bg-info/5 hover:bg-info/10 transition-colors border border-info/20">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Target className="h-4 w-4 text-info" />
@@ -168,15 +156,9 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* 5. Actions rapides du jour - NOUVEAU */}
       <TodayActionsCard />
-
-      {/* 6. Briefing IA */}
       <DailyBriefingCard />
 
-      {/* 7. Gamification Widget */}
-
-      {/* 8. Insights IA (collapsible pour réduire le scroll) */}
       <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="outline" className="w-full flex items-center justify-between">

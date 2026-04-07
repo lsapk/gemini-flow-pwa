@@ -2,11 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Crée une session de paiement Stripe pour un abonnement.
+ * Le productId doit correspondre à ce qu'attend create-checkout :
+ * "premium_monthly", "premium_yearly", ou "premium_lifetime".
  */
-export const createCheckoutSession = async (planType: 'basic' | 'premium' | 'ultimate'): Promise<{ url: string | null, error: string | null }> => {
+export const createCheckoutSession = async (
+  productId: 'premium_monthly' | 'premium_yearly' | 'premium_lifetime'
+): Promise<{ url: string | null, error: string | null }> => {
   try {
     const { data, error } = await supabase.functions.invoke('create-checkout', {
-      body: { planType }
+      body: { productId }
     });
     if (error) throw new Error(error.message);
     return { url: data?.url || null, error: null };
