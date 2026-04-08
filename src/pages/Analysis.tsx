@@ -2,21 +2,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Target, Timer, TrendingUp, CheckCircle2, Crown, Lock, Brain, Flame, Calendar } from "lucide-react";
-import { useAnalyticsData } from "@/hooks/useAnalyticsData";
+import { useUnifiedProductivityScore } from "@/hooks/useUnifiedProductivityScore";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, Radar
 } from "recharts";
 import { LifeWheelChart } from "@/components/analysis/LifeWheelChart";
 import { ChronobiologyChart } from "@/components/analysis/ChronobiologyChart";
 import { ConsistencyHeatmap } from "@/components/analysis/ConsistencyHeatmap";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 export default function Analysis() {
-  const { habitsData, tasksData, focusData, activityData, isLoading, refetch, taskCompletionRate, totalFocusTime, streakCount } = useAnalyticsData();
+  const { scores, totalFocusTime, streakCount, habitsData, tasksData, focusData, activityData, isLoading, refetch } = useUnifiedProductivityScore();
   const { canUseFeature, trackUsage, isPremium } = useSubscription();
+  const { user } = useAuth();
+  const [weeklyTrend, setWeeklyTrend] = useState<{ name: string; tasks: number; habits: number }[]>([]);
 
   useEffect(() => {
     if (!isPremium && canUseFeature("analysis")) {
@@ -24,19 +29,56 @@ export default function Analysis() {
     }
   }, []);
 
-  const scores = useMemo(() => {
-    const taskScore = Math.min(100, Math.round(taskCompletionRate || 0));
-    const focusScore = Math.min(100, Math.round((totalFocusTime || 0) / 60 * 10));
-    const habitScore = Math.min(100, (streakCount || 0) * 10);
-    const overall = Math.round((taskScore + focusScore + habitScore) / 3);
-    return { taskScore, focusScore, habitScore, overall };
-  }, [taskCompletionRate, totalFocusTime, streakCount]);
+  // Compute real weekly trend from DB data
+  useEffect(() => {
+    if (!user) return;
+    const computeWeeklyTrend = async () => {
+      const now = new Date();
+      const days: { name: string; date: string }[] = [];
+      const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+      
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        days.push({ name: dayNames[d.getDay()], date: toLocalDateKey(d) });
+      }
+
+      // Fetch tasks completed in the last 7 days
+      const startDate = days[0].date;
+      const endDate = days[6].date + "T23:59:59";
+
+      const [tasksRes, completionsRes] = await Promise.all([
+        supabase.from('tasks').select('updated_at').eq('user_id', user.id).eq('completed', true).gte('updated_at', startDate).lte('updated_at', endDate),
+        supabase.from('habit_completions').select('completed_date').eq('user_id', user.id).gte('completed_date', startDate).lte('completed_date', days[6].date),
+      ]);
+
+      const tasksByDay: Record<string, number> = {};
+      const habitsByDay: Record<string, number> = {};
+      days.forEach(d => { tasksByDay[d.date] = 0; habitsByDay[d.date] = 0; });
+
+      (tasksRes.data || []).forEach(t => {
+        const key = t.updated_at?.split('T')[0];
+        if (key && tasksByDay[key] !== undefined) tasksByDay[key]++;
+      });
+      (completionsRes.data || []).forEach(c => {
+        const key = c.completed_date;
+        if (key && habitsByDay[key] !== undefined) habitsByDay[key]++;
+      });
+
+      setWeeklyTrend(days.map(d => ({
+        name: d.name,
+        tasks: tasksByDay[d.date],
+        habits: habitsByDay[d.date],
+      })));
+    };
+    computeWeeklyTrend();
+  }, [user, tasksData, habitsData]);
 
   const focusChartData = useMemo(() => {
     if (focusData?.length > 0) {
       return focusData.slice(0, 7).map(s => ({ name: s.date || 'Session', value: Math.round(s.minutes || 0) }));
     }
-    return [{ name: 'Lun', value: 45 }, { name: 'Mar', value: 60 }, { name: 'Mer', value: 30 }, { name: 'Jeu', value: 90 }, { name: 'Ven', value: 75 }, { name: 'Sam', value: 20 }, { name: 'Dim', value: 10 }];
+    return [{ name: 'Lun', value: 0 }, { name: 'Mar', value: 0 }, { name: 'Mer', value: 0 }, { name: 'Jeu', value: 0 }, { name: 'Ven', value: 0 }, { name: 'Sam', value: 0 }, { name: 'Dim', value: 0 }];
   }, [focusData]);
 
   const activityPieData = useMemo(() => [
@@ -45,17 +87,6 @@ export default function Analysis() {
     { name: 'Habitudes', value: scores.habitScore, color: '#8B5CF6' },
   ], [scores]);
 
-  // Weekly productivity trend
-  const weeklyTrend = useMemo(() => {
-    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    return days.map((d, i) => ({
-      name: d,
-      tasks: Math.round(Math.random() * 5 + (tasksData?.length || 0) / 7),
-      habits: Math.round(Math.random() * 3 + (habitsData?.length || 0) / 7),
-    }));
-  }, [tasksData, habitsData]);
-
-  // Efficiency radar
   const efficiencyRadar = useMemo(() => [
     { subject: 'Régularité', value: Math.min(100, streakCount * 15) },
     { subject: 'Focus', value: scores.focusScore },
@@ -89,19 +120,11 @@ export default function Analysis() {
         <Card className="overflow-hidden border-border/30 shadow-lg bg-card/60 backdrop-blur-xl">
           <CardContent className="py-5 md:py-7">
             <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8">
-              {/* Score Circle */}
               <div className="relative group">
                 <div className="relative w-32 h-32 md:w-36 md:h-36">
-                  {/* Background ring */}
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                     <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" opacity="0.3" />
-                    <circle
-                      cx="60" cy="60" r="52" fill="none"
-                      stroke="url(#scoreGradient)" strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${scores.overall * 3.267} ${326.7 - scores.overall * 3.267}`}
-                      className="transition-all duration-1000 ease-out"
-                    />
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="url(#scoreGradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${scores.overall * 3.267} ${326.7 - scores.overall * 3.267}`} className="transition-all duration-1000 ease-out" />
                     <defs>
                       <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="hsl(var(--primary))" />
@@ -109,7 +132,6 @@ export default function Analysis() {
                       </linearGradient>
                     </defs>
                   </svg>
-                  {/* Center text */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">{scores.overall}</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
@@ -122,7 +144,6 @@ export default function Analysis() {
                 </Badge>
               </div>
 
-              {/* Stats */}
               <div className="flex-1 grid grid-cols-3 gap-3 w-full">
                 <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
                   <Target className="h-5 w-5 mx-auto mb-1.5 text-green-500" />
@@ -145,13 +166,11 @@ export default function Analysis() {
         </Card>
       </motion.div>
 
-      {/* Life Wheel + Chronobiology */}
       <div className="grid md:grid-cols-2 gap-4">
         <LifeWheelChart />
         <ChronobiologyChart />
       </div>
 
-      {/* Focus + Distribution */}
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
           <Card>
@@ -202,7 +221,7 @@ export default function Analysis() {
         </motion.div>
       </div>
 
-      {/* NEW: Weekly Productivity Trend */}
+      {/* Weekly Trend — real data */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <Card>
           <CardHeader className="pb-2">
@@ -224,7 +243,7 @@ export default function Analysis() {
         </Card>
       </motion.div>
 
-      {/* NEW: Efficiency Radar */}
+      {/* Efficiency Radar */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card>
           <CardHeader className="pb-2">
@@ -244,10 +263,9 @@ export default function Analysis() {
         </Card>
       </motion.div>
 
-      {/* Consistency Heatmap */}
       <ConsistencyHeatmap days={isPremium ? 365 : 90} />
 
-      {/* NEW: Daily Stats Summary */}
+      {/* Stats Summary */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Card>
           <CardHeader className="pb-3">

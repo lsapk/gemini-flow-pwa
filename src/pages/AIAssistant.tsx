@@ -406,15 +406,19 @@ export default function AIAssistant() {
           </div>
       </div>
 
-      {/* Analysis Tab */}
-      <div className={cn("flex-1 overflow-y-auto animate-fade-in", activeTab !== "analysis" && "hidden")}>
-        <Analysis />
-      </div>
+      {/* Analysis Tab — lazy mount to avoid recharts width=0 warnings */}
+      {activeTab === "analysis" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
+          <Analysis />
+        </div>
+      )}
 
-      {/* Profile Tab */}
-      <div className={cn("flex-1 overflow-y-auto animate-fade-in", activeTab !== "profile" && "hidden")}>
-        <Profile />
-      </div>
+      {/* Profile Tab — lazy mount */}
+      {activeTab === "profile" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
+          <Profile />
+        </div>
+      )}
 
       <AISuggestionDialog
         suggestion={currentSuggestion}
