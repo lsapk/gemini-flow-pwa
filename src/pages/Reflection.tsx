@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Send, Sparkles, RefreshCw, Lightbulb } from "lucide-react";
+import { BookOpen, Send, Sparkles, RefreshCw, Lightbulb, Pencil, Trash2, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,10 @@ import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Reflection {
   id: string;
@@ -70,6 +74,9 @@ export default function Reflection() {
   const [answer, setAnswer] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAnswer, setEditAnswer] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { user } = useAuth();
 
   const getRandomQuestion = () => REFLECTION_QUESTIONS[Math.floor(Math.random() * REFLECTION_QUESTIONS.length)];
@@ -80,7 +87,7 @@ export default function Reflection() {
       const { data, error } = await supabase.from('daily_reflections').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (error) throw error;
       setReflections(data || []);
-    } catch (error) { console.error(error); toast.error('Erreur lors du chargement'); } finally { setLoadingData(false); }
+    } catch { toast.error('Erreur lors du chargement'); } finally { setLoadingData(false); }
   };
 
   const generateNewQuestion = () => { setCurrentQuestion(getRandomQuestion()); setAnswer(""); };
@@ -92,7 +99,29 @@ export default function Reflection() {
       const { error } = await supabase.from('daily_reflections').insert({ user_id: user.id, question: currentQuestion, answer: answer.trim() });
       if (error) throw error;
       toast.success('Réflexion sauvegardée !'); setAnswer(""); generateNewQuestion(); fetchReflections();
-    } catch (error) { console.error(error); toast.error('Erreur'); } finally { setIsLoading(false); }
+    } catch { toast.error('Erreur'); } finally { setIsLoading(false); }
+  };
+
+  const updateReflection = async (id: string) => {
+    if (!user || !editAnswer.trim()) return;
+    try {
+      const { error } = await supabase.from('daily_reflections').update({ answer: editAnswer.trim() }).eq('id', id).eq('user_id', user.id);
+      if (error) throw error;
+      toast.success('Réflexion modifiée !');
+      setEditingId(null);
+      fetchReflections();
+    } catch { toast.error('Erreur lors de la modification'); }
+  };
+
+  const deleteReflection = async () => {
+    if (!user || !deleteId) return;
+    try {
+      const { error } = await supabase.from('daily_reflections').delete().eq('id', deleteId).eq('user_id', user.id);
+      if (error) throw error;
+      toast.success('Réflexion supprimée');
+      setDeleteId(null);
+      fetchReflections();
+    } catch { toast.error('Erreur lors de la suppression'); }
   };
 
   useEffect(() => { fetchReflections(); generateNewQuestion(); }, [user]);
@@ -108,7 +137,6 @@ export default function Reflection() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-5 p-3 sm:p-6 min-h-[calc(100vh-120px)]">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BookOpen className="h-7 w-7 text-primary" />
@@ -124,7 +152,6 @@ export default function Reflection() {
         </div>
       </div>
 
-      {/* Tabs: Réflexion | Historique */}
       <Tabs defaultValue="reflect" className="w-full flex-1 flex flex-col">
         <TabsList className="grid w-full max-w-xs grid-cols-2">
           <TabsTrigger value="reflect">Réflexion</TabsTrigger>
@@ -141,7 +168,6 @@ export default function Reflection() {
               transition={{ duration: 0.3 }}
               className="flex-1 flex flex-col gap-4"
             >
-              {/* Question Card */}
               <Card className="backdrop-blur-sm bg-gradient-to-br from-primary/5 to-primary/10 border-border/30 overflow-hidden">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3">
@@ -156,7 +182,6 @@ export default function Reflection() {
                 </CardContent>
               </Card>
 
-              {/* Answer — takes remaining space */}
               <Card className="backdrop-blur-sm bg-card/80 border-border/40 flex-1 flex flex-col">
                 <CardContent className="p-4 sm:p-6 flex-1 flex flex-col gap-4">
                   <Textarea
@@ -203,11 +228,41 @@ export default function Reflection() {
                         <Badge variant="secondary" className="rounded-full text-xs">
                           {format(new Date(r.created_at), 'dd MMM yyyy', { locale: fr })}
                         </Badge>
+                        <div className="flex items-center gap-1">
+                          {editingId === r.id ? (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => updateReflection(r.id)}>
+                                <Check className="h-3.5 w-3.5 text-green-500" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingId(r.id); setEditAnswer(r.answer); }}>
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(r.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div className="p-3 bg-primary/5 rounded-xl">
                         <p className="font-medium text-sm">{r.question}</p>
                       </div>
-                      <p className="text-sm leading-relaxed text-foreground/85">{r.answer}</p>
+                      {editingId === r.id ? (
+                        <Textarea
+                          value={editAnswer}
+                          onChange={(e) => setEditAnswer(e.target.value)}
+                          className="text-sm min-h-[100px]"
+                          autoFocus
+                        />
+                      ) : (
+                        <p className="text-sm leading-relaxed text-foreground/85">{r.answer}</p>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -216,6 +271,20 @@ export default function Reflection() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette réflexion ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteReflection} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
