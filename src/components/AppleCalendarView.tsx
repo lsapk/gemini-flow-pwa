@@ -287,7 +287,7 @@ export function AppleCalendarView({
                       style={{ height: `${CELL_HEIGHT}px` }}
                       onMouseEnter={() => setHoveredCell(cellKey)}
                       onMouseLeave={() => setHoveredCell(null)}
-                      onClick={() => onCreateEvent(day, hour)}
+                      onClick={() => onCreateEvent?.(day, hour)}
                     >
                       {/* Half-hour dashed line */}
                       <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-border/10" />
@@ -364,9 +364,9 @@ export function AppleCalendarView({
 
       {/* ===== FAB ===== */}
       <Button
-        size="lg"
-        className="fixed bottom-20 md:bottom-6 right-4 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.95] z-30"
-        onClick={onAddClick}
+         size="lg"
+         className="fixed bottom-24 md:bottom-6 right-4 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.95] z-30"
+         onClick={() => onAddClick?.()}
       >
         <Plus className="h-6 w-6" />
       </Button>
