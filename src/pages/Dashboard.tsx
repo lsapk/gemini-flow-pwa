@@ -1,4 +1,4 @@
-import { useAnalyticsData } from "@/hooks/useAnalyticsData";
+import { useUnifiedProductivityScore } from "@/hooks/useUnifiedProductivityScore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -20,16 +20,8 @@ export default function Dashboard() {
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   const { 
-    taskCompletionRate, 
-    totalFocusTime, 
-    streakCount, 
-    habitsData, 
-    tasksData, 
-    focusData, 
-    isLoading 
-  } = useAnalyticsData();
-
-  const activeHabits = habitsData?.length || 0;
+    scores, level, taskCompletionRate, totalFocusTime, streakCount, activeHabits, isLoading 
+  } = useUnifiedProductivityScore();
 
   if (isLoading) {
     return (
@@ -43,22 +35,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const productivityScore = Math.round(
-    (taskCompletionRate * 0.4) +
-    (Math.min((totalFocusTime / 300) * 100, 100) * 0.3) +
-    (Math.min(streakCount * 10, 100) * 0.2) +
-    (Math.min(activeHabits * 10, 100) * 0.1)
-  );
-
-  const getScoreLevel = (score: number) => {
-    if (score >= 80) return { label: "Excellent", color: "text-success" };
-    if (score >= 60) return { label: "Bon", color: "text-primary" };
-    if (score >= 40) return { label: "Moyen", color: "text-warning" };
-    return { label: "À améliorer", color: "text-muted-foreground" };
-  };
-
-  const scoreLevel = getScoreLevel(productivityScore);
 
   const quickLinks = [
     { icon: ListTodo, label: "Tâches", path: "/tasks", color: "bg-success/10 text-success" },
@@ -113,15 +89,15 @@ export default function Dashboard() {
         <CardContent className="space-y-4 relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-5xl font-heading font-extrabold gradient-text">{productivityScore}</div>
-              <p className={`text-sm font-medium mt-1 ${scoreLevel.color}`}>{scoreLevel.label}</p>
+              <div className="text-5xl font-heading font-extrabold gradient-text">{scores.overall}</div>
+              <p className={`text-sm font-medium mt-1 ${level.color}`}>{level.label}</p>
             </div>
             <Badge variant="secondary" className="text-lg px-4 py-2 rounded-xl bg-gradient-to-br from-warning/20 to-warning/10 border-warning/30 animate-float">
               {streakCount} jours 🔥
             </Badge>
           </div>
           
-          <Progress value={productivityScore} className="h-3 rounded-full" />
+          <Progress value={scores.overall} className="h-3 rounded-full" />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
             <div className="space-y-1 p-3 rounded-xl bg-success/5 hover:bg-success/10 transition-colors border border-success/20">
