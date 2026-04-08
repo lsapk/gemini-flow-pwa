@@ -1,134 +1,89 @@
 
 
-# Plan: Nettoyage Gamification + Simplification + Stripe + IA
+# Plan: Correction de tous les problemes fonctionnels identifies
 
-## 1. Supprimer toute la gamification pingouin
+## Problemes trouves
 
-### Fichiers a modifier
+### P1 — Streaks incohérents entre Dashboard et Analyse
+- **Dashboard** calcule un `productivityScore` avec `streakCount * 10` plafonné à 100 (donc streak 10 = max)
+- **Analysis** calcule `habitScore = streakCount * 10` de la meme facon, MAIS `focusScore = (totalFocusTime / 60) * 10` — donc 6h de focus = 100%. Formule incoherente.
+- **Le score du Dashboard et celui d'Analysis sont calcules differemment** : Dashboard pondère (40% tâches, 30% focus, 20% streak, 10% habitudes) tandis qu'Analysis fait une moyenne simple de 3 métriques. Résultat : deux scores différents affichés dans la meme app.
+- **Fix** : Unifier la formule dans un hook unique `useProductivityScore` et l'utiliser partout.
 
-**`src/pages/Settings.tsx`**
-- Supprimer `import { penguinMascot }`, `playerProfile` state, `fetchPlayerProfile()`, appel dans useEffect
-- Supprimer le bloc "Progression Pingouin" (lignes 452-484) — la card entiere avec crevettes/saumons/poissons
-- Supprimer dans le profil : img pingouin, stageLabel, saumons, bouton "Mon Pingouin", bouton "Boutique"
-- Supprimer `penguin_profiles` de la liste des tables dans `handleDeleteAllData`
-- Supprimer la question FAQ "Comment nourrir mon pingouin"
-- Remplacer la description FAQ "gamification" par "productivite augmentee par IA"
-- Supprimer imports `Gamepad2, Trophy` inutilises
+### P2 — Tendance hebdomadaire (Analysis) utilise `Math.random()`
+- Ligne 53 : `tasks: Math.round(Math.random() * 5 + ...)` — les données du graphique "Tendance Hebdomadaire" sont aléatoires, jamais basées sur les vraies données.
+- **Fix** : Calculer à partir des tâches et habitudes réelles par jour de la semaine.
 
-**`src/pages/Admin.tsx`**
-- Supprimer `penguinMascot` import et image dans le header
-- Supprimer `penguin_stage`, `shrimp_total`, `salmon_total`, `golden_fish_total` de UserData et de handleViewUser
-- Supprimer `handleResetPenguin`, `resetPenguinOpen/User` state, bouton "Reset pingouin" dans la liste users
-- Supprimer `STAGE_LABELS`, le bloc pingouin dans le dialog details user (lignes 701-713)
-- Supprimer le dialog "Reset Penguin" (lignes 795-807)
-- Supprimer `reset_penguin` des LOG_ICONS et getLogBgColor
+### P3 — Habitudes : navigation par date corrompt l'état
+- `toggleHabitCompletion` fait un optimistic update sur `habits` state mais ne stocke pas la date consultée. Si l'utilisateur navigue vers un autre jour, coche une habitude, puis revient à aujourd'hui, le state local `is_completed_today` est désynchronisé car `fetchHabits` n'est pas rappelé systématiquement avec la bonne date.
+- Le vrai bug : `fetchHabits` recalcule les streaks à chaque appel (lignes 149-173), ce qui fait N+1 requêtes par habitude. Quand on revient à aujourd'hui, les streaks recalculés peuvent différer.
+- **Fix** : Séparer la logique de streak repair du fetch. Ne recalculer les streaks que quand on modifie une completion, pas à chaque navigation.
 
-**`src/pages/Dashboard.tsx`**
-- Supprimer `penguinThinking` import + image dans le header
-- Changer le quick link "Pingouin" → "Analyse" pointant vers `/ai-assistant`
-- Supprimer le commentaire "Gamification Widget"
+### P4 — Calendrier : interface minimaliste, pas d'events locaux visibles clairement
+- Le calendrier ne montre les items locaux (taches, objectifs) que si Google Calendar est connecté. Sans Google connecté, on voit juste "Connectez votre calendrier" — l'utilisateur ne peut pas voir ses tâches/objectifs dans un calendrier.
+- Les events locaux n'ont pas d'heure précise (défaut 9h-10h) — pas utile.
+- Le bouton "+" FAB chevauche la barre de navigation mobile.
+- **Fix** : Afficher le calendrier même sans Google (avec seulement les items locaux), améliorer le positionnement FAB, et montrer un mini-calendrier mensuel.
 
-**`src/pages/Register.tsx`**
-- Supprimer `penguinMascot` import et l'image animee du pingouin
-- Remplacer par l'icone DeepFlow (le logo existant ou un gradient icon)
+### P5 — Reflexion : pas de modification/suppression possible
+- L'historique des réflexions est en lecture seule. Pas de bouton modifier ni supprimer.
+- **Fix** : Ajouter boutons edit/delete sur chaque reflexion dans l'historique.
 
-**`src/components/layout/Sidebar.tsx`**
-- Supprimer import `Gamepad2` (deja inutilise mais present)
+### P6 — Intelligence IA : onglet Analysis embarque toute la page Analysis (avec son propre calcul de score)
+- `AIAssistant.tsx` importe `Analysis` et `Profile` en entier comme sous-pages. Cela cause :
+  - Double rendu des charts (les warnings recharts `width(0) height(0)` dans les logs)
+  - Le score dans l'onglet Analyse IA est celui de `Analysis.tsx` qui diffère du Dashboard
+- **Fix** : Ne pas embarquer les pages entières. Créer des composants légers dédiés pour l'onglet Analyse dans l'IA.
 
-**`src/hooks/useSubscription.ts`**
-- Supprimer `hasFullGamification` de SubscriptionLimits et TIER_LIMITS
-- Supprimer case `"gamification"` dans canUseFeature
+### P7 — Stripe webhook manque le secret STRIPE_WEBHOOK_SECRET
+- Le webhook existe mais ne peut pas fonctionner sans le secret. Il faut vérifier sa présence et alerter l'utilisateur.
 
-**`src/components/PremiumUpgradeCard.tsx`**
-- Retirer "Gamification complete" des features Premium
-- Retirer le mapping `gamification` dans FeatureLockedOverlay
-- Remplacer par "Rapports IA mensuels" ou "Insights avances"
+### P8 — Charts recharts : warnings width/height 0
+- Les charts dans les onglets cachés (via `hidden` class) ont une taille 0 au montage, causant les warnings en console.
+- **Fix** : Ne rendre les charts que quand l'onglet est visible, ou utiliser un lazy mount.
 
-**`src/constants/assets.ts`**
-- Supprimer le fichier entier (plus utilise apres nettoyage)
+## Plan d'implementation
 
-**`src/pages/Badges.tsx`**
-- Supprimer le commentaire "Gamification" (ligne 394)
+### 1. Unifier le score de productivité
+- Créer `src/hooks/useProductivityScore.ts` avec une formule unique
+- L'utiliser dans `Dashboard.tsx` et `Analysis.tsx`
+- Supprimer les calculs dupliqués
 
-**`src/pages/legal/Terms.tsx`**
-- Remplacer "gamification" par "productivite augmentee par IA"
+### 2. Fix données aléatoires dans Analysis
+- Remplacer `Math.random()` dans `weeklyTrend` par des vraies données groupées par jour de la semaine depuis les tâches et habitudes
 
-## 2. Simplification du code
+### 3. Fix navigation habitudes
+- Arrêter de recalculer les streaks dans `fetchHabits` (supprimer lignes 149-173)
+- Ne recalculer que dans `toggleHabitCompletion` (déjà fait) et dans `repairHabitsStreaks` (au chargement initial uniquement)
 
-- **`src/services/billing.ts`** : le body envoie `{ planType }` mais `create-checkout` attend `{ productId }` — aligner les deux
-- **`src/hooks/useSubscription.ts`** : `handleStripeCheckout` envoie toujours `"premium"` que ce soit monthly ou yearly — passer le vrai productId (`"premium_monthly"` ou `"premium_yearly"`) au checkout
-- **`src/utils/aiLimits.ts`** : tout le monde est "premium" (`isPremium = true`, `hasReachedLimit = false`) — ce fichier contourne toute la logique. Le simplifier en un one-liner ou le supprimer et utiliser `useSubscription` partout
-- **`src/pages/Badges.tsx`** : `dateToLocalKey` est duplique — importer depuis `src/utils/dateUtils.ts`
+### 4. Calendrier visible sans Google
+- Séparer la condition : afficher `AppleCalendarView` même quand `!isConnected`, mais sans les events Google
+- Ajouter un bandeau discret "Connecter Google" au lieu du fullscreen blocker
+- Corriger le FAB position sur mobile (`bottom-24` au lieu de `bottom-20`)
 
-## 3. Integration Stripe correcte et securisee
+### 5. Reflexion : edit et delete
+- Ajouter des boutons edit/delete sur chaque card dans l'historique
+- Permettre la modification inline (dialog ou expansion)
+- Appeler `supabase.from('daily_reflections').delete/update`
 
-**`src/services/billing.ts`** — Refactorer pour envoyer le bon `productId` :
-```ts
-export const createCheckoutSession = async (
-  productId: 'premium_monthly' | 'premium_yearly' | 'premium_lifetime'
-) => {
-  const { data, error } = await supabase.functions.invoke('create-checkout', {
-    body: { productId }
-  });
-  // ...
-};
-```
+### 6. Fix IA page — ne pas embarquer Analysis/Profile entiers
+- Remplacer `<Analysis />` par un composant leger `AIAnalysisSummary` qui affiche juste le score + radar
+- Remplacer `<Profile />` par un composant leger ou le garder mais en lazy-mount
+- Condition de rendu : ne monter le composant que quand l'onglet est actif (pas `hidden` CSS)
 
-**`src/hooks/useSubscription.ts`** — Fix `handleStripeCheckout` :
-```ts
-const handleStripeCheckout = async (plan: "premium_monthly" | "premium_yearly") => {
-  const { url, error } = await createCheckoutSession(plan);
-  // ...
-};
-```
+### 7. Fix recharts warnings
+- Utiliser rendu conditionnel (`activeTab === "analysis" && <Analysis />`) au lieu de `hidden` class pour les onglets avec charts
 
-**`supabase/functions/create-checkout/index.ts`** — Deja corrige pour lire les env vars. Ajouter une validation Zod du body pour rejeter les inputs invalides.
-
-**Ajouter un webhook Stripe** (`stripe-webhook` edge function) :
-- Ecoute `checkout.session.completed` et `customer.subscription.deleted`
-- Met a jour la table `subscribers` automatiquement (subscribed, tier, end date)
-- Sans webhook, le statut d'abonnement n'est jamais mis a jour apres paiement — c'est un bug critique
-- Necessite un secret `STRIPE_WEBHOOK_SECRET`
-
-## 4. Nouvelles integrations IA
-
-**A. Reflexion IA dans la page Reflection** (`src/pages/Reflection.tsx`)
-- Apres avoir repondu a une question de reflexion, bouton "✨ Insight IA"
-- Envoie la question + reponse a `gemini-chat-enhanced` pour un retour empathique personnalise
-- Affiche la reponse IA sous la reflexion de l'utilisateur
-
-**B. Resume IA dans le Journal** (`src/pages/Journal.tsx`)
-- Bouton "✨ Resume de la semaine" en haut de la page
-- Appelle une nouvelle edge function `journal-weekly-summary` qui prend les entries des 7 derniers jours
-- Retourne un resume structure : humeur dominante, themes recurrents, recommandations
-- Affiche dans un composant card collapsible
-
-**C. Smart Focus Suggestions** (`src/pages/Focus.tsx`)
-- Avant de lancer une session focus, bouton "✨ Que bosser maintenant ?"
-- Appelle `gemini-chat-enhanced` avec la liste des taches en cours (triees par priorite/deadline)
-- Retourne la tache la plus urgente avec une justification
-- Pre-remplit le label de la session focus
-
-## Fichiers impactes
+## Fichiers impactés
 
 | Fichier | Action |
 |---------|--------|
-| `src/pages/Settings.tsx` | Purger gamification pingouin |
-| `src/pages/Admin.tsx` | Purger pingouin (reset, dialog, stats, logs) |
-| `src/pages/Dashboard.tsx` | Retirer mascotte, fix quick links |
-| `src/pages/Register.tsx` | Retirer mascotte pingouin |
-| `src/components/PremiumUpgradeCard.tsx` | Retirer "gamification" des features |
-| `src/hooks/useSubscription.ts` | Retirer gamification, fix checkout |
-| `src/services/billing.ts` | Aligner productId |
-| `src/constants/assets.ts` | Supprimer |
-| `src/utils/aiLimits.ts` | Simplifier |
-| `src/pages/Badges.tsx` | Importer dateUtils, retirer duplicat |
-| `src/pages/legal/Terms.tsx` | Texte |
-| `src/components/layout/Sidebar.tsx` | Retirer Gamepad2 |
-| `supabase/functions/create-checkout/index.ts` | Validation Zod |
-| **Nouveau** `supabase/functions/stripe-webhook/index.ts` | Webhook Stripe |
-| **Nouveau** `supabase/functions/journal-weekly-summary/index.ts` | Resume journal IA |
-| `src/pages/Reflection.tsx` | Bouton Insight IA |
-| `src/pages/Journal.tsx` | Bouton resume semaine IA |
-| `src/pages/Focus.tsx` | Suggestion IA pre-session |
+| **Nouveau** `src/hooks/useProductivityScore.ts` | Formule unifiée |
+| `src/pages/Dashboard.tsx` | Utiliser le hook unifié |
+| `src/pages/Analysis.tsx` | Utiliser le hook unifié + fix `Math.random()` + fix weekly trend |
+| `src/pages/Habits.tsx` | Supprimer streak recalcul dans fetchHabits |
+| `src/pages/Calendar.tsx` | Afficher calendrier sans Google connecté |
+| `src/components/AppleCalendarView.tsx` | Fix FAB position mobile |
+| `src/pages/Reflection.tsx` | Ajouter edit/delete |
+| `src/pages/AIAssistant.tsx` | Lazy-mount onglets au lieu de hidden, composants légers |
 
