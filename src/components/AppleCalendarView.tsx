@@ -23,8 +23,8 @@ interface AppleCalendarViewProps {
   onDateChange: (date: Date) => void;
   googleEvents: CalendarEvent[];
   localItems: CalendarItem[];
-  onCreateEvent: (date: Date, hour: number) => void;
-  onAddClick: () => void;
+  onCreateEvent?: (date: Date, hour: number) => void;
+  onAddClick?: () => void;
   isLoading?: boolean;
   // AI section
   aiContent?: React.ReactNode;
