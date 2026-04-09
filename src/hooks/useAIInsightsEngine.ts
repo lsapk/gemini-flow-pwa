@@ -112,7 +112,9 @@ export function useAIInsightsEngine() {
 
   useEffect(() => {
     if (user) {
-      loadCachedInsights() || generateInsights();
+      if (!loadCachedInsights()) {
+        generateInsights();
+      }
     }
   }, [user, loadCachedInsights, generateInsights]);
 

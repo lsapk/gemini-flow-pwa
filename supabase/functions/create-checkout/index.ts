@@ -7,6 +7,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
+const ALLOWED_ORIGINS = [
+  "https://deepflowia.lovable.app",
+  "https://deepflow.app",
+  "http://localhost:8080",
+];
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -92,12 +98,15 @@ serve(async (req) => {
         }, { onConflict: 'user_id' });
     }
 
+    const origin = req.headers.get("origin") || "";
+    const safeOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceConfig.priceId, quantity: 1 }],
       mode: priceConfig.mode,
-      success_url: `${req.headers.get("origin")}/settings?payment=success`,
-      cancel_url: `${req.headers.get("origin")}/settings?payment=cancelled`,
+      success_url: `${safeOrigin}/settings?payment=success`,
+      cancel_url: `${safeOrigin}/settings?payment=cancelled`,
       metadata: { user_id: user.id, product_id: productId }
     });
 

@@ -103,3 +103,12 @@ verify_jwt = true
 
 [functions.ai-item-assistant]
 verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.journal-weekly-summary]
+verify_jwt = true
+
+[functions.calendar-ai-suggestions]
+verify_jwt = true

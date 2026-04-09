@@ -114,7 +114,9 @@ export function useAIDailyBriefing() {
   // Initial load
   useEffect(() => {
     if (user) {
-      loadCachedBriefing() || generateBriefing();
+      if (!loadCachedBriefing()) {
+        generateBriefing();
+      }
     }
   }, [user, loadCachedBriefing, generateBriefing]);
 

@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const ALLOWED_ORIGINS = [
+  "https://deepflowia.lovable.app",
+  "https://deepflow.app",
+  "http://localhost:8080",
+];
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -100,8 +106,8 @@ serve(async (req) => {
           brand_name: "DeepFlow",
           landing_page: "NO_PREFERENCE",
           user_action: "PAY_NOW",
-          return_url: `${req.headers.get("origin")}/settings?payment=success`,
-          cancel_url: `${req.headers.get("origin")}/settings?payment=cancelled`,
+          return_url: `${(() => { const o = req.headers.get("origin") || ""; return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0]; })()}/settings?payment=success`,
+          cancel_url: `${(() => { const o = req.headers.get("origin") || ""; return ALLOWED_ORIGINS.includes(o) ? o : ALLOWED_ORIGINS[0]; })()}/settings?payment=cancelled`,
         },
       }),
     });
