@@ -9,6 +9,18 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'recharts': ['recharts'],
+          'framer': ['framer-motion'],
+          'markdown': ['react-markdown', 'react-syntax-highlighter', 'remark-gfm'],
+          'dates': ['date-fns'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     mode === 'development' &&
