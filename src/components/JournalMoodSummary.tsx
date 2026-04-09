@@ -46,7 +46,7 @@ export default function JournalMoodSummary({ entries, moods }: MoodSummaryProps)
           </Card>
         );
       })}
-      {/* Carte "Autres"/sans humeur ? */}
+      {/* Carte Autres sans humeur */}
       {entries.filter(e => !e.mood).length > 0 && (
         <Card className="flex px-2 py-2 sm:p-4 items-center transition-shadow">
           <CardContent className="p-0 flex items-center gap-2 sm:gap-4 w-full">
