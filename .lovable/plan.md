@@ -1,89 +1,117 @@
 
 
-# Plan: Correction de tous les problemes fonctionnels identifies
+# Plan: Corrections pre-production DeepFlow
 
-## Problemes trouves
+## Vue d'ensemble
 
-### P1 — Streaks incohérents entre Dashboard et Analyse
-- **Dashboard** calcule un `productivityScore` avec `streakCount * 10` plafonné à 100 (donc streak 10 = max)
-- **Analysis** calcule `habitScore = streakCount * 10` de la meme facon, MAIS `focusScore = (totalFocusTime / 60) * 10` — donc 6h de focus = 100%. Formule incoherente.
-- **Le score du Dashboard et celui d'Analysis sont calcules differemment** : Dashboard pondère (40% tâches, 30% focus, 20% streak, 10% habitudes) tandis qu'Analysis fait une moyenne simple de 3 métriques. Résultat : deux scores différents affichés dans la meme app.
-- **Fix** : Unifier la formule dans un hook unique `useProductivityScore` et l'utiliser partout.
+6 axes pour passer de NO-GO a GO : lint cleanup, securite Stripe, RLS analytics (faux positif), bundle splitting, encrypt_token, et suppression imports lourds.
 
-### P2 — Tendance hebdomadaire (Analysis) utilise `Math.random()`
-- Ligne 53 : `tasks: Math.round(Math.random() * 5 + ...)` — les données du graphique "Tendance Hebdomadaire" sont aléatoires, jamais basées sur les vraies données.
-- **Fix** : Calculer à partir des tâches et habitudes réelles par jour de la semaine.
+## 1. Fix 106 erreurs lint
 
-### P3 — Habitudes : navigation par date corrompt l'état
-- `toggleHabitCompletion` fait un optimistic update sur `habits` state mais ne stocke pas la date consultée. Si l'utilisateur navigue vers un autre jour, coche une habitude, puis revient à aujourd'hui, le state local `is_completed_today` est désynchronisé car `fetchHabits` n'est pas rappelé systématiquement avec la bonne date.
-- Le vrai bug : `fetchHabits` recalcule les streaks à chaque appel (lignes 149-173), ce qui fait N+1 requêtes par habitude. Quand on revient à aujourd'hui, les streaks recalculés peuvent différer.
-- **Fix** : Séparer la logique de streak repair du fetch. Ne recalculer les streaks que quand on modifie une completion, pas à chaque navigation.
+La quasi-totalite sont des `@typescript-eslint/no-explicit-any`. Approche systematique :
 
-### P4 — Calendrier : interface minimaliste, pas d'events locaux visibles clairement
-- Le calendrier ne montre les items locaux (taches, objectifs) que si Google Calendar est connecté. Sans Google connecté, on voit juste "Connectez votre calendrier" — l'utilisateur ne peut pas voir ses tâches/objectifs dans un calendrier.
-- Les events locaux n'ont pas d'heure précise (défaut 9h-10h) — pas utile.
-- Le bouton "+" FAB chevauche la barre de navigation mobile.
-- **Fix** : Afficher le calendrier même sans Google (avec seulement les items locaux), améliorer le positionnement FAB, et montrer un mini-calendrier mensuel.
+- **Typer les `any` evidents** : remplacer par les types concrets (`Error`, `Record<string, unknown>`, `React.ChangeEvent`, etc.) dans ~25 fichiers
+- **2 erreurs `no-unused-expressions`** dans `useAIDailyBriefing.ts` et `useAIInsightsEngine.ts` — corriger la syntaxe (probablement des ternaires sans assignation)
+- **2 erreurs `no-empty-object-type`** dans `command.tsx` et `textarea.tsx` — remplacer `interface X extends Y {}` par `type X = Y`
+- **1 erreur `no-irregular-whitespace`** dans `JournalMoodSummary.tsx`
 
-### P5 — Reflexion : pas de modification/suppression possible
-- L'historique des réflexions est en lecture seule. Pas de bouton modifier ni supprimer.
-- **Fix** : Ajouter boutons edit/delete sur chaque reflexion dans l'historique.
+Objectif : **0 erreur lint**.
 
-### P6 — Intelligence IA : onglet Analysis embarque toute la page Analysis (avec son propre calcul de score)
-- `AIAssistant.tsx` importe `Analysis` et `Profile` en entier comme sous-pages. Cela cause :
-  - Double rendu des charts (les warnings recharts `width(0) height(0)` dans les logs)
-  - Le score dans l'onglet Analyse IA est celui de `Analysis.tsx` qui diffère du Dashboard
-- **Fix** : Ne pas embarquer les pages entières. Créer des composants légers dédiés pour l'onglet Analyse dans l'IA.
+## 2. Securiser les redirections Stripe (origin allowlist)
 
-### P7 — Stripe webhook manque le secret STRIPE_WEBHOOK_SECRET
-- Le webhook existe mais ne peut pas fonctionner sans le secret. Il faut vérifier sa présence et alerter l'utilisateur.
+Dans `create-checkout`, `customer-portal`, et `paypal-create-order` :
 
-### P8 — Charts recharts : warnings width/height 0
-- Les charts dans les onglets cachés (via `hidden` class) ont une taille 0 au montage, causant les warnings en console.
-- **Fix** : Ne rendre les charts que quand l'onglet est visible, ou utiliser un lazy mount.
+```ts
+const ALLOWED_ORIGINS = [
+  "https://deepflowia.lovable.app",
+  "https://deepflow.app", // futur domaine custom
+  "http://localhost:8080",
+];
+const origin = req.headers.get("origin") || "";
+const safeOrigin = ALLOWED_ORIGINS.includes(origin)
+  ? origin
+  : ALLOWED_ORIGINS[0];
+```
 
-## Plan d'implementation
+Utiliser `safeOrigin` au lieu de `origin` brut pour `success_url` et `cancel_url`.
 
-### 1. Unifier le score de productivité
-- Créer `src/hooks/useProductivityScore.ts` avec une formule unique
-- L'utiliser dans `Dashboard.tsx` et `Analysis.tsx`
-- Supprimer les calculs dupliqués
+## 3. RLS analytics — faux positif
 
-### 2. Fix données aléatoires dans Analysis
-- Remplacer `Math.random()` dans `weeklyTrend` par des vraies données groupées par jour de la semaine depuis les tâches et habitudes
+Les tables `analytics_by_period`, `analytics_metadata`, `analytics_raw` n'ont **pas de colonne `user_id`** — ce sont des donnees globales partagees. Les policies `USING (true)` sont correctes ici. Aucune action requise, mais je documenterai la decision.
 
-### 3. Fix navigation habitudes
-- Arrêter de recalculer les streaks dans `fetchHabits` (supprimer lignes 149-173)
-- Ne recalculer que dans `toggleHabitCompletion` (déjà fait) et dans `repairHabitsStreaks` (au chargement initial uniquement)
+## 4. Bundle splitting — reduire les 3 gros chunks
 
-### 4. Calendrier visible sans Google
-- Séparer la condition : afficher `AppleCalendarView` même quand `!isConnected`, mais sans les events Google
-- Ajouter un bandeau discret "Connecter Google" au lieu du fullscreen blocker
-- Corriger le FAB position sur mobile (`bottom-24` au lieu de `bottom-20`)
+**Markdown (803 kB)** : `react-syntax-highlighter` inclut TOUS les langages Prism. Fix :
+- Importer uniquement les langages necessaires (js, ts, json, bash, css)
+- Lazy-load le composant `Markdown` via `React.lazy`
 
-### 5. Reflexion : edit et delete
-- Ajouter des boutons edit/delete sur chaque card dans l'historique
-- Permettre la modification inline (dialog ou expansion)
-- Appeler `supabase.from('daily_reflections').delete/update`
+**BarChart (367 kB)** : Recharts — deja lazy-loaded via les pages. Ajouter `manualChunks` dans vite config pour isoler recharts.
 
-### 6. Fix IA page — ne pas embarquer Analysis/Profile entiers
-- Remplacer `<Analysis />` par un composant leger `AIAnalysisSummary` qui affiche juste le score + radar
-- Remplacer `<Profile />` par un composant leger ou le garder mais en lazy-mount
-- Condition de rendu : ne monter le composant que quand l'onglet est actif (pas `hidden` CSS)
+**index (588 kB)** : chunk principal — ajouter `manualChunks` pour separer `framer-motion`, `date-fns`, et les composants UI lourds.
 
-### 7. Fix recharts warnings
-- Utiliser rendu conditionnel (`activeTab === "analysis" && <Analysis />`) au lieu de `hidden` class pour les onglets avec charts
+```ts
+// vite.config.ts
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'recharts': ['recharts'],
+        'framer': ['framer-motion'],
+        'markdown': ['react-markdown', 'react-syntax-highlighter', 'remark-gfm'],
+        'dates': ['date-fns'],
+      }
+    }
+  }
+}
+```
 
-## Fichiers impactés
+## 5. encrypt_token — vrai chiffrement
+
+Migration SQL pour remplacer le placeholder par pgcrypto :
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION public.encrypt_token(token text)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN encode(
+    pgp_sym_encrypt(token, current_setting('app.settings.token_secret', true)),
+    'base64'
+  );
+END;
+$$;
+```
+
+Note : necessite de definir `app.settings.token_secret` comme parametre de configuration Supabase, ou utiliser un secret edge function. Si le secret n'est pas configure, on utilisera une cle derivee du service role key.
+
+## 6. Ajouter config webhook Stripe dans config.toml
+
+Ajouter la declaration de la fonction `stripe-webhook` dans `supabase/config.toml` avec `verify_jwt = false` (Stripe signe ses propres requetes).
+
+## Fichiers impactes
 
 | Fichier | Action |
 |---------|--------|
-| **Nouveau** `src/hooks/useProductivityScore.ts` | Formule unifiée |
-| `src/pages/Dashboard.tsx` | Utiliser le hook unifié |
-| `src/pages/Analysis.tsx` | Utiliser le hook unifié + fix `Math.random()` + fix weekly trend |
-| `src/pages/Habits.tsx` | Supprimer streak recalcul dans fetchHabits |
-| `src/pages/Calendar.tsx` | Afficher calendrier sans Google connecté |
-| `src/components/AppleCalendarView.tsx` | Fix FAB position mobile |
-| `src/pages/Reflection.tsx` | Ajouter edit/delete |
-| `src/pages/AIAssistant.tsx` | Lazy-mount onglets au lieu de hidden, composants légers |
+| ~25 fichiers src/ | Fix `any` → types concrets |
+| `src/hooks/useAIDailyBriefing.ts` | Fix unused expression |
+| `src/hooks/useAIInsightsEngine.ts` | Fix unused expression |
+| `src/components/ui/command.tsx` | Fix empty interface |
+| `src/components/ui/textarea.tsx` | Fix empty interface |
+| `src/components/JournalMoodSummary.tsx` | Fix whitespace |
+| `src/components/Markdown.tsx` | Import selectif Prism + lazy |
+| `vite.config.ts` | manualChunks pour bundle split |
+| `supabase/functions/create-checkout/index.ts` | Origin allowlist |
+| `supabase/functions/customer-portal/index.ts` | Origin allowlist |
+| `supabase/functions/paypal-create-order/index.ts` | Origin allowlist |
+| `supabase/config.toml` | Ajouter stripe-webhook |
+| Migration SQL | Fix encrypt_token avec pgcrypto |
+
+## Estimation
+
+Gros volume de fichiers mais changements mecaniques (typage). Le plus impactant pour la securite : origin allowlist + encrypt_token.
 
