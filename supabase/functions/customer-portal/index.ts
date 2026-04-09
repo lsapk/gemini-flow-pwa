@@ -7,6 +7,12 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
+const ALLOWED_ORIGINS = [
+  "https://deepflowia.lovable.app",
+  "https://deepflow.app",
+  "http://localhost:8080",
+];
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -51,10 +57,12 @@ serve(async (req) => {
       throw new Error("No subscription found for this user");
     }
 
-    // Create a Stripe customer portal session
+    const origin = req.headers.get("origin") || "";
+    const safeOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
     const session = await stripe.billingPortal.sessions.create({
       customer: customerData.stripe_customer_id,
-      return_url: `${req.headers.get("origin")}/settings`,
+      return_url: `${safeOrigin}/settings`,
     });
 
     // Return the portal URL
