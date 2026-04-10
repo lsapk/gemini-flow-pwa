@@ -23,11 +23,7 @@ export default function Analysis() {
   const { user } = useAuth();
   const [weeklyTrend, setWeeklyTrend] = useState<{ name: string; tasks: number; habits: number }[]>([]);
 
-  useEffect(() => {
-    if (!isPremium && canUseFeature("analysis")) {
-      trackUsage("analysis");
-    }
-  }, []);
+  // Analysis usage is tracked only when explicitly triggered, not on page load
 
   // Compute real weekly trend from DB data
   useEffect(() => {
