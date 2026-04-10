@@ -441,6 +441,13 @@ export type Database = {
             referencedRelation: "user"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "auth_identity_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "user_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       auth_provider_sync_history: {
@@ -1759,6 +1766,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "FK_5f0643f6717905a05164090dde7"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "user_safe_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "FK_61448d56d61802b5dfde5cdb002"
             columns: ["projectId"]
             isOneToOne: false
@@ -2630,6 +2644,13 @@ export type Database = {
             referencedRelation: "user"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "FK_e131705cbbc8fb589889b02d457"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "user_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_profiles: {
@@ -2996,7 +3017,114 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      google_calendar_tokens_safe: {
+        Row: {
+          created_at: string | null
+          has_access_token: string | null
+          has_refresh_token: string | null
+          id: string | null
+          last_rotated_at: string | null
+          token_expiry: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          last_rotated_at?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          last_rotated_at?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      google_tasks_tokens_safe: {
+        Row: {
+          created_at: string | null
+          has_access_token: string | null
+          has_refresh_token: string | null
+          id: string | null
+          last_rotated_at: string | null
+          token_expiry: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          last_rotated_at?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_access_token?: never
+          has_refresh_token?: never
+          id?: string | null
+          last_rotated_at?: string | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_safe_view: {
+        Row: {
+          createdAt: string | null
+          disabled: boolean | null
+          email: string | null
+          firstName: string | null
+          id: string | null
+          lastName: string | null
+          mfaEnabled: boolean | null
+          personalizationAnswers: Json | null
+          role: string | null
+          settings: Json | null
+          updatedAt: string | null
+        }
+        Insert: {
+          createdAt?: string | null
+          disabled?: boolean | null
+          email?: string | null
+          firstName?: string | null
+          id?: string | null
+          lastName?: string | null
+          mfaEnabled?: boolean | null
+          personalizationAnswers?: Json | null
+          role?: string | null
+          settings?: Json | null
+          updatedAt?: string | null
+        }
+        Update: {
+          createdAt?: string | null
+          disabled?: boolean | null
+          email?: string | null
+          firstName?: string | null
+          id?: string | null
+          lastName?: string | null
+          mfaEnabled?: boolean | null
+          personalizationAnswers?: Json | null
+          role?: string | null
+          settings?: Json | null
+          updatedAt?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       auth_user_is_admin: { Args: never; Returns: boolean }
