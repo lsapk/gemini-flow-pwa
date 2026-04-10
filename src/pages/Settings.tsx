@@ -253,18 +253,6 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Password Change */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg"><Key className="h-5 w-5 text-primary" />Mot de passe</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Input type="password" placeholder="Nouveau mot de passe (min. 8 car., maj/min/chiffre)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-              <Button onClick={handleChangePassword} disabled={changingPassword || newPassword.length < 8} className="w-full">
-                {changingPassword ? "Modification..." : "Modifier le mot de passe"}
-              </Button>
-            </CardContent>
-          </Card>
 
           {/* Data & Account Management */}
           <Card className="border-destructive/20">
