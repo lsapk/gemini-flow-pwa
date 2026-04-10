@@ -338,14 +338,14 @@ export default function Focus() {
 
   const closePip = () => {
     if (pipWindowRef.current) {
-      try { pipWindowRef.current.close(); } catch {}
+      try { pipWindowRef.current.close(); } catch (_e) { /* ignore */ }
       pipWindowRef.current = null;
     }
     if (document.pictureInPictureElement) {
-      try { document.exitPictureInPicture(); } catch {}
+      try { document.exitPictureInPicture(); } catch (_e) { /* ignore */ }
     }
     if (videoRef.current) {
-      try { videoRef.current.remove(); } catch {}
+      try { videoRef.current.remove(); } catch (_e) { /* ignore */ }
       videoRef.current = null;
     }
     canvasRef.current = null;

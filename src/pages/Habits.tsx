@@ -266,9 +266,7 @@ export default function Habits() {
           last_completed_at: completedAt,
         });
 
-        // Rewards only when viewing today
-        if (isViewingToday) {
-        }
+        // Rewards only when viewing today — placeholder for future feature
 
         // Check streak milestones
         if (newStreak > 0 && newStreak % 7 === 0) {

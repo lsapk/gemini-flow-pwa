@@ -3015,6 +3015,7 @@ export type Database = {
         Args: { current_level: number }
         Returns: number
       }
+      decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       encrypt_token: { Args: { token: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
