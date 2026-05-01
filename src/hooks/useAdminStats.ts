@@ -47,7 +47,7 @@ export const useAdminStats = () => {
 
   const fetchStats = async () => {
     try {
-      const [usersRes, tasksRes, habitsRes, goalsRes, focusRes, journalRes, subscribersRes, activityRes] = await Promise.allSettled([
+      const [usersRes, tasksRes, habitsRes, goalsRes, focusRes, journalRes, subscribersRes, taskUsersRes, habitUsersRes, goalUsersRes, journalUsersRes, focusUsersRes, completionUsersRes] = await Promise.allSettled([
         supabase.from("user_profiles").select("id, created_at"),
         supabase.from("tasks").select("id", { count: "exact", head: true }),
         supabase.from("habits").select("id", { count: "exact", head: true }),
@@ -55,6 +55,11 @@ export const useAdminStats = () => {
         supabase.from("focus_sessions").select("duration"),
         supabase.from("journal_entries").select("id", { count: "exact", head: true }),
         supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("subscribed", true),
+        supabase.from("tasks").select("user_id"),
+        supabase.from("habits").select("user_id"),
+        supabase.from("goals").select("user_id"),
+        supabase.from("journal_entries").select("user_id"),
+        supabase.from("focus_sessions").select("user_id"),
         supabase.from("habit_completions").select("user_id"),
       ]);
 
@@ -65,7 +70,8 @@ export const useAdminStats = () => {
       const focusSessions = focusRes.status === "fulfilled" ? focusRes.value.data || [] : [];
       const journalCount = journalRes.status === "fulfilled" ? journalRes.value.count || 0 : 0;
       const subscribersCount = subscribersRes.status === "fulfilled" ? subscribersRes.value.count || 0 : 0;
-      const habitCompletions = activityRes.status === "fulfilled" ? activityRes.value.data || [] : [];
+      const activityRows = [taskUsersRes, habitUsersRes, goalUsersRes, journalUsersRes, focusUsersRes, completionUsersRes]
+        .flatMap((result) => (result.status === "fulfilled" ? result.value.data || [] : []));
 
       const totalFocusMinutes = focusSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
       
@@ -76,7 +82,7 @@ export const useAdminStats = () => {
       ).length;
 
       const totalUsers = users.length;
-      const activeUserIds = new Set<string>(habitCompletions.map((item) => item.user_id));
+      const activeUserIds = new Set<string>(activityRows.map((item) => item.user_id).filter(Boolean));
       const activeUsers = activeUserIds.size;
       const dormantUsers = Math.max(0, totalUsers - activeUsers);
       const retentionRate = totalUsers > 0 ? Math.round((newUsersThisWeek / totalUsers) * 100) : 0;
