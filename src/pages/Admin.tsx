@@ -346,8 +346,8 @@ export default function Admin() {
         <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
           <CardContent className="p-4 text-center">
             <UserPlus className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
-            <div className="text-2xl font-bold">{statsLoading ? '...' : platformStats.newUsersThisWeek}</div>
-            <p className="text-xs text-muted-foreground">Nouveaux (7j)</p>
+            <div className="text-2xl font-bold">{statsLoading ? '...' : platformStats.activeUsers}</div>
+            <p className="text-xs text-muted-foreground">Utilisateurs actifs</p>
           </CardContent>
         </Card>
         <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
@@ -383,7 +383,7 @@ export default function Admin() {
         <Card className="border-border/30">
           <CardContent className="p-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10"><Star className="h-4 w-4 text-amber-500" /></div>
-            <div><div className="text-lg font-bold">{statsLoading ? '...' : platformStats.totalSubscribers}</div><p className="text-xs text-muted-foreground">Abonnés Premium</p></div>
+            <div><div className="text-lg font-bold">{statsLoading ? '...' : platformStats.dormantUsers}</div><p className="text-xs text-muted-foreground">Profils sans activité</p></div>
           </CardContent>
         </Card>
       </div>
