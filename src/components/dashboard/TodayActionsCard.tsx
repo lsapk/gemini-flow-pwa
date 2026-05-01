@@ -52,7 +52,7 @@ export const TodayActionsCard = () => {
         // Fetch habits with today's completion status
         const { data: habitsData } = await supabase
           .from('habits')
-          .select('id, title, streak, is_archived')
+          .select('id, title, streak, is_archived, days_of_week')
           .eq('user_id', user.id)
           .eq('is_archived', false);
         
@@ -63,13 +63,14 @@ export const TodayActionsCard = () => {
           .eq('user_id', user.id)
           .gte('completed_date', '2000-01-01');
         
-        const completedHabitIds = new Set(completions?.map(c => c.habit_id) || []);
+        const completedHabitIds = new Set(
+          (completions || [])
+            .filter(completion => completion.completed_date === today)
+            .map(completion => completion.habit_id)
+        );
         const streakMap = calculateHabitStreakMap(
-          (habitsData || []).map(habit => ({ id: habit.id, days_of_week: null })),
-          (completions || []).map(completion => ({
-            habit_id: completion.habit_id,
-            completed_date: today,
-          }))
+          (habitsData || []).map(habit => ({ id: habit.id, days_of_week: habit.days_of_week })),
+          completions || []
         );
         
         // Filter tasks due today
