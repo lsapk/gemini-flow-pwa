@@ -56,12 +56,12 @@ export const TodayActionsCard = () => {
           .eq('user_id', user.id)
           .eq('is_archived', false);
         
-        // Check completions for today
+        // Check completions for streaks and today's state
         const { data: completions } = await supabase
           .from('habit_completions')
-          .select('habit_id')
+          .select('habit_id, completed_date')
           .eq('user_id', user.id)
-          .eq('completed_date', today);
+          .gte('completed_date', '2000-01-01');
         
         const completedHabitIds = new Set(completions?.map(c => c.habit_id) || []);
         const streakMap = calculateHabitStreakMap(
