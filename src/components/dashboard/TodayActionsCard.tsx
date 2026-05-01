@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isToday, parseISO } from "date-fns";
+import { calculateHabitStreakMap } from "@/services/streakCalculator";
 
 interface Task {
   id: string;
@@ -63,6 +64,13 @@ export const TodayActionsCard = () => {
           .eq('completed_date', today);
         
         const completedHabitIds = new Set(completions?.map(c => c.habit_id) || []);
+        const streakMap = calculateHabitStreakMap(
+          (habitsData || []).map(habit => ({ id: habit.id, days_of_week: null })),
+          (completions || []).map(completion => ({
+            habit_id: completion.habit_id,
+            completed_date: today,
+          }))
+        );
         
         // Filter tasks due today
         const todayTasks = (tasksData || []).filter(task => {
@@ -77,6 +85,7 @@ export const TodayActionsCard = () => {
         // Add completion status to habits
         const habitsWithCompletion = (habitsData || []).map(habit => ({
           ...habit,
+          streak: streakMap[habit.id] ?? habit.streak ?? 0,
           is_completed_today: completedHabitIds.has(habit.id),
           is_archived: habit.is_archived || false
         })) as Habit[];
