@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundService } from "@/hooks/useSoundService";
-import { calculateStreak } from "@/services/streakCalculator";
+import { calculateHabitStreakMap, calculateStreak } from "@/services/streakCalculator";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -124,26 +124,36 @@ export default function Habits() {
 
       if (error) throw error;
 
-      const habitsWithCompletion = await Promise.all(
-        (data || []).map(async (habit) => {
-          const { data: completion } = await supabase
-            .from('habit_completions')
-            .select('*')
-            .eq('habit_id', habit.id)
-            .eq('completed_date', targetDate)
-            .maybeSingle();
+      const habitIds = (data || []).map((habit) => habit.id);
+      const { data: completions, error: completionsError } = await supabase
+        .from('habit_completions')
+        .select('habit_id, completed_date')
+        .eq('user_id', user.id)
+        .in('habit_id', habitIds.length > 0 ? habitIds : ['00000000-0000-0000-0000-000000000000'])
+        .gte('completed_date', '2000-01-01');
 
-          const selectedDay = dateToUse.getDay();
-          const shouldShowForDate = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(selectedDay);
+      if (completionsError) throw completionsError;
 
-          return {
-            ...habit,
-            frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
-            is_completed_today: !!completion,
-            should_show_today: shouldShowForDate
-          };
-        })
+      const completionsByHabitAndDate = new Set(
+        (completions || []).map((completion) => `${completion.habit_id}:${completion.completed_date}`)
       );
+      const streakMap = calculateHabitStreakMap(
+        (data || []).map((habit) => ({ id: habit.id, days_of_week: habit.days_of_week })),
+        completions || [],
+      );
+
+      const habitsWithCompletion = (data || []).map((habit) => {
+        const selectedDay = dateToUse.getDay();
+        const shouldShowForDate = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(selectedDay);
+
+        return {
+          ...habit,
+          streak: streakMap[habit.id] ?? 0,
+          frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
+          is_completed_today: completionsByHabitAndDate.has(`${habit.id}:${targetDate}`),
+          should_show_today: shouldShowForDate
+        };
+      });
 
       const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
       const archived = habitsWithCompletion.filter(h => h.is_archived);
