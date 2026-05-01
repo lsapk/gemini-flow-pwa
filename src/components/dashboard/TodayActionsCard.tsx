@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isToday, parseISO } from "date-fns";
+import { calculateHabitStreakMap } from "@/services/streakCalculator";
 
 interface Task {
   id: string;
@@ -51,18 +52,26 @@ export const TodayActionsCard = () => {
         // Fetch habits with today's completion status
         const { data: habitsData } = await supabase
           .from('habits')
-          .select('id, title, streak, is_archived')
+          .select('id, title, streak, is_archived, days_of_week')
           .eq('user_id', user.id)
           .eq('is_archived', false);
         
-        // Check completions for today
+        // Check completions for streaks and today's state
         const { data: completions } = await supabase
           .from('habit_completions')
-          .select('habit_id')
+          .select('habit_id, completed_date')
           .eq('user_id', user.id)
-          .eq('completed_date', today);
+          .gte('completed_date', '2000-01-01');
         
-        const completedHabitIds = new Set(completions?.map(c => c.habit_id) || []);
+        const completedHabitIds = new Set(
+          (completions || [])
+            .filter(completion => completion.completed_date === today)
+            .map(completion => completion.habit_id)
+        );
+        const streakMap = calculateHabitStreakMap(
+          (habitsData || []).map(habit => ({ id: habit.id, days_of_week: habit.days_of_week })),
+          completions || []
+        );
         
         // Filter tasks due today
         const todayTasks = (tasksData || []).filter(task => {
@@ -77,6 +86,7 @@ export const TodayActionsCard = () => {
         // Add completion status to habits
         const habitsWithCompletion = (habitsData || []).map(habit => ({
           ...habit,
+          streak: streakMap[habit.id] ?? habit.streak ?? 0,
           is_completed_today: completedHabitIds.has(habit.id),
           is_archived: habit.is_archived || false
         })) as Habit[];

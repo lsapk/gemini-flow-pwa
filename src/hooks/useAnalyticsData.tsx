@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subDays, startOfToday, parseISO } from "date-fns";
 import { toLocalDateKey } from "@/utils/dateUtils";
+import { calculateHabitStreakMap } from "@/services/streakCalculator";
 
 type AnalyticsDataType = {
   // Types de données pour les graphiques
@@ -41,15 +42,30 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       // Récupérer les données des habitudes
       const { data: habitsRawData, error: habitsError } = await supabase
         .from('habits')
-        .select('title, id, streak')
+        .select('title, id, streak, days_of_week')
         .eq('user_id', user.id);
         
       if (habitsError) throw new Error("Erreur lors de la récupération des habitudes: " + habitsError.message);
       
+      const { data: habitCompletionsRawData, error: habitCompletionsError } = await supabase
+        .from('habit_completions')
+        .select('habit_id, completed_date')
+        .eq('user_id', user.id)
+        .gte('completed_date', '2000-01-01');
+
+      if (habitCompletionsError) {
+        throw new Error("Erreur lors de la récupération des complétions d'habitudes: " + habitCompletionsError.message);
+      }
+
+      const streakMap = calculateHabitStreakMap(
+        (habitsRawData || []).map(habit => ({ id: habit.id, days_of_week: habit.days_of_week })),
+        habitCompletionsRawData || [],
+      );
+
       // Format the habit data using the correct column name (title instead of name)
       let maxStreak = 0;
       const formattedHabitsData = (habitsRawData || []).map(habit => {
-        const streak = habit.streak || 0;
+        const streak = streakMap[habit.id] ?? habit.streak ?? 0;
         if (streak > maxStreak) maxStreak = streak;
         return {
           name: habit.title, // Using 'title' instead of 'name'

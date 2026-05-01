@@ -17,6 +17,7 @@ import { useTheme } from "next-themes";
 import { useDesignMode } from "@/contexts/DesignModeContext";
 import { useAICredits } from "@/hooks/useAICredits";
 import { useSubscription } from "@/hooks/useSubscription";
+import { calculateHabitStreakMap } from "@/services/streakCalculator";
 import { Link, useSearchParams } from "react-router-dom";
 import { PremiumUpgradeCard } from "@/components/PremiumUpgradeCard";
 import { ProfileEditForm } from "@/components/settings/ProfileEditForm";
@@ -86,19 +87,22 @@ export default function Settings() {
   const fetchStats = async () => {
     if (!user) return;
     try {
-      const [tasksRes, habitsRes, focusRes, goalsRes, journalRes] = await Promise.allSettled([
+      const [tasksRes, habitsRes, focusRes, goalsRes, journalRes, completionsRes] = await Promise.allSettled([
         supabase.from('tasks').select('id').eq('user_id', user.id).eq('completed', true),
-        supabase.from('habits').select('id, streak').eq('user_id', user.id),
+        supabase.from('habits').select('id, streak, days_of_week').eq('user_id', user.id),
         supabase.from('focus_sessions').select('duration').eq('user_id', user.id),
         supabase.from('goals').select('id').eq('user_id', user.id).eq('completed', true),
-        supabase.from('journal_entries').select('id').eq('user_id', user.id)
+        supabase.from('journal_entries').select('id').eq('user_id', user.id),
+        supabase.from('habit_completions').select('habit_id, completed_date').eq('user_id', user.id)
       ]);
       const tasks = tasksRes.status === 'fulfilled' ? (tasksRes.value.data?.length || 0) : 0;
       const habits = habitsRes.status === 'fulfilled' ? (habitsRes.value.data || []) : [];
+      const completions = completionsRes.status === 'fulfilled' ? (completionsRes.value.data || []) : [];
       const focusSessions = focusRes.status === 'fulfilled' ? (focusRes.value.data || []) : [];
       const goals = goalsRes.status === 'fulfilled' ? (goalsRes.value.data?.length || 0) : 0;
       const journal = journalRes.status === 'fulfilled' ? (journalRes.value.data?.length || 0) : 0;
-      const maxStreak = Math.max(...habits.map(h => h.streak || 0), 0);
+      const streakMap = calculateHabitStreakMap(habits.map(h => ({ id: h.id, days_of_week: h.days_of_week })), completions);
+      const maxStreak = Math.max(...Object.values(streakMap), 0);
       const totalMinutes = focusSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
       setStats({ tasks_completed: tasks, habits_tracked: habits.length, focus_sessions: focusSessions.length, focus_minutes: totalMinutes, streak_max: maxStreak, goals_completed: goals, journal_entries: journal });
     } catch (error) { console.error('Error fetching stats:', error); }
