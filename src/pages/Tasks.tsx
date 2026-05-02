@@ -304,7 +304,7 @@ export default function Tasks() {
                       tasks={currentTasks}
                       loading={isLoading}
                       onEdit={handleEdit}
-                      onDelete={handleDelete}
+                      onDelete={requestDelete}
                       onToggleComplete={handleToggleComplete}
                       subtasks={subtasks}
                       onRefreshSubtasks={handleRefreshSubtasks}
@@ -339,6 +339,23 @@ export default function Tasks() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleSyncWithGoogle}>Synchroniser</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est définitive. La tâche et ses sous-tâches seront supprimées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
