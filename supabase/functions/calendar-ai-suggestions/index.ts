@@ -62,7 +62,14 @@ serve(async (req) => {
     console.log('Lovable API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur (using authenticated user ID)
-    const targetDate = new Date(date).toISOString().split('T')[0];
+    // Use a local-date helper to avoid UTC shift bugs (matches client-side toLocalDateKey)
+    const toLocalDateKey = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const targetDate = toLocalDateKey(new Date(date));
     const selectedDay = new Date(date).getDay();
 
     // Récupérer aussi les événements Google Calendar
