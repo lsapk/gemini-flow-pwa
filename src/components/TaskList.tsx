@@ -153,7 +153,7 @@ const SortableTaskCard = React.forwardRef<HTMLDivElement, SortableTaskCardProps>
       </ItemCard>
     </div>
   );
-}
+});
 
 export default function TaskList({
   tasks,
