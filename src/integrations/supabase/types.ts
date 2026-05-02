@@ -3143,11 +3143,14 @@ export type Database = {
         Args: { current_level: number }
         Returns: number
       }
+      consume_ai_credit: { Args: { amount: number }; Returns: number }
       decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       encrypt_token: { Args: { token: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      increment_daily_usage: { Args: { p_type: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_authenticated: { Args: never; Returns: boolean }
+      reset_my_daily_ai_usage: { Args: never; Returns: undefined }
       sync_offline_item: {
         Args: {
           p_item: Json

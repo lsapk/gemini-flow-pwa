@@ -88,30 +88,18 @@ export const useSubscription = () => {
 
   const trackUsage = async (type: "chat" | "analysis") => {
     if (!user || limits.isUnlimited) return;
-    const today = toLocalDateKey();
-    const { data: existing } = await supabase
-      .from("daily_usage")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("usage_date", today)
-      .maybeSingle();
-
-    if (existing) {
-      const updateData = type === "chat"
-        ? { ai_chat_count: existing.ai_chat_count + 1 }
-        : { ai_analysis_count: existing.ai_analysis_count + 1 };
-      await supabase
-        .from("daily_usage")
-        .update({ ...updateData, updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
-    } else {
-      await supabase.from("daily_usage").insert({
-        user_id: user.id,
-        usage_date: today,
-        ai_chat_count: type === "chat" ? 1 : 0,
-        ai_analysis_count: type === "analysis" ? 1 : 0,
-      });
+    // Atomic UPSERT on server (handles race conditions and timezone correctly)
+    const { error } = await supabase.rpc("increment_daily_usage", { p_type: type });
+    if (error) {
+      console.error("increment_daily_usage failed", error);
     }
+    queryClient.invalidateQueries({ queryKey: ["daily-usage", user?.id] });
+  };
+
+  const resetDailyUsage = async () => {
+    if (!user) return;
+    const { error } = await supabase.rpc("reset_my_daily_ai_usage");
+    if (error) throw error;
     queryClient.invalidateQueries({ queryKey: ["daily-usage", user?.id] });
   };
 
@@ -173,6 +161,7 @@ export const useSubscription = () => {
     canUseFeature,
     getRemainingUses,
     trackUsage,
+    resetDailyUsage,
     handleStripeCheckout,
     handleManageSubscription,
   };

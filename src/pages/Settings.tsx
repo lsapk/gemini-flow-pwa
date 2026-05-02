@@ -40,7 +40,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { designMode, setDesignMode } = useDesignMode();
   const { credits: aiCredits } = useAICredits();
-  const { handleManageSubscription, isPremium } = useSubscription();
+  const { handleManageSubscription, isPremium, getRemainingUses, resetDailyUsage, isAdmin } = useSubscription();
   const [searchParams] = useSearchParams();
   
   const [formData, setFormData] = useState({
@@ -244,16 +244,39 @@ export default function Settings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Crédits IA
+                Crédits & Usage IA
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold text-primary">{aiCredits === Infinity ? "∞" : aiCredits}</div>
                   <p className="text-xs text-muted-foreground">crédits disponibles</p>
                 </div>
+                {!isPremium && !isAdmin && (
+                  <div className="text-right text-sm">
+                    <div>Chat restant : <span className="font-semibold">{getRemainingUses("chat")}</span> / 5</div>
+                    <div>Analyses restantes : <span className="font-semibold">{getRemainingUses("analysis")}</span> / 1</div>
+                  </div>
+                )}
               </div>
+              {!isPremium && !isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      await resetDailyUsage();
+                      toast.success("Compteurs IA du jour réinitialisés");
+                    } catch {
+                      toast.error("Impossible de réinitialiser les compteurs");
+                    }
+                  }}
+                >
+                  Réinitialiser mes compteurs IA du jour
+                </Button>
+              )}
             </CardContent>
           </Card>
 

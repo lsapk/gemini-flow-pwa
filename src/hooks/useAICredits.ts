@@ -73,19 +73,10 @@ export const useAICredits = () => {
 
       if (!user) throw new Error("Not authenticated");
 
-      const currentCredits = aiCredits?.credits || 0;
-      if (currentCredits < amount) {
-        throw new Error("Pas assez de crédits IA");
-      }
-
-      const newCredits = currentCredits - amount;
-      const { error } = await supabase
-        .from("ai_credits")
-        .update({ credits: newCredits, last_updated: new Date().toISOString() })
-        .eq("user_id", user.id);
-
+      // Atomic decrement on the server to avoid race conditions
+      const { data, error } = await supabase.rpc("consume_ai_credit", { amount });
       if (error) throw error;
-      return newCredits;
+      return (data as number) ?? 0;
     },
     onSuccess: () => {
       if (!isAdmin) {

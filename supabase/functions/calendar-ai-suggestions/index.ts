@@ -62,7 +62,14 @@ serve(async (req) => {
     console.log('Lovable API key retrieved successfully');
 
     // Récupérer les données de l'utilisateur (using authenticated user ID)
-    const targetDate = new Date(date).toISOString().split('T')[0];
+    // Use a local-date helper to avoid UTC shift bugs (matches client-side toLocalDateKey)
+    const toLocalDateKey = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const targetDate = toLocalDateKey(new Date(date));
     const selectedDay = new Date(date).getDay();
 
     // Récupérer aussi les événements Google Calendar
@@ -117,7 +124,7 @@ serve(async (req) => {
       }
     }
 
-    const targetDateStr = new Date(date).toISOString().split('T')[0];
+    const targetDateStr = targetDate;
     
     const systemPrompt = `Tu es un assistant de productivité expert. Tu dois fournir des suggestions complètes et détaillées pour organiser la journée de l'utilisateur. Ne coupe JAMAIS ta réponse - termine toujours complètement.`;
     
