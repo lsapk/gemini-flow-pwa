@@ -58,7 +58,7 @@ interface SortableTaskCardProps {
   viewMode: ViewMode;
 }
 
-function SortableTaskCard({
+const SortableTaskCard = React.forwardRef<HTMLDivElement, SortableTaskCardProps>(function SortableTaskCard({
   task,
   onEdit,
   onDelete,
@@ -68,7 +68,7 @@ function SortableTaskCard({
   onToggleExpanded,
   onRefreshSubtasks,
   viewMode,
-}: SortableTaskCardProps) {
+}, _forwardedRef) {
   const {
     attributes,
     listeners,
@@ -85,6 +85,9 @@ function SortableTaskCard({
 
   const completedSubtasks = taskSubtasks.filter(s => s.completed).length;
 
+  // We attach the dnd-kit ref to the root element. Framer Motion's PopChild
+  // forwards a ref to detect mounting; using forwardRef silences the warning,
+  // and dnd-kit's setNodeRef is what actually controls drag behavior.
   return (
     <div ref={setNodeRef} style={style}>
       <ItemCard
