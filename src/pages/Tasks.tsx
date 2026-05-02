@@ -133,28 +133,42 @@ export default function Tasks() {
     setSubtasks(subtasksByTask);
   };
 
-  useEffect(() => { fetchSubtasks(); }, [user, tasks]);
+  // Refetch subtasks only when the SET of task IDs changes (not on every task content update)
+  const taskIdsKey = tasks.map(t => t.id).join(',');
+  useEffect(() => { fetchSubtasks(); }, [user, taskIdsKey]);
 
   const handleEdit = (task: Task) => { setEditingTask(task); setIsEditModalOpen(true); };
 
-  const handleDelete = async (id: string) => {
+  const requestDelete = (id: string) => {
+    setTaskToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      const { error } = await supabase.from('tasks').delete().eq('id', taskToDelete).eq('user_id', user?.id ?? '');
       if (error) throw new Error(error.message);
-      toast({ title: 'Success', description: 'Task deleted successfully' });
+      toast({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' });
       refetch();
-    } catch (error: any) { toast({ title: 'Error', description: error.message }); }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setTaskToDelete(null);
+    }
   };
 
   const handleToggleComplete = async (id: string, completed: boolean) => {
     try {
-      const task = tasks.find(t => t.id === id);
       const { error } = await supabase.from('tasks').update({ completed: !completed }).eq('id', id);
       if (error) throw new Error(error.message);
-
-      toast({ title: 'Success', description: 'Task updated successfully' });
       refetch();
-    } catch (error: any) { toast({ title: 'Error', description: error.message }); }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
+    }
   };
 
   const handleRefreshSubtasks = () => fetchSubtasks();
