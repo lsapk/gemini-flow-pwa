@@ -40,7 +40,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { designMode, setDesignMode } = useDesignMode();
   const { credits: aiCredits } = useAICredits();
-  const { handleManageSubscription, isPremium } = useSubscription();
+  const { handleManageSubscription, isPremium, getRemainingUses, resetDailyUsage, isAdmin } = useSubscription();
   const [searchParams] = useSearchParams();
   
   const [formData, setFormData] = useState({
