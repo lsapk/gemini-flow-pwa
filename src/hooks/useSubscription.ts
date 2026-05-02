@@ -161,6 +161,7 @@ export const useSubscription = () => {
     canUseFeature,
     getRemainingUses,
     trackUsage,
+    resetDailyUsage,
     handleStripeCheckout,
     handleManageSubscription,
   };
