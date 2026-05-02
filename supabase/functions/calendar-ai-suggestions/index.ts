@@ -124,7 +124,7 @@ serve(async (req) => {
       }
     }
 
-    const targetDateStr = new Date(date).toISOString().split('T')[0];
+    const targetDateStr = targetDate;
     
     const systemPrompt = `Tu es un assistant de productivité expert. Tu dois fournir des suggestions complètes et détaillées pour organiser la journée de l'utilisateur. Ne coupe JAMAIS ta réponse - termine toujours complètement.`;
     
