@@ -1,117 +1,119 @@
+# Audit & corrections — DeepFlow
 
+J'ai parcouru les pages, hooks et logs. Voici les vrais problèmes trouvés (pas de réécriture inutile) et ce que je propose de corriger.
 
-# Plan: Corrections pre-production DeepFlow
+## 1. Bugs concrets à corriger
 
-## Vue d'ensemble
+### a. Erreur React dans la liste des tâches (visible dans la console)
+`SortableTaskCard` est utilisé dans `<AnimatePresence mode="popLayout">`, qui passe une `ref` au composant enfant. Or le composant n'utilise pas `forwardRef`. Console actuelle :
+> Function components cannot be given refs… Check the render method of `PopChild`.
+**Fix** : envelopper `SortableTaskCard` dans `React.forwardRef` et transmettre la `ref` au `<div>` racine.
 
-6 axes pour passer de NO-GO a GO : lint cleanup, securite Stripe, RLS analytics (faux positif), bundle splitting, encrypt_token, et suppression imports lourds.
-
-## 1. Fix 106 erreurs lint
-
-La quasi-totalite sont des `@typescript-eslint/no-explicit-any`. Approche systematique :
-
-- **Typer les `any` evidents** : remplacer par les types concrets (`Error`, `Record<string, unknown>`, `React.ChangeEvent`, etc.) dans ~25 fichiers
-- **2 erreurs `no-unused-expressions`** dans `useAIDailyBriefing.ts` et `useAIInsightsEngine.ts` — corriger la syntaxe (probablement des ternaires sans assignation)
-- **2 erreurs `no-empty-object-type`** dans `command.tsx` et `textarea.tsx` — remplacer `interface X extends Y {}` par `type X = Y`
-- **1 erreur `no-irregular-whitespace`** dans `JournalMoodSummary.tsx`
-
-Objectif : **0 erreur lint**.
-
-## 2. Securiser les redirections Stripe (origin allowlist)
-
-Dans `create-checkout`, `customer-portal`, et `paypal-create-order` :
-
+### b. Boucle de fetch des sous-tâches
+`src/pages/Tasks.tsx` :
 ```ts
-const ALLOWED_ORIGINS = [
-  "https://deepflowia.lovable.app",
-  "https://deepflow.app", // futur domaine custom
-  "http://localhost:8080",
-];
-const origin = req.headers.get("origin") || "";
-const safeOrigin = ALLOWED_ORIGINS.includes(origin)
-  ? origin
-  : ALLOWED_ORIGINS[0];
+useEffect(() => { fetchSubtasks(); }, [user, tasks]);
 ```
+À chaque `refetch()` (toggle complete, edit, delete, reorder…), `tasks` change → re-fetch des sous-tâches même quand inutile.
+**Fix** : ne dépendre que des `tasks.map(t=>t.id).join(',')` ou recharger explicitement après les mutations qui touchent vraiment aux sous-tâches.
 
-Utiliser `safeOrigin` au lieu de `origin` brut pour `success_url` et `cancel_url`.
+### c. Race condition sur les crédits IA et le compteur d'usage
+`useAICredits.useCredits` et `useSubscription.trackUsage` font `read → compute → write` côté client. Deux clics rapides peuvent décrémenter une seule fois ou compter en double.
+**Fix** : créer une fonction Postgres `consume_ai_credit(amount int)` et `increment_daily_usage(type text)` (SECURITY DEFINER, atomique), et les appeler via `supabase.rpc(...)`.
 
-## 3. RLS analytics — faux positif
+### d. "Analyse IA déjà utilisée" alors que jamais lancée
+La limite Basique est `dailyAnalyses = 1`. Si un ancien `useEffect` (corrigé récemment) ou une re-render a tracké 1 usage, le compteur reste en DB. Aucune logique ne le réinitialise hors changement de jour.
+**Fix** : ajouter dans Settings/Admin un bouton "Réinitialiser mes compteurs IA du jour" (côté user pour Admin, ou via un RPC qui supprime la ligne `daily_usage` du jour).
 
-Les tables `analytics_by_period`, `analytics_metadata`, `analytics_raw` n'ont **pas de colonne `user_id`** — ce sont des donnees globales partagees. Les policies `USING (true)` sont correctes ici. Aucune action requise, mais je documenterai la decision.
+### e. Suppression sans confirmation
+`Tasks.tsx`, `Goals.tsx` : `handleDelete` supprime directement.
+**Fix** : ajouter un `AlertDialog` de confirmation (déjà utilisé dans Habits).
 
-## 4. Bundle splitting — reduire les 3 gros chunks
+## 2. Cohérence i18n (app entièrement FR)
 
-**Markdown (803 kB)** : `react-syntax-highlighter` inclut TOUS les langages Prism. Fix :
-- Importer uniquement les langages necessaires (js, ts, json, bash, css)
-- Lazy-load le composant `Markdown` via `React.lazy`
+Plusieurs toasts encore en anglais dans `Tasks.tsx` :
+- `"Success" / "Task deleted successfully" / "Task updated successfully" / "Error"`
+**Fix** : traduire en FR (cohérent avec le reste).
 
-**BarChart (367 kB)** : Recharts — deja lazy-loaded via les pages. Ajouter `manualChunks` dans vite config pour isoler recharts.
+## 3. Cohérence avec la mémoire projet
 
-**index (588 kB)** : chunk principal — ajouter `manualChunks` pour separer `framer-motion`, `date-fns`, et les composants UI lourds.
+### a. `toISOString().split('T')[0]` interdit
+Encore présent dans :
+- `supabase/functions/calendar-ai-suggestions/index.ts` (lignes 65, 120) — utilisé pour générer une clé de date côté serveur ; à remplacer par une fonction locale équivalente à `toLocalDateKey`.
+- `src/pages/Focus.tsx` ligne 615 (max d'un input date) — peu critique mais à harmoniser.
+- `src/pages/Settings.tsx` et `Admin.tsx` : usage uniquement pour nommer le fichier d'export → acceptable, on garde.
 
-```ts
-// vite.config.ts
-build: {
-  rollupOptions: {
-    output: {
-      manualChunks: {
-        'recharts': ['recharts'],
-        'framer': ['framer-motion'],
-        'markdown': ['react-markdown', 'react-syntax-highlighter', 'remark-gfm'],
-        'dates': ['date-fns'],
-      }
-    }
-  }
-}
-```
+## 4. Petites améliorations UX
 
-## 5. encrypt_token — vrai chiffrement
+- **Manifest PWA** : ajouter `purpose: "any maskable"` sur l'icône principale et référencer le nouveau `favicon.png` ajouté récemment dans `<link rel="icon">` (déjà fait dans `index.html` apparemment, à revérifier).
+- **TaskList — état vide après filtres** : OK déjà géré.
+- **Page `Profile` (`canUseFeature("ai_profile")`)** : actuellement bloque silencieusement les Basique. Afficher un bandeau "Disponible avec Premium" plutôt qu'une page vide.
+- **AIAssistant — affichage des crédits** : harmoniser le compteur affiché (`aiCredits` vs `getRemainingUses("chat")`) — actuellement deux sources peuvent diverger.
 
-Migration SQL pour remplacer le placeholder par pgcrypto :
+## 5. Hors scope (à ne pas faire maintenant)
 
+- Refactor majeur de pages > 500 lignes (Admin, Focus, Habits, Settings) — fonctionnel, juste long.
+- Migration vers React Query pour toutes les pages — gros chantier.
+- 100 `console.log` à nettoyer — non bloquant.
+
+## Détails techniques
+
+### Migration SQL prévue
 ```sql
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-CREATE OR REPLACE FUNCTION public.encrypt_token(token text)
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
+-- Décrémenter un crédit de façon atomique
+CREATE OR REPLACE FUNCTION public.consume_ai_credit(amount int)
+RETURNS int LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE remaining int;
 BEGIN
-  RETURN encode(
-    pgp_sym_encrypt(token, current_setting('app.settings.token_secret', true)),
-    'base64'
-  );
-END;
+  UPDATE ai_credits
+  SET credits = credits - amount, last_updated = now()
+  WHERE user_id = auth.uid() AND credits >= amount
+  RETURNING credits INTO remaining;
+  IF remaining IS NULL THEN RAISE EXCEPTION 'Crédits insuffisants'; END IF;
+  RETURN remaining;
+END $$;
+
+-- Incrémenter daily_usage atomiquement
+CREATE OR REPLACE FUNCTION public.increment_daily_usage(p_type text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO daily_usage(user_id, usage_date, ai_chat_count, ai_analysis_count)
+  VALUES (auth.uid(), (now() AT TIME ZONE 'Europe/Paris')::date,
+          CASE WHEN p_type='chat' THEN 1 ELSE 0 END,
+          CASE WHEN p_type='analysis' THEN 1 ELSE 0 END)
+  ON CONFLICT (user_id, usage_date) DO UPDATE
+  SET ai_chat_count = daily_usage.ai_chat_count + EXCLUDED.ai_chat_count,
+      ai_analysis_count = daily_usage.ai_analysis_count + EXCLUDED.ai_analysis_count,
+      updated_at = now();
+END $$;
+
+-- Reset compteurs IA du jour pour soi-même
+CREATE OR REPLACE FUNCTION public.reset_my_daily_ai_usage()
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  DELETE FROM daily_usage
+  WHERE user_id = auth.uid()
+    AND usage_date = (now() AT TIME ZONE 'Europe/Paris')::date;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.consume_ai_credit(int),
+                          public.increment_daily_usage(text),
+                          public.reset_my_daily_ai_usage()
+FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.consume_ai_credit(int),
+                         public.increment_daily_usage(text),
+                         public.reset_my_daily_ai_usage()
+TO authenticated;
 ```
 
-Note : necessite de definir `app.settings.token_secret` comme parametre de configuration Supabase, ou utiliser un secret edge function. Si le secret n'est pas configure, on utilisera une cle derivee du service role key.
+### Fichiers à modifier
+- `src/components/TaskList.tsx` — `forwardRef` sur `SortableTaskCard`
+- `src/pages/Tasks.tsx` — dépendances useEffect, toasts FR, AlertDialog suppression
+- `src/pages/Goals.tsx` — AlertDialog suppression
+- `src/hooks/useAICredits.ts` — utiliser `rpc('consume_ai_credit')`
+- `src/hooks/useSubscription.ts` — utiliser `rpc('increment_daily_usage')`, exposer `resetDailyUsage()`
+- `src/pages/Settings.tsx` — bouton "Réinitialiser compteurs IA du jour"
+- `src/pages/AIAssistant.tsx` — unifier l'affichage crédits/limite
+- `src/pages/Profile.tsx` — bandeau Premium au lieu de blocage muet
+- `supabase/functions/calendar-ai-suggestions/index.ts` — helper local de date
 
-## 6. Ajouter config webhook Stripe dans config.toml
-
-Ajouter la declaration de la fonction `stripe-webhook` dans `supabase/config.toml` avec `verify_jwt = false` (Stripe signe ses propres requetes).
-
-## Fichiers impactes
-
-| Fichier | Action |
-|---------|--------|
-| ~25 fichiers src/ | Fix `any` → types concrets |
-| `src/hooks/useAIDailyBriefing.ts` | Fix unused expression |
-| `src/hooks/useAIInsightsEngine.ts` | Fix unused expression |
-| `src/components/ui/command.tsx` | Fix empty interface |
-| `src/components/ui/textarea.tsx` | Fix empty interface |
-| `src/components/JournalMoodSummary.tsx` | Fix whitespace |
-| `src/components/Markdown.tsx` | Import selectif Prism + lazy |
-| `vite.config.ts` | manualChunks pour bundle split |
-| `supabase/functions/create-checkout/index.ts` | Origin allowlist |
-| `supabase/functions/customer-portal/index.ts` | Origin allowlist |
-| `supabase/functions/paypal-create-order/index.ts` | Origin allowlist |
-| `supabase/config.toml` | Ajouter stripe-webhook |
-| Migration SQL | Fix encrypt_token avec pgcrypto |
-
-## Estimation
-
-Gros volume de fichiers mais changements mecaniques (typage). Le plus impactant pour la securite : origin allowlist + encrypt_token.
-
+Ce plan corrige les vrais problèmes visibles (erreur console, race conditions crédits IA, "analyse déjà utilisée", suppression sans confirmation, toasts EN) sans chambouler l'architecture.
