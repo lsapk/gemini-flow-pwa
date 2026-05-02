@@ -63,6 +63,8 @@ export default function Tasks() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const googleTasks = useGoogleTasks();
 
