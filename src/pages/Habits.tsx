@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundService } from "@/hooks/useSoundService";
-import { calculateHabitStreakMap, calculateStreak } from "@/services/streakCalculator";
+import { calculateHabitStreakMap, calculateStreak, normalizeDaysOfWeek } from "@/services/streakCalculator";
 import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -143,13 +143,15 @@ export default function Habits() {
       );
 
       const habitsWithCompletion = (data || []).map((habit) => {
+        const normalizedDaysOfWeek = normalizeDaysOfWeek(habit.days_of_week);
         const selectedDay = dateToUse.getDay();
-        const shouldShowForDate = !habit.days_of_week || habit.days_of_week.length === 0 || habit.days_of_week.includes(selectedDay);
+        const shouldShowForDate = !normalizedDaysOfWeek || normalizedDaysOfWeek.includes(selectedDay);
 
         return {
           ...habit,
           streak: streakMap[habit.id] ?? 0,
           frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
+          days_of_week: normalizedDaysOfWeek ?? undefined,
           is_completed_today: completionsByHabitAndDate.has(`${habit.id}:${targetDate}`),
           should_show_today: shouldShowForDate
         };
@@ -224,9 +226,10 @@ export default function Habits() {
     const targetDate = formatLocalDate(currentSelectedDate);
 
     const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
-    if (habit?.days_of_week && habit.days_of_week.length > 0) {
+    const normalizedDaysOfWeek = normalizeDaysOfWeek(habit?.days_of_week);
+    if (normalizedDaysOfWeek && normalizedDaysOfWeek.length > 0) {
       const selectedDay = currentSelectedDate.getDay();
-      if (!habit.days_of_week.includes(selectedDay)) {
+      if (!normalizedDaysOfWeek.includes(selectedDay)) {
         sound.playError();
         toast.error("Cette habitude n'est pas prévue pour cette date");
         return;
@@ -250,7 +253,7 @@ export default function Habits() {
         sound.playUncomplete();
 
         // Recalculate streak from actual data
-        const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
         updateHabitInLists(habitId, { streak: newStreak });
 
@@ -268,7 +271,7 @@ export default function Habits() {
         sound.playComplete();
 
         // Recalculate streak from actual data
-        const newStreak = await calculateStreak(habitId, user.id, habit?.days_of_week);
+        const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         const completedAt = new Date().toISOString();
         await supabase.from('habits').update({ 
           last_completed_at: completedAt, 
