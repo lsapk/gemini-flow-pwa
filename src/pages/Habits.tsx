@@ -256,10 +256,13 @@ export default function Habits() {
 
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        // Check: insert completion
+        // Check: upsert completion (idempotent — avoids duplicate key errors on rapid clicks)
         const { error } = await supabase
           .from('habit_completions')
-          .insert({ habit_id: habitId, user_id: user.id, completed_date: targetDate });
+          .upsert(
+            { habit_id: habitId, user_id: user.id, completed_date: targetDate },
+            { onConflict: 'habit_id,user_id,completed_date', ignoreDuplicates: true }
+          );
         if (error) throw error;
 
         sound.playComplete();
