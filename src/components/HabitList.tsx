@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Target, Calendar } from "lucide-react";
@@ -24,6 +24,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { normalizeDaysOfWeek } from '@/services/streakCalculator';
 
 interface HabitListProps {
   habits: Habit[];
@@ -47,18 +48,19 @@ interface SortableHabitCardProps {
 }
 
 // Days of week indicator component
-function DaysIndicator({ daysOfWeek, completedToday }: { daysOfWeek?: number[], completedToday?: boolean }) {
+function DaysIndicator({ daysOfWeek }: { daysOfWeek?: number[] }) {
   const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const today = new Date().getDay();
+  const normalizedDays = normalizeDaysOfWeek(daysOfWeek);
   
-  if (!daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.length === 7) {
+  if (!normalizedDays || normalizedDays.length === 7) {
     return null;
   }
 
   return (
     <div className="flex items-center gap-0.5 mt-2">
       {days.map((day, index) => {
-        const isActive = daysOfWeek.includes(index);
+        const isActive = normalizedDays.includes(index);
         const isToday = index === today;
         return (
           <div
@@ -81,7 +83,7 @@ function DaysIndicator({ daysOfWeek, completedToday }: { daysOfWeek?: number[], 
   );
 }
 
-function SortableHabitCard({ habit, onEdit, onDelete, onComplete, onArchive, showArchived }: SortableHabitCardProps) {
+const SortableHabitCard = React.forwardRef<HTMLDivElement, SortableHabitCardProps>(function SortableHabitCard({ habit, onEdit, onDelete, onComplete, onArchive, showArchived }, ref) {
   const {
     attributes,
     listeners,
@@ -97,7 +99,20 @@ function SortableHabitCard({ habit, onEdit, onDelete, onComplete, onArchive, sho
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div
+      ref={(node) => {
+        setNodeRef(node);
+
+        if (!ref) return;
+        if (typeof ref === 'function') {
+          ref(node);
+          return;
+        }
+
+        ref.current = node;
+      }}
+      style={style}
+    >
       <ItemCard
         type="habit"
         data={habit}
@@ -124,15 +139,12 @@ function SortableHabitCard({ habit, onEdit, onDelete, onComplete, onArchive, sho
               </div>
             )}
           </div>
-          <DaysIndicator 
-            daysOfWeek={habit.days_of_week} 
-            completedToday={habit.is_completed_today}
-          />
+          <DaysIndicator daysOfWeek={habit.days_of_week} />
         </div>
       </ItemCard>
     </div>
   );
-}
+});
 
 export default function HabitList({
   habits,
