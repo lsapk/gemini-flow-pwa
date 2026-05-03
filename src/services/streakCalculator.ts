@@ -11,6 +11,25 @@ type HabitCompletionRow = {
   completed_date: string;
 };
 
+function normalizeDayValue(day: number): number {
+  if (day === 7) return 0;
+  return day;
+}
+
+function normalizeDaysOfWeek(daysOfWeek?: number[] | null): number[] | null {
+  if (!daysOfWeek || daysOfWeek.length === 0) return null;
+
+  const normalized = Array.from(
+    new Set(
+      daysOfWeek
+        .map((day) => normalizeDayValue(day))
+        .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+    ),
+  ).sort((a, b) => a - b);
+
+  return normalized.length === 0 ? null : normalized;
+}
+
 function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -19,11 +38,13 @@ function formatDateKey(date: Date): string {
 }
 
 function getScheduledDays(daysOfWeek?: number[] | null): Set<number> | null {
-  if (!daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.length === 7) {
+  const normalizedDays = normalizeDaysOfWeek(daysOfWeek);
+
+  if (!normalizedDays || normalizedDays.length === 7) {
     return null;
   }
 
-  return new Set(daysOfWeek);
+  return new Set(normalizedDays);
 }
 
 export function calculateStreakFromDates(
@@ -106,3 +127,5 @@ export async function calculateStreak(
     daysOfWeek,
   );
 }
+
+export { normalizeDaysOfWeek };
