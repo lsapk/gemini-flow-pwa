@@ -11,9 +11,10 @@ import CreateModal from "@/components/modals/CreateModal";
 import CreateHabitForm from "@/components/modals/CreateHabitForm";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { toLocalDateKey } from "@/utils/dateUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -41,13 +42,6 @@ import {
 import HabitList from "@/components/HabitList";
 import { Habit } from "@/types";
 
-function formatLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 export default function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [archivedHabits, setArchivedHabits] = useState<Habit[]>([]);
@@ -63,9 +57,9 @@ export default function Habits() {
   const sound = useSoundService();
 
   // Keep a stable reference to today's date string to avoid drift
-  const todayStr = useRef(formatLocalDate(new Date()));
+  const todayStr = useRef(toLocalDateKey(new Date()));
 
-  const isViewingToday = formatLocalDate(selectedDate) === todayStr.current;
+  const isViewingToday = toLocalDateKey(selectedDate) === todayStr.current;
 
   const completedToday = habits.filter(h => h.is_completed_today).length;
   const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
@@ -114,7 +108,7 @@ export default function Habits() {
     if (!user) return;
     setIsLoading(true);
     try {
-      const targetDate = formatLocalDate(dateToUse);
+      const targetDate = toLocalDateKey(dateToUse);
       const { data, error } = await supabase
         .from('habits')
         .select('*')
@@ -125,12 +119,19 @@ export default function Habits() {
       if (error) throw error;
 
       const habitIds = (data || []).map((habit) => habit.id);
+
+      // Filter completions for the last year to stay under Supabase's row limit (1000)
+      // while ensuring we have enough data for streak calculations.
+      // Crucially, we order by completed_date DESC to get the most recent ones first.
+      const oneYearAgo = toLocalDateKey(subDays(new Date(), 366));
+
       const { data: completions, error: completionsError } = await supabase
         .from('habit_completions')
         .select('habit_id, completed_date')
         .eq('user_id', user.id)
         .in('habit_id', habitIds.length > 0 ? habitIds : ['00000000-0000-0000-0000-000000000000'])
-        .gte('completed_date', '2000-01-01');
+        .gte('completed_date', oneYearAgo)
+        .order('completed_date', { ascending: false });
 
       if (completionsError) throw completionsError;
 
@@ -183,7 +184,7 @@ export default function Habits() {
 
   useEffect(() => {
     // Update todayStr on mount
-    todayStr.current = formatLocalDate(new Date());
+    todayStr.current = toLocalDateKey(new Date());
     fetchHabits();
   }, [user, selectedDate]);
 
@@ -223,7 +224,7 @@ export default function Habits() {
   const toggleHabitCompletion = async (habitId: string, isCompleted: boolean) => {
     if (!user) return;
     const currentSelectedDate = new Date(selectedDate);
-    const targetDate = formatLocalDate(currentSelectedDate);
+    const targetDate = toLocalDateKey(currentSelectedDate);
 
     const habit = habits.find(h => h.id === habitId) || archivedHabits.find(h => h.id === habitId);
     const normalizedDaysOfWeek = normalizeDaysOfWeek(habit?.days_of_week);

@@ -47,11 +47,13 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         
       if (habitsError) throw new Error("Erreur lors de la récupération des habitudes: " + habitsError.message);
       
+      const oneYearAgo = toLocalDateKey(subDays(new Date(), 366));
       const { data: habitCompletionsRawData, error: habitCompletionsError } = await supabase
         .from('habit_completions')
         .select('habit_id, completed_date')
         .eq('user_id', user.id)
-        .gte('completed_date', '2000-01-01');
+        .gte('completed_date', oneYearAgo)
+        .order('completed_date', { ascending: false });
 
       if (habitCompletionsError) {
         throw new Error("Erreur lors de la récupération des complétions d'habitudes: " + habitCompletionsError.message);

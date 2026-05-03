@@ -7,7 +7,7 @@ import { toLocalDateKey } from "@/utils/dateUtils";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { isToday, parseISO } from "date-fns";
+import { isToday, parseISO, subDays } from "date-fns";
 import { calculateHabitStreakMap } from "@/services/streakCalculator";
 
 interface Task {
@@ -57,11 +57,14 @@ export const TodayActionsCard = () => {
           .eq('is_archived', false);
         
         // Check completions for streaks and today's state
+        // We limit to the last 366 days and order by date DESC to stay under Supabase's row limit
+        const oneYearAgo = toLocalDateKey(subDays(new Date(), 366));
         const { data: completions } = await supabase
           .from('habit_completions')
           .select('habit_id, completed_date')
           .eq('user_id', user.id)
-          .gte('completed_date', '2000-01-01');
+          .gte('completed_date', oneYearAgo)
+          .order('completed_date', { ascending: false });
         
         const completedHabitIds = new Set(
           (completions || [])
