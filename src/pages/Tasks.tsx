@@ -224,42 +224,41 @@ export default function Tasks() {
   return (
     <>
       <div className="space-y-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto min-w-0">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tâches</h1>
+          <div className="flex items-start justify-between gap-2 mb-6 flex-wrap">
+            <div className="space-y-1 min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Tâches</h1>
               {tasks.length > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
                     {completedTasks.length}/{tasks.length} complétées
                   </span>
                   <Progress value={completionRate} className="w-24 h-1.5" />
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap shrink-0">
               {googleTasks.isConnected ? (
                 <>
-                  <Button onClick={() => setShowSyncDialog(true)} size="sm" variant="outline" disabled={googleTasks.isLoading} className="rounded-xl">
-                    <RefreshCw className={`h-4 w-4 mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
+                  <Button onClick={() => setShowSyncDialog(true)} size="icon" variant="outline" disabled={googleTasks.isLoading} className="rounded-xl sm:size-auto sm:px-3" aria-label="Synchroniser">
+                    <RefreshCw className={`h-4 w-4 sm:mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">Synchroniser</span>
                   </Button>
-                  <Button onClick={googleTasks.disconnect} size="sm" variant="outline" className="rounded-xl">
-                    <CloudOff className="h-4 w-4 mr-2" />
+                  <Button onClick={googleTasks.disconnect} size="icon" variant="outline" className="rounded-xl sm:size-auto sm:px-3" aria-label="Déconnecter">
+                    <CloudOff className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Déconnecter</span>
                   </Button>
                 </>
               ) : (
-                <Button onClick={googleTasks.connectToGoogle} size="sm" variant="outline" className="rounded-xl">
-                  <Cloud className="h-4 w-4 mr-2" />
+                <Button onClick={googleTasks.connectToGoogle} size="icon" variant="outline" className="rounded-xl sm:size-auto sm:px-3" aria-label="Google Tasks">
+                  <Cloud className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Google Tasks</span>
                 </Button>
               )}
               <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Nouvelle tâche</span>
-                <span className="sm:hidden">Nouveau</span>
               </Button>
             </div>
           </div>
@@ -267,13 +266,13 @@ export default function Tasks() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pending" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                En cours ({pendingTasks.length})
+              <TabsTrigger value="pending" className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
+                <Clock className="h-4 w-4 shrink-0" />
+                <span className="truncate">En cours ({pendingTasks.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center gap-2">
-                <CheckSquare className="h-4 w-4" />
-                Terminées ({completedTasks.length})
+              <TabsTrigger value="completed" className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
+                <CheckSquare className="h-4 w-4 shrink-0" />
+                <span className="truncate">Terminées ({completedTasks.length})</span>
               </TabsTrigger>
             </TabsList>
 

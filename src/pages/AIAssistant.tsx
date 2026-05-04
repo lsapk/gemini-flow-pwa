@@ -185,20 +185,20 @@ export default function AIAssistant() {
   ];
 
   return (
-    <div className="flex flex-col max-w-7xl mx-auto h-[calc(100vh-120px)] md:h-[calc(100vh-100px)]">
+    <div className="flex flex-col max-w-7xl mx-auto h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="relative h-11 w-11 rounded-2xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-sm">
+      <div className="flex items-center justify-between gap-2 mb-4 shrink-0 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="relative h-11 w-11 rounded-2xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-sm shrink-0">
             <Brain className="h-5 w-5 text-primary" />
             <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight leading-none">Intelligence IA</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Coach personnel</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-bold tracking-tight leading-none truncate">Intelligence IA</h1>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">Coach personnel</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Badge variant="secondary" className="h-8 px-3 rounded-xl font-medium bg-secondary/60 backdrop-blur-sm border-border/30">
             <Zap className="h-3.5 w-3.5 mr-1.5 text-amber-500 fill-amber-500" />
             {isAIAdmin ? "∞" : aiCredits}

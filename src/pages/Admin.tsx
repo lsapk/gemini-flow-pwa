@@ -319,19 +319,19 @@ export default function Admin() {
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20">
-          <Shield className="h-7 w-7 text-white" />
+      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
+          <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
         </div>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-bold font-heading">Administration</h1>
-          <p className="text-muted-foreground text-sm">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-heading truncate">Administration</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm truncate">
             {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })} • {user?.email}
           </p>
         </div>
-        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold">Admin ✓</Badge>
+        <Badge className="bg-red-500/10 text-red-500 border-red-500/20 font-semibold shrink-0">Admin ✓</Badge>
       </div>
 
       {/* Platform Stats */}

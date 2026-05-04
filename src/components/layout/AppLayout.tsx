@@ -36,7 +36,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen">
+        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen w-full min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -44,7 +44,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
-              className="px-4 py-6 sm:p-6 md:p-8 lg:p-8 max-w-[1400px] mx-auto"
+              className="px-3 py-5 sm:p-6 md:p-8 lg:p-8 max-w-[1400px] mx-auto w-full min-w-0 overflow-x-hidden"
             >
               {children || <Outlet />}
             </motion.div>

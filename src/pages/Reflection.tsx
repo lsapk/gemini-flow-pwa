@@ -136,13 +136,13 @@ export default function Reflection() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-5 p-3 sm:p-6 min-h-[calc(100vh-120px)]">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-7 w-7 text-primary" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Réflexion personnelle</h1>
-            <p className="text-sm text-muted-foreground">
+    <div className="max-w-4xl mx-auto flex flex-col gap-5 p-3 sm:p-6 min-h-[calc(100vh-120px)] min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <BookOpen className="h-7 w-7 text-primary shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">Réflexion personnelle</h1>
+            <p className="text-sm text-muted-foreground truncate">
               Explorez vos pensées profondes
               {reflections.length > 0 && (
                 <Badge variant="secondary" className="ml-2 rounded-full text-xs">{reflections.length}</Badge>
