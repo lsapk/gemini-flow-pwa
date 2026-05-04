@@ -198,7 +198,7 @@ export default function CalendarPage() {
   ) : null;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-x-hidden">
       {/* Banner if not connected to Google */}
       {!isConnected && (
         <div className="shrink-0 mx-2 mt-2 mb-1 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20">
