@@ -53,6 +53,7 @@ export default function Habits() {
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("active");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showAll, setShowAll] = useState(false);
   const { user } = useAuth();
   const sound = useSoundService();
 
@@ -158,7 +159,8 @@ export default function Habits() {
         };
       });
 
-      const active = habitsWithCompletion.filter(h => !h.is_archived && h.should_show_today);
+      // When "showAll" is on, ignore the days_of_week filter so users can edit any habit
+      const active = habitsWithCompletion.filter(h => !h.is_archived && (showAll || h.should_show_today));
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
       const normalizedActive = active.map(({ should_show_today, ...habit }) => habit as Habit);
@@ -186,7 +188,7 @@ export default function Habits() {
     // Update todayStr on mount
     todayStr.current = toLocalDateKey(new Date());
     fetchHabits();
-  }, [user, selectedDate]);
+  }, [user, selectedDate, showAll]);
 
   const handleEdit = (habit: Habit) => { setEditingHabit(habit); setIsEditModalOpen(true); };
   const requestDelete = (habitId: string) => { setHabitToDelete(habitId); setIsDeleteDialogOpen(true); };
@@ -349,7 +351,16 @@ export default function Habits() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant={showAll ? "default" : "outline"}
+              size="sm"
+              className="rounded-xl text-xs sm:text-sm"
+              onClick={() => setShowAll(v => !v)}
+              title={showAll ? "Filtrer par jour" : "Voir toutes les habitudes"}
+            >
+              {showAll ? "Filtrer par jour" : "Voir toutes"}
+            </Button>
             {!isViewingToday && (
               <Button
                 variant="ghost"
@@ -369,6 +380,7 @@ export default function Habits() {
                     !selectedDate && "text-muted-foreground"
                   )}
                   size="sm"
+                  disabled={showAll}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">{selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: fr }) : "Date"}</span>
