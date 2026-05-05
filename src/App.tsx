@@ -29,6 +29,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Support = lazy(() => import("./pages/Support"));
 
 // Legal pages
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
@@ -110,6 +111,7 @@ function App() {
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/calendar" element={<Calendar />} />
                         <Route path="/admin" element={<Admin />} />
+                        <Route path="/support" element={<Support />} />
                       </Route>
                       
                       {/* Redirects */}
