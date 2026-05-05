@@ -14,7 +14,8 @@ import { CrossInsightsWidget } from "@/components/ai/CrossInsightsWidget";
 import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -22,6 +23,19 @@ export default function Dashboard() {
   const { 
     scores, level, taskCompletionRate, totalFocusTime, streakCount, activeHabits, isLoading 
   } = useUnifiedProductivityScore();
+
+  useEffect(() => {
+    const KEY = "deepflow-welcome-shown";
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(KEY)) return;
+    localStorage.setItem(KEY, "1");
+    setTimeout(() => {
+      toast("Bienvenue sur DeepFlow 👋", {
+        description: "Commencez par créer une tâche ou une habitude. Besoin d'aide ? Voir /support.",
+        duration: 6000,
+      });
+    }, 800);
+  }, []);
 
   if (isLoading) {
     return (
