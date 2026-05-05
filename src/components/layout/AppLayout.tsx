@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -46,7 +47,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
               transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
               className="px-3 py-5 sm:p-6 md:p-8 lg:p-8 max-w-[1400px] mx-auto w-full min-w-0 overflow-x-hidden"
             >
-              {children || <Outlet />}
+              <ErrorBoundary resetKey={location.pathname}>
+                {children || <Outlet />}
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>
