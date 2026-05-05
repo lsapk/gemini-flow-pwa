@@ -351,7 +351,16 @@ export default function Habits() {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant={showAll ? "default" : "outline"}
+              size="sm"
+              className="rounded-xl text-xs sm:text-sm"
+              onClick={() => setShowAll(v => !v)}
+              title={showAll ? "Filtrer par jour" : "Voir toutes les habitudes"}
+            >
+              {showAll ? "Filtrer par jour" : "Voir toutes"}
+            </Button>
             {!isViewingToday && (
               <Button
                 variant="ghost"
@@ -371,6 +380,7 @@ export default function Habits() {
                     !selectedDate && "text-muted-foreground"
                   )}
                   size="sm"
+                  disabled={showAll}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">{selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: fr }) : "Date"}</span>
