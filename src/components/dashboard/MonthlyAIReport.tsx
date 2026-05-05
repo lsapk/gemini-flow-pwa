@@ -6,7 +6,7 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, FileText, Loader2, RefreshCw, Calendar, TrendingUp, Award, Crown, Lock, Save, Check } from "lucide-react";
+import { Brain, FileText, Loader2, RefreshCw, Calendar, TrendingUp, Award, Crown, Lock, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -20,51 +20,67 @@ export const MonthlyAIReport = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // Load saved report on mount
+  const monthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${now.getMonth()}`;
+  })();
+
+  // Load saved report on mount — pick the most recent matching this month
   useEffect(() => {
     const loadSavedReport = async () => {
       if (!user) return;
-      
-      const now = new Date();
-      const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
-      
-      const { data } = await supabase
+
+      const { data, error } = await supabase
         .from('ai_productivity_analysis')
-        .select('analysis_data')
+        .select('analysis_data, updated_at')
         .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (data?.analysis_data) {
-        const savedData = data.analysis_data as { report: string; monthKey: string };
-        if (savedData.monthKey === monthKey) {
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Load report error:', error);
+        return;
+      }
+
+      const row = data?.[0];
+      if (row?.analysis_data) {
+        const savedData = row.analysis_data as { report?: string; monthKey?: string };
+        if (savedData.monthKey === monthKey && savedData.report) {
           setReport(savedData.report);
           setIsSaved(true);
         }
       }
     };
-    
-    loadSavedReport();
-  }, [user]);
 
-  const saveReport = async () => {
-    if (!user || !report) return;
-    
-    const now = new Date();
-    const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
-    
-    const { error } = await supabase
+    loadSavedReport();
+  }, [user, monthKey]);
+
+  // Robust save: delete previous rows then insert a fresh one (no unique constraint required)
+  const persistReport = async (reportText: string) => {
+    if (!user) return false;
+
+    const { error: deleteError } = await supabase
       .from('ai_productivity_analysis')
-      .upsert({
-        user_id: user.id,
-        analysis_data: { report, monthKey, savedAt: new Date().toISOString() }
-      }, { onConflict: 'user_id' });
-    
-    if (error) {
-      toast.error("Erreur lors de la sauvegarde");
-    } else {
-      setIsSaved(true);
-      toast.success("Rapport sauvegardé !");
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('Delete previous report error:', deleteError);
     }
+
+    const { error: insertError } = await supabase
+      .from('ai_productivity_analysis')
+      .insert({
+        user_id: user.id,
+        analysis_data: { report: reportText, monthKey, savedAt: new Date().toISOString() },
+      });
+
+    if (insertError) {
+      console.error('Save report error:', insertError);
+      toast.error("Impossible de sauvegarder le rapport");
+      return false;
+    }
+    return true;
   };
 
   const generateReport = async () => {
