@@ -133,8 +133,12 @@ Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} | Focus: ${Ma
       if (error) throw error;
       if (!isPremium) trackUsage("analysis");
 
-      setReport(data.response);
-      toast.success("Rapport généré !");
+      const generated = data.response as string;
+      setReport(generated);
+      // Auto-save immediately so the report persists across reloads
+      const ok = await persistReport(generated);
+      setIsSaved(ok);
+      toast.success(ok ? "Rapport généré et sauvegardé !" : "Rapport généré (sauvegarde échouée)");
     } catch (error: any) {
       console.error("Error:", error);
       toast.error("Erreur lors de la génération");
@@ -170,12 +174,7 @@ Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} | Focus: ${Ma
                   {getRemainingUses("analysis")}/1 restant
                 </Badge>
               )}
-              {report && !isSaved && (
-                <Button onClick={saveReport} variant="outline" size="sm" className="gap-2">
-                  <Save className="h-4 w-4" />
-                  Sauvegarder
-                </Button>
-              )}
+              {/* Auto-saved on generation; manual save button removed */}
               {isSaved && (
                 <Badge variant="secondary" className="text-xs gap-1">
                   <Check className="h-3 w-3" /> Sauvegardé
