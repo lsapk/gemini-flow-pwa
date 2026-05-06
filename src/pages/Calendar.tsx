@@ -115,7 +115,8 @@ export default function CalendarPage() {
       });
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
-      setSuggestionText(data.suggestion || "");
+      const cleanedSuggestion = (data.suggestion || "").replace(/```json[\s\S]*?```/g, "").trim();
+      setSuggestionText(cleanedSuggestion);
       setSuggestedEvents(data.suggestedEvents || []);
       toast.success("Suggestions générées avec succès");
     } catch (error: any) {
