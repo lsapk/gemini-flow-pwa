@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Target, Calendar } from "lucide-react";
+import { Target, Calendar, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -127,10 +127,14 @@ const SortableHabitCard = React.forwardRef<HTMLDivElement, SortableHabitCardProp
       >
         {/* Additional habit info */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
             <div className="flex items-center gap-1">
               <Target className="h-3 w-3" />
               <span>Objectif: {habit.target}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>{habit.total_completions ?? 0} fois</span>
             </div>
             {habit.last_completed_at && (
               <div className="flex items-center gap-1">

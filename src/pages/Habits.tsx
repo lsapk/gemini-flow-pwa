@@ -144,6 +144,19 @@ export default function Habits() {
         completions || [],
       );
 
+      // Fetch all-time completion counts per habit (in parallel)
+      const totalCountsEntries = await Promise.all(
+        habitIds.map(async (id) => {
+          const { count } = await supabase
+            .from('habit_completions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('habit_id', id);
+          return [id, count ?? 0] as const;
+        })
+      );
+      const totalCountsMap = Object.fromEntries(totalCountsEntries);
+
       const habitsWithCompletion = (data || []).map((habit) => {
         const normalizedDaysOfWeek = normalizeDaysOfWeek(habit.days_of_week);
         const selectedDay = dateToUse.getDay();
@@ -152,6 +165,7 @@ export default function Habits() {
         return {
           ...habit,
           streak: streakMap[habit.id] ?? 0,
+          total_completions: totalCountsMap[habit.id] ?? 0,
           frequency: habit.frequency as 'daily' | 'weekly' | 'monthly',
           days_of_week: normalizedDaysOfWeek ?? undefined,
           is_completed_today: completionsByHabitAndDate.has(`${habit.id}:${targetDate}`),
