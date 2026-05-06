@@ -127,10 +127,14 @@ const SortableHabitCard = React.forwardRef<HTMLDivElement, SortableHabitCardProp
       >
         {/* Additional habit info */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
             <div className="flex items-center gap-1">
               <Target className="h-3 w-3" />
               <span>Objectif: {habit.target}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>{habit.total_completions ?? 0} fois</span>
             </div>
             {habit.last_completed_at && (
               <div className="flex items-center gap-1">
