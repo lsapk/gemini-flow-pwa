@@ -322,7 +322,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
                 .from('ai_personality_profiles')
                 .upsert({
                   user_id: user.id,
-                  profile_data: analysisResult as any,
+                  profile_data: analysisResult as Record<string, unknown>,
                   updated_at: new Date().toISOString()
                 }, {
                   onConflict: 'user_id'
@@ -386,7 +386,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
         .from('ai_personality_profiles')
         .upsert({
           user_id: user.id,
-          profile_data: analysisResult as any,
+          profile_data: analysisResult as Record<string, unknown>,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
@@ -399,11 +399,12 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
       
       toast.success('Profil de personnalité généré et sauvegardé !');
       
-    } catch (error: any) {
-      console.error('Erreur génération profil:', error);
+    } catch (error: unknown) {
+      const err = error as Record<string, any>;
+      console.error('Erreur génération profil:', err);
       
       // Gestion des erreurs spécifiques
-      if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+      if (err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('Too Many Requests')) {
         toast.error('Limite d\'API atteinte. Réessayez dans quelques minutes.');
       } else if (error?.message?.includes('Réponse IA invalide')) {
         toast.error('Erreur dans l\'analyse IA. Réessayez.');
@@ -424,7 +425,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
 };
 
 // Fonctions d'analyse basées sur les données réelles
-const generatePersonalityTraits = (data: any) => {
+const generatePersonalityTraits = (data: Record<string, any>) => {
   const traits = [];
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
   if (taskCompletionRate > 70) traits.push("déterminé");
@@ -434,7 +435,7 @@ const generatePersonalityTraits = (data: any) => {
   return traits.length > 0 ? traits : ["motivé", "organisé"];
 };
 
-const generateStrengths = (data: any) => {
+const generateStrengths = (data: Record<string, any>) => {
   const strengths = [];
   if (data.analyse_habitudes?.streak_moyen > 5) strengths.push("constance dans les habitudes");
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
@@ -443,7 +444,7 @@ const generateStrengths = (data: any) => {
   return strengths.length > 0 ? strengths : ["motivation", "persévérance"];
 };
 
-const generateImprovementAreas = (data: any) => {
+const generateImprovementAreas = (data: Record<string, any>) => {
   const areas = [];
   if (data.analyse_focus?.temps_total_minutes < 60) areas.push("temps de concentration");
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
@@ -452,7 +453,7 @@ const generateImprovementAreas = (data: any) => {
   return areas.length > 0 ? areas : ["équilibre vie-travail", "gestion du stress"];
 };
 
-const generateMotivations = (data: any) => {
+const generateMotivations = (data: Record<string, any>) => {
   const motivations = [];
   if (data.vue_generale?.total_objectifs > 2) motivations.push("accomplissement d'objectifs");
   if (data.vue_generale?.total_habitudes > 2) motivations.push("amélioration continue");
@@ -460,13 +461,13 @@ const generateMotivations = (data: any) => {
   return motivations;
 };
 
-const generateWorkingStyle = (data: any) => {
+const generateWorkingStyle = (data: Record<string, any>) => {
   if (data.analyse_focus?.sessions_30j > 5) return "focalisé sur la concentration";
   if (data.vue_generale?.total_taches > 10) return "orienté tâches";
   return "équilibré et adaptable";
 };
 
-const generateBehavioralPatterns = (data: any) => {
+const generateBehavioralPatterns = (data: Record<string, any>) => {
   const patterns = [];
   if (data.analyse_habitudes?.habitudes_actives > 0) patterns.push("formation d'habitudes");
   if (data.analyse_focus?.sessions_30j > 0) patterns.push("sessions de travail focalisé");
@@ -474,31 +475,31 @@ const generateBehavioralPatterns = (data: any) => {
   return patterns;
 };
 
-const generateStressManagement = (data: any) => {
+const generateStressManagement = (data: Record<string, any>) => {
   if (data.analyse_focus?.temps_moyen_session > 30) return "gestion par la concentration";
   if (data.analyse_habitudes?.habitudes_actives > 3) return "gestion par les routines";
   return "approche équilibrée";
 };
 
-const generateDecisionStyle = (data: any) => {
+const generateDecisionStyle = (data: Record<string, any>) => {
   if (data.metriques_performance?.progression_objectifs_moyenne > 50) return "orienté résultats";
   if (data.analyse_taches?.taches_haute_priorite > 0) return "priorise l'urgence";
   return "réfléchi et méthodique";
 };
 
-const generateSocialPreferences = (data: any) => {
+const generateSocialPreferences = (data: Record<string, any>) => {
   if (data.analyse_focus?.sessions_30j > 3) return "préfère le travail concentré";
   return "équilibre social et travail";
 };
 
-const generatePeakTimes = (data: any) => {
+const generatePeakTimes = (data: Record<string, any>) => {
   const times = [];
   if (data.analyse_focus?.sessions_30j > 0) times.push("périodes de focus planifiées");
   times.push("matinée");
   return times;
 };
 
-const generateBlockers = (data: any) => {
+const generateBlockers = (data: Record<string, any>) => {
   const blockers = [];
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
   if (taskCompletionRate < 50) blockers.push("procrastination");
@@ -506,18 +507,18 @@ const generateBlockers = (data: any) => {
   return blockers.length > 0 ? blockers : ["distractions", "surcharge de tâches"];
 };
 
-const generateOptimalEnvironment = (data: any) => {
+const generateOptimalEnvironment = (data: Record<string, any>) => {
   if (data.analyse_focus?.sessions_30j > 3) return "environnement calme et organisé";
   return "espace flexible et adaptatif";
 };
 
-const generateGoalStyle = (data: any) => {
+const generateGoalStyle = (data: Record<string, any>) => {
   if (data.metriques_performance?.progression_objectifs_moyenne > 60) return "approche progressive et mesurée";
   if (data.vue_generale?.total_objectifs > 2) return "objectifs multiples et ambitieux";
   return "approche étape par étape";
 };
 
-const generateHabitRecommendations = (data: any) => {
+const generateHabitRecommendations = (data: Record<string, any>) => {
   const recommendations = [];
   if (data.analyse_focus?.temps_total_minutes < 60) recommendations.push("sessions de concentration quotidiennes");
   if (data.vue_generale?.total_habitudes < 3) recommendations.push("routine matinale structurée");
@@ -525,7 +526,7 @@ const generateHabitRecommendations = (data: any) => {
   return recommendations;
 };
 
-const generateProductivityTips = (data: any) => {
+const generateProductivityTips = (data: Record<string, any>) => {
   const tips = [];
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
   if (taskCompletionRate < 60) tips.push("technique Pomodoro");
@@ -534,7 +535,7 @@ const generateProductivityTips = (data: any) => {
   return tips;
 };
 
-const generateGrowthRecommendations = (data: any) => {
+const generateGrowthRecommendations = (data: Record<string, any>) => {
   const growth = [];
   if (data.vue_generale?.total_entrees_journal < 3) growth.push("tenue de journal régulière");
   growth.push("auto-évaluation mensuelle");
@@ -542,7 +543,7 @@ const generateGrowthRecommendations = (data: any) => {
   return growth;
 };
 
-const generateStressRecommendations = (data: any) => {
+const generateStressRecommendations = (data: Record<string, any>) => {
   const stress = [];
   if (data.metriques_performance?.duree_moyenne_focus < 25) stress.push("techniques de respiration");
   stress.push("pauses régulières");
@@ -550,13 +551,13 @@ const generateStressRecommendations = (data: any) => {
   return stress;
 };
 
-const generateCurrentPhase = (data: any) => {
+const generateCurrentPhase = (data: Record<string, any>) => {
   if (data.vue_generale?.total_habitudes > 3 && data.metriques_performance?.progression_objectifs_moyenne > 50) return "phase d'optimisation";
   if (data.vue_generale?.total_taches > 5) return "phase de développement actif";
   return "phase d'établissement des bases";
 };
 
-const generateMilestones = (data: any) => {
+const generateMilestones = (data: Record<string, any>) => {
   const milestones = [];
   if (data.analyse_habitudes?.streak_moyen < 7) milestones.push("maintenir 7 jours d'habitudes");
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;
@@ -565,7 +566,7 @@ const generateMilestones = (data: any) => {
   return milestones;
 };
 
-const generateLongTermPotential = (data: any) => {
+const generateLongTermPotential = (data: Record<string, any>) => {
   if (data.vue_generale?.total_objectifs > 2 && data.vue_generale?.total_habitudes > 3) return "expert en productivité personnelle";
   if (data.analyse_focus?.sessions_30j > 3) return "maître de la concentration";
   return "développeur de systèmes personnels efficaces";
