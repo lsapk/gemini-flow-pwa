@@ -10,15 +10,15 @@ export const InteractiveBackground: React.FC = () => {
   const dx = useSpring(mouseX, springConfig);
   const dy = useSpring(mouseY, springConfig);
 
-  // Create transformed motion values for parallax effect
-  const x1 = useTransform(dx, (v) => v * 30);
-  const y1 = useTransform(dy, (v) => v * 30);
+  // Create transformed motion values for parallax effect - increased sensitivity
+  const x1 = useTransform(dx, (v) => v * 60);
+  const y1 = useTransform(dy, (v) => v * 60);
 
-  const x2 = useTransform(dx, (v) => v * -20);
-  const y2 = useTransform(dy, (v) => v * -20);
+  const x2 = useTransform(dx, (v) => v * -40);
+  const y2 = useTransform(dy, (v) => v * -40);
 
-  const x3 = useTransform(dx, (v) => v * 15);
-  const y3 = useTransform(dy, (v) => v * 15);
+  const x3 = useTransform(dx, (v) => v * 30);
+  const y3 = useTransform(dy, (v) => v * 30);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -38,20 +38,20 @@ export const InteractiveBackground: React.FC = () => {
       {/* Deep dark base */}
       <div className="absolute inset-0 bg-[#0a0a0c]" />
 
-      {/* Interactive Glows */}
+      {/* Interactive Glows - Increased opacity and size */}
       <motion.div
         style={{ x: x1, y: y1 }}
-        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/10 blur-[120px]"
+        className="absolute top-[-15%] left-[-15%] w-[60%] h-[60%] rounded-full bg-blue-600/15 blur-[140px]"
       />
 
       <motion.div
         style={{ x: x2, y: y2 }}
-        className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-600/10 blur-[150px]"
+        className="absolute bottom-[-15%] right-[-15%] w-[70%] h-[70%] rounded-full bg-purple-600/15 blur-[160px]"
       />
 
       <motion.div
         style={{ x: x3, y: y3 }}
-        className="absolute top-[20%] right-[10%] w-[40%] h-[40%] rounded-full bg-emerald-600/5 blur-[100px]"
+        className="absolute top-[15%] right-[5%] w-[50%] h-[50%] rounded-full bg-emerald-600/10 blur-[120px]"
       />
 
       {/* Floating particles or subtle noise if needed, but keeping it clean for now */}

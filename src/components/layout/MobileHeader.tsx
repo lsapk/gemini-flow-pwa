@@ -11,15 +11,14 @@ interface MobileHeaderProps {
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 md:hidden"
+      className="fixed top-4 left-4 right-4 z-50 md:hidden rounded-[2rem] border border-white/10 overflow-hidden"
       style={{ 
-        background: 'hsl(var(--background) / 0.72)',
+        background: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div className="flex h-12 items-center justify-between px-4 max-w-7xl mx-auto">
+      <div className="flex h-14 items-center justify-between px-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
