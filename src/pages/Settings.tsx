@@ -302,27 +302,6 @@ export default function Settings() {
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-5">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg"><Palette className="h-5 w-5 text-primary" />Apparence</CardTitle>
-              <CardDescription>Personnalisez le look de l'application</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Thème</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setTheme('light')} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${theme === 'light' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/30'}`}>
-                    <Sun className="h-6 w-6" />
-                    <span className="text-sm font-medium">Clair</span>
-                  </button>
-                  <button onClick={() => setTheme('dark')} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${theme === 'dark' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/30'}`}>
-                    <Moon className="h-6 w-6" />
-                    <span className="text-sm font-medium">Sombre</span>
-                  </button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader className="pb-3">

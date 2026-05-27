@@ -63,13 +63,13 @@
   }
 
   .dark {
-    --background: 0 0% 7%;
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     
-    --card: 0 0% 11%;
+    --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
     
-    --popover: 0 0% 11%;
+    --popover: 240 10% 6%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 211 100% 50%;
@@ -153,39 +153,39 @@
 }
 
 @layer components {
-  /* ===== Liquid Glass ===== */
+  /* ===== Modern Glassmorphism ===== */
   .liquid-glass {
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
   }
 
   .glass-nav {
-    @apply fixed z-50 w-full border-b border-border/30 shadow-none;
-    background: hsl(var(--card) / 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    @apply fixed z-50 w-full border-b border-white/5 shadow-none;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
   }
   
   .glass-container {
-    @apply bg-card border border-border/40 rounded-2xl shadow-none p-4
-           hover:bg-muted/30 transition-colors duration-200;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl shadow-none p-6
+           hover:bg-white/10 transition-all duration-300;
   }
   
   .dashboard-card {
-    @apply bg-card border border-border/40 rounded-2xl shadow-none p-4
-           transition-colors duration-200 hover:bg-muted/30;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl shadow-none p-6
+           transition-all duration-300 hover:bg-white/10 hover:border-white/20;
   }
 
   .glass-morphism {
-    @apply border border-border/30 rounded-2xl shadow-lg;
-    background: hsl(var(--card) / 0.8);
+    @apply border border-white/10 rounded-3xl shadow-2xl;
+    background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   
   .glass-card {
-    @apply bg-card border border-border/30 rounded-2xl shadow-none
-           hover:bg-muted/30 transition-colors duration-200;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl shadow-none
+           hover:bg-white/10 transition-all duration-300;
   }
   
   .hover-scale {
@@ -226,14 +226,14 @@
   
   /* Liquid Glass dialogs */
   [role="dialog"] {
-    @apply rounded-2xl border border-border/40 shadow-2xl;
+    @apply rounded-[2rem] border border-white/10 shadow-2xl bg-black/60 backdrop-blur-2xl;
   }
   
   /* Liquid Glass dropdowns */
   [role="menu"],
   [role="listbox"] {
-    @apply rounded-xl border border-border/40 shadow-lg;
-    background: hsl(var(--card) / 0.88);
+    @apply rounded-2xl border border-white/10 shadow-lg;
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
@@ -275,12 +275,23 @@
     background: hsl(var(--muted-foreground) / 0.3);
   }
 
-  /* Dark mode adaptive tint on cards */
+  /* Modern Glass Shadows */
+  .glass-shadow {
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  /* Dark mode adaptive tint on cards - Overridden for glass look */
   .dark .dashboard-card,
   .dark .glass-container,
   .dark .glass-card {
-    background: hsl(var(--card) / 1);
-    box-shadow: inset 0 0 0 1px hsl(211 100% 50% / 0.03);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: none;
+  }
+
+  .dark .dashboard-card:hover,
+  .dark .glass-container:hover,
+  .dark .glass-card:hover {
+    background: rgba(255, 255, 255, 0.06);
   }
 }
 
