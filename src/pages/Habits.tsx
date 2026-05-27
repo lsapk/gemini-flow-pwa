@@ -254,11 +254,17 @@ export default function Habits() {
     }
 
     // Optimistic update
-    updateHabitInLists(habitId, { is_completed_today: !isCompleted });
+    const previousTotal = habit?.total_completions ?? 0;
+    const nextTotal = Math.max(0, isCompleted ? previousTotal - 1 : previousTotal + 1);
+
+    updateHabitInLists(habitId, {
+      is_completed_today: !isCompleted,
+      total_completions: nextTotal
+    });
 
     try {
       if (isCompleted) {
-        // Uncheck: delete completion
+        // Uncheck: delete completion from habit_completions table (Source of truth for total_completions)
         const { error: deleteError } = await supabase
           .from('habit_completions')
           .delete()
@@ -269,14 +275,14 @@ export default function Habits() {
 
         sound.playUncomplete();
 
-        // Recalculate streak from actual data
+        // Recalculate streak and update habits table
         const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
         updateHabitInLists(habitId, { streak: newStreak });
 
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        // Check: upsert completion (idempotent — avoids duplicate key errors on rapid clicks)
+        // Check: insert completion into habit_completions table
         const { error } = await supabase
           .from('habit_completions')
           .upsert(
@@ -287,7 +293,7 @@ export default function Habits() {
 
         sound.playComplete();
 
-        // Recalculate streak from actual data
+        // Recalculate streak and last_completed_at and update habits table
         const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         const completedAt = new Date().toISOString();
         await supabase.from('habits').update({ 
@@ -296,7 +302,7 @@ export default function Habits() {
         }).eq('id', habitId);
         updateHabitInLists(habitId, {
           streak: newStreak,
-          last_completed_at: completedAt,
+          last_completed_at: completedAt
         });
 
         // Rewards only when viewing today — placeholder for future feature
@@ -318,7 +324,10 @@ export default function Habits() {
     } catch (error) {
       console.error('Error toggling habit completion:', error);
       // Revert optimistic update
-      updateHabitInLists(habitId, { is_completed_today: isCompleted });
+      updateHabitInLists(habitId, {
+        is_completed_today: isCompleted,
+        total_completions: habit?.total_completions
+      });
       sound.playError();
       toast.error("Erreur lors de la mise à jour de l'habitude");
     }
