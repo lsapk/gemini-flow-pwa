@@ -116,9 +116,9 @@ export function ItemCard({
     >
       <Card
         className={cn(
-          'relative overflow-hidden transition-all duration-200',
-          'backdrop-blur-sm bg-card/80 border-border/40',
-          'hover:bg-card/90 hover:shadow-md hover:shadow-black/[0.03]',
+          'relative overflow-hidden transition-all duration-300',
+          'backdrop-blur-2xl bg-white/5 border-white/10 rounded-[2rem]',
+          'hover:bg-white/10 hover:border-white/20',
           'active:scale-[0.98]',
           // Completed state
           isCompleted && 'bg-muted/30 opacity-75',
