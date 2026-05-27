@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
+import { InteractiveBackground } from "./InteractiveBackground";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -19,7 +20,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent relative overflow-hidden">
+      <InteractiveBackground />
       {/* Mobile Header */}
       <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
       
@@ -33,11 +35,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="flex">
         {/* Desktop Sidebar - Fixed position */}
         <div className="hidden md:block">
-          <Sidebar className="fixed top-0 left-0 h-full z-40" />
+          <Sidebar className="fixed top-0 left-0 z-40" />
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-16 md:pt-0 md:ml-64 min-h-screen w-full min-w-0 overflow-x-hidden">
+        <main className="flex-1 pt-16 md:pt-4 md:ml-[18rem] md:mr-4 min-h-screen w-full min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

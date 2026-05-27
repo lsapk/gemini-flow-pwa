@@ -15,6 +15,7 @@ import {
   Shield
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import deepflowLogo from "@/assets/deepflow-logo.png";
 
@@ -51,15 +52,18 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   };
 
   return (
-    <div className={cn("w-64 h-screen bg-card border-r border-border/40 sticky top-0 flex flex-col", className)}>
-      <div className="p-4 border-b border-border/30">
+    <div className={cn(
+      "w-64 h-[calc(100vh-2rem)] m-4 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/10 flex flex-col transition-all duration-300 shadow-2xl",
+      className
+    )}>
+      <div className="p-6">
         <div className="flex items-center gap-3">
-          <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-xl object-contain bg-muted/50 p-1" />
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">DeepFlow</h1>
+          <img src={deepflowLogo} alt="DeepFlow Logo" className="h-9 w-9 rounded-xl object-contain bg-white/5 p-1" />
+          <h1 className="text-xl font-bold tracking-tight text-white/90">DeepFlow</h1>
         </div>
       </div>
       
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-hidden">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hidden">
         {allNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           const isAdminItem = item.path === "/admin";
@@ -67,40 +71,44 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
             <button
               key={item.path}
               className={cn(
-                "w-full flex items-center gap-3 h-11 px-4 rounded-xl text-sm font-medium transition-colors duration-200",
+                "w-full flex items-center gap-3 h-12 px-4 rounded-2xl text-sm font-medium transition-all duration-300 relative group",
                 isActive 
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                isAdminItem && !isActive && "text-destructive hover:text-destructive hover:bg-destructive/10",
-                "active:scale-[0.98]"
+                  ? "bg-white/10 text-white shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                  : "text-white/50 hover:bg-white/5 hover:text-white/80",
+                isAdminItem && !isActive && "text-destructive/70 hover:text-destructive hover:bg-destructive/10",
+                "active:scale-[0.97]"
               )}
               onClick={() => handleItemClick(item.path)}
             >
-              {isActive && (
-                <div className="absolute left-0 w-[3px] h-6 rounded-r-full bg-primary" />
-              )}
               <item.icon className={cn(
-                "h-[18px] w-[18px] flex-shrink-0",
-                isActive && "text-primary",
-                isAdminItem && !isActive && "text-destructive"
+                "h-5 w-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
+                isActive && "text-white",
+                isAdminItem && !isActive && "text-destructive/70"
               )} />
               <span className="truncate">{item.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="active-pill"
+                  className="absolute left-0 w-1 h-6 bg-white rounded-r-full"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
             </button>
           );
         })}
       </nav>
       
-      <div className="p-3 border-t border-border/30">
+      <div className="p-4 mt-auto">
         <button
-          className="w-full flex items-center gap-3 h-11 px-4 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors duration-200 active:scale-[0.98]"
+          className="w-full flex items-center gap-3 h-12 px-4 rounded-2xl text-sm font-medium text-white/40 hover:bg-white/5 hover:text-destructive/80 transition-all duration-300 active:scale-[0.97]"
           onClick={async () => {
             await signOut();
             navigate('/login');
             onItemClick?.();
           }}
         >
-          <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
-          Déconnexion
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          <span>Déconnexion</span>
         </button>
       </div>
     </div>
