@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { motion, useSpring, useMotionValue, useTransform } from 'framer-motion';
 
-export const InteractiveBackground: React.FC = () => {
+const InteractiveBackground: React.FC = () => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -19,6 +19,28 @@ export const InteractiveBackground: React.FC = () => {
 
   const x3 = useTransform(dx, (v) => v * 30);
   const y3 = useTransform(dy, (v) => v * 30);
+
+  const floatAnimation = {
+    x: [0, 30, -20, 0],
+    y: [0, -40, 20, 0],
+    scale: [1, 1.1, 0.95, 1],
+    transition: {
+      duration: 20,
+      repeat: Infinity,
+      ease: "linear"
+    }
+  };
+
+  const floatAnimationReverse = {
+    x: [0, -30, 20, 0],
+    y: [0, 40, -20, 0],
+    scale: [1, 0.95, 1.1, 1],
+    transition: {
+      duration: 25,
+      repeat: Infinity,
+      ease: "linear"
+    }
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -41,16 +63,19 @@ export const InteractiveBackground: React.FC = () => {
       {/* Interactive Glows - Increased opacity and size */}
       <motion.div
         style={{ x: x1, y: y1 }}
+        animate={floatAnimation}
         className="absolute top-[-15%] left-[-15%] w-[60%] h-[60%] rounded-full bg-blue-600/15 blur-[140px]"
       />
 
       <motion.div
         style={{ x: x2, y: y2 }}
+        animate={floatAnimationReverse}
         className="absolute bottom-[-15%] right-[-15%] w-[70%] h-[70%] rounded-full bg-purple-600/15 blur-[160px]"
       />
 
       <motion.div
         style={{ x: x3, y: y3 }}
+        animate={floatAnimation}
         className="absolute top-[15%] right-[5%] w-[50%] h-[50%] rounded-full bg-emerald-600/10 blur-[120px]"
       />
 
@@ -61,3 +86,5 @@ export const InteractiveBackground: React.FC = () => {
     </div>
   );
 };
+
+export default InteractiveBackground;

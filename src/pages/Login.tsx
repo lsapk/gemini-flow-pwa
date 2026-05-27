@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import InteractiveBackground from "@/components/layout/InteractiveBackground";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -112,24 +113,24 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-black" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(56,189,248,0.15),transparent_50%)]" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#050505]">
+      <InteractiveBackground />
 
       <div className="relative z-10 w-full max-w-md px-5 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="text-center mb-8">
-            <motion.div className="flex justify-center mb-5" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-primary/10 flex items-center justify-center mb-4 border border-primary/20 shadow-xl backdrop-blur-sm z-10 relative">
-                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60">DF</span>
+          <div className="text-center mb-10">
+            <motion.div className="flex justify-center mb-6" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-black/40 flex items-center justify-center mb-4 border border-white/10 shadow-2xl backdrop-blur-3xl z-10 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
+                <span className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-white/40 relative z-10">DF</span>
               </div>
             </motion.div>
-            <motion.h1 className="text-3xl sm:text-4xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
-            <motion.p className="text-sky-200/60 mt-2 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Productivité augmentée par l'IA</motion.p>
+            <motion.h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
+            <motion.p className="text-white/40 mt-3 text-base font-medium" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Productivité augmentée par l'IA</motion.p>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <Card className="bg-white/5 backdrop-blur-3xl border-white/10 shadow-2xl rounded-[3rem]">
+            <Card className="bg-black/60 backdrop-blur-3xl border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
               <CardHeader className="space-y-1 text-center pb-4">
                 <CardTitle className="text-xl sm:text-2xl font-bold text-white">Connexion</CardTitle>
                 <CardDescription className="text-white/40 text-sm">Accédez à votre espace personnel</CardDescription>
@@ -156,8 +157,8 @@ export default function Login() {
                   {cooldownDisplay > 0 && (
                     <p className="text-center text-sm text-red-400/80">Trop de tentatives. Réessayez dans {cooldownDisplay}s</p>
                   )}
-                  <Button type="submit" className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-medium shadow-lg shadow-blue-500/20 text-base mt-2" disabled={isLoading || isCoolingDown}>
-                    {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connexion...</>) : isCoolingDown ? `Patientez ${cooldownDisplay}s` : (<><Shield className="mr-2 h-4 w-4" />Se connecter</>)}
+                  <Button type="submit" className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-bold shadow-lg shadow-primary/20 text-base mt-4" disabled={isLoading || isCoolingDown}>
+                    {isLoading ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Connexion...</>) : isCoolingDown ? `Patientez ${cooldownDisplay}s` : (<><Shield className="mr-2 h-5 w-5" />Se connecter</>)}
                   </Button>
                 </form>
               </CardContent>

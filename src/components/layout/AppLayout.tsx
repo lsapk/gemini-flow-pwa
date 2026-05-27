@@ -4,7 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
-import { InteractiveBackground } from "./InteractiveBackground";
+import InteractiveBackground from "./InteractiveBackground";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -39,7 +39,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 pt-24 md:pt-4 md:ml-[17rem] md:mr-8 min-h-screen w-full min-w-0 overflow-x-hidden">
+        <main className="flex-1 pt-24 md:pt-4 md:ml-[19rem] md:mr-4 min-h-screen w-full min-w-0 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

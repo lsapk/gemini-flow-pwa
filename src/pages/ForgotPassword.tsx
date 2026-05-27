@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import InteractiveBackground from "@/components/layout/InteractiveBackground";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -32,27 +33,26 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-sky-500/10" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#050505]">
+      <InteractiveBackground />
 
       <div className="relative z-10 w-full max-w-md px-5 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="text-center mb-8">
-            <motion.div className="flex justify-center mb-5" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, type: "spring" }}>
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-primary/10 flex items-center justify-center mb-4 border border-primary/20 shadow-xl backdrop-blur-sm z-10 relative">
-                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60">DF</span>
+          <div className="text-center mb-10">
+            <motion.div className="flex justify-center mb-6" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-black/40 flex items-center justify-center mb-4 border border-white/10 shadow-2xl backdrop-blur-3xl z-10 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
+                <span className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-white/40 relative z-10">DF</span>
               </div>
             </motion.div>
-            <motion.h1 className="text-3xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>DeepFlow</motion.h1>
+            <motion.h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
-            <Card className="bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl">
+            <Card className="bg-black/60 backdrop-blur-3xl border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
               <CardHeader className="space-y-1 text-center pb-4">
                 <CardTitle className="text-xl sm:text-2xl font-bold text-white">{isEmailSent ? "Email envoyé !" : "Mot de passe oublié"}</CardTitle>
-                <CardDescription className="text-sky-200/50 text-sm">{isEmailSent ? "Vérifiez votre boîte de réception" : "Entrez votre email pour réinitialiser"}</CardDescription>
+                <CardDescription className="text-white/40 text-sm">{isEmailSent ? "Vérifiez votre boîte de réception" : "Entrez votre email pour réinitialiser"}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isEmailSent ? (
@@ -64,17 +64,17 @@ export default function ForgotPassword() {
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium text-sky-100/80">Email</Label>
-                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 text-base" />
+                      <Label htmlFor="email" className="text-sm font-medium text-white/60 ml-1">Email</Label>
+                      <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required disabled={isLoading} className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 focus:bg-white/10 transition-all text-base" />
                     </div>
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-medium shadow-lg shadow-sky-500/20 text-base" disabled={isLoading}>
-                      {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Envoi...</>) : (<><Mail className="mr-2 h-4 w-4" />Envoyer le lien</>)}
+                    <Button type="submit" className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-bold shadow-lg shadow-primary/20 text-base mt-4" disabled={isLoading}>
+                      {isLoading ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Envoi...</>) : (<><Mail className="mr-2 h-5 w-5" />Envoyer le lien</>)}
                     </Button>
                   </form>
                 )}
               </CardContent>
               <CardFooter className="flex justify-center pt-2">
-                <Link to="/login" className="text-sm text-white/40 hover:text-sky-300 transition-colors flex items-center gap-2"><ArrowLeft className="w-4 h-4" />Retour à la connexion</Link>
+                <Link to="/login" className="text-sm text-white/40 hover:text-white transition-colors flex items-center gap-2 font-medium"><ArrowLeft className="w-4 h-4" />Retour à la connexion</Link>
               </CardFooter>
             </Card>
           </motion.div>
