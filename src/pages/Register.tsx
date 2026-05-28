@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
-import { Zap, Eye, EyeOff, Loader2, Target, Shield } from "lucide-react";
+import { Zap, Eye, EyeOff, Loader2, Target, Shield, Sparkles } from "lucide-react";
 import deepflowLogo from "@/assets/deepflow-logo.png";
+import InteractiveBackground from "@/components/layout/InteractiveBackground";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse e-mail valide." }).max(255),
@@ -60,31 +61,27 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-sky-500/10" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full border border-indigo-500/10" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#050505]">
+      <InteractiveBackground />
 
       <div className="relative z-10 w-full max-w-md px-5 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="text-center mb-8">
-            <motion.div className="flex justify-center mb-5" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
-              <img 
-                src={deepflowLogo} 
-                alt="DeepFlow Logo" 
-                className="h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-2xl rounded-2xl"
-              />
+          <div className="text-center mb-10">
+            <motion.div className="flex justify-center mb-6" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-black/40 flex items-center justify-center mb-4 border border-white/10 shadow-2xl backdrop-blur-3xl z-10 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
+                <span className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-white/40 relative z-10">DF</span>
+              </div>
             </motion.div>
-            <motion.h1 className="text-3xl sm:text-4xl font-bold text-white font-heading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
-            <motion.p className="text-sky-200/60 mt-2 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Rejoignez la communauté productive</motion.p>
+            <motion.h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>
+            <motion.p className="text-white/40 mt-3 text-base font-medium" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>Rejoignez l'élite productive</motion.p>
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <Card className="bg-slate-900/60 backdrop-blur-xl border-white/10 shadow-2xl">
+            <Card className="bg-black/60 backdrop-blur-3xl border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
               <CardHeader className="space-y-1 text-center pb-4">
                 <CardTitle className="text-xl sm:text-2xl font-bold text-white">Créer un compte</CardTitle>
-                <CardDescription className="text-sky-200/50 text-sm">Commencez votre voyage vers la productivité</CardDescription>
+                <CardDescription className="text-white/40 text-sm">Prêt à transformer votre chaos en clarté ?</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...form}>
@@ -97,50 +94,49 @@ export default function Register() {
 
                     <FormField control={form.control} name="displayName" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-sky-100/80">Nom d'utilisateur</FormLabel>
-                        <FormControl><Input placeholder="John Doe" {...field} disabled={isLoading} className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 text-base" /></FormControl>
+                        <FormLabel className="text-sm font-medium text-white/60 ml-1">Nom d'utilisateur</FormLabel>
+                        <FormControl><Input placeholder="John Doe" {...field} disabled={isLoading} className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 focus:bg-white/10 transition-all text-base" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="email" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-sky-100/80">Email</FormLabel>
-                        <FormControl><Input placeholder="nom@exemple.com" {...field} autoComplete="email" disabled={isLoading} className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 text-base" /></FormControl>
+                        <FormLabel className="text-sm font-medium text-white/60 ml-1">Email</FormLabel>
+                        <FormControl><Input placeholder="nom@exemple.com" {...field} autoComplete="email" disabled={isLoading} className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 focus:bg-white/10 transition-all text-base" /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="password" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-sky-100/80">Mot de passe</FormLabel>
+                        <FormLabel className="text-sm font-medium text-white/60 ml-1">Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} autoComplete="new-password" disabled={isLoading} className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-sky-400/50 pr-10 text-base" />
-                            <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-white/40 hover:text-white/70" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                            <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} autoComplete="new-password" disabled={isLoading} className="h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/20 focus:bg-white/10 transition-all pr-10 text-base" />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-3 top-0 h-full px-3 py-2 hover:bg-transparent text-white/40 hover:text-white/70" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                           </div>
                         </FormControl>
-                        <FormDescription className="text-xs text-white/30">Min. 8 caractères avec majuscule, minuscule et chiffre</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" className="w-full h-12 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-medium shadow-lg shadow-sky-500/20 text-base" disabled={isLoading || isCoolingDown}>
-                      {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Inscription...</>) : isCoolingDown ? "Veuillez patienter..." : (<><Zap className="mr-2 h-4 w-4" />Créer mon compte</>)}
+                    <Button type="submit" className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all text-white font-bold shadow-lg shadow-primary/20 text-base mt-4" disabled={isLoading || isCoolingDown}>
+                      {isLoading ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Inscription...</>) : isCoolingDown ? "Patientez..." : (<><Zap className="mr-2 h-5 w-5" />Démarrer mon accès</>)}
                     </Button>
                   </form>
                 </Form>
               </CardContent>
               <CardFooter className="flex flex-col items-center gap-4 pt-2">
-                <div className="text-sm text-white/40">Vous avez déjà un compte ?{" "}<Link to="/login" className="text-sky-400 hover:text-sky-300 font-medium">Se connecter</Link></div>
-                <div className="text-xs text-white/30 text-center">En vous inscrivant, vous acceptez nos conditions d'utilisation.</div>
+                <div className="text-sm text-white/40 font-medium">Vous avez déjà un compte ?{" "}<Link to="/login" className="text-primary hover:text-blue-400 transition-colors font-bold">Se connecter</Link></div>
+                <div className="text-[10px] text-white/20 text-center px-4">En vous inscrivant, vous rejoignez une communauté d'élite et acceptez nos conditions de service.</div>
               </CardFooter>
             </Card>
           </motion.div>
 
-          <motion.div className="mt-8 flex justify-center gap-6 text-xs text-white/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.6 }}>
-            <div className="flex items-center gap-1"><Target className="w-3 h-3 text-sky-400" /><span>Objectifs</span></div>
-            <div className="flex items-center gap-1"><Shield className="w-3 h-3 text-emerald-400" /><span>Habitudes</span></div>
-            <div className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" /><span>Focus</span></div>
+          <motion.div className="mt-8 flex justify-center gap-6 text-xs text-white/40 font-bold uppercase tracking-widest" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.6 }}>
+            <div className="flex items-center gap-1.5"><Target className="w-3.5 h-3.5 text-primary" /><span>Objectifs</span></div>
+            <div className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-emerald-400" /><span>Sécurité</span></div>
+            <div className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-purple-400" /><span>Focus IA</span></div>
           </motion.div>
         </motion.div>
       </div>
