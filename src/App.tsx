@@ -24,7 +24,6 @@ const Focus = lazy(() => import("./pages/Focus"));
 const Journal = lazy(() => import("./pages/Journal"));
 const Goals = lazy(() => import("./pages/Goals"));
 const AIAssistant = lazy(() => import("./pages/AIAssistant"));
-const Reflection = lazy(() => import("./pages/Reflection"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Calendar = lazy(() => import("./pages/Calendar"));
@@ -107,7 +106,7 @@ function App() {
                         <Route path="/journal" element={<Journal />} />
                         <Route path="/goals" element={<Goals />} />
                         <Route path="/ai-assistant" element={<AIAssistant />} />
-                        <Route path="/reflection" element={<Reflection />} />
+                        <Route path="/reflection" element={<Navigate to="/journal" replace />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/calendar" element={<Calendar />} />
                         <Route path="/admin" element={<Admin />} />

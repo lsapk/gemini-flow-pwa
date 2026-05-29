@@ -15,6 +15,7 @@ interface FilterBarProps {
   onPriorityFilterChange?: (priority: 'all' | 'high' | 'medium' | 'low') => void;
   showPriorityFilter?: boolean;
   showViewToggle?: boolean;
+  showSearch?: boolean;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ export function FilterBar({
   onPriorityFilterChange,
   showPriorityFilter = true,
   showViewToggle = true,
+  showSearch = true,
   className,
 }: FilterBarProps) {
   const priorities = [
@@ -39,23 +41,25 @@ export function FilterBar({
   return (
     <div className={cn('flex flex-col sm:flex-row gap-3', className)}>
       {/* Search Input */}
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher..."
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-8 h-10 rounded-xl bg-secondary/50 border-0 backdrop-blur-sm"
-        />
-        {searchValue && (
-          <button
-            onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      {showSearch && (
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher..."
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9 pr-8 h-10 rounded-xl bg-secondary/50 border-0 backdrop-blur-sm"
+          />
+          {searchValue && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Priority Filters */}
       {showPriorityFilter && onPriorityFilterChange && (

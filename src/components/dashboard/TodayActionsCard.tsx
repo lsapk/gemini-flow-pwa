@@ -41,13 +41,12 @@ export const TodayActionsCard = () => {
       try {
         const today = toLocalDateKey();
         
-        // Fetch tasks due today
+        // Fetch tasks
         const { data: tasksData } = await supabase
           .from('tasks')
           .select('id, title, completed, priority, due_date')
           .eq('user_id', user.id)
-          .eq('completed', false)
-          .order('priority', { ascending: true });
+          .eq('completed', false);
         
         // Fetch habits with today's completion status
         const { data: habitsData } = await supabase
@@ -76,16 +75,21 @@ export const TodayActionsCard = () => {
           completions || []
         );
         
-        // Filter tasks due today
-        const todayTasks = (tasksData || []).filter(task => {
-          if (!task.due_date) return false;
-          try {
-            return isToday(parseISO(task.due_date));
-          } catch {
-            return false;
-          }
-        }) as Task[];
-        
+        // Filter and sort tasks by priority
+        const allPendingTasks = (tasksData || []) as Task[];
+        const highPriority = allPendingTasks.filter(t => t.priority === 'high');
+        const mediumPriority = allPendingTasks.filter(t => t.priority === 'medium');
+        const lowPriority = allPendingTasks.filter(t => t.priority === 'low' || !t.priority);
+
+        let tasksToShow: Task[] = [];
+        if (highPriority.length > 0) {
+          tasksToShow = highPriority;
+        } else if (mediumPriority.length > 0) {
+          tasksToShow = mediumPriority;
+        } else {
+          tasksToShow = lowPriority;
+        }
+
         // Add completion status to habits
         const habitsWithCompletion = (habitsData || []).map(habit => ({
           ...habit,
@@ -94,7 +98,7 @@ export const TodayActionsCard = () => {
           is_archived: habit.is_archived || false
         })) as Habit[];
         
-        setTasks(todayTasks);
+        setTasks(tasksToShow);
         setHabits(habitsWithCompletion.filter(h => !h.is_completed_today));
       } catch (error) {
         console.error('Error fetching today actions:', error);

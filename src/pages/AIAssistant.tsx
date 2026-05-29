@@ -100,10 +100,10 @@ export default function AIAssistant() {
         supabase.from('tasks').select('*').eq('user_id', user.id),
         supabase.from('habits').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('habit_completions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50)
+        supabase.from('habit_completions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
       ]);
       return {
         tasks: tasksR.status === 'fulfilled' ? (tasksR.value.data || []) : [],

@@ -266,6 +266,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder, onRefres
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         showPriorityFilter={false}
+        showSearch={false}
         showViewToggle={false}
       />
 

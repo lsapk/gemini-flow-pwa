@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Loader2, Calendar as CalendarIcon, Link2 } from "lucide-react";
+import { Loader2, Calendar as CalendarIcon, Link2, Sparkles, Brain, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { AppleCalendarView } from "@/components/AppleCalendarView";
 import { GoogleCalendarEventModal, EventFormData } from "@/components/GoogleCalendarEventModal";
 import { AISuggestedEvents } from "@/components/AISuggestedEvents";
 import { Markdown } from "@/components/Markdown";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CalendarEvent {
   id: string;
@@ -30,6 +31,7 @@ export default function CalendarPage() {
   const [suggestedEvents, setSuggestedEvents] = useState<any[]>([]);
   const [suggestionText, setSuggestionText] = useState<string>("");
   const [initialEventData, setInitialEventData] = useState<any>(null);
+  const [isAISuggestionsExpanded, setIsAISuggestionsExpanded] = useState(true);
 
   const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
 
@@ -119,6 +121,7 @@ export default function CalendarPage() {
       setSuggestionText(cleanedSuggestion);
       setSuggestedEvents(data.suggestedEvents || []);
       toast.success("Suggestions générées avec succès");
+      setIsAISuggestionsExpanded(true);
     } catch (error: any) {
       let errorMessage = "Erreur lors de la récupération des suggestions";
       if (error?.message) errorMessage = error.message;
@@ -167,63 +170,121 @@ export default function CalendarPage() {
     setIsCreateDialogOpen(true);
   };
 
-  const aiPanelContent = isConnected ? (
-    <div className="max-w-4xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Intelligence IA</h3>
-        <Button onClick={getAISuggestions} disabled={isLoading} size="sm" variant="outline" className="text-xs">
-          {isLoading ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Génération...</> : "Générer des suggestions"}
-        </Button>
-      </div>
-      {suggestionText && (
-        <Card><CardContent className="pt-4"><Markdown content={suggestionText} /></CardContent></Card>
-      )}
-      {suggestedEvents.length > 0 && (
-        <AISuggestedEvents
-          events={suggestedEvents}
-          onCreateEvent={async (event) => {
-            await createEvent({
-              title: event.title, type: "event", description: event.description || "",
-              calendar: "mon-agenda", allDay: false,
-              startDate: event.startDateTime.split("T")[0],
-              startTime: event.startDateTime.split("T")[1]?.slice(0, 5) || "13:00",
-              endDate: event.endDateTime.split("T")[0],
-              endTime: event.endDateTime.split("T")[1]?.slice(0, 5) || "14:00",
-              timezone: "Europe/Paris", repeat: "none", guests: [], location: "", videoConference: false,
-            });
-            loadEvents();
-          }}
-        />
-      )}
-    </div>
-  ) : null;
-
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-x-hidden">
+    <div className="h-full flex flex-col min-w-0 overflow-hidden bg-background/50">
       {/* Banner if not connected to Google */}
       {!isConnected && (
-        <div className="shrink-0 mx-2 mt-2 mb-1 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link2 className="h-4 w-4 text-primary" />
+        <div className="shrink-0 mx-4 mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-primary/5 border border-primary/20 backdrop-blur-md">
+          <div className="flex items-center gap-3 text-sm font-medium">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Link2 className="h-4 w-4 text-primary" />
+            </div>
             <span>Connectez Google Calendar pour synchroniser vos événements</span>
           </div>
-          <Button onClick={connectGoogle} disabled={isConnecting} size="sm" variant="outline" className="text-xs shrink-0">
-            {isConnecting ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Connexion...</> : "Connecter"}
+          <Button onClick={connectGoogle} disabled={isConnecting} size="sm" variant="outline" className="rounded-xl font-bold active:scale-95 transition-transform">
+            {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Connecter"}
           </Button>
         </div>
       )}
 
-      <AppleCalendarView
-        currentDate={selectedDate}
-        onDateChange={setSelectedDate}
-        googleEvents={isConnected ? events : []}
-        localItems={calendarItems}
-        onCreateEvent={isConnected ? handleCreateEventFromCalendar : undefined}
-        onAddClick={isConnected ? handleAddClick : undefined}
-        isLoading={isLoading || isLoadingItems}
-        aiContent={aiPanelContent}
-        showAI={isConnected}
-      />
+      {/* AI Suggestions - Main Block */}
+      {isConnected && (
+        <div className="p-4 shrink-0">
+          <Card className="border-primary/20 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2rem]">
+            <CardHeader className="py-4 px-6 border-b border-primary/10 flex flex-row items-center justify-between space-y-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10 animate-glow-pulse">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-heading tracking-tight">Optimisation IA</CardTitle>
+                  <p className="text-xs text-muted-foreground font-medium">Suggestions personnalisées pour votre agenda</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={getAISuggestions}
+                  disabled={isLoading}
+                  size="sm"
+                  className="rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Brain className="h-4 w-4 mr-2" /> Analyser</>}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsAISuggestionsExpanded(!isAISuggestionsExpanded)}
+                  className="rounded-xl"
+                >
+                  {isAISuggestionsExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </Button>
+              </div>
+            </CardHeader>
+            <AnimatePresence>
+              {isAISuggestionsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  <CardContent className="p-0 max-h-[400px] overflow-y-auto scrollbar-none">
+                    {!suggestionText && !suggestedEvents.length && !isLoading && (
+                      <div className="p-10 text-center flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-[2rem] bg-secondary/30 flex items-center justify-center mb-2">
+                          <Brain className="h-8 w-8 text-muted-foreground/40" />
+                        </div>
+                        <p className="text-sm text-muted-foreground font-medium max-w-[240px]">
+                          L'IA peut organiser votre journée en fonction de vos tâches et habitudes.
+                        </p>
+                      </div>
+                    )}
+
+                    {suggestionText && (
+                      <div className="p-6 border-b border-primary/5 bg-primary/[0.02]">
+                        <Markdown content={suggestionText} />
+                      </div>
+                    )}
+
+                    {suggestedEvents.length > 0 && (
+                      <div className="p-4">
+                        <AISuggestedEvents
+                          events={suggestedEvents}
+                          onCreateEvent={async (event) => {
+                            await createEvent({
+                              title: event.title, type: "event", description: event.description || "",
+                              calendar: "mon-agenda", allDay: false,
+                              startDate: event.startDateTime.split("T")[0],
+                              startTime: event.startDateTime.split("T")[1]?.slice(0, 5) || "13:00",
+                              endDate: event.endDateTime.split("T")[0],
+                              endTime: event.endDateTime.split("T")[1]?.slice(0, 5) || "14:00",
+                              timezone: "Europe/Paris", repeat: "none", guests: [], location: "", videoConference: false,
+                            });
+                          }}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Card>
+        </div>
+      )}
+
+      {/* Calendar View */}
+      <div className="flex-1 min-h-0 relative">
+        <AppleCalendarView
+          currentDate={selectedDate}
+          onDateChange={setSelectedDate}
+          googleEvents={isConnected ? events : []}
+          localItems={calendarItems}
+          onCreateEvent={isConnected ? handleCreateEventFromCalendar : undefined}
+          onAddClick={isConnected ? handleAddClick : undefined}
+          isLoading={isLoading || isLoadingItems}
+          showAI={false} // Hidden here as it's now the main block
+        />
+      </div>
 
       {isConnected && (
         <GoogleCalendarEventModal

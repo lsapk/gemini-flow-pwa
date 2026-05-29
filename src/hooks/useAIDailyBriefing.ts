@@ -59,6 +59,36 @@ export function useAIDailyBriefing() {
       return;
     }
 
+    // Basic users are limited to 1 briefing per day
+    const today = toLocalDateKey();
+    const { data: usage } = await supabase
+      .from("daily_usage")
+      .select("ai_analysis_count")
+      .eq("user_id", user.id)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    const currentUsage = usage?.ai_analysis_count || 0;
+
+    // Check premium status (assuming we have access to a way to check premium here)
+    // We'll use the same logic as useSubscription but simplified for this hook
+    const { data: subscriber } = await supabase
+      .from("subscribers")
+      .select("subscribed, subscription_tier, subscription_end")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const isPremium = subscriber?.subscribed &&
+                      subscriber?.subscription_tier === 'premium' &&
+                      (!subscriber.subscription_end || new Date(subscriber.subscription_end) > new Date());
+
+    if (!isPremium && currentUsage >= 1) {
+      if (force) {
+        toast.error("Limite quotidienne de briefing atteinte. Passez à Premium !");
+      }
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -96,6 +126,9 @@ export function useAIDailyBriefing() {
         const newBriefing = data.result as DailyBriefing;
         setBriefing(newBriefing);
         
+        // Track usage (increment_daily_usage)
+        await supabase.rpc("increment_daily_usage", { p_type: "analysis" });
+
         // Cache the briefing
         const cache: BriefingCache = {
           briefing: newBriefing,
