@@ -2,7 +2,7 @@
 export interface ChartData {
   name: string;
   value: number;
-  [key: string]: any; // Pour permettre d'autres propriétés
+  [key: string]: any;
 }
 
 export interface BarChartProps {

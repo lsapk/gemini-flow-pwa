@@ -1,5 +1,4 @@
 
-import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,7 +42,7 @@ export const SubobjectiveForm = ({
     setIsLoading(true);
     try {
       if (initialSubobjective) {
-        // Modification
+
         const { error } = await supabase
           .from('subobjectives')
           .update({
@@ -56,7 +55,7 @@ export const SubobjectiveForm = ({
         if (error) throw error;
         toast.success('Sous-objectif modifié avec succès');
       } else {
-        // Création
+
         const { error } = await supabase
           .from('subobjectives')
           .insert({

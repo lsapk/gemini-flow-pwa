@@ -9,11 +9,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface ActiveFocusSession {
   id: string;
   title: string;
-  duration: number; // in minutes
-  startTime: number; // timestamp
+  duration: number;
+  startTime: number;
   userId: string;
-  isActive: boolean; // Add isActive to sync pause state
-  timeLeft?: number; // Add timeLeft to sync pause state
+  isActive: boolean;
+  timeLeft?: number;
 }
 
 export const FocusTimer = () => {
@@ -34,9 +34,9 @@ export const FocusTimer = () => {
             if (parsed.isActive) {
               setTimeLeft(Math.ceil(remaining));
             } else {
-              // If paused, we need to load the timeLeft saved by the main Focus page.
-              // This part is tricky without a single source of truth. We'll approximate.
-              // The main Focus page needs to save timeLeft on pause. Let's assume it does.
+
+
+
               setTimeLeft(parsed.timeLeft || Math.ceil(remaining));
             }
           } else {
@@ -67,7 +67,7 @@ export const FocusTimer = () => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(loadSession, 2000); // Check for session periodically
+    const interval = setInterval(loadSession, 2000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -108,7 +108,7 @@ export const FocusTimer = () => {
              <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSession(null)} // Hide locally
+              onClick={() => setSession(null)}
               className="h-6 w-6 p-0"
             >
               ×

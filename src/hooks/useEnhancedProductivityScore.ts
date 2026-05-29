@@ -53,7 +53,7 @@ export const useEnhancedProductivityScore = () => {
       }
 
       try {
-        // Collect comprehensive user data
+
         const [
           tasksResult,
           habitsResult,
@@ -125,7 +125,7 @@ export const useEnhancedProductivityScore = () => {
 
         if (error) throw error;
 
-        // Parse AI response with improved error handling
+
         let parsedData: EnhancedProductivityData;
         try {
           if (!data?.response) {
@@ -133,7 +133,7 @@ export const useEnhancedProductivityScore = () => {
           }
 
           if (typeof data.response === 'string') {
-            // Remove any markdown formatting and extract JSON
+
             let jsonContent = data.response.trim();
             const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/) || jsonContent.match(/\{[\s\S]*\}/);
             
@@ -141,7 +141,7 @@ export const useEnhancedProductivityScore = () => {
               jsonContent = jsonMatch[1] || jsonMatch[0];
             }
             
-            // Clean up any potential formatting issues
+
             jsonContent = jsonContent.replace(/^\s*```json\s*/, '').replace(/\s*```\s*$/, '').trim();
             
             if (!jsonContent || jsonContent === '') {
@@ -154,7 +154,7 @@ export const useEnhancedProductivityScore = () => {
           }
         } catch (parseError) {
           console.error('Error parsing enhanced productivity JSON:', parseError);
-          // Fallback with enhanced default values
+
           parsedData = {
             score: 35,
             level: "Intermédiaire",
@@ -184,7 +184,7 @@ export const useEnhancedProductivityScore = () => {
           };
         }
 
-        // Validate and sanitize data
+
         return {
           score: Math.max(0, Math.min(100, parsedData.score || 0)),
           level: parsedData.level || 'Débutant',
@@ -229,9 +229,9 @@ export const useEnhancedProductivityScore = () => {
       }
     },
     enabled: !!user,
-    staleTime: 60 * 60 * 1000, // 1 hour - increased to reduce API calls
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
-    retry: false, // Disable automatic retries to prevent rate limiting
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 };

@@ -64,7 +64,7 @@ export function ChronobiologyChart() {
       isPeak: h.hour === peakHour
     }));
 
-  // Safely render insight text — strip any HTML tags to prevent XSS
+
   const sanitizedInsight = insight.replace(/<[^>]*>/g, '').replace(/\*\*(.*?)\*\*/g, '$1');
 
   return (

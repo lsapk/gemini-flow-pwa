@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to check admin role - memoized to prevent recreating
+
   const checkAdminRole = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -66,13 +66,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
     
-    // Set up auth state listener FIRST (before checking existing session)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       
-      console.log("Auth state changed:", event, newSession?.user?.email);
       
-      // Only update session state synchronously - no async calls in callback
+
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
@@ -81,7 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoading(false);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         if (newSession?.user) {
-          // Immediately perform admin check, then stop loading
+
           checkAdminRole(newSession.user.id).finally(() => {
             if (mounted) setIsLoading(false);
           });
@@ -91,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // THEN check for existing session
+
     const initSession = async () => {
       try {
         const { data: { session: existingSession }, error } = await supabase.auth.getSession();
@@ -102,7 +101,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        console.log("Initial session check:", existingSession ? `Found session for ${existingSession.user?.email}` : "No session");
         
         if (mounted) {
           setSession(existingSession);
@@ -121,7 +119,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initSession();
 
-    // Cleanup subscription on unmount
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
@@ -129,7 +127,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [checkAdminRole]);
 
   const signIn = async (email: string, password: string) => {
-    console.log("Signing in with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -139,7 +136,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
-    console.log("Signing up with email:", email);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -152,14 +148,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    console.log("Signing out (local scope only)");
-    // Use 'local' scope to only sign out on this device, not all devices
+
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     return { error };
   };
 
   const resetPassword = async (email: string) => {
-    console.log("Resetting password for:", email);
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });

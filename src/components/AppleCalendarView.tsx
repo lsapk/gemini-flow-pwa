@@ -26,13 +26,13 @@ interface AppleCalendarViewProps {
   onCreateEvent?: (date: Date, hour: number) => void;
   onAddClick?: () => void;
   isLoading?: boolean;
-  // AI section
+
   aiContent?: React.ReactNode;
   showAI?: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const CELL_HEIGHT = 56; // px per hour
+const CELL_HEIGHT = 56;
 
 const eventTypeColors: Record<string, { bg: string; text: string; darkBg: string; darkText: string }> = {
   task: { bg: "bg-blue-100", text: "text-blue-700", darkBg: "dark:bg-blue-500/20", darkText: "dark:text-blue-300" },
@@ -58,12 +58,12 @@ export function AppleCalendarView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
 
-  // Auto-switch view on mobile
+
   useEffect(() => {
     setViewMode(isMobile ? "day" : "week");
   }, [isMobile]);
 
-  // Auto-scroll to current time on mount
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (scrollRef.current) {
@@ -82,7 +82,7 @@ export function AppleCalendarView({
 
   const displayMonth = format(currentDate, "MMMM yyyy", { locale: fr });
 
-  // Navigation
+
   const goNext = () => {
     onDateChange(viewMode === "week" ? addWeeks(currentDate, 1) : addDays(currentDate, 1));
   };
@@ -91,12 +91,12 @@ export function AppleCalendarView({
   };
   const goToday = () => onDateChange(new Date());
 
-  // Current time indicator
+
   const now = new Date();
   const currentMinuteOfDay = now.getHours() * 60 + now.getMinutes();
   const timeIndicatorTop = (currentMinuteOfDay / (24 * 60)) * (24 * CELL_HEIGHT);
 
-  // Merge google events into a unified format
+
   const allEvents = useMemo(() => {
     const items: Array<{
       id: string;
@@ -109,7 +109,7 @@ export function AppleCalendarView({
       allDay: boolean;
     }> = [];
 
-    // Google events
+
     googleEvents.forEach((e) => {
       const startStr = e.start.dateTime || e.start.date;
       if (!startStr) return;
@@ -129,7 +129,7 @@ export function AppleCalendarView({
       });
     });
 
-    // Local items (tasks, goals, habits)
+
     localItems.forEach((item) => {
       if (!item.date) return;
       const d = parseISO(item.date);

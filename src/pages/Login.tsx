@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, Shield, Sparkles, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import InteractiveBackground from "@/components/layout/InteractiveBackground";
+import deepflowLogo from "@/assets/deepflow-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -21,14 +22,14 @@ export default function Login() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
 
-  // Rate limiting state
+
   const [failCount, setFailCount] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [cooldownDisplay, setCooldownDisplay] = useState(0);
 
   const isCoolingDown = Date.now() < cooldownUntil;
 
-  // Countdown timer for cooldown display
+
   useEffect(() => {
     if (!isCoolingDown) { setCooldownDisplay(0); return; }
     const interval = setInterval(() => {
@@ -84,7 +85,7 @@ export default function Login() {
         const newFailCount = failCount + 1;
         setFailCount(newFailCount);
 
-        // Progressive cooldown: 10s, 30s, 60s after 3+ failures
+
         if (newFailCount >= 3) {
           const delays = [10, 30, 60];
           const delayIndex = Math.min(newFailCount - 3, delays.length - 1);
@@ -120,9 +121,8 @@ export default function Login() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="text-center mb-10">
             <motion.div className="flex justify-center mb-6" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, delay: 0.1, type: "spring", stiffness: 200 }}>
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-black/40 flex items-center justify-center mb-4 border border-white/10 shadow-2xl backdrop-blur-3xl z-10 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
-                <span className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-white/40 relative z-10">DF</span>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-white flex items-center justify-center mb-4 shadow-2xl z-10 relative overflow-hidden">
+                <img src={deepflowLogo} alt="DeepFlow Logo" className="h-16 w-16 sm:h-20 sm:h-20 object-contain" />
               </div>
             </motion.div>
             <motion.h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>DeepFlow</motion.h1>

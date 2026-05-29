@@ -282,7 +282,7 @@ export default function CalendarPage() {
           onCreateEvent={isConnected ? handleCreateEventFromCalendar : undefined}
           onAddClick={isConnected ? handleAddClick : undefined}
           isLoading={isLoading || isLoadingItems}
-          showAI={false} // Hidden here as it's now the main block
+          showAI={false}
         />
       </div>
 

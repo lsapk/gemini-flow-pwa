@@ -1,4 +1,3 @@
-import React from "react";
 import { Progress } from "@/components/ui/progress";
 
 interface BadgeProgressBarProps {
@@ -16,7 +15,7 @@ export const BadgeProgressBar: React.FC<BadgeProgressBarProps> = ({
 }) => {
   const percent = total > 0 ? Math.round((value / total) * 100) : 0;
 
-  // Determine the progress bar color
+
   const barColor =
     color === "primary"
       ? "bg-primary"

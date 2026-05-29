@@ -58,7 +58,7 @@ export function SmartInsightsWidget() {
     );
   }
 
-  // Show only top 3 insights, simplified
+
   const topInsights = insights.slice(0, 3);
 
   return (

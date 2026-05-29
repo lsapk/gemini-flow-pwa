@@ -7,7 +7,7 @@ import { toLocalDateKey } from "@/utils/dateUtils";
 import { calculateHabitStreakMap } from "@/services/streakCalculator";
 
 type AnalyticsDataType = {
-  // Types de données pour les graphiques
+
   habitsData: { name: string; value: number }[];
   tasksData: { name: string; completed: number; pending: number }[];
   focusData: { date: string; minutes: number }[];
@@ -39,7 +39,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
     setError(null);
     
     try {
-      // Récupérer les données des habitudes
+
       const { data: habitsRawData, error: habitsError } = await supabase
         .from('habits')
         .select('title, id, streak, days_of_week')
@@ -64,26 +64,26 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         habitCompletionsRawData || [],
       );
 
-      // Format the habit data using the correct column name (title instead of name)
+
       let maxStreak = 0;
       const formattedHabitsData = (habitsRawData || []).map(habit => {
         const streak = streakMap[habit.id] ?? habit.streak ?? 0;
         if (streak > maxStreak) maxStreak = streak;
         return {
-          name: habit.title, // Using 'title' instead of 'name'
+          name: habit.title,
           value: streak
         };
       });
       
-      // Update global streak count
+
       setStreakCount(maxStreak);
       
-      // Set habits data
+
       setHabitsData(formattedHabitsData.length > 0 ? formattedHabitsData : [
         { name: "Pas d'habitudes", value: 0 }
       ]);
       
-      // Récupérer les données des tâches
+
       const { data: tasksRawData, error: tasksError } = await supabase
         .from('tasks')
         .select('priority, completed')
@@ -91,12 +91,12 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         
       if (tasksError) throw new Error("Erreur lors de la récupération des tâches: " + tasksError.message);
       
-      // Calculate task completion rate
+
       const totalTasks = (tasksRawData || []).length;
       const completedTasks = (tasksRawData || []).filter(task => task.completed).length;
       setTaskCompletionRate(totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0);
       
-      // Regrouper par priorité
+
       const tasksByPriority = (tasksRawData || []).reduce((acc: Record<string, {completed: number, pending: number}>, task) => {
         const priority = task.priority || 'non-défini';
         if (!acc[priority]) {
@@ -122,7 +122,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         { name: "Pas de tâches", completed: 0, pending: 0 }
       ]);
       
-      // Récupérer les données des sessions focus
+
       const { data: focusRawData, error: focusError } = await supabase
         .from('focus_sessions')
         .select('duration, created_at')
@@ -132,10 +132,10 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         
       if (focusError) throw new Error("Erreur lors de la récupération des sessions focus: " + focusError.message);
       
-      // Calculer le temps total de focus en minutes
+
       let totalMinutes = 0;
       
-      // Formater les données de focus
+
       const focusByDay: Record<string, number> = {};
       const last7Days = Array.from({ length: 7 }).map((_, i) => {
         const date = new Date();
@@ -145,7 +145,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         return formattedDate;
       }).reverse();
       
-      // Agréger les sessions par jour
+
       (focusRawData || []).forEach(session => {
         const sessionDate = format(parseISO(session.created_at), 'yyyy-MM-dd');
         const durationMinutes = Math.round(session.duration / 60);
@@ -156,10 +156,10 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         }
       });
       
-      // Mettre à jour le temps total de focus
+
       setTotalFocusTime(totalMinutes);
       
-      // Formater les données pour le graphique
+
       const formattedFocusData = Object.entries(focusByDay).map(([date, minutes]) => ({
         date: format(parseISO(date), 'dd MMM'),
         minutes
@@ -167,18 +167,18 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       
       setFocusData(formattedFocusData);
       
-      // Récupérer les données d'activité générale
+
       const last7DaysDates = [...Array(7)].map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - i);
         return toLocalDateKey(date);
       }).reverse();
       
-      // Compter toutes les activités par jour en utilisant des requêtes directes
+
       const startDate = last7DaysDates[0];
       const endDate = last7DaysDates[last7DaysDates.length - 1] + 'T23:59:59';
       
-      // Get habits activity
+
       const { data: habitsActivityData, error: habitsActivityError } = await supabase
         .from('habits')
         .select('updated_at')
@@ -186,7 +186,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .gte('updated_at', startDate)
         .lte('updated_at', endDate);
         
-      // Get tasks activity
+
       const { data: tasksActivityData, error: tasksActivityError } = await supabase
         .from('tasks')
         .select('updated_at')
@@ -194,7 +194,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .gte('updated_at', startDate)
         .lte('updated_at', endDate);
         
-      // Get focus sessions activity
+
       const { data: focusActivityData, error: focusActivityError } = await supabase
         .from('focus_sessions')
         .select('created_at')
@@ -202,7 +202,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         .gte('created_at', startDate)
         .lte('created_at', endDate);
         
-      // Get journal entries activity
+
       const { data: journalActivityData, error: journalActivityError } = await supabase
         .from('journal_entries')
         .select('created_at')
@@ -215,7 +215,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
           + (habitsActivityError || tasksActivityError || focusActivityError || journalActivityError).message);
       }
       
-      // Combine all activity data
+
       const allActivityData = [
         ...(habitsActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
         ...(tasksActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.updated_at)) })),
@@ -223,7 +223,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
         ...(journalActivityData || []).map(item => ({ date: toLocalDateKey(new Date(item.created_at)) }))
       ];
       
-      // Mapper les activités par jour
+
       const activityByDay: Record<string, number> = {};
       last7DaysDates.forEach(day => {
         activityByDay[day] = 0;
@@ -246,7 +246,7 @@ export const useAnalyticsData = (): AnalyticsDataType => {
       console.error("Erreur lors de la récupération des données pour l'analyse:", err);
       setError(err.message || "Erreur lors du chargement des données d'analyse");
       
-      // Définir des données par défaut en cas d'erreur
+
       if (habitsData.length === 0) {
         setHabitsData([{ name: "Pas de données", value: 0 }]);
       }

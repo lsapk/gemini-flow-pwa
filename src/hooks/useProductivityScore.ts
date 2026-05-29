@@ -81,10 +81,10 @@ export const useProductivityScore = () => {
 
         if (error) throw error;
 
-        // Parser la réponse JSON de l'IA
+
         let parsedData: ProductivityData;
         try {
-          // Essayer de parser directement la réponse
+
           if (typeof data?.response === 'string') {
             const jsonMatch = data.response.match(/```json\s*([\s\S]*?)\s*```/) || data.response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
@@ -97,7 +97,7 @@ export const useProductivityScore = () => {
           }
         } catch (parseError) {
           console.error('Erreur de parsing JSON:', parseError);
-          // Fallback avec des valeurs par défaut
+
           parsedData = {
             score: 50,
             level: "Intermédiaire",
@@ -115,14 +115,14 @@ export const useProductivityScore = () => {
           };
         }
 
-        // Mise à jour des badges pour enlever ceux liés aux bonnes actions
+
         const updatedBadges = parsedData.badges.filter(badge => 
           !badge.toLowerCase().includes('bonne action') && 
           !badge.toLowerCase().includes('good action') &&
           !badge.toLowerCase().includes('communaut')
         );
 
-        // Ajouter de nouveaux badges basés sur la productivité
+
         const newBadges = [];
         if (parsedData.score >= 80) newBadges.push("Maître de la Productivité");
         if (parsedData.score >= 60) newBadges.push("Expert en Organisation");
@@ -133,7 +133,7 @@ export const useProductivityScore = () => {
 
         return {
           ...parsedData,
-          badges: [...updatedBadges, ...newBadges].slice(0, 4) // Limiter à 4 badges
+          badges: [...updatedBadges, ...newBadges].slice(0, 4)
         };
 
       } catch (error) {
@@ -156,7 +156,7 @@ export const useProductivityScore = () => {
       }
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };

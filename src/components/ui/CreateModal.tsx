@@ -31,7 +31,7 @@ export function CreateModal({ isOpen, onClose, title, children, hasUnsavedChange
     setShowConfirmDialog(false);
   };
 
-  // Prevent closing on backdrop click or escape key
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {

@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Check if user has admin role via database (secure method)
 export const isUserAdmin = async (): Promise<boolean> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,11 +19,9 @@ export const isUserAdmin = async (): Promise<boolean> => {
   }
 };
 
-// Sync offline data function
 export const syncOfflineData = async () => {
   try {
-    console.log('Syncing offline data...');
-    // Add offline sync logic here if needed
+
     return { success: true };
   } catch (error) {
     console.error('Error syncing offline data:', error);
@@ -32,7 +29,6 @@ export const syncOfflineData = async () => {
   }
 };
 
-// Goals API functions
 export const getGoals = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +92,6 @@ export const deleteGoal = async (id: string) => {
   }
 };
 
-// Habits API functions
 export const getHabits = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -160,7 +155,6 @@ export const deleteHabit = async (id: string) => {
   }
 };
 
-// Journal API functions
 export const getJournalEntries = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();

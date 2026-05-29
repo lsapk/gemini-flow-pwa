@@ -61,7 +61,7 @@ export default function AIAssistant() {
   }, [activeTab]);
 
   const {
-    habitsData, tasksData, focusData, activityData,
+    habitsData, focusData,
     taskCompletionRate, totalFocusTime, streakCount, refetch
   } = useAnalyticsData();
 
@@ -112,7 +112,7 @@ export default function AIAssistant() {
         journal_entries: journalR.status === 'fulfilled' ? (journalR.value.data || []) : [],
         focus_sessions: focusR.status === 'fulfilled' ? (focusR.value.data || []) : [],
         habit_completions: completionsR.status === 'fulfilled' ? (completionsR.value.data || []) : [],
-        profile: profileR.status === 'fulfilled' ? profileR.value.data : null,
+        profile: profileR.status === 'fulfilled' ? (profileR.value as any)?.data : null,
         analytics: { taskCompletionRate, totalFocusTime, streakCount, habitsCount: habitsData?.length || 0, focusSessionsCount: focusData?.length || 0 }
       };
     } catch { return {}; }
@@ -137,7 +137,7 @@ export default function AIAssistant() {
       const recentMessages = messages.slice(-10).map(msg => ({ role: msg.role, content: msg.content }));
       let finalMessage = text;
 
-      // Always provide full context for better intelligence
+
       if (chatMode === 'creation') finalMessage = `[MODE CRÉATION] ${text}`;
       else finalMessage = `[MODE ANALYSE] ${text} - Analyse approfondie basée sur mes données.`;
 

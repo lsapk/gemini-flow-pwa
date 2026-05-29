@@ -1,5 +1,4 @@
 
-import React, { useEffect } from 'react';
 import { motion, useSpring, useMotionValue, useTransform } from 'framer-motion';
 
 const InteractiveBackground: React.FC = () => {
@@ -10,7 +9,7 @@ const InteractiveBackground: React.FC = () => {
   const dx = useSpring(mouseX, springConfig);
   const dy = useSpring(mouseY, springConfig);
 
-  // Create transformed motion values for parallax effect - increased sensitivity
+
   const x1 = useTransform(dx, (v) => v * 60);
   const y1 = useTransform(dy, (v) => v * 60);
 
@@ -44,7 +43,7 @@ const InteractiveBackground: React.FC = () => {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse coordinates to range [-1, 1]
+
       const x = (e.clientX / window.innerWidth) * 2 - 1;
       const y = (e.clientY / window.innerHeight) * 2 - 1;
       mouseX.set(x);

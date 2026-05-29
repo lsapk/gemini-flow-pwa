@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -120,11 +119,11 @@ export function ItemCard({
           'backdrop-blur-2xl bg-white/5 border-white/10 rounded-[2rem]',
           'hover:bg-white/10 hover:border-white/20',
           'active:scale-[0.98]',
-          // Completed state
+
           isCompleted && 'bg-muted/30 opacity-75',
-          // Archived state
+
           isArchived && 'opacity-60',
-          // Dragging state
+
           isDragging && 'shadow-xl ring-2 ring-primary/20'
         )}
       >
@@ -255,7 +254,6 @@ export function ItemCard({
   );
 }
 
-// Re-export for convenience
 export { CheckCircle } from './CheckCircle';
 export { ProgressRing } from './ProgressRing';
 export { DragHandle } from './DragHandle';

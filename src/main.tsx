@@ -1,16 +1,12 @@
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { syncOfflineData } from "./lib/api";
 
-// Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(registration => {
-        console.log('SW registered:', registration.scope);
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
@@ -27,7 +23,7 @@ if ('serviceWorker' in navigator) {
       .catch(error => console.error('SW registration failed:', error));
   });
 
-  // PWA install prompt
+
   let deferredPrompt: BeforeInstallPromptEvent | null = null;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -48,12 +44,10 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: string }>;
 }
 
-// Online/offline handling
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     document.getElementById('offline-banner')?.remove();
     syncOfflineData()
-      .then(() => console.log('Offline data synced'))
       .catch(err => console.error('Sync error:', err));
   });
   
@@ -68,7 +62,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Refresh data when app becomes visible
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     window.dispatchEvent(new CustomEvent('app-visible'));

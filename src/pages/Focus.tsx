@@ -149,7 +149,7 @@ export default function Focus() {
   const handleManualSubmit = async () => {
     if (!user || !manualSession.title || manualSession.duration <= 0) return;
     try {
-      // Correctly combine date and time
+
       const [hours, minutes] = manualSession.startTime.split(':').map(Number);
       const startedAt = new Date(manualSession.date);
       startedAt.setHours(hours, minutes, 0, 0);

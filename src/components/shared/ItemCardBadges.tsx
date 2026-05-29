@@ -1,4 +1,3 @@
-import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { 
   AlertCircle, 
@@ -12,7 +11,6 @@ import { format, differenceInDays, isToday, isTomorrow, isPast } from 'date-fns'
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-// Priority Badge
 interface PriorityBadgeProps {
   priority: 'high' | 'medium' | 'low' | string;
   compact?: boolean;
@@ -47,7 +45,6 @@ export function PriorityBadge({ priority, compact = false }: PriorityBadgeProps)
   );
 }
 
-// Due Date Badge
 interface DueDateBadgeProps {
   dueDate: string;
   compact?: boolean;
@@ -85,7 +82,6 @@ export function DueDateBadge({ dueDate, compact = false }: DueDateBadgeProps) {
   );
 }
 
-// Streak Badge
 interface StreakBadgeProps {
   streak: number;
   compact?: boolean;
@@ -112,7 +108,6 @@ export function StreakBadge({ streak, compact = false }: StreakBadgeProps) {
   );
 }
 
-// Frequency Badge
 interface FrequencyBadgeProps {
   frequency: 'daily' | 'weekly' | 'monthly' | string;
 }
@@ -133,7 +128,6 @@ export function FrequencyBadge({ frequency }: FrequencyBadgeProps) {
   );
 }
 
-// Category Badge
 interface CategoryBadgeProps {
   category: string;
 }
@@ -147,7 +141,6 @@ export function CategoryBadge({ category }: CategoryBadgeProps) {
   );
 }
 
-// Subtask Progress Badge
 interface SubtaskBadgeProps {
   completed: number;
   total: number;

@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Target, Calendar, CheckCircle2 } from "lucide-react";
@@ -47,7 +46,6 @@ interface SortableHabitCardProps {
   showArchived: boolean;
 }
 
-// Days of week indicator component
 function DaysIndicator({ daysOfWeek }: { daysOfWeek?: number[] }) {
   const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const today = new Date().getDay();
@@ -186,7 +184,7 @@ export default function HabitList({
     }
   };
 
-  // Filter habits
+
   const filteredHabits = habits.filter(habit => {
     const matchesSearch = habit.title.toLowerCase().includes(searchValue.toLowerCase()) ||
       habit.description?.toLowerCase().includes(searchValue.toLowerCase());

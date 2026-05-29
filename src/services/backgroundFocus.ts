@@ -26,7 +26,7 @@ class BackgroundFocusService {
     const session: FocusSession = {
       id,
       title,
-      duration: duration * 60, // mins to seconds
+      duration: duration * 60,
       startTime: Date.now(),
       isRunning: true,
     };
@@ -50,7 +50,7 @@ class BackgroundFocusService {
     if (session && session.isRunning) {
       this.clearInterval(id);
       const elapsed = (Date.now() - session.startTime) / 1000;
-      session.duration = session.duration - elapsed; // Update duration to remaining time
+      session.duration = session.duration - elapsed;
       session.isRunning = false;
     }
   }
@@ -59,7 +59,7 @@ class BackgroundFocusService {
     const session = this.sessions.get(id);
     if (session && !session.isRunning) {
       session.isRunning = true;
-      session.startTime = Date.now(); // Reset start time
+      session.startTime = Date.now();
       
       const interval = setInterval(() => {
         this.updateSession(id);
@@ -113,7 +113,6 @@ class BackgroundFocusService {
   }
 
   private handleSessionComplete(id: string, session: FocusSession): void {
-    // Show notification
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Session terminée !', {
         body: `Votre session "${session.title}" est terminée. Bien joué !`,
@@ -122,14 +121,11 @@ class BackgroundFocusService {
       });
     }
 
-    // Play sound if browser supports it
     try {
       const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DrwGWYC0GWrJO3B+l0W6BdHr+e3FMGOD1Yh89p4B/e53v6uC1');
-      audio.play().catch(() => {
-        // Ignore audio play errors
-      });
+      audio.play().catch(e => console.warn("Background audio play failed", e));
     } catch (error) {
-      // Ignore audio errors
+      console.error("Background focus completion error", error);
     }
 
     this.stopSession(id);

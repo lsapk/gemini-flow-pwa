@@ -22,14 +22,14 @@ export function useUnifiedProductivityScore() {
 
   const scores = useMemo(() => {
     const taskScore = Math.min(100, Math.round(taskCompletionRate || 0));
-    // Focus: 5h (300 min) = 100%
+
     const focusScore = Math.min(100, Math.round(((totalFocusTime || 0) / 300) * 100));
-    // Streak: 10 jours = 100%
+
     const habitScore = Math.min(100, (streakCount || 0) * 10);
-    // Habits: 10 habitudes actives = 100%
+
     const habitsActiveScore = Math.min(100, activeHabits * 10);
 
-    // Weighted overall
+
     const overall = Math.round(
       taskScore * 0.4 +
       focusScore * 0.3 +

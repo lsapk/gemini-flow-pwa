@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Trophy } from 'lucide-react';
@@ -213,7 +212,7 @@ export const GoalList = ({ goals, loading, onEdit, onDelete, onReorder, onRefres
     }
   };
 
-  // Filter goals
+
   const filteredGoals = goals.filter(goal => {
     const matchesSearch = goal.title.toLowerCase().includes(searchValue.toLowerCase()) ||
       goal.description?.toLowerCase().includes(searchValue.toLowerCase());

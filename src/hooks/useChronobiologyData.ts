@@ -77,7 +77,7 @@ export const useChronobiologyData = () => {
       }
 
       try {
-        // Fetch data from last 30 days
+
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         
         const [tasksResult, completionsResult, focusResult] = await Promise.all([
@@ -94,7 +94,7 @@ export const useChronobiologyData = () => {
           total: 0 
         }));
 
-        // Process tasks
+
         (tasksResult.data || []).forEach(task => {
           if (task.updated_at) {
             const hour = new Date(task.updated_at).getHours();
@@ -103,7 +103,7 @@ export const useChronobiologyData = () => {
           }
         });
 
-        // Process habit completions
+
         (completionsResult.data || []).forEach(completion => {
           if (completion.created_at) {
             const hour = new Date(completion.created_at).getHours();
@@ -112,7 +112,7 @@ export const useChronobiologyData = () => {
           }
         });
 
-        // Process focus sessions
+
         (focusResult.data || []).forEach(session => {
           if (session.started_at) {
             const hour = new Date(session.started_at).getHours();
@@ -121,7 +121,7 @@ export const useChronobiologyData = () => {
           }
         });
 
-        // Calculate peak hour
+
         let peakHour = 9;
         let maxTotal = 0;
         hourlyData.forEach(h => {
@@ -131,12 +131,12 @@ export const useChronobiologyData = () => {
           }
         });
 
-        // Calculate time period percentages
+
         const totalActivities = hourlyData.reduce((sum, h) => sum + h.total, 0) || 1;
-        const morningTotal = hourlyData.slice(5, 12).reduce((sum, h) => sum + h.total, 0); // 5h-11h
-        const afternoonTotal = hourlyData.slice(12, 18).reduce((sum, h) => sum + h.total, 0); // 12h-17h
+        const morningTotal = hourlyData.slice(5, 12).reduce((sum, h) => sum + h.total, 0);
+        const afternoonTotal = hourlyData.slice(12, 18).reduce((sum, h) => sum + h.total, 0);
         const eveningTotal = hourlyData.slice(18, 24).reduce((sum, h) => sum + h.total, 0) + 
-                            hourlyData.slice(0, 5).reduce((sum, h) => sum + h.total, 0); // 18h-4h
+                            hourlyData.slice(0, 5).reduce((sum, h) => sum + h.total, 0);
 
         const morningPercent = Math.round((morningTotal / totalActivities) * 100);
         const afternoonPercent = Math.round((afternoonTotal / totalActivities) * 100);

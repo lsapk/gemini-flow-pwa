@@ -1,10 +1,8 @@
 
-import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChartData } from "./types";
 import { useMediaQuery } from "@/hooks/use-mobile";
 
-// Couleurs par défaut pour le graphique
 const DEFAULT_COLORS = ["#7C3AED", "#EC4899", "#10B981", "#F59E0B", "#3B82F6"];
 
 interface SimplePieChartProps {

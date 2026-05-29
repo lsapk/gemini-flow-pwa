@@ -58,7 +58,7 @@ export const useRealProductivityAnalysis = () => {
       }
 
       try {
-        // Fetch all user data for analysis
+
         const [
           tasksResult,
           habitsResult,
@@ -84,7 +84,7 @@ export const useRealProductivityAnalysis = () => {
           habit_completions: habitCompletionsResult.status === 'fulfilled' ? (habitCompletionsResult.value.data || []) : []
         };
 
-        // Call AI for comprehensive analysis
+
         const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
           body: {
             message: `Analyse détaillée de productivité avec calculs précis. 
@@ -156,7 +156,7 @@ CALCULS REQUIS:
 
           let jsonContent = typeof data.response === 'string' ? data.response.trim() : JSON.stringify(data.response);
           
-          // Extract JSON from markdown if present
+
           const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/) || jsonContent.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             jsonContent = jsonMatch[1] || jsonMatch[0];
@@ -166,7 +166,7 @@ CALCULS REQUIS:
         } catch (parseError) {
           console.error('Erreur parsing analyse:', parseError);
           
-          // Fallback with real calculations
+
           const tasksCompleted = userData.tasks.filter(t => t.completed).length;
           const totalTasks = userData.tasks.length;
           const completionRate = totalTasks > 0 ? Math.round((tasksCompleted / totalTasks) * 100) : 0;
@@ -234,7 +234,7 @@ CALCULS REQUIS:
       }
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 };

@@ -24,9 +24,9 @@ export default function Analysis() {
   const { user } = useAuth();
   const [weeklyTrend, setWeeklyTrend] = useState<{ name: string; tasks: number; habits: number }[]>([]);
 
-  // Analysis usage is tracked only when explicitly triggered, not on page load
 
-  // Compute real weekly trend from DB data
+
+
   useEffect(() => {
     if (!user) return;
     const computeWeeklyTrend = async () => {
@@ -40,7 +40,7 @@ export default function Analysis() {
         days.push({ name: dayNames[d.getDay()], date: toLocalDateKey(d) });
       }
 
-      // Fetch tasks completed in the last 7 days
+
       const startDate = days[0].date;
       const endDate = days[6].date + "T23:59:59";
 

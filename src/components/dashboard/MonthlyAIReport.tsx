@@ -25,7 +25,7 @@ export const MonthlyAIReport = () => {
     return `${now.getFullYear()}-${now.getMonth()}`;
   })();
 
-  // Load saved report on mount — pick the most recent matching this month
+
   useEffect(() => {
     const loadSavedReport = async () => {
       if (!user) return;
@@ -55,7 +55,7 @@ export const MonthlyAIReport = () => {
     loadSavedReport();
   }, [user, monthKey]);
 
-  // Robust save: delete previous rows then insert a fresh one (no unique constraint required)
+
   const persistReport = async (reportText: string) => {
     if (!user) return false;
 
@@ -135,7 +135,7 @@ Tâches: ${monthlyData.tasks.completed}/${monthlyData.tasks.total} | Focus: ${Ma
 
       const generated = data.response as string;
       setReport(generated);
-      // Auto-save immediately so the report persists across reloads
+
       const ok = await persistReport(generated);
       setIsSaved(ok);
       toast.success(ok ? "Rapport généré et sauvegardé !" : "Rapport généré (sauvegarde échouée)");

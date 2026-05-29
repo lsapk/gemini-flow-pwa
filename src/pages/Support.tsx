@@ -47,8 +47,8 @@ export default function Support() {
       await navigator.clipboard.writeText(SUPPORT_EMAIL);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Copy failed", err);
     }
   };
 

@@ -9,7 +9,7 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Vérifier si Ctrl/Cmd + Shift sont pressés
+
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
       const isShift = event.shiftKey;
 
@@ -44,11 +44,6 @@ export const useKeyboardShortcuts = () => {
             event.preventDefault();
             navigate('/goals');
             toast({ title: "Navigation", description: "Objectifs" });
-            break;
-          case 'b':
-            event.preventDefault();
-            navigate('/badges');
-            toast({ title: "Navigation", description: "Badges" });
             break;
           case 'a':
             event.preventDefault();

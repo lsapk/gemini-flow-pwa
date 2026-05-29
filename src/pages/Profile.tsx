@@ -10,7 +10,7 @@ export default function Profile() {
   const { profile, isLoading, isInitialLoading, generateProfile } = usePersonalityProfile();
   const { canUseFeature } = useSubscription();
 
-  // Check if user has access to AI Profile
+
   if (!canUseFeature("ai_profile")) {
     return (
       <div className="max-w-2xl mx-auto mt-8">
@@ -85,13 +85,40 @@ export default function Profile() {
     );
   }
 
-  // Parse profile data - handle both string and object formats
-  const data = typeof profile === 'string' ? JSON.parse(profile) : profile;
+
+  let data: PersonalityProfile | null = null;
+  try {
+    data = typeof profile === 'string' ? JSON.parse(profile) : profile;
+  } catch (e) {
+    console.error("Error parsing profile data:", e);
+  }
+
+  if (!data || !data.personality) {
+    return (
+      <div className="max-w-2xl mx-auto mt-8">
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardContent className="py-12 text-center">
+            <div className="bg-destructive/10 p-4 rounded-full w-fit mx-auto mb-4">
+              <Brain className="h-12 w-12 text-destructive" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Données corrompues</h3>
+            <p className="text-muted-foreground mb-6">
+              Une erreur est survenue lors du chargement de votre profil. Voulez-vous essayer de le régénérer ?
+            </p>
+            <Button onClick={generateProfile} disabled={isLoading} className="rounded-xl">
+              {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              Régénérer mon profil
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-4 px-2 sm:px-4">
       <PersonalityProfileCard
-        profile={data as PersonalityProfile}
+        profile={data}
         onRefresh={generateProfile}
         isLoading={isLoading}
       />

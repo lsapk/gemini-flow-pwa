@@ -11,7 +11,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { CookieConsent } from "./components/CookieConsent";
 import AppLayout from "./components/layout/AppLayout";
 
-// Lazy loaded pages for better performance
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
@@ -30,7 +29,6 @@ const Calendar = lazy(() => import("./pages/Calendar"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Support = lazy(() => import("./pages/Support"));
 
-// Legal pages
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
 const Cookies = lazy(() => import("./pages/legal/Cookies"));
@@ -64,7 +62,6 @@ function ProtectedLayout() {
   return <AppLayout />;
 }
 
-// Loading fallback component
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>

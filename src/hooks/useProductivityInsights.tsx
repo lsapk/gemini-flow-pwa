@@ -33,7 +33,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
   return useMemo(() => {
     const insights: ProductivityInsight[] = [];
     
-    // Calculs préliminaires
+
     const dailyFocusAverage = totalFocusTime / 7;
     const avgStreakDays = habitsData.length > 0 
       ? habitsData.reduce((sum, habit) => sum + habit.value, 0) / habitsData.length
@@ -41,7 +41,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
     const recentActivity = activityData.slice(-7).reduce((sum, day) => sum + day.count, 0);
     const focusConsistency = focusData.filter(day => day.minutes > 0).length;
     
-    // Insights de performance
+
     if (taskCompletionRate < 40) {
       insights.push({
         id: 'critical-completion',
@@ -83,7 +83,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Insights de focus
+
     if (dailyFocusAverage < 20) {
       insights.push({
         id: 'focus-deficit',
@@ -108,7 +108,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Insights de consistance
+
     if (focusConsistency <= 2) {
       insights.push({
         id: 'inconsistent-focus',
@@ -133,7 +133,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Insights d'habitudes
+
     if (avgStreakDays < 2 && habitsData.length > 0) {
       insights.push({
         id: 'habit-struggle',
@@ -158,7 +158,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Insights d'activité générale
+
     if (recentActivity < 10) {
       insights.push({
         id: 'low-engagement',
@@ -183,7 +183,7 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Insights d'optimisation
+
     const weekendActivity = activityData.slice(-2).reduce((sum, day) => sum + day.count, 0);
     const weekdayActivity = activityData.slice(-7, -2).reduce((sum, day) => sum + day.count, 0);
     
@@ -199,10 +199,10 @@ export const useProductivityInsights = (): ProductivityInsight[] => {
       });
     }
 
-    // Trier par priorité et limiter le nombre
+
     const priorityOrder = { high: 3, medium: 2, low: 1 };
     return insights
       .sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority])
-      .slice(0, 8); // Limiter à 8 insights max
+      .slice(0, 8);
   }, [taskCompletionRate, totalFocusTime, streakCount, habitsData, focusData, activityData]);
 };

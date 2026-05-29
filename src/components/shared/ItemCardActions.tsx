@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Edit2, 
@@ -140,7 +139,6 @@ export function ItemCardActions({
   );
 }
 
-// Expand/Collapse toggle for subtasks
 interface ExpandToggleProps {
   isExpanded: boolean;
   onToggle: () => void;
@@ -169,7 +167,6 @@ export function ExpandToggle({ isExpanded, onToggle, count, label = 'sous-élém
   );
 }
 
-// Add button for inline creation
 interface AddButtonProps {
   onClick: () => void;
   label?: string;

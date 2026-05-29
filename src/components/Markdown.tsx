@@ -1,5 +1,3 @@
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -47,7 +45,7 @@ export const Markdown: React.FC<MarkdownProps> = ({ content }) => {
             </code>
           );
         },
-        // Add styles for other markdown elements
+
         h1: ({ node, ...props }) => <h1 className="text-lg font-bold mt-2 mb-1" {...props} />,
         h2: ({ node, ...props }) => <h2 className="text-md font-bold mt-2 mb-1" {...props} />,
         h3: ({ node, ...props }) => <h3 className="text-sm font-bold mt-1 mb-0.5" {...props} />,

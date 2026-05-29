@@ -32,7 +32,7 @@ export default function AIConfirmation({ type, data, onConfirm, onCancel }: AICo
     
     setIsProcessing(true);
     try {
-      // Créer l'élément dans la base de données selon le type
+
       let result;
       
       if (type === "task") {

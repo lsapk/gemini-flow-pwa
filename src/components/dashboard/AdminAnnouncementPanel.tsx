@@ -42,7 +42,7 @@ export const AdminAnnouncementPanel = () => {
     );
   }
 
-  // Show nothing if no announcements and not admin
+
   if (announcements.length === 0 && !isAdmin) {
     return null;
   }

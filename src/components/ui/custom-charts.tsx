@@ -1,5 +1,4 @@
 
-import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Area, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart as RechartsAreaChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart, Pie, Cell, Legend } from 'recharts';
 
@@ -212,7 +211,6 @@ export const SimpleLineChart = ({
   );
 };
 
-// Fallback chart components to ensure the original imports still work
 export const AreaChart = SimpleAreaChart;
 export const BarChart = SimpleBarChart;
 export const PieChart = SimplePieChart;

@@ -12,7 +12,9 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-lg object-contain bg-white/90 dark:bg-white/10 dark:invert p-0.5" />
+              <div className="p-1 bg-white rounded-lg">
+                <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 object-contain" />
+              </div>
               <span className="font-heading font-bold text-xl">DeepFlow</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">

@@ -30,7 +30,9 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
             <span className="sr-only">Ouvrir le menu</span>
           </Button>
           <Link to="/dashboard" className="flex items-center gap-2 active:opacity-70 transition-opacity">
-            <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 rounded-xl object-contain bg-muted/50 p-0.5" />
+            <div className="p-1 bg-white rounded-xl">
+              <img src={deepflowLogo} alt="DeepFlow" className="h-8 w-8 object-contain" />
+            </div>
             <span className="text-lg font-semibold tracking-tight text-foreground">
               DeepFlow
             </span>

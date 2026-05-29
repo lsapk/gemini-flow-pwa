@@ -31,13 +31,13 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
     const heatmapData = data.data;
     const weeksArray: typeof heatmapData[] = [];
     
-    // Group by weeks
+
     let currentWeek: typeof heatmapData = [];
     
     heatmapData.forEach((day, index) => {
       const dayOfWeek = getDay(parseISO(day.date));
       
-      // Start a new week on Sunday (0)
+
       if (dayOfWeek === 0 && currentWeek.length > 0) {
         weeksArray.push(currentWeek);
         currentWeek = [];
@@ -45,7 +45,7 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
       
       currentWeek.push(day);
       
-      // Push last week
+
       if (index === heatmapData.length - 1) {
         weeksArray.push(currentWeek);
       }

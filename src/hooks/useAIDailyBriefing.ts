@@ -31,7 +31,7 @@ export function useAIDailyBriefing() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load cached briefing from localStorage
+
   const loadCachedBriefing = useCallback(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -50,16 +50,16 @@ export function useAIDailyBriefing() {
     return false;
   }, []);
 
-  // Generate new briefing
+
   const generateBriefing = useCallback(async (force = false) => {
     if (!user) return;
 
-    // Check cache first unless forced
+
     if (!force && loadCachedBriefing()) {
       return;
     }
 
-    // Basic users are limited to 1 briefing per day
+
     const today = toLocalDateKey();
     const { data: usage } = await supabase
       .from("daily_usage")
@@ -70,8 +70,8 @@ export function useAIDailyBriefing() {
 
     const currentUsage = usage?.ai_analysis_count || 0;
 
-    // Check premium status (assuming we have access to a way to check premium here)
-    // We'll use the same logic as useSubscription but simplified for this hook
+
+
     const { data: subscriber } = await supabase
       .from("subscribers")
       .select("subscribed, subscription_tier, subscription_end")
@@ -126,10 +126,10 @@ export function useAIDailyBriefing() {
         const newBriefing = data.result as DailyBriefing;
         setBriefing(newBriefing);
         
-        // Track usage (increment_daily_usage)
+
         await supabase.rpc("increment_daily_usage", { p_type: "analysis" });
 
-        // Cache the briefing
+
         const cache: BriefingCache = {
           briefing: newBriefing,
           generated_at: new Date().toISOString()
@@ -144,7 +144,7 @@ export function useAIDailyBriefing() {
     }
   }, [user, loadCachedBriefing]);
 
-  // Initial load
+
   useEffect(() => {
     if (user) {
       if (!loadCachedBriefing()) {

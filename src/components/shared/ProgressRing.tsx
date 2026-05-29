@@ -1,9 +1,8 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface ProgressRingProps {
-  progress: number; // 0-100
+  progress: number;
   size?: 'sm' | 'md' | 'lg';
   strokeWidth?: number;
   showLabel?: boolean;

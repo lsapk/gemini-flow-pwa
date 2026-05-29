@@ -139,6 +139,6 @@ export default {
 		}
 	},
 	plugins: [
-		require("tailwindcss-animate"),
+		require("tailwindcss-animate") /* eslint-disable-line @typescript-eslint/no-require-imports */ ,
 	],
 } satisfies Config;
