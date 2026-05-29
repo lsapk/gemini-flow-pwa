@@ -73,37 +73,33 @@ export function ChronobiologyChart() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <Card>
+      <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
               Chronobiologie
             </CardTitle>
-            <Badge className={`${TYPE_COLORS[productivityType]} text-white flex items-center gap-1`}>
-              <TypeIcon className="h-3 w-3" />
-              {TYPE_LABELS[productivityType]}
+            <Badge className={`${TYPE_COLORS[productivityType]} text-white border-none rounded-full px-3 py-1 font-bold text-[10px]`}>
+              <TypeIcon className="h-3 w-3 mr-1" />
+              {TYPE_LABELS[productivityType].toUpperCase()}
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           {/* Time Distribution Stats */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="text-center p-2 bg-amber-500/10 rounded-lg">
-              <Sunrise className="h-4 w-4 mx-auto text-amber-500 mb-1" />
-              <div className="text-lg font-bold">{stats.morningPercent}%</div>
-              <div className="text-xs text-muted-foreground">Matin</div>
-            </div>
-            <div className="text-center p-2 bg-orange-500/10 rounded-lg">
-              <Sun className="h-4 w-4 mx-auto text-orange-500 mb-1" />
-              <div className="text-lg font-bold">{stats.afternoonPercent}%</div>
-              <div className="text-xs text-muted-foreground">Après-midi</div>
-            </div>
-            <div className="text-center p-2 bg-indigo-500/10 rounded-lg">
-              <Moon className="h-4 w-4 mx-auto text-indigo-500 mb-1" />
-              <div className="text-lg font-bold">{stats.eveningPercent}%</div>
-              <div className="text-xs text-muted-foreground">Soir</div>
-            </div>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {[
+              { label: 'Matin', val: stats.morningPercent, icon: Sunrise, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+              { label: 'Après-midi', val: stats.afternoonPercent, icon: Sun, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+              { label: 'Soir', val: stats.eveningPercent, icon: Moon, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
+            ].map((s) => (
+              <div key={s.label} className="text-center p-3 rounded-2xl bg-white/5 border border-white/10">
+                <s.icon className={`h-4 w-4 mx-auto ${s.color} mb-1.5`} />
+                <div className="text-lg font-black">{s.val}%</div>
+                <div className="text-[10px] text-muted-foreground font-bold uppercase">{s.label}</div>
+              </div>
+            ))}
           </div>
 
           {/* Chart */}
@@ -112,53 +108,36 @@ export function ChronobiologyChart() {
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 10 }} 
+                  tick={{ fontSize: 10, fill: '#888' }}
                   interval={2}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis hide />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
+                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', border: 'none', borderRadius: '16px' }}
+                  itemStyle={{ fontSize: '11px', color: '#fff' }}
                   formatter={(value: number, name: string) => {
-                    const labels: Record<string, string> = {
-                      tasks: 'Tâches',
-                      habits: 'Habitudes',
-                      focus: 'Focus'
-                    };
+                    const labels: Record<string, string> = { tasks: 'Tâches', habits: 'Habitudes', focus: 'Focus' };
                     return [value, labels[name] || name];
                   }}
                 />
-                <Legend 
-                  wrapperStyle={{ fontSize: '11px' }}
-                  formatter={(value) => {
-                    const labels: Record<string, string> = {
-                      tasks: 'Tâches',
-                      habits: 'Habitudes',
-                      focus: 'Focus'
-                    };
-                    return labels[value] || value;
-                  }}
-                />
-                <Bar dataKey="tasks" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="habits" stackId="a" fill="#8B5CF6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="focus" stackId="a" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="tasks" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} barSize={12} />
+                <Bar dataKey="habits" stackId="a" fill="#8B5CF6" radius={[0, 0, 0, 0]} barSize={12} />
+                <Bar dataKey="focus" stackId="a" fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Insight — rendered as plain text, no HTML injection */}
+          {/* Insight */}
           {sanitizedInsight && (
-            <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm font-medium">{sanitizedInsight}</p>
+            <div className="mt-6 p-4 bg-white/5 rounded-[1.5rem] border border-white/10 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+              <p className="text-sm font-bold text-white/90 leading-relaxed">{sanitizedInsight}</p>
               {recommendation && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  💡 {recommendation.replace(/<[^>]*>/g, '')}
+                <p className="text-xs text-muted-foreground mt-2 font-medium flex items-center gap-1.5">
+                  <span className="text-primary text-base">●</span>
+                  {recommendation.replace(/<[^>]*>/g, '')}
                 </p>
               )}
             </div>

@@ -16,6 +16,7 @@ import { LifeWheelChart } from "@/components/analysis/LifeWheelChart";
 import { ChronobiologyChart } from "@/components/analysis/ChronobiologyChart";
 import { ConsistencyHeatmap } from "@/components/analysis/ConsistencyHeatmap";
 import { toLocalDateKey } from "@/utils/dateUtils";
+import confetti from 'canvas-confetti';
 
 export default function Analysis() {
   const { scores, totalFocusTime, streakCount, habitsData, tasksData, focusData, activityData, isLoading, refetch } = useUnifiedProductivityScore();
@@ -92,6 +93,21 @@ export default function Analysis() {
     { subject: 'Énergie', value: Math.min(100, (totalFocusTime / 60) * 8) },
   ], [scores, streakCount, totalFocusTime]);
 
+  useEffect(() => {
+    if (!isLoading && scores.overall >= 80) {
+      const timer = setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#8B5CF6', '#3B82F6', '#10B981'],
+          ticks: 300
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, scores.overall]);
+
   if (!canUseFeature("analysis") && !isPremium) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm min-h-[500px] text-center">
@@ -110,51 +126,102 @@ export default function Analysis() {
   }
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
-      {/* Global Score */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="overflow-hidden border-border/30 shadow-lg bg-card/60 backdrop-blur-xl">
-          <CardContent className="py-5 md:py-7">
-            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8">
+    <div className="space-y-6 max-w-4xl mx-auto pb-10">
+      {/* Global Score - Apple Fluid Style */}
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+        <Card className="overflow-hidden border-none shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-gradient-to-br from-card/60 to-card/20 backdrop-blur-3xl rounded-[3rem] relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -z-10 rounded-full" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 blur-[100px] -z-10 rounded-full" />
+
+          <CardContent className="py-8 md:py-12">
+            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
               <div className="relative group">
-                <div className="relative w-32 h-32 md:w-36 md:h-36">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" opacity="0.3" />
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="url(#scoreGradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${scores.overall * 3.267} ${326.7 - scores.overall * 3.267}`} className="transition-all duration-1000 ease-out" />
+                <motion.div
+                  initial={{ rotate: -90, opacity: 0 }}
+                  animate={{ rotate: -90, opacity: 1 }}
+                  transition={{ duration: 1, delay: 0.2 }}
+                  className="relative w-48 h-48 md:w-56 md:h-56"
+                >
+                  <svg className="w-full h-full" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" strokeWidth="10" className="text-muted/20" />
+                    <motion.circle
+                      cx="60"
+                      cy="60"
+                      r="54"
+                      fill="none"
+                      stroke="url(#appleGradient)"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      initial={{ strokeDasharray: "0 340" }}
+                      animate={{ strokeDasharray: `${scores.overall * 3.39} 340` }}
+                      transition={{ duration: 1.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    />
                     <defs>
-                      <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" />
-                        <stop offset="100%" stopColor="hsl(var(--primary) / 0.6)" />
+                      <linearGradient id="appleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8B5CF6" />
+                        <stop offset="50%" stopColor="#3B82F6" />
+                        <stop offset="100%" stopColor="#10B981" />
                       </linearGradient>
                     </defs>
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl md:text-5xl font-black tracking-tighter text-foreground">{scores.overall}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Score</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center rotate-90">
+                    <motion.span
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1, duration: 0.5 }}
+                      className="text-6xl md:text-7xl font-black tracking-tighter bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent"
+                    >
+                      {scores.overall}
+                    </motion.span>
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.5 }}
+                      transition={{ delay: 1.2 }}
+                      className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mt-1"
+                    >
+                      PRODUCTIVITÉ
+                    </motion.span>
                   </div>
-                </div>
-                <Badge className={`absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-md border-2 border-background px-3 py-1 rounded-full font-semibold text-xs ${
-                  scores.overall >= 80 ? 'bg-green-500 text-white' : scores.overall >= 60 ? 'bg-primary text-primary-foreground' : scores.overall >= 40 ? 'bg-amber-500 text-white' : 'bg-orange-500 text-white'
-                }`}>
-                  {scores.overall >= 80 ? '🏆 Excellent' : scores.overall >= 60 ? '👍 Bien' : scores.overall >= 40 ? '📈 Progresse' : '🎯 À améliorer'}
-                </Badge>
+                </motion.div>
+
+                {scores.overall >= 80 && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 1.5, type: "spring" }}
+                    className="absolute -top-2 -right-2 bg-amber-400 p-2 rounded-full shadow-[0_0_20px_rgba(251,191,36,0.5)]"
+                  >
+                    <Crown className="w-5 h-5 text-amber-900" />
+                  </motion.div>
+                )}
               </div>
 
-              <div className="flex-1 grid grid-cols-3 gap-3 w-full">
-                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
-                  <Target className="h-5 w-5 mx-auto mb-1.5 text-green-500" />
-                  <div className="text-xl font-bold tracking-tight">{scores.taskScore}%</div>
-                  <div className="text-[10px] text-muted-foreground font-medium">Tâches</div>
+              <div className="flex-1 space-y-8 w-full">
+                <div>
+                  <h3 className="text-xl font-bold text-white/90 mb-1">Analyse Quotidienne</h3>
+                  <p className="text-sm text-muted-foreground">Votre performance est <span className="text-primary font-bold">{scores.overall >= 80 ? 'exceptionnelle' : scores.overall >= 60 ? 'solide' : 'en progression'}</span> aujourd'hui.</p>
                 </div>
-                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
-                  <Timer className="h-5 w-5 mx-auto mb-1.5 text-primary" />
-                  <div className="text-xl font-bold tracking-tight">{Math.round(totalFocusTime / 60)}h</div>
-                  <div className="text-[10px] text-muted-foreground font-medium">Focus</div>
-                </div>
-                <div className="text-center p-3.5 bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20">
-                  <Flame className="h-5 w-5 mx-auto mb-1.5 text-orange-500" />
-                  <div className="text-2xl font-bold">{streakCount}</div>
-                  <div className="text-xs text-muted-foreground">Streak</div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: 'Tâches', val: `${scores.taskScore}%`, icon: Target, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+                    { label: 'Focus', val: `${Math.round(totalFocusTime / 60)}h`, icon: Timer, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+                    { label: 'Streak', val: streakCount, icon: Flame, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+                  ].map((stat, i) => (
+                    <motion.div
+                      key={stat.label}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.2 + (i * 0.1) }}
+                      className="flex flex-col items-center p-4 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors"
+                    >
+                      <div className={`p-2 rounded-2xl ${stat.bg} ${stat.color} mb-2`}>
+                        <stat.icon className="h-5 w-5" />
+                      </div>
+                      <div className="text-xl font-black text-white">{stat.val}</div>
+                      <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">{stat.label}</div>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -169,19 +236,28 @@ export default function Analysis() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-          <Card>
+          <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><Timer className="h-4 w-4 text-blue-500" />Temps de Focus</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Timer className="h-4 w-4 text-blue-500" />Temps de Focus</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={focusChartData}>
-                    <defs><linearGradient id="focusGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/></linearGradient></defs>
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <defs>
+                      <linearGradient id="focusGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
                     <YAxis hide />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(v: number) => [`${v} min`, 'Focus']} />
-                    <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} fill="url(#focusGradient)" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', border: 'none', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                      itemStyle={{ color: '#fff', fontSize: '12px' }}
+                      formatter={(v: number) => [`${v} min`, 'Focus']}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={4} fill="url(#focusGradient)" dot={{ r: 4, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -189,26 +265,42 @@ export default function Analysis() {
           </Card>
         </motion.div>
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-          <Card>
+          <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />Répartition</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />Répartition</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-48 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={activityPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+                    <Pie
+                      data={activityPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={8}
+                      dataKey="value"
+                      stroke="none"
+                    >
                       {activityPieData.map((entry, i) => (<Cell key={`cell-${i}`} fill={entry.color} />))}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(v: number) => [`${v}%`, '']} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', border: 'none', borderRadius: '16px' }}
+                      itemStyle={{ color: '#fff', fontSize: '12px' }}
+                      formatter={(v: number) => [`${v}%`, '']}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex justify-center gap-4 mt-2">
+              <div className="flex justify-center gap-6 mt-2">
                 {activityPieData.map(item => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs text-muted-foreground">{item.name}</span>
+                  <div key={item.name} className="flex flex-col items-center">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-black">{item.value}%</span>
                   </div>
                 ))}
               </div>
@@ -219,19 +311,23 @@ export default function Analysis() {
 
       {/* Weekly Trend — real data */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-        <Card>
+        <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4 text-indigo-500" />Tendance Hebdomadaire</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4 text-indigo-500" />Tendance Hebdomadaire</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyTrend}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <BarChart data={weeklyTrend} barGap={8}>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#888' }} />
                   <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-                  <Bar dataKey="tasks" fill="#10B981" radius={[4, 4, 0, 0]} name="Tâches" />
-                  <Bar dataKey="habits" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Habitudes" />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(255,255,255,0.05)', radius: 10 }}
+                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', border: 'none', borderRadius: '16px' }}
+                    itemStyle={{ color: '#fff', fontSize: '12px' }}
+                  />
+                  <Bar dataKey="tasks" fill="#10B981" radius={[10, 10, 10, 10]} barSize={8} name="Tâches" />
+                  <Bar dataKey="habits" fill="#8B5CF6" radius={[10, 10, 10, 10]} barSize={8} name="Habitudes" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -241,17 +337,17 @@ export default function Analysis() {
 
       {/* Efficiency Radar */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <Card>
+        <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Brain className="h-4 w-4 text-purple-500" />Radar d'Efficacité</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><Brain className="h-4 w-4 text-purple-500" />Radar d'Efficacité</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={efficiencyRadar}>
-                  <PolarGrid stroke="hsl(var(--border))" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Radar name="Score" dataKey="value" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.2} strokeWidth={2} />
+                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#888', fontWeight: 'bold' }} />
+                  <Radar name="Score" dataKey="value" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} strokeWidth={3} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -263,28 +359,23 @@ export default function Analysis() {
 
       {/* Stats Summary */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card>
+        <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-500" />Résumé Statistique</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-500" />Résumé Statistique</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-center">
-                <div className="text-2xl font-bold text-emerald-600">{tasksData?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Tâches créées</p>
-              </div>
-              <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
-                <div className="text-2xl font-bold text-blue-600">{focusData?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Sessions focus</p>
-              </div>
-              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 text-center">
-                <div className="text-2xl font-bold text-purple-600">{habitsData?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Habitudes actives</p>
-              </div>
-              <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
-                <div className="text-2xl font-bold text-amber-600">{activityData?.reduce((s, d) => s + d.count, 0) || 0}</div>
-                <p className="text-xs text-muted-foreground">Activités totales</p>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Tâches', val: tasksData?.length || 0, color: 'text-emerald-400', bg: 'bg-emerald-400/5' },
+                { label: 'Sessions Focus', val: focusData?.length || 0, color: 'text-blue-400', bg: 'bg-blue-400/5' },
+                { label: 'Habitudes', val: habitsData?.length || 0, color: 'text-purple-400', bg: 'bg-purple-400/5' },
+                { label: 'Activités', val: activityData?.reduce((s, d) => s + d.count, 0) || 0, color: 'text-amber-400', bg: 'bg-amber-400/5' },
+              ].map((stat) => (
+                <div key={stat.label} className={`p-4 rounded-[1.5rem] ${stat.bg} border border-white/5 text-center`}>
+                  <div className={`text-3xl font-black ${stat.color}`}>{stat.val}</div>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{stat.label}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -292,37 +383,36 @@ export default function Analysis() {
 
       {/* Tips */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <Card>
+        <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem] overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">💡 Conseils Personnalisés</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => refetch()}><RefreshCw className="h-4 w-4" /></Button>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">💡 Conseils Personnalisés</CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => refetch()} className="rounded-full h-8 w-8 p-0 hover:bg-white/10"><RefreshCw className="h-3.5 w-3.5" /></Button>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 gap-3">
               {scores.taskScore < 50 && (
-                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                  <p className="text-sm"><span className="font-medium text-green-600">📋 Tâches:</span> Terminez 2-3 tâches importantes chaque jour.</p>
+                <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex gap-3">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                  <p className="text-sm font-medium"><span className="text-emerald-400 font-bold uppercase text-[10px] block mb-0.5">Tâches</span> Terminez 2-3 tâches importantes chaque jour pour augmenter votre score.</p>
                 </div>
               )}
               {scores.focusScore < 50 && (
-                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <p className="text-sm"><span className="font-medium text-blue-600">⏱️ Focus:</span> Planifiez des sessions de 25min Pomodoro.</p>
+                <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10 flex gap-3">
+                  <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                  <p className="text-sm font-medium"><span className="text-blue-400 font-bold uppercase text-[10px] block mb-0.5">Focus</span> Planifiez des sessions Pomodoro de 25min pour muscler votre concentration.</p>
                 </div>
               )}
               {scores.habitScore < 50 && (
-                <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                  <p className="text-sm"><span className="font-medium text-purple-600">🔥 Habitudes:</span> Validez vos habitudes chaque jour pour le streak.</p>
+                <div className="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/10 flex gap-3">
+                  <div className="h-2 w-2 rounded-full bg-purple-500 shrink-0 mt-1.5" />
+                  <p className="text-sm font-medium"><span className="text-purple-400 font-bold uppercase text-[10px] block mb-0.5">Habitudes</span> Validez vos habitudes chaque jour pour maintenir votre streak.</p>
                 </div>
               )}
-              {scores.overall >= 60 && (
-                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                  <p className="text-sm"><span className="font-medium text-amber-600">🌟 Bravo!</span> Continuez sur cette lancée !</p>
-                </div>
-              )}
-              <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
-                <p className="text-sm"><span className="font-medium text-indigo-600">🧠 Deep Work:</span> Bloquez 2h sans distraction pour vos projets clés.</p>
+              <div className="p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 flex gap-3">
+                <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
+                <p className="text-sm font-medium"><span className="text-indigo-400 font-bold uppercase text-[10px] block mb-0.5">Deep Work</span> Bloquez 2h sans distraction pour vos projets les plus créatifs.</p>
               </div>
             </div>
           </CardContent>
