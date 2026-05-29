@@ -14,6 +14,7 @@ import {
   Zap
 } from "lucide-react";
 import { useAIDailyBriefing } from "@/hooks/useAIDailyBriefing";
+import { useSubscription } from "@/hooks/useSubscription";
 import { motion } from "framer-motion";
 
 const getTimeIcon = () => {
@@ -36,6 +37,8 @@ const getProductivityBadge = (type: string) => {
 
 export function DailyBriefingCard() {
   const { briefing, isLoading, refreshBriefing } = useAIDailyBriefing();
+  const { isPremium, getRemainingUses } = useSubscription();
+  const canRefresh = isPremium || getRemainingUses("analysis") > 0;
 
   if (isLoading && !briefing) {
     return (
@@ -92,15 +95,17 @@ export function DailyBriefingCard() {
                 <span className="text-muted-foreground text-sm font-normal ml-2">Briefing du jour</span>
               </div>
             </CardTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={refreshBriefing}
-              disabled={isLoading}
-              className="hover:bg-primary/10"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
+            {canRefresh && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshBriefing}
+                disabled={isLoading}
+                className="hover:bg-primary/10"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
           </div>
         </CardHeader>
 

@@ -257,7 +257,8 @@ export default function TaskList({
         onViewModeChange={setViewMode}
         priorityFilter={priorityFilter}
         onPriorityFilterChange={setPriorityFilter}
-        showPriorityFilter
+        showPriorityFilter={false}
+        showSearch={false}
         showViewToggle
       />
 

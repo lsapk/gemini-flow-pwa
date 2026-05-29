@@ -266,6 +266,7 @@ export default function HabitList({
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         showPriorityFilter={false}
+        showSearch={false}
         showViewToggle={false}
       />
         

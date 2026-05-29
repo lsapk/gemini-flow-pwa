@@ -36,8 +36,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Target, label: "Objectifs", path: "/goals" },
     { icon: Timer, label: "Focus", path: "/focus" },
     { icon: Calendar, label: "Calendrier", path: "/calendar" },
-    { icon: BookOpen, label: "Journal", path: "/journal" },
-    { icon: MessageSquare, label: "Réflexion", path: "/reflection" },
+    { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
     { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];

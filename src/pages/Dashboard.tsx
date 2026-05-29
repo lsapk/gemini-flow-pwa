@@ -55,7 +55,7 @@ export default function Dashboard() {
     { icon: Target, label: "Objectifs", path: "/goals", color: "bg-primary/10 text-primary" },
     { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
     { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
-    { icon: BookOpen, label: "Journal", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
+    { icon: BookOpen, label: "Journal/Réflexion", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
     { icon: Zap, label: "Analyse IA", path: "/ai-assistant", color: "bg-amber-500/10 text-amber-500" },
   ];
 
