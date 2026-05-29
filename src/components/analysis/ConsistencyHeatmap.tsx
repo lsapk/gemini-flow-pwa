@@ -75,53 +75,42 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
     >
-      <Card>
+      <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
-              Heatmap de Consistance
+              Consistance
             </CardTitle>
-            <Badge variant="outline" className="text-xs">
-              {days} jours
+            <Badge variant="secondary" className="text-[10px] rounded-full px-3 bg-white/5 border border-white/10 font-bold uppercase">
+              {days} JOURS
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            <div className="text-center p-2 bg-muted/50 rounded-lg">
-              <Activity className="h-4 w-4 mx-auto text-blue-500 mb-1" />
-              <div className="text-lg font-bold">{totalActivities}</div>
-              <div className="text-xs text-muted-foreground">Activités</div>
-            </div>
-            <div className="text-center p-2 bg-muted/50 rounded-lg">
-              <Calendar className="h-4 w-4 mx-auto text-green-500 mb-1" />
-              <div className="text-lg font-bold">{totalActiveDays}</div>
-              <div className="text-xs text-muted-foreground">Jours actifs</div>
-            </div>
-            <div className="text-center p-2 bg-muted/50 rounded-lg">
-              <Flame className="h-4 w-4 mx-auto text-orange-500 mb-1" />
-              <div className="text-lg font-bold">{currentStreak}</div>
-              <div className="text-xs text-muted-foreground">Streak actuel</div>
-            </div>
-            <div className="text-center p-2 bg-muted/50 rounded-lg">
-              <Trophy className="h-4 w-4 mx-auto text-amber-500 mb-1" />
-              <div className="text-lg font-bold">{longestStreak}</div>
-              <div className="text-xs text-muted-foreground">Meilleur streak</div>
-            </div>
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Activités', val: totalActivities, icon: Activity, color: 'text-blue-400' },
+              { label: 'Jours Actifs', val: totalActiveDays, icon: Calendar, color: 'text-emerald-400' },
+              { label: 'Streak', val: currentStreak, icon: Flame, color: 'text-orange-400' },
+              { label: 'Record', val: longestStreak, icon: Trophy, color: 'text-amber-400' },
+            ].map((s) => (
+              <div key={s.label} className="text-center p-3 rounded-2xl bg-white/5 border border-white/10">
+                <s.icon className={`h-4 w-4 mx-auto ${s.color} mb-1.5`} />
+                <div className="text-lg font-black">{s.val}</div>
+                <div className="text-[9px] text-muted-foreground font-bold uppercase">{s.label}</div>
+              </div>
+            ))}
           </div>
 
           {/* Heatmap Grid */}
-          <div className="overflow-x-auto">
-            <div className="flex gap-0.5 min-w-max">
+          <div className="overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-1 min-w-max">
               {/* Day labels column */}
-              <div className="flex flex-col gap-0.5 mr-1">
+              <div className="flex flex-col gap-1 mr-1">
                 {DAYS_LABELS.map((day, i) => (
-                  <div 
-                    key={i} 
-                    className="w-3 h-3 text-[9px] text-muted-foreground flex items-center justify-center"
-                  >
+                  <div key={i} className="w-3.5 h-3.5 text-[8px] font-black text-muted-foreground/50 flex items-center justify-center">
                     {i % 2 === 1 ? day : ''}
                   </div>
                 ))}
@@ -130,11 +119,10 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
               {/* Weeks */}
               <TooltipProvider delayDuration={100}>
                 {weeks.map((week, weekIndex) => (
-                  <div key={weekIndex} className="flex flex-col gap-0.5">
-                    {/* Fill empty days at start of first week */}
+                  <div key={weekIndex} className="flex flex-col gap-1">
                     {weekIndex === 0 && week.length < 7 && (
                       Array.from({ length: 7 - week.length }).map((_, i) => (
-                        <div key={`empty-${i}`} className="w-3 h-3" />
+                        <div key={`empty-${i}`} className="w-3.5 h-3.5" />
                       ))
                     )}
                     
@@ -144,23 +132,23 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            transition={{ delay: weekIndex * 0.01 }}
-                            className={`w-3 h-3 rounded-sm cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 ${LEVEL_COLORS[day.level]}`}
+                            transition={{ delay: weekIndex * 0.005 }}
+                            className={`w-3.5 h-3.5 rounded-[4px] cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 shadow-sm ${LEVEL_COLORS[day.level as keyof typeof LEVEL_COLORS]}`}
                           />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">
-                          <div className="font-medium">
-                            {format(parseISO(day.date), 'd MMMM yyyy', { locale: fr })}
+                        <TooltipContent side="top" className="rounded-xl bg-black/90 backdrop-blur-md border-white/10 p-3 shadow-2xl">
+                          <div className="font-black text-sm mb-1 capitalize">
+                            {format(parseISO(day.date), 'EEEE d MMMM', { locale: fr })}
                           </div>
-                          <div className="text-muted-foreground mt-1">
+                          <div className="space-y-1">
                             {day.count === 0 ? (
-                              'Aucune activité'
+                              <div className="text-[10px] font-bold text-white/40 uppercase">Aucune activité</div>
                             ) : (
                               <>
-                                {day.activities.habits > 0 && <div>✓ {day.activities.habits} habitude(s)</div>}
-                                {day.activities.tasks > 0 && <div>📋 {day.activities.tasks} tâche(s)</div>}
-                                {day.activities.focus > 0 && <div>⏱️ {day.activities.focus} session(s)</div>}
-                                {day.activities.journal > 0 && <div>📝 {day.activities.journal} entrée(s)</div>}
+                                {day.activities.habits > 0 && <div className="text-[11px] font-bold">✓ {day.activities.habits} Habitude(s)</div>}
+                                {day.activities.tasks > 0 && <div className="text-[11px] font-bold">📋 {day.activities.tasks} Tâche(s)</div>}
+                                {day.activities.focus > 0 && <div className="text-[11px] font-bold">⏱️ {day.activities.focus} Session(s) focus</div>}
+                                {day.activities.journal > 0 && <div className="text-[11px] font-bold">📝 {day.activities.journal} Réflexion(s)</div>}
                               </>
                             )}
                           </div>
@@ -174,15 +162,12 @@ export function ConsistencyHeatmap({ days = 365 }: ConsistencyHeatmapProps) {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-end gap-1 mt-4 text-xs text-muted-foreground">
-            <span>Moins</span>
+          <div className="flex items-center justify-end gap-1.5 mt-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <span>MOINS</span>
             {[0, 1, 2, 3, 4].map(level => (
-              <div 
-                key={level} 
-                className={`w-3 h-3 rounded-sm ${LEVEL_COLORS[level as keyof typeof LEVEL_COLORS]}`} 
-              />
+              <div key={level} className={`w-3 h-3 rounded-[3px] ${LEVEL_COLORS[level as keyof typeof LEVEL_COLORS]}`} />
             ))}
-            <span>Plus</span>
+            <span>PLUS</span>
           </div>
         </CardContent>
       </Card>

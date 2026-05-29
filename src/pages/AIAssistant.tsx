@@ -51,7 +51,7 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
-  const [chatMode, setChatMode] = useState<ChatMode>('discussion');
+  const [chatMode, setChatMode] = useState<ChatMode>('analysis');
   const [activeTab, setActiveTab] = useState("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,9 +136,10 @@ export default function AIAssistant() {
       const userData = await getUserData();
       const recentMessages = messages.slice(-10).map(msg => ({ role: msg.role, content: msg.content }));
       let finalMessage = text;
-      if (chatMode === 'analysis') finalMessage = `[MODE ANALYSE] ${text} - Analyse approfondie.`;
-      else if (chatMode === 'creation') finalMessage = `[MODE CRÉATION] ${text}`;
-      else finalMessage = `[MODE DISCUSSION] ${text}`;
+
+      // Always provide full context for better intelligence
+      if (chatMode === 'creation') finalMessage = `[MODE CRÉATION] ${text}`;
+      else finalMessage = `[MODE ANALYSE] ${text} - Analyse approfondie basée sur mes données.`;
 
       const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
         body: { message: finalMessage, context: { user_data: userData, recent_messages: recentMessages, creation_mode: chatMode === 'creation', analysis_mode: chatMode === 'analysis' } }
@@ -179,8 +180,7 @@ export default function AIAssistant() {
   ];
 
   const modes: { id: ChatMode; label: string; icon: React.ElementType }[] = [
-    { id: 'discussion', label: 'Discussion', icon: MessageSquare },
-    { id: 'analysis', label: 'Analyse', icon: BarChart3 },
+    { id: 'analysis', label: 'Analyse & Conseil', icon: BarChart3 },
     { id: 'creation', label: 'Création', icon: Sparkles },
   ];
 
@@ -377,7 +377,7 @@ export default function AIAssistant() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder={chatMode === 'analysis' ? "Demandez une analyse..." : chatMode === 'creation' ? "Décrivez ce que vous souhaitez créer..." : "Message..."}
+                placeholder={chatMode === 'analysis' ? "Demandez une analyse ou un conseil..." : "Décrivez ce que vous souhaitez créer..."}
                 disabled={isLoading}
                 className="flex-1 bg-transparent h-11 px-4 text-sm placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
                 autoFocus

@@ -3,7 +3,7 @@ import { toLocalDateKey } from "@/utils/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TrendingUp, History, Square, Play, Pause, PictureInPicture2, Timer } from "lucide-react";
+import { TrendingUp, History, Square, Play, Pause, PictureInPicture2, Timer, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSoundService } from "@/hooks/useSoundService";
@@ -13,6 +13,8 @@ import { Task } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface ActiveFocusSession {
   id: string;
@@ -37,6 +39,13 @@ export default function Focus() {
   const [sessionsHistory, setSessionsHistory] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ name: string; minutes: number }[]>([]);
   const [isPipActive, setIsPipActive] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [manualSession, setManualSession] = useState({
+    title: "",
+    duration: 25,
+    date: new Date().toISOString().split('T')[0],
+    startTime: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace('h', ':')
+  });
   const pipWindowRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -136,6 +145,43 @@ export default function Focus() {
   const resetSession = () => { setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); };
 
   const loadSessionsHistory = async () => { if (!user) return; try { const { data, error } = await supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('started_at', { ascending: false }).limit(10); if (error) throw error; setSessionsHistory(data || []); } catch (error) { console.error(error); } };
+
+  const handleManualSubmit = async () => {
+    if (!user || !manualSession.title || manualSession.duration <= 0) return;
+    try {
+      // Correctly combine date and time
+      const [hours, minutes] = manualSession.startTime.split(':').map(Number);
+      const startedAt = new Date(manualSession.date);
+      startedAt.setHours(hours, minutes, 0, 0);
+
+      const completedAt = new Date(startedAt.getTime() + manualSession.duration * 60000);
+
+      const { error } = await supabase.from('focus_sessions').insert({
+        user_id: user.id,
+        title: manualSession.title,
+        duration: manualSession.duration,
+        started_at: startedAt.toISOString(),
+        completed_at: completedAt.toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Session ajoutée", description: "La session a été enregistrée manuellement." });
+      setIsManualModalOpen(false);
+      setManualSession({
+        title: "",
+        duration: 25,
+        date: new Date().toISOString().split('T')[0],
+        startTime: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace('h', ':')
+      });
+      loadSessionsToday();
+      loadSessionsHistory();
+      loadWeeklyData();
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible d'ajouter la session." });
+    }
+  };
 
   const loadWeeklyData = async () => {
     if (!user) return;
@@ -284,7 +330,46 @@ export default function Focus() {
             <CardContent className="p-4">{weeklyData.length > 0 ? <SimpleBarChart data={weeklyData.map(d => ({ name: d.name, value: d.minutes }))} xAxisKey="name" barKey="value" color="hsl(var(--primary))" className="h-32" /> : <div className="h-32 flex items-center justify-center text-xs text-muted-foreground">Aucune donnée</div>}</CardContent>
           </Card>
           <Card className="rounded-[2rem] bg-card/30 border-primary/5 backdrop-blur-sm overflow-hidden">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2"><History className="h-4 w-4" /> Historique</CardTitle></CardHeader>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <History className="h-4 w-4" /> Historique
+              </CardTitle>
+              <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="rounded-[2rem] bg-card/95 backdrop-blur-2xl border-primary/10">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">Ajouter une session</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Titre de la session</Label>
+                      <Input id="title" value={manualSession.title} onChange={(e) => setManualSession({...manualSession, title: e.target.value})} placeholder="Ex: Travail sur le projet DeepFlow" className="rounded-xl" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input id="date" type="date" value={manualSession.date} onChange={(e) => setManualSession({...manualSession, date: e.target.value})} className="rounded-xl" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="startTime">Heure de début</Label>
+                        <Input id="startTime" type="time" value={manualSession.startTime} onChange={(e) => setManualSession({...manualSession, startTime: e.target.value})} className="rounded-xl" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="duration">Durée (minutes)</Label>
+                      <Input id="duration" type="number" value={manualSession.duration} onChange={(e) => setManualSession({...manualSession, duration: parseInt(e.target.value) || 0})} className="rounded-xl" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleManualSubmit} className="w-full rounded-xl font-bold">Enregistrer la session</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-primary/5 max-h-[160px] overflow-y-auto">
                 {sessionsHistory.length > 0 ? sessionsHistory.map((s) => (

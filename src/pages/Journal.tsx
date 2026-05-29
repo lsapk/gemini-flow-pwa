@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import JournalEntryCard from "@/components/JournalEntryCard";
-import { Plus, BookOpen, X, Sparkles, RefreshCw, Send, Check, Pencil, Trash2, Lightbulb } from "lucide-react";
+import { Plus, BookOpen, X, Sparkles, RefreshCw, Send, Check, Pencil, Trash2, Lightbulb, History } from "lucide-react";
 import { JournalEntry } from "@/types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";

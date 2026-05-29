@@ -49,15 +49,15 @@ export function LifeWheelChart() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <Card>
+      <Card className="border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem]">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <Compass className="h-4 w-4 text-primary" />
               Roue de la Vie
             </CardTitle>
-            <Badge className={`${balanceInfo.color} text-white`}>
-              {balanceInfo.label}
+            <Badge className={`${balanceInfo.color} text-white border-none rounded-full px-3 py-1 font-bold text-[10px]`}>
+              {balanceInfo.label.toUpperCase()}
             </Badge>
           </div>
         </CardHeader>
@@ -65,43 +65,28 @@ export function LifeWheelChart() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis 
-                  dataKey="category" 
-                  tick={{ 
-                    fontSize: 11, 
-                    fill: 'hsl(var(--muted-foreground))' 
-                  }}
-                />
-                <PolarRadiusAxis 
-                  angle={30} 
-                  domain={[0, 100]} 
-                  tick={{ fontSize: 10 }}
-                  tickCount={5}
-                />
+                <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: '#888', fontWeight: 'bold' }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                 <Radar
                   name="Score"
                   dataKey="score"
-                  stroke="hsl(var(--primary))"
-                  fill="hsl(var(--primary))"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
                   fillOpacity={0.3}
-                  strokeWidth={2}
+                  strokeWidth={3}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
+                  contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', border: 'none', borderRadius: '16px' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px' }}
                   formatter={(value: number, name: string, props: any) => [
                     <div key="tooltip" className="space-y-1">
-                      <div className="font-medium">{value}%</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="font-black text-lg">{value}%</div>
+                      <div className="text-[10px] text-white/60 font-bold uppercase">
                         {props.payload.habits} habitudes • {props.payload.goals} objectifs
                       </div>
                     </div>,
-                    props.payload.category
+                    ""
                   ]}
                 />
               </RadarChart>
@@ -111,19 +96,21 @@ export function LifeWheelChart() {
           {/* Insights */}
           <div className="grid grid-cols-2 gap-3 mt-4">
             {strongest && strongest.score > 0 && (
-              <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                <p className="text-xs text-muted-foreground">Point fort</p>
-                <p className="font-medium text-green-600 dark:text-green-400">
-                  {strongest.category} ({strongest.score}%)
+              <div className="p-3 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Point fort</p>
+                <p className="text-sm font-black text-emerald-400">
+                  {strongest.category}
                 </p>
+                <p className="text-xs font-bold">{strongest.score}%</p>
               </div>
             )}
             {weakest && weakest.score < 100 && (
-              <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
-                <p className="text-xs text-muted-foreground">À développer</p>
-                <p className="font-medium text-orange-600 dark:text-orange-400">
-                  {weakest.category} ({weakest.score}%)
+              <div className="p-3 bg-orange-500/5 rounded-2xl border border-orange-500/10">
+                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mb-1">À développer</p>
+                <p className="text-sm font-black text-orange-400">
+                  {weakest.category}
                 </p>
+                <p className="text-xs font-bold">{weakest.score}%</p>
               </div>
             )}
           </div>
