@@ -28,10 +28,10 @@ export function useGoogleCalendar() {
     if (!user) return;
 
     const { data } = await supabase
-      .from("google_calendar_tokens")
+      .from("google_calendar_tokens_safe")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     setIsConnected(!!data);
   };

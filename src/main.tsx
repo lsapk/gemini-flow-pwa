@@ -28,14 +28,15 @@ if ('serviceWorker' in navigator) {
 
   let deferredPrompt: BeforeInstallPromptEvent | null = null;
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e as BeforeInstallPromptEvent;
     const installButton = document.getElementById('install-pwa');
     if (installButton) {
+      e.preventDefault();
+      deferredPrompt = e as BeforeInstallPromptEvent;
       installButton.style.display = 'block';
       installButton.addEventListener('click', () => {
         deferredPrompt?.prompt();
         deferredPrompt = null;
+        installButton.style.display = 'none';
       });
     }
   });

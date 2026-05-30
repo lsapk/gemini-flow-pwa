@@ -30,10 +30,10 @@ export function useGoogleTasks() {
     if (!user) return;
 
     const { data } = await supabase
-      .from("google_tasks_tokens")
+      .from("google_tasks_tokens_safe")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     setIsConnected(!!data);
   };
@@ -78,7 +78,7 @@ export function useGoogleTasks() {
 
     try {
       const { error } = await supabase
-        .from("google_tasks_tokens")
+        .from("google_tasks_tokens_safe")
         .delete()
         .eq("user_id", user.id);
 
