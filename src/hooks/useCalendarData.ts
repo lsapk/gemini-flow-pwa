@@ -107,10 +107,10 @@ export function useCalendarData(selectedDate: Date) {
     try {
 
       const { data: tokenData } = await supabase
-        .from("google_calendar_tokens")
+        .from("google_calendar_tokens_safe")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!tokenData) return [];
 
