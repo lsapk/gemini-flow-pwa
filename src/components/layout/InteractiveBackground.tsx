@@ -1,4 +1,5 @@
 
+import React, { useEffect } from 'react';
 import { motion, useSpring, useMotionValue, useTransform } from 'framer-motion';
 
 const InteractiveBackground: React.FC = () => {
