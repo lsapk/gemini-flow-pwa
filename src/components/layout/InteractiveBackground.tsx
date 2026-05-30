@@ -57,8 +57,8 @@ const InteractiveBackground: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden bg-background pointer-events-none">
-      {/* Deep dark base */}
-      <div className="absolute inset-0 bg-[#0a0a0c]" />
+      {/* Deep dark base - matches the global #050505 */}
+      <div className="absolute inset-0 bg-[#050505]" />
 
       {/* Interactive Glows - Increased opacity and size */}
       <motion.div
