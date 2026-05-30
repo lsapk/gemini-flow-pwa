@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { DesignModeProvider } from "./contexts/DesignModeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
@@ -69,20 +69,18 @@ const PageLoader = () => (
   </div>
 );
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
-        <DesignModeProvider>
-          <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AuthProvider>
-                  <ErrorBoundary>
-                  <CookieConsent />
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
+    <>
+      <Toaster />
+      <Sonner />
+      <AuthProvider>
+        <ErrorBoundary resetKey={location.pathname}>
+          <CookieConsent />
+          <Suspense fallback={<PageLoader />}>
+            <Routes location={location}>
                       <Route path="/" element={<Index />} />
                       <Route path="/index" element={<Index />} />
                       <Route path="/login" element={<Login />} />
@@ -118,11 +116,23 @@ function App() {
                       
                       {/* 404 */}
                       <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                  </ErrorBoundary>
-                </AuthProvider>
-              </BrowserRouter>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </AuthProvider>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
+        <DesignModeProvider>
+          <TooltipProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
           </TooltipProvider>
         </DesignModeProvider>
       </ThemeProvider>
