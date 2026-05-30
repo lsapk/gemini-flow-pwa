@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import { Mail, Github, Twitter } from "lucide-react";
 import deepflowLogo from "@/assets/deepflow-logo.png";

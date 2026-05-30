@@ -1,3 +1,4 @@
+import React from "react";
 
 import { Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart } from "recharts";
 import { ChartData } from "./types";

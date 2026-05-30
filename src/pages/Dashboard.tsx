@@ -1,3 +1,4 @@
+import React from "react";
 import { useUnifiedProductivityScore } from "@/hooks/useUnifiedProductivityScore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";

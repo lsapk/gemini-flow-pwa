@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect } from "react";
 import { Plus, Target, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";

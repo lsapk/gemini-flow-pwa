@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, addWeeks, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
