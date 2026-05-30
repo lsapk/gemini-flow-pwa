@@ -1,3 +1,4 @@
+import React from "react";
 interface FocusSession {
   id: string;
   title: string;

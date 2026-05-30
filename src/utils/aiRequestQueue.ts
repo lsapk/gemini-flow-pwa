@@ -1,3 +1,4 @@
+import React from "react";
 
 type QueuedRequest = {
   fn: () => Promise<any>;

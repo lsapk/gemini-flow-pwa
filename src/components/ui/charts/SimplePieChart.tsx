@@ -1,3 +1,4 @@
+import React from "react";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChartData } from "./types";

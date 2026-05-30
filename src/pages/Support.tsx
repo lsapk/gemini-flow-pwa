@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, MessageCircle, HelpCircle, ChevronDown } from "lucide-react";

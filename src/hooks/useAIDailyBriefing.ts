@@ -1,7 +1,9 @@
+import React from "react";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 export interface DailyBriefing {
   greeting: string;

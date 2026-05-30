@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

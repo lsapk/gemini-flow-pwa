@@ -1,3 +1,4 @@
+import React from "react";
 import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
