@@ -1,7 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import React from "react";
 
 type MoodSummaryProps = {
   entries: { mood?: string }[];
@@ -14,7 +13,7 @@ const emojiByMood: Record<string, string> = {
 };
 
 export default function JournalMoodSummary({ entries, moods }: MoodSummaryProps) {
-  // Regroupe par humeur
+
   const moodCounts: Record<string, number> = {};
   entries.forEach(entry => {
     if (entry.mood) {

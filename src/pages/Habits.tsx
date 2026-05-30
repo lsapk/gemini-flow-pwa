@@ -57,7 +57,7 @@ export default function Habits() {
   const { user } = useAuth();
   const sound = useSoundService();
 
-  // Keep a stable reference to today's date string to avoid drift
+
   const todayStr = useRef(toLocalDateKey(new Date()));
 
   const isViewingToday = toLocalDateKey(selectedDate) === todayStr.current;
@@ -121,9 +121,9 @@ export default function Habits() {
 
       const habitIds = (data || []).map((habit) => habit.id);
 
-      // Filter completions for the last year to stay under Supabase's row limit (1000)
-      // while ensuring we have enough data for streak calculations.
-      // Crucially, we order by completed_date DESC to get the most recent ones first.
+
+
+
       const oneYearAgo = toLocalDateKey(subDays(new Date(), 366));
 
       const { data: completions, error: completionsError } = await supabase
@@ -144,7 +144,7 @@ export default function Habits() {
         completions || [],
       );
 
-      // Fetch all-time completion counts per habit (in parallel)
+
       const totalCountsEntries = await Promise.all(
         habitIds.map(async (id) => {
           const { count } = await supabase
@@ -173,7 +173,7 @@ export default function Habits() {
         };
       });
 
-      // When "showAll" is on, ignore the days_of_week filter so users can edit any habit
+
       const active = habitsWithCompletion.filter(h => !h.is_archived && (showAll || h.should_show_today));
       const archived = habitsWithCompletion.filter(h => h.is_archived);
       
@@ -199,7 +199,7 @@ export default function Habits() {
   }, [user?.id]);
 
   useEffect(() => {
-    // Update todayStr on mount
+
     todayStr.current = toLocalDateKey(new Date());
     fetchHabits();
   }, [user, selectedDate, showAll]);
@@ -253,7 +253,7 @@ export default function Habits() {
       }
     }
 
-    // Optimistic update
+
     const previousTotal = habit?.total_completions ?? 0;
     const nextTotal = Math.max(0, isCompleted ? previousTotal - 1 : previousTotal + 1);
 
@@ -264,7 +264,7 @@ export default function Habits() {
 
     try {
       if (isCompleted) {
-        // Uncheck: delete completion from habit_completions table (Source of truth for total_completions)
+
         const { error: deleteError } = await supabase
           .from('habit_completions')
           .delete()
@@ -275,14 +275,14 @@ export default function Habits() {
 
         sound.playUncomplete();
 
-        // Recalculate streak and update habits table
+
         const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
         updateHabitInLists(habitId, { streak: newStreak });
 
         toast.info("L'habitude n'est plus marquée comme faite.");
       } else {
-        // Check: insert completion into habit_completions table
+
         const { error } = await supabase
           .from('habit_completions')
           .upsert(
@@ -293,7 +293,7 @@ export default function Habits() {
 
         sound.playComplete();
 
-        // Recalculate streak and last_completed_at and update habits table
+
         const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
         const completedAt = new Date().toISOString();
         await supabase.from('habits').update({ 
@@ -305,9 +305,9 @@ export default function Habits() {
           last_completed_at: completedAt
         });
 
-        // Rewards only when viewing today — placeholder for future feature
 
-        // Check streak milestones
+
+
         if (newStreak > 0 && newStreak % 7 === 0) {
           sound.playStreakMilestone();
         }
@@ -315,7 +315,7 @@ export default function Habits() {
         toast.success('Habitude complétée !');
       }
 
-      // Check if all habits are now completed
+
       const updatedHabits = habits.map(h => h.id === habitId ? { ...h, is_completed_today: !isCompleted } : h);
       const allDone = updatedHabits.length > 0 && updatedHabits.every(h => h.is_completed_today);
       if (allDone && !isCompleted) {
@@ -323,7 +323,7 @@ export default function Habits() {
       }
     } catch (error) {
       console.error('Error toggling habit completion:', error);
-      // Revert optimistic update
+
       updateHabitInLists(habitId, {
         is_completed_today: isCompleted,
         total_completions: habit?.total_completions

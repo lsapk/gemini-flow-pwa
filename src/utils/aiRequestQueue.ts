@@ -1,5 +1,3 @@
-// AI Request Queue to prevent rate limiting
-// Queues AI requests and processes them sequentially with delays
 
 type QueuedRequest = {
   fn: () => Promise<any>;
@@ -10,7 +8,7 @@ type QueuedRequest = {
 class AIRequestQueue {
   private queue: QueuedRequest[] = [];
   private processing = false;
-  private readonly minDelay = 1000; // 1 second between requests
+  private readonly minDelay = 1000;
 
   async add<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -35,7 +33,7 @@ class AIRequestQueue {
         request.reject(error);
       }
 
-      // Wait before processing next request
+
       if (this.queue.length > 0) {
         await new Promise(resolve => setTimeout(resolve, this.minDelay));
       }

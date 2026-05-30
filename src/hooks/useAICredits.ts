@@ -66,14 +66,14 @@ export const useAICredits = () => {
 
   const useCredits = useMutation({
     mutationFn: async (amount: number) => {
-      // Admins have unlimited credits - skip the check
+
       if (isAdmin) {
         return Infinity;
       }
 
       if (!user) throw new Error("Not authenticated");
 
-      // Atomic decrement on the server to avoid race conditions
+
       const { data, error } = await supabase.rpc("consume_ai_credit", { amount });
       if (error) throw error;
       return (data as number) ?? 0;
@@ -85,7 +85,7 @@ export const useAICredits = () => {
     },
   });
 
-  // Admins get unlimited credits displayed as Infinity
+
   const effectiveCredits = isAdmin ? Infinity : (aiCredits?.credits || 0);
 
   return {

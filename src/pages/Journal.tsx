@@ -96,7 +96,7 @@ export default function Journal() {
   const [activeTab, setActiveTab] = useState<string>("journal");
   const [loading, setLoading] = useState(true);
 
-  // Journal State
+
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showJournalForm, setShowJournalForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
@@ -105,7 +105,7 @@ export default function Journal() {
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
 
-  // Reflection State
+
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [reflectionAnswer, setReflectionAnswer] = useState("");
@@ -146,7 +146,7 @@ export default function Journal() {
 
   useEffect(() => { fetchData(); }, [user]);
 
-  // Journal Handlers
+
   const resetJournalForm = () => { setTitle(getDefaultTitle()); setContent(""); setMood(""); setEditingEntry(null); setShowJournalForm(false); };
   const handleJournalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +166,7 @@ export default function Journal() {
   const handleJournalEdit = (entry: JournalEntry) => { setEditingEntry(entry); setTitle(entry.title); setContent(entry.content); setMood(entry.mood || ""); setShowJournalForm(true); };
   const handleJournalDelete = async (entryId: string) => { if (!confirm('Supprimer cette entrée ?')) return; try { const { error } = await supabase.from('journal_entries').delete().eq('id', entryId); if (error) throw error; toast.success('Entrée supprimée !'); fetchData(); } catch (error) { toast.error('Erreur'); } };
 
-  // Reflection Handlers
+
   const generateNewQuestion = () => { setCurrentQuestion(getRandomQuestion()); setReflectionAnswer(""); };
   const saveReflection = async () => {
     if (!user || !currentQuestion.trim() || !reflectionAnswer.trim()) return;

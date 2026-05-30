@@ -12,37 +12,37 @@ interface LifeCategory {
 }
 
 const CATEGORY_MAPPINGS: Record<string, string> = {
-  // Santé
+
   health: 'Santé',
   santé: 'Santé',
   fitness: 'Santé',
   musculation: 'Santé',
   posture: 'Santé',
   sport: 'Santé',
-  // Carrière
+
   professional: 'Carrière',
   productivity: 'Carrière',
   work: 'Carrière',
   travail: 'Carrière',
   project: 'Carrière',
-  // Mental
+
   mindfulness: 'Mental',
   mental: 'Mental',
   meditation: 'Mental',
   'santé mental': 'Mental',
   wellness: 'Mental',
-  // Apprentissage
+
   learning: 'Apprentissage',
   education: 'Apprentissage',
   study: 'Apprentissage',
   études: 'Apprentissage',
   lecture: 'Apprentissage',
-  // Personnel
+
   personal: 'Personnel',
   personel: 'Personnel',
   famille: 'Personnel',
   family: 'Personnel',
-  // Loisirs
+
   other: 'Loisirs',
   loisirs: 'Loisirs',
   hobby: 'Loisirs',
@@ -93,44 +93,44 @@ export const useLifeWheelData = () => {
         const goals = goalsResult.data || [];
         const completions = completionsResult.data || [];
 
-        // Count completions per habit
+
         const completionCounts: Record<string, number> = {};
         completions.forEach(c => {
           completionCounts[c.habit_id] = (completionCounts[c.habit_id] || 0) + 1;
         });
 
-        // Map to life categories
+
         const mapToLifeCategory = (category: string): string => {
           const normalized = category?.toLowerCase().trim() || 'other';
           return CATEGORY_MAPPINGS[normalized] || 'Loisirs';
         };
 
-        // Calculate scores per category
+
         const categoryData: Record<string, { habits: number, goals: number, habitScore: number, goalScore: number }> = {};
         ALL_CATEGORIES.forEach(cat => {
           categoryData[cat] = { habits: 0, goals: 0, habitScore: 0, goalScore: 0 };
         });
 
-        // Process habits
+
         habits.forEach(habit => {
           const lifeCategory = mapToLifeCategory(habit.category || 'other');
           categoryData[lifeCategory].habits++;
           
           const completionCount = completionCounts[habit.id] || 0;
           const streak = habit.streak || 0;
-          // Score based on streak and recent completions
+
           const habitScore = Math.min(100, (streak * 3) + (completionCount * 2));
           categoryData[lifeCategory].habitScore += habitScore;
         });
 
-        // Process goals
+
         goals.forEach(goal => {
           const lifeCategory = mapToLifeCategory(goal.category || 'other');
           categoryData[lifeCategory].goals++;
           categoryData[lifeCategory].goalScore += goal.progress || 0;
         });
 
-        // Calculate final scores
+
         const data: LifeCategory[] = ALL_CATEGORIES.map(category => {
           const cat = categoryData[category];
           const totalItems = cat.habits + cat.goals;
@@ -140,7 +140,7 @@ export const useLifeWheelData = () => {
             const avgHabitScore = cat.habits > 0 ? cat.habitScore / cat.habits : 0;
             const avgGoalScore = cat.goals > 0 ? cat.goalScore / cat.goals : 0;
             
-            // Weighted average favoring habits if both exist
+
             if (cat.habits > 0 && cat.goals > 0) {
               score = Math.round((avgHabitScore * 0.6 + avgGoalScore * 0.4));
             } else if (cat.habits > 0) {
@@ -159,7 +159,7 @@ export const useLifeWheelData = () => {
           };
         });
 
-        // Calculate balance (inverse of standard deviation - higher = more balanced)
+
         const scores = data.map(d => d.score);
         const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
         const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;

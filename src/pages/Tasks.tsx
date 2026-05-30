@@ -133,7 +133,7 @@ export default function Tasks() {
     setSubtasks(subtasksByTask);
   };
 
-  // Refetch subtasks only when the SET of task IDs changes (not on every task content update)
+
   const taskIdsKey = tasks.map(t => t.id).join(',');
   useEffect(() => { fetchSubtasks(); }, [user, taskIdsKey]);
 

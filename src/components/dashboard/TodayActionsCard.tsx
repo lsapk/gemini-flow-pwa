@@ -41,22 +41,22 @@ export const TodayActionsCard = () => {
       try {
         const today = toLocalDateKey();
         
-        // Fetch tasks
+
         const { data: tasksData } = await supabase
           .from('tasks')
           .select('id, title, completed, priority, due_date')
           .eq('user_id', user.id)
           .eq('completed', false);
         
-        // Fetch habits with today's completion status
+
         const { data: habitsData } = await supabase
           .from('habits')
           .select('id, title, streak, is_archived, days_of_week')
           .eq('user_id', user.id)
           .eq('is_archived', false);
         
-        // Check completions for streaks and today's state
-        // We limit to the last 366 days and order by date DESC to stay under Supabase's row limit
+
+
         const oneYearAgo = toLocalDateKey(subDays(new Date(), 366));
         const { data: completions } = await supabase
           .from('habit_completions')
@@ -75,7 +75,7 @@ export const TodayActionsCard = () => {
           completions || []
         );
         
-        // Filter and sort tasks by priority
+
         const allPendingTasks = (tasksData || []) as Task[];
         const highPriority = allPendingTasks.filter(t => t.priority === 'high');
         const mediumPriority = allPendingTasks.filter(t => t.priority === 'medium');
@@ -90,7 +90,7 @@ export const TodayActionsCard = () => {
           tasksToShow = lowPriority;
         }
 
-        // Add completion status to habits
+
         const habitsWithCompletion = (habitsData || []).map(habit => ({
           ...habit,
           streak: streakMap[habit.id] ?? habit.streak ?? 0,

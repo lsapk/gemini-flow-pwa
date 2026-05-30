@@ -44,7 +44,7 @@ class SoundService {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + duration);
     } catch (e) {
-      // Silently fail if audio is not available
+      console.warn("Audio playback failed", e);
     }
   }
 
@@ -57,7 +57,7 @@ class SoundService {
     });
   }
 
-  // === Sound Effects ===
+
 
   /** Habit/task completed */
   playComplete() {

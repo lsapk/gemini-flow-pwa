@@ -38,7 +38,7 @@ export function LifeWheelChart() {
 
   const balanceInfo = getBalanceInfo(balance);
 
-  // Find weakest and strongest categories
+
   const sorted = [...chartData].sort((a, b) => b.score - a.score);
   const strongest = sorted[0];
   const weakest = sorted[sorted.length - 1];

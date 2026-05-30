@@ -31,16 +31,16 @@ export function useCalendarData(selectedDate: Date) {
 
     setIsLoading(true);
     try {
-      // Calculate week range
+
       const startOfWeek = new Date(selectedDate);
-      startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1); // Monday
+      startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1);
       startOfWeek.setHours(0, 0, 0, 0);
       
       const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
 
-      // Charger les tâches pour toute la semaine
+
       const { data: tasks } = await supabase
         .from('tasks')
         .select('*')
@@ -48,7 +48,7 @@ export function useCalendarData(selectedDate: Date) {
         .gte('due_date', startOfWeek.toISOString())
         .lte('due_date', endOfWeek.toISOString());
 
-      // Charger les objectifs pour toute la semaine
+
       const { data: goals } = await supabase
         .from('goals')
         .select('*')
@@ -56,12 +56,12 @@ export function useCalendarData(selectedDate: Date) {
         .gte('target_date', startOfWeek.toISOString())
         .lte('target_date', endOfWeek.toISOString());
 
-      // Charger les événements Google Calendar
+
       const googleEvents = await loadGoogleEvents(startOfWeek, endOfWeek);
 
       const calendarItems: CalendarItem[] = [];
 
-      // Ajouter les tâches
+
       tasks?.forEach((task: any) => {
         calendarItems.push({
           id: task.id,
@@ -75,7 +75,7 @@ export function useCalendarData(selectedDate: Date) {
         });
       });
 
-      // Ajouter les objectifs
+
       goals?.forEach((goal: any) => {
         calendarItems.push({
           id: goal.id,
@@ -89,7 +89,7 @@ export function useCalendarData(selectedDate: Date) {
         });
       });
 
-      // Ajouter les événements Google
+
       calendarItems.push(...googleEvents);
 
       setItems(calendarItems);
@@ -104,7 +104,7 @@ export function useCalendarData(selectedDate: Date) {
     if (!user) return [];
     
     try {
-      // Vérifier si Google Calendar est connecté
+
       const { data: tokenData } = await supabase
         .from("google_calendar_tokens")
         .select("*")

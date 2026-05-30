@@ -82,7 +82,7 @@ export function AIActionButton({
     setIsLoading(true);
     
     try {
-      // Use centralized supabase client instead of hardcoded URL
+
       const { data, error } = await supabase.functions.invoke('ai-cross-analysis', {
         body: { type: config.analysisType },
       });

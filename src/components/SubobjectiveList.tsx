@@ -1,5 +1,4 @@
 
-import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus, ChevronRight, ChevronDown, Edit2 } from 'lucide-react';

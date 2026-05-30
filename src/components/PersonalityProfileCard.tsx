@@ -47,6 +47,18 @@ export default function PersonalityProfileCard({
   onRefresh, 
   isLoading 
 }: PersonalityProfileCardProps) {
+  if (!profile || !profile.personality) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground mb-4">Données de profil incomplètes.</p>
+        <Button onClick={onRefresh} disabled={isLoading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Réessayer la génération
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 md:space-y-6 pb-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -89,7 +101,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Traits dominants</h4>
                 <div className="flex flex-wrap gap-2">
-                  {profile.personality.traits.map((trait, i) => (
+                  {profile.personality?.traits?.map((trait, i) => (
                     <Badge key={i} variant="secondary" className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-600 border-none">
                       {trait}
                     </Badge>
@@ -99,7 +111,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Forces majeures</h4>
                 <div className="space-y-2">
-                  {profile.personality.strengths.map((strength, i) => (
+                  {profile.personality?.strengths?.map((strength, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                       <span>{strength}</span>
@@ -110,7 +122,7 @@ export default function PersonalityProfileCard({
               <div className="pt-2 border-t">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Style de travail</h4>
                 <p className="text-sm leading-relaxed italic text-muted-foreground">
-                  "{profile.personality.working_style}"
+                  "{profile.personality?.working_style || 'Non défini'}"
                 </p>
               </div>
             </CardContent>
@@ -130,7 +142,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Patterns comportementaux</h4>
                 <div className="space-y-3">
-                  {profile.psychological_insights.behavioral_patterns.map((pattern, i) => (
+                  {profile.psychological_insights?.behavioral_patterns?.map((pattern, i) => (
                     <div key={i} className="bg-muted/50 p-3 rounded-xl text-sm border border-border/50">
                       {pattern}
                     </div>
@@ -141,7 +153,7 @@ export default function PersonalityProfileCard({
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Gestion du stress</h4>
                 <div className="flex items-start gap-2 text-sm bg-indigo-500/5 p-3 rounded-xl border border-indigo-500/10">
                   <Shield className="h-4 w-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                  <p>{profile.psychological_insights.stress_management}</p>
+                  <p>{profile.psychological_insights?.stress_management || 'Non défini'}</p>
                 </div>
               </div>
             </CardContent>
@@ -161,7 +173,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Pics de concentration</h4>
                 <div className="grid grid-cols-1 gap-2">
-                  {profile.productivity_analysis.peak_performance_times.map((time, i) => (
+                  {profile.productivity_analysis?.peak_performance_times?.map((time, i) => (
                     <div key={i} className="flex items-center gap-3 bg-amber-500/5 px-4 py-2 rounded-xl border border-amber-500/10 text-sm font-medium">
                       <Calendar className="h-4 w-4 text-amber-500" />
                       {time}
@@ -172,7 +184,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Freins à la productivité</h4>
                 <div className="flex flex-wrap gap-2">
-                  {profile.productivity_analysis.productivity_blockers.map((blocker, i) => (
+                  {profile.productivity_analysis?.productivity_blockers?.map((blocker, i) => (
                     <Badge key={i} variant="outline" className="px-3 py-1 rounded-lg border-orange-200 bg-orange-50 text-orange-700">
                       {blocker}
                     </Badge>
@@ -183,7 +195,7 @@ export default function PersonalityProfileCard({
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Environnement idéal</h4>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Compass className="h-4 w-4 text-primary" />
-                  <span>{profile.productivity_analysis.optimal_work_environment}</span>
+                  <span>{profile.productivity_analysis?.optimal_work_environment || 'Non défini'}</span>
                 </div>
               </div>
             </CardContent>
@@ -207,7 +219,7 @@ export default function PersonalityProfileCard({
                     Habitudes à forger
                   </h4>
                   <ul className="space-y-2">
-                    {profile.recommendations.habits_to_develop.map((habit, i) => (
+                    {profile.recommendations?.habits_to_develop?.map((habit, i) => (
                       <li key={i} className="flex items-start gap-3 bg-background/60 p-3 rounded-xl border text-sm shadow-sm">
                         <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
                           {i + 1}
@@ -223,7 +235,7 @@ export default function PersonalityProfileCard({
                     Optimisation de croissance
                   </h4>
                   <div className="space-y-3">
-                    {profile.recommendations.productivity_tips.slice(0, 3).map((tip, i) => (
+                    {profile.recommendations?.productivity_tips?.slice(0, 3).map((tip, i) => (
                       <div key={i} className="flex items-start gap-3 text-sm">
                         <Smile className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <p className="leading-relaxed">{tip}</p>
@@ -252,13 +264,13 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/70 mb-2">Phase actuelle</h4>
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center border border-white/20">
-                  <span className="text-lg font-bold">{profile.growth_trajectory.current_phase}</span>
+                  <span className="text-lg font-bold">{profile.growth_trajectory?.current_phase || 'Non définie'}</span>
                 </div>
               </div>
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/70 mb-3">Prochains jalons</h4>
                 <div className="space-y-2">
-                  {profile.growth_trajectory.next_milestones.map((milestone, i) => (
+                  {profile.growth_trajectory?.next_milestones?.map((milestone, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm bg-white/5 p-2 rounded-lg border border-white/10">
                       <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                       {milestone}
@@ -269,7 +281,7 @@ export default function PersonalityProfileCard({
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/70 mb-2">Potentiel long terme</h4>
                 <p className="text-xs leading-relaxed opacity-90 italic font-medium">
-                  {profile.growth_trajectory.long_term_potential}
+                  {profile.growth_trajectory?.long_term_potential || 'Non défini'}
                 </p>
               </div>
             </CardContent>

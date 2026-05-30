@@ -42,7 +42,7 @@ export const usePersonalityProfile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Load saved profile on mount
+
   useEffect(() => {
     if (!user) {
       setIsInitialLoading(false);
@@ -73,14 +73,12 @@ export const usePersonalityProfile = () => {
 
   const generateProfile = async () => {
     if (!user) {
-      console.log('Pas d\'utilisateur connecté');
       return;
     }
 
-    console.log('Début de la génération du profil pour l\'utilisateur:', user.id);
     setIsLoading(true);
     try {
-      // Récupérer TOUTES les données utilisateur sans limites strictes
+
       const [habitsResult, goalsResult, tasksResult, journalResult, focusResult, habitCompletionsResult, reflectionsResult] = await Promise.allSettled([
         supabase.from('habits').select('*').eq('user_id', user.id),
         supabase.from('goals').select('*').eq('user_id', user.id),
@@ -91,7 +89,7 @@ export const usePersonalityProfile = () => {
         supabase.from('daily_reflections').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30)
       ]);
 
-      // Extraire les données de manière sécurisée
+
       const habits = habitsResult.status === 'fulfilled' ? habitsResult.value.data || [] : [];
       const goals = goalsResult.status === 'fulfilled' ? goalsResult.value.data || [] : [];
       const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value.data || [] : [];
@@ -100,36 +98,35 @@ export const usePersonalityProfile = () => {
       const habitCompletions = habitCompletionsResult.status === 'fulfilled' ? habitCompletionsResult.value.data || [] : [];
       const reflections = reflectionsResult.status === 'fulfilled' ? reflectionsResult.value.data || [] : [];
 
-      console.log('Données récupérées:', { habits: habits.length, goals: goals.length, tasks: tasks.length, journal: journal.length, focus: focus.length });
 
-      // Calculer des métriques avancées
+
       const now = new Date();
       const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      // Analyse temporelle des habitudes
+
       const recentHabitCompletions = habitCompletions.filter(hc => new Date(hc.completed_date) > last30Days);
       const habitConsistencyRate = habits.length > 0 ? (recentHabitCompletions.length / (habits.length * 30)) * 100 : 0;
 
-      // Analyse des tâches
+
       const completedTasks = tasks.filter(t => t.completed);
       const taskCompletionRate = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
       const recentTasks = tasks.filter(t => new Date(t.created_at) > last7Days);
       const highPriorityTasks = tasks.filter(t => t.priority === 'high');
       const highPriorityCompleted = highPriorityTasks.filter(t => t.completed);
 
-      // Analyse des objectifs
+
       const activeGoals = goals.filter(g => !g.completed && !g.is_archived);
       const completedGoals = goals.filter(g => g.completed);
       const avgGoalProgress = activeGoals.length > 0 ? activeGoals.reduce((acc, g) => acc + (g.progress || 0), 0) / activeGoals.length : 0;
 
-      // Analyse du focus
+
       const recentFocus = focus.filter(f => new Date(f.created_at) > last30Days);
       const totalFocusTime = recentFocus.reduce((acc, f) => acc + (f.duration || 0), 0);
       const avgFocusSession = recentFocus.length > 0 ? totalFocusTime / recentFocus.length : 0;
       const focusFrequency = recentFocus.length / 30;
 
-      // Analyse du journal
+
       const recentJournals = journal.filter(j => new Date(j.created_at) > last30Days);
       const moodDistribution = recentJournals.reduce((acc, j) => {
         const mood = j.mood || 'unknown';
@@ -138,7 +135,7 @@ export const usePersonalityProfile = () => {
       }, {} as Record<string, number>);
       const dominantMood = Object.entries(moodDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] || 'neutral';
 
-      // Patterns temporels
+
       const tasksByDayOfWeek = tasks.reduce((acc, t) => {
         const day = new Date(t.created_at).getDay();
         acc[day] = (acc[day] || 0) + 1;
@@ -153,7 +150,7 @@ export const usePersonalityProfile = () => {
       }, {} as Record<number, number>);
       const peakFocusHour = Object.entries(focusByHour).sort((a, b) => b[1] - a[1])[0]?.[0];
 
-      // Créer un résumé détaillé pour une analyse psychologique approfondie
+
       const userSummary = {
         vue_generale: {
           total_habitudes: habits.length,
@@ -240,11 +237,9 @@ export const usePersonalityProfile = () => {
         }
       };
 
-      console.log('Résumé utilisateur créé avec métriques avancées');
 
-      // Tenter d'abord l'API Gemini avec analyse approfondie
+
       try {
-        console.log('Invocation de l\'IA pour analyse psychologique approfondie...');
         const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
           body: {
             message: `ANALYSE PSYCHOLOGIQUE APPROFONDIE - Profil de Personnalité
@@ -307,7 +302,6 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
 
         if (!error && data?.response) {
           const responseText = data.response;
-          console.log('Réponse IA reçue:', responseText);
           
           if (typeof responseText === 'string') {
             const cleanedResponse = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -316,8 +310,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
             if (analysisResult.personality) {
               setProfile(analysisResult);
               
-              console.log('Sauvegarde du profil dans Supabase...');
-              // Save to database
+
               const { error: saveError } = await supabase
                 .from('ai_personality_profiles')
                 .upsert({
@@ -339,11 +332,10 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
           }
         }
       } catch (aiError) {
-        console.log('API IA non disponible, utilisation de l\'analyse locale:', aiError);
+        console.error("AI analysis error:", aiError);
       }
 
-      // Fallback : génération basée sur les vraies données utilisateur
-      console.log('Génération du profil basé sur les données réelles...');
+
       
       const analysisResult: PersonalityProfile = {
         personality: {
@@ -380,8 +372,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
 
       setProfile(analysisResult);
       
-      console.log('Sauvegarde du profil (fallback) dans Supabase...');
-      // Save to database
+
       const { error: saveError } = await supabase
         .from('ai_personality_profiles')
         .upsert({
@@ -402,7 +393,7 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
     } catch (error: any) {
       console.error('Erreur génération profil:', error);
       
-      // Gestion des erreurs spécifiques
+
       if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
         toast.error('Limite d\'API atteinte. Réessayez dans quelques minutes.');
       } else if (error?.message?.includes('Réponse IA invalide')) {
@@ -423,7 +414,6 @@ Réponds UNIQUEMENT avec le JSON valide, aucun texte supplémentaire.`,
   };
 };
 
-// Fonctions d'analyse basées sur les données réelles
 const generatePersonalityTraits = (data: any) => {
   const traits = [];
   const taskCompletionRate = data.metriques_performance?.taux_completion_taches || 0;

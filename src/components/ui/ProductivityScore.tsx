@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 export function ProductivityScore() {
   const { data: productivityData, isLoading } = useRealtimeProductivityScore();
 
-  // Default values if data is not available
+
   const {
     score = 0,
     level = 'Débutant',
@@ -76,7 +76,7 @@ export function ProductivityScore() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", duration: 0.6 }}
-            key={score} // Re-animer quand le score change
+            key={score}
           >
             {score}/100
           </motion.div>

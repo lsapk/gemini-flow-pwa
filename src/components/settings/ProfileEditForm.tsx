@@ -25,12 +25,12 @@ export function ProfileEditForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   
-  // Form fields
+
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   
-  // Password change
+
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -66,7 +66,7 @@ export function ProfileEditForm() {
         setBio(data.bio || "");
         setAvatarUrl(data.photo_url || "");
       } else {
-        // Create profile if it doesn't exist
+
         setDisplayName("");
         setBio("");
         setAvatarUrl("");
@@ -209,7 +209,7 @@ export function ProfileEditForm() {
                         .from('avatars')
                         .getPublicUrl(fileName);
                       
-                      // Add cache buster to force reload
+
                       setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
                       toast.success("Photo de profil mise à jour !");
                     } catch (error: any) {

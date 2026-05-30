@@ -29,7 +29,7 @@ export const useNotifications = () => {
         ...options
       });
     } else {
-      // Fallback to toast
+
       toast({
         title,
         description: options?.body,

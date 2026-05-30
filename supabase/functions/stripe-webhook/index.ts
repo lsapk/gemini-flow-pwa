@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
+// @ts-expect-error: External Deno imports
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -55,7 +56,7 @@ serve(async (req) => {
         if (!userId) break;
 
         // Determine tier and end date
-        let tier = "premium";
+        const tier = "premium";
         let endDate: string | null = null;
 
         if (productId.includes("monthly")) {

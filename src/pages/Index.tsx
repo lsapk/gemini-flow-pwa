@@ -61,7 +61,7 @@ const Index = () => {
       <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl">
         <nav className="bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] px-6 py-3 flex justify-between items-center shadow-2xl">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-white/10 rounded-xl sm:rounded-2xl">
+            <div className="p-1.5 sm:p-2 bg-white rounded-xl sm:rounded-2xl">
               <img src={deepflowLogo} alt="DeepFlow Logo" className="h-5 w-5 sm:h-7 sm:h-7 object-contain" />
             </div>
             <span className="text-lg sm:text-2xl font-bold tracking-tight text-white/90">
@@ -274,7 +274,9 @@ const Index = () => {
       <footer className="py-20 border-t border-white/5 px-6">
         <div className="container max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3 opacity-60">
-            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-6 w-6 grayscale" />
+            <div className="p-1 bg-white rounded-lg">
+              <img src={deepflowLogo} alt="DeepFlow Logo" className="h-6 w-6 object-contain" />
+            </div>
             <span className="text-lg font-bold tracking-tight">DeepFlow</span>
           </div>
           <p className="text-sm text-white/40 font-medium">

@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from "react";
  */
 export function useMediaQuery(query: string): boolean {
   const getMatches = useCallback((query: string): boolean => {
-    // Check for SSR (server-side rendering)
+
     if (typeof window !== "undefined") {
       return window.matchMedia(query).matches;
     }
@@ -22,23 +22,23 @@ export function useMediaQuery(query: string): boolean {
 
     const matchMedia = window.matchMedia(query);
     
-    // Initial check
+
     handleChange();
 
-    // Listen for changes
+
     if (matchMedia.addEventListener) {
       matchMedia.addEventListener("change", handleChange);
     } else {
-      // Fallback for older browsers
+
       matchMedia.addListener(handleChange);
     }
 
-    // Cleanup
+
     return () => {
       if (matchMedia.removeEventListener) {
         matchMedia.removeEventListener("change", handleChange);
       } else {
-        // Fallback for older browsers
+
         matchMedia.removeListener(handleChange);
       }
     };
@@ -114,7 +114,7 @@ export function useNetworkStatus(): { online: boolean; type: string | undefined 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Try to get connection type if available
+
     if ((navigator as any).connection) {
       setType((navigator as any).connection.effectiveType);
       

@@ -57,7 +57,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     )}>
       <div className="p-10 pb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 bg-white/5 rounded-2xl border border-white/10">
+          <div className="p-2 bg-white rounded-2xl">
             <img src={deepflowLogo} alt="DeepFlow Logo" className="h-7 w-7 object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white/90">DeepFlow</h1>

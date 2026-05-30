@@ -26,7 +26,7 @@ interface GoogleCalendarViewProps {
   onAddClick?: () => void;
 }
 
-const hours = Array.from({ length: 24 }, (_, i) => i); // 00:00 to 23:00
+const hours = Array.from({ length: 24 }, (_, i) => i);
 
 const eventColors = [
   { bg: "bg-blue-500", border: "border-blue-600", text: "text-white" },
@@ -57,7 +57,7 @@ export function GoogleCalendarView({
     ? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     : [currentDate];
 
-  // Current time indicator
+
   const now = new Date();
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
@@ -102,7 +102,7 @@ export function GoogleCalendarView({
     const endHour = end.getHours() + end.getMinutes() / 60;
     
     const top = (startHour / 24) * 100;
-    const height = Math.max(((endHour - startHour) / 24) * 100, 2); // Minimum 2% height
+    const height = Math.max(((endHour - startHour) / 24) * 100, 2);
     
     return { 
       top: `${top}%`, 
@@ -122,7 +122,7 @@ export function GoogleCalendarView({
     }
   };
 
-  const cellHeight = 48 * zoomLevel; // Base height 48px
+  const cellHeight = 48 * zoomLevel;
 
   const formatEventTime = (event: CalendarEvent) => {
     if (!event.start.dateTime) return 'Toute la journée';

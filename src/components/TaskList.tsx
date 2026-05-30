@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Plus, CheckSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import React from "react";
 import { SubtaskList } from "./SubtaskList";
 import { ItemCard, FilterBar, ViewMode } from "@/components/shared/ItemCard";
 import {
@@ -85,9 +84,9 @@ const SortableTaskCard = React.forwardRef<HTMLDivElement, SortableTaskCardProps>
 
   const completedSubtasks = taskSubtasks.filter(s => s.completed).length;
 
-  // We attach the dnd-kit ref to the root element. Framer Motion's PopChild
-  // forwards a ref to detect mounting; using forwardRef silences the warning,
-  // and dnd-kit's setNodeRef is what actually controls drag behavior.
+
+
+
   return (
     <div ref={setNodeRef} style={style}>
       <ItemCard
@@ -202,7 +201,7 @@ export default function TaskList({
     }
   };
 
-  // Filter tasks
+
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchValue.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchValue.toLowerCase());

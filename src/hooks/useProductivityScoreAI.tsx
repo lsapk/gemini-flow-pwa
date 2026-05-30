@@ -58,9 +58,8 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
     setIsCalculating(true);
     
     try {
-      console.log("Calculating productivity score with AI...");
       
-      // Récupérer toutes les données utilisateur pour l'analyse
+
       const [
         tasksResult,
         habitsResult,
@@ -137,17 +136,15 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
       if (error) {
         console.error('Error calling AI function:', error);
         
-        // Handle credits exhausted (402)
+
         if (error.message?.includes('402') || error.message?.includes('credits exhausted') || error.message?.includes('Payment Required')) {
-          console.log('AI credits exhausted - using fallback calculation');
           toast.error('💳 Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage.');
           calculateFallbackMetrics();
           return;
         }
         
-        // Handle rate limit (429)
+
         if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
-          console.log('Rate limited - using fallback calculation');
           toast.error('🚫 Limite d\'API atteinte. Réessayez plus tard.');
           calculateFallbackMetrics();
           return;
@@ -156,13 +153,12 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
         throw error;
       }
 
-      console.log("AI response received:", data);
 
-      // Try to extract JSON from AI response
+
       let parsedMetrics = null;
       if (data?.response && !data.error) {
         try {
-          // Look for JSON in the response
+
           const jsonMatch = data.response.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             parsedMetrics = JSON.parse(jsonMatch[0]);
@@ -173,7 +169,6 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
       }
 
       if (parsedMetrics && typeof parsedMetrics.score === 'number') {
-        console.log("Using AI-calculated metrics:", parsedMetrics);
         setAiMetrics({
           score: Math.max(0, Math.min(100, parsedMetrics.score)),
           level: parsedMetrics.level || 'Débutant',
@@ -188,7 +183,6 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
           goalScore: Math.max(0, Math.min(15, parsedMetrics.goalScore || 0))
         });
       } else {
-        console.log("AI response not valid, using fallback calculation");
         calculateFallbackMetrics();
       }
 
@@ -201,7 +195,7 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
   };
 
   const calculateFallbackMetrics = () => {
-    // Calcul de fallback amélioré
+
     let totalPossibleScore = 0;
     let earnedScore = 0;
     
@@ -226,9 +220,9 @@ export const useProductivityScoreAI = (): ProductivityMetrics => {
       earnedScore += Math.min(25, (streakCount / 21) * 25);
     }
     
-    // Score de base
+
     totalPossibleScore += 25;
-    earnedScore += 15; // Score de base pour l'utilisation de l'app
+    earnedScore += 15;
     
     const totalScore = totalPossibleScore > 0 ? Math.round((earnedScore / totalPossibleScore) * 100) : 0;
     

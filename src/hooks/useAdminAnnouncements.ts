@@ -19,11 +19,11 @@ export const useAdminAnnouncements = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch active announcements for all users using raw query
+
   const { data: announcements, isLoading } = useQuery({
     queryKey: ["admin-announcements"],
     queryFn: async () => {
-      // Use rpc or direct fetch since table might not be in types yet
+
       const { data, error } = await supabase
         .from("admin_announcements" as any)
         .select("*")
@@ -38,7 +38,7 @@ export const useAdminAnnouncements = () => {
     },
   });
 
-  // Create announcement (admin only)
+
   const createAnnouncement = useMutation({
     mutationFn: async (announcement: Omit<AdminAnnouncement, 'id' | 'created_at' | 'updated_at'>) => {
       if (!user || !isAdmin) throw new Error("Not authorized");
@@ -71,7 +71,7 @@ export const useAdminAnnouncements = () => {
     },
   });
 
-  // Update announcement (admin only)
+
   const updateAnnouncement = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<AdminAnnouncement> & { id: string }) => {
       if (!isAdmin) throw new Error("Not authorized");
@@ -95,7 +95,7 @@ export const useAdminAnnouncements = () => {
     },
   });
 
-  // Delete announcement (admin only)
+
   const deleteAnnouncement = useMutation({
     mutationFn: async (id: string) => {
       if (!isAdmin) throw new Error("Not authorized");

@@ -88,7 +88,7 @@ export const useSubscription = () => {
 
   const trackUsage = async (type: "chat" | "analysis") => {
     if (!user || limits.isUnlimited) return;
-    // Atomic UPSERT on server (handles race conditions and timezone correctly)
+
     const { error } = await supabase.rpc("increment_daily_usage", { p_type: type });
     if (error) {
       console.error("increment_daily_usage failed", error);

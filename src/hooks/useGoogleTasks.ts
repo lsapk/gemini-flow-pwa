@@ -109,7 +109,7 @@ export function useGoogleTasks() {
       setTasks(data.items || []);
       
       if (!taskListId && data.items?.[0]) {
-        // Get the task list ID from the first request
+
         const { data: listsData } = await supabase.functions.invoke("google-tasks-api", {
           body: {
             action: "list_task_lists",
