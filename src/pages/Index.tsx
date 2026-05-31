@@ -1,7 +1,8 @@
 import React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { 
   ArrowRight, 
@@ -9,7 +10,6 @@ import {
   Target, 
   Sparkles,
   Clock,
-  CheckCircle2,
   Zap,
   ShieldCheck,
   TrendingUp,
@@ -22,6 +22,7 @@ import deepflowLogo from "@/assets/deepflow-logo.png";
 const Index = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [initialGoal, setInitialGoal] = useState("");
 
   useEffect(() => {
     if (isLoading) return;
@@ -30,6 +31,14 @@ const Index = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [user, isLoading, navigate]);
+
+  const handleStartFlow = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (initialGoal.trim()) {
+      localStorage.setItem("deepflow_pending_goal", initialGoal.trim());
+    }
+    navigate("/register");
+  };
 
   if (isLoading) {
     return (
@@ -100,29 +109,39 @@ const Index = () => {
                 L'intelligence artificielle au service de votre focus
               </motion.div>
 
-              <motion.h1 variants={itemVariants} className="text-5xl sm:text-8xl md:text-[9rem] font-black mb-8 leading-[0.9] tracking-tighter">
-                Libérez votre <br />
+              <motion.h1 variants={itemVariants} className="text-5xl sm:text-7xl md:text-8xl font-black mb-8 leading-[0.95] tracking-tighter">
+                Reprenez le contrôle de votre temps. <br />
                 <span className="bg-gradient-to-r from-primary via-blue-400 to-purple-500 bg-clip-text text-transparent italic">
-                  Génie
+                  Sans effort.
                 </span>
               </motion.h1>
 
               <motion.p variants={itemVariants} className="text-lg sm:text-2xl md:text-3xl text-white/40 mb-14 max-w-3xl mx-auto leading-tight px-4 sm:px-0 font-medium">
-                Passez du chaos mental à la maîtrise absolue. DeepFlow orchestre votre flux de travail pour une productivité sans effort.
+                L'espace de travail minimaliste qui élimine les distractions et dope votre focus.
               </motion.p>
 
-              <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 sm:gap-8">
-                <Link to="/register">
-                  <Button 
-                    size="lg" 
-                    className="h-14 sm:h-16 px-8 sm:px-12 text-lg sm:text-xl font-bold rounded-full bg-primary hover:bg-primary/90 shadow-[0_0_40px_rgba(59,130,246,0.3)] hover:shadow-[0_0_60px_rgba(59,130,246,0.5)] transition-all duration-500 hover:scale-105 active:scale-95 w-full sm:w-auto"
-                  >
-                    Reprendre le contrôle
-                    <ArrowRight className="ml-2 sm:ml-3 h-5 sm:h-6 w-5 sm:w-6" />
-                  </Button>
-                </Link>
+              <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 sm:gap-8 max-w-2xl mx-auto w-full">
+                <form onSubmit={handleStartFlow} className="w-full relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary to-purple-600 rounded-[2.5rem] blur opacity-25 group-focus-within:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="relative flex flex-col sm:flex-row gap-3 p-2 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] sm:rounded-full">
+                    <Input
+                      placeholder="Quel est votre objectif principal aujourd'hui ?"
+                      className="h-14 sm:h-16 bg-transparent border-0 text-lg sm:text-xl focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-white/20 px-6"
+                      value={initialGoal}
+                      onChange={(e) => setInitialGoal(e.target.value)}
+                    />
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="h-14 sm:h-16 px-8 sm:px-12 text-lg sm:text-xl font-bold rounded-full bg-primary hover:bg-primary/90 shadow-lg transition-all duration-500 hover:scale-[1.02] active:scale-95 whitespace-nowrap"
+                    >
+                      Démarrer mon flow
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </div>
+                </form>
                 
-                <div className="flex flex-wrap justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-700">
+                <div className="flex flex-wrap justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
                    <div className="flex items-center gap-2 text-sm font-medium">
                       <ShieldCheck className="h-5 w-5 text-primary" /> Sécurisé & Privé
                    </div>
@@ -254,14 +273,14 @@ const Index = () => {
                 <p className="text-xl md:text-2xl text-white/80 mb-12 max-w-2xl mx-auto font-medium">
                   Rejoignez l'élite qui a déjà choisi de transformer son chaos en avantage compétitif.
                 </p>
-                <Link to="/register">
+                <form onSubmit={handleStartFlow}>
                   <Button
                     size="lg"
                     className="h-20 px-16 text-2xl font-black rounded-full bg-white text-black hover:bg-white/90 shadow-2xl transition-all hover:scale-110 active:scale-95"
                   >
                     Ouvrir mon accès gratuit
                   </Button>
-                </Link>
+                </form>
                 <p className="mt-8 text-white/50 text-sm font-medium">
                   Installation en 30 secondes • Sans engagement • Gratuit pour toujours
                 </p>
