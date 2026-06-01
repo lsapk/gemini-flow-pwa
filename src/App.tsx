@@ -29,6 +29,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Support = lazy(() => import("./pages/Support"));
+const Developers = lazy(() => import("./pages/Developers"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
@@ -92,6 +94,10 @@ function AppContent() {
                       <Route path="/legal/privacy" element={<Privacy />} />
                       <Route path="/legal/terms" element={<Terms />} />
                       <Route path="/legal/cookies" element={<Cookies />} />
+
+                      {/* OAuth consent (user must be logged in - handled inside the page) */}
+                      <Route path="/oauth/consent" element={<OAuthConsent />} />
+
                       
                       {/* Protected routes - single persistent layout */}
                       <Route element={<ProtectedLayout />}>
@@ -107,6 +113,7 @@ function AppContent() {
                         <Route path="/calendar" element={<Calendar />} />
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/support" element={<Support />} />
+                        <Route path="/developers" element={<Developers />} />
                       </Route>
                       
                       {/* Redirects */}
