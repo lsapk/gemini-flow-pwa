@@ -112,3 +112,16 @@ verify_jwt = true
 
 [functions.calendar-ai-suggestions]
 verify_jwt = true
+
+[functions.oauth-authorize]
+verify_jwt = false
+
+[functions.oauth-token]
+verify_jwt = false
+
+[functions.oauth-revoke]
+verify_jwt = false
+
+[functions.api-v1-router]
+verify_jwt = false
+

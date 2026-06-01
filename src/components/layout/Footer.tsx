@@ -41,6 +41,7 @@ export default function Footer() {
               <li><Link to="/legal/terms" className="text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
               <li><Link to="/legal/cookies" className="text-muted-foreground hover:text-primary transition-colors">Politique des cookies</Link></li>
               <li><Link to="/support" className="text-muted-foreground hover:text-primary transition-colors">Aide & Support</Link></li>
+              <li><Link to="/developers" className="text-muted-foreground hover:text-primary transition-colors">API Développeurs</Link></li>
             </ul>
           </div>
 
