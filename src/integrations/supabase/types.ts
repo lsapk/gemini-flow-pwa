@@ -1,4 +1,3 @@
-import React from "react";
 export type Json =
   | string
   | number
@@ -8,8 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
-
-
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
@@ -409,6 +408,39 @@ export type Database = {
           id?: string
           name?: string
           updatedAt?: string
+        }
+        Relationships: []
+      }
+      api_request_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          duration_ms: number | null
+          endpoint: string
+          id: string
+          method: string
+          status_code: number
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          duration_ms?: number | null
+          endpoint: string
+          id?: string
+          method: string
+          status_code: number
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          endpoint?: string
+          id?: string
+          method?: string
+          status_code?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -1407,6 +1439,159 @@ export type Database = {
           id?: number
           name?: string
           timestamp?: number
+        }
+        Relationships: []
+      }
+      oauth_apps: {
+        Row: {
+          client_id: string
+          client_secret_hash: string
+          created_at: string
+          description: string | null
+          homepage_url: string | null
+          id: string
+          is_verified: boolean
+          logo_url: string | null
+          name: string
+          owner_user_id: string
+          redirect_uris: string[]
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_secret_hash: string
+          created_at?: string
+          description?: string | null
+          homepage_url?: string | null
+          id?: string
+          is_verified?: boolean
+          logo_url?: string | null
+          name: string
+          owner_user_id: string
+          redirect_uris?: string[]
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_secret_hash?: string
+          created_at?: string
+          description?: string | null
+          homepage_url?: string | null
+          id?: string
+          is_verified?: boolean
+          logo_url?: string | null
+          name?: string
+          owner_user_id?: string
+          redirect_uris?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      oauth_authorizations: {
+        Row: {
+          client_id: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          pkce_challenge: string
+          pkce_method: string
+          redirect_uri: string
+          scopes: string[]
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code_hash: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pkce_challenge: string
+          pkce_method?: string
+          redirect_uri: string
+          scopes?: string[]
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          pkce_challenge?: string
+          pkce_method?: string
+          redirect_uri?: string
+          scopes?: string[]
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oauth_tokens: {
+        Row: {
+          access_token_hash: string
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string | null
+          refresh_token_hash: string | null
+          revoked_at: string | null
+          scopes: string[]
+          user_id: string
+        }
+        Insert: {
+          access_token_hash: string
+          client_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_used_at?: string | null
+          refresh_token_hash?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id: string
+        }
+        Update: {
+          access_token_hash?: string
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_used_at?: string | null
+          refresh_token_hash?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oauth_user_consents: {
+        Row: {
+          client_id: string
+          granted_at: string
+          id: string
+          revoked_at: string | null
+          scopes: string[]
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          granted_at?: string
+          id?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          granted_at?: string
+          id?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id?: string
         }
         Relationships: []
       }
