@@ -13,7 +13,8 @@ import {
   Brain,
   LogOut,
   Calendar,
-  Shield
+  Shield,
+  Sparkles
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
