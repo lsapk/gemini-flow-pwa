@@ -138,6 +138,41 @@ export default function Developers() {
     loadAll();
   }
 
+  function openEdit(app: OAuthApp) {
+    setEditing(app);
+    setEditForm({
+      name: app.name,
+      description: app.description ?? "",
+      homepage_url: app.homepage_url ?? "",
+      redirect_uris: app.redirect_uris.join("\n"),
+    });
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (!editForm.name.trim() || !editForm.redirect_uris.trim()) {
+      toast.error("Nom et redirect URI requis");
+      return;
+    }
+    const redirect_uris = editForm.redirect_uris.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const { error } = await supabase
+      .from("oauth_apps")
+      .update({
+        name: editForm.name,
+        description: editForm.description || null,
+        homepage_url: editForm.homepage_url || null,
+        redirect_uris,
+      })
+      .eq("id", editing.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Application mise à jour");
+    setEditing(null);
+    loadAll();
+  }
+
   async function revokeConsent(consent: Consent) {
     const { error } = await supabase
       .from("oauth_user_consents")
