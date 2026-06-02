@@ -125,3 +125,7 @@ verify_jwt = false
 [functions.api-v1-router]
 verify_jwt = false
 
+[functions.ai-autopilot]
+verify_jwt = true
+
+
