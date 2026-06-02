@@ -426,6 +426,45 @@ Authorization: Bearer <access_token>`}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit app dialog */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifier l'application</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nom *</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+            </div>
+            <div>
+              <Label>Site web</Label>
+              <Input value={editForm.homepage_url} onChange={(e) => setEditForm({ ...editForm, homepage_url: e.target.value })} placeholder="https://..." />
+            </div>
+            <div>
+              <Label>Redirect URIs * (un par ligne)</Label>
+              <Textarea
+                value={editForm.redirect_uris}
+                onChange={(e) => setEditForm({ ...editForm, redirect_uris: e.target.value })}
+                placeholder="https://your-app.com/callback"
+                rows={3}
+              />
+            </div>
+            {editing && (
+              <p className="text-xs text-muted-foreground">
+                Client ID : <span className="font-mono">{editing.client_id}</span> (non modifiable)
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
+            <Button onClick={saveEdit}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
