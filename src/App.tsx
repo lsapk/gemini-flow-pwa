@@ -115,6 +115,7 @@ function AppContent() {
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/support" element={<Support />} />
                         <Route path="/developers" element={<Developers />} />
+                        <Route path="/autopilot" element={<AutoPilot />} />
                       </Route>
                       
                       {/* Redirects */}
