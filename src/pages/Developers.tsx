@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Copy, Trash2, Plus, ExternalLink, Code2, Shield, ScrollText } from "lucide-react";
+import { Copy, Trash2, Plus, ExternalLink, Code2, Shield, ScrollText, Pencil } from "lucide-react";
 
 interface OAuthApp {
   id: string;
