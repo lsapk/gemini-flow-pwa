@@ -31,6 +31,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Support = lazy(() => import("./pages/Support"));
 const Developers = lazy(() => import("./pages/Developers"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const AutoPilot = lazy(() => import("./pages/AutoPilot"));
 
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
@@ -114,6 +115,7 @@ function AppContent() {
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/support" element={<Support />} />
                         <Route path="/developers" element={<Developers />} />
+                        <Route path="/autopilot" element={<AutoPilot />} />
                       </Route>
                       
                       {/* Redirects */}

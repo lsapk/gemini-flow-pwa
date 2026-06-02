@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Copy, Trash2, Plus, ExternalLink, Code2, Shield, ScrollText } from "lucide-react";
+import { Copy, Trash2, Plus, ExternalLink, Code2, Shield, ScrollText, Pencil } from "lucide-react";
 
 interface OAuthApp {
   id: string;
@@ -76,6 +76,8 @@ export default function Developers() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", homepage_url: "", redirect_uris: "" });
   const [createdSecret, setCreatedSecret] = useState<{ client_id: string; client_secret: string } | null>(null);
+  const [editing, setEditing] = useState<OAuthApp | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", homepage_url: "", redirect_uris: "" });
 
   useEffect(() => {
     if (!user) {
@@ -133,6 +135,41 @@ export default function Developers() {
       return;
     }
     toast.success("Application supprimée");
+    loadAll();
+  }
+
+  function openEdit(app: OAuthApp) {
+    setEditing(app);
+    setEditForm({
+      name: app.name,
+      description: app.description ?? "",
+      homepage_url: app.homepage_url ?? "",
+      redirect_uris: app.redirect_uris.join("\n"),
+    });
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (!editForm.name.trim() || !editForm.redirect_uris.trim()) {
+      toast.error("Nom et redirect URI requis");
+      return;
+    }
+    const redirect_uris = editForm.redirect_uris.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const { error } = await supabase
+      .from("oauth_apps")
+      .update({
+        name: editForm.name,
+        description: editForm.description || null,
+        homepage_url: editForm.homepage_url || null,
+        redirect_uris,
+      })
+      .eq("id", editing.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Application mise à jour");
+    setEditing(null);
     loadAll();
   }
 
@@ -209,9 +246,14 @@ export default function Developers() {
                     Redirect URIs : {app.redirect_uris.join(", ")}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(app)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
@@ -381,6 +423,45 @@ Authorization: Bearer <access_token>`}
           </div>
           <DialogFooter>
             <Button onClick={() => setCreatedSecret(null)}>J'ai sauvegardé</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit app dialog */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifier l'application</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nom *</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+            </div>
+            <div>
+              <Label>Site web</Label>
+              <Input value={editForm.homepage_url} onChange={(e) => setEditForm({ ...editForm, homepage_url: e.target.value })} placeholder="https://..." />
+            </div>
+            <div>
+              <Label>Redirect URIs * (un par ligne)</Label>
+              <Textarea
+                value={editForm.redirect_uris}
+                onChange={(e) => setEditForm({ ...editForm, redirect_uris: e.target.value })}
+                placeholder="https://your-app.com/callback"
+                rows={3}
+              />
+            </div>
+            {editing && (
+              <p className="text-xs text-muted-foreground">
+                Client ID : <span className="font-mono">{editing.client_id}</span> (non modifiable)
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
+            <Button onClick={saveEdit}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
