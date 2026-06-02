@@ -246,9 +246,14 @@ export default function Developers() {
                     Redirect URIs : {app.redirect_uris.join(", ")}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(app)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
