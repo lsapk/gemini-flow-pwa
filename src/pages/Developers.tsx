@@ -76,6 +76,8 @@ export default function Developers() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", homepage_url: "", redirect_uris: "" });
   const [createdSecret, setCreatedSecret] = useState<{ client_id: string; client_secret: string } | null>(null);
+  const [editing, setEditing] = useState<OAuthApp | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", homepage_url: "", redirect_uris: "" });
 
   useEffect(() => {
     if (!user) {
