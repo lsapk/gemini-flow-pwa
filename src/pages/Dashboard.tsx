@@ -7,7 +7,7 @@ import {
   CheckCircle2, Target, Clock, Brain, Zap, BookOpen, ListTodo, Flame, ChevronDown
 } from "lucide-react";
 import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AdminAnnouncementPanel } from "@/components/dashboard/AdminAnnouncementPanel";
 import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
 import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
