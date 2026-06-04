@@ -177,6 +177,7 @@ export default function AIAssistant() {
 
   const tabs = [
     { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "autopilot", label: "Auto-Pilot", icon: Rocket },
     { id: "analysis", label: "Analyse", icon: BarChart3 },
     { id: "profile", label: "Profil IA", icon: Brain },
   ];
