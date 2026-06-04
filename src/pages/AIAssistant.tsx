@@ -416,6 +416,13 @@ export default function AIAssistant() {
         </div>
       )}
 
+      {/* Auto-Pilot Tab */}
+      {activeTab === "autopilot" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
+          <AutoPilot embedded />
+        </div>
+      )}
+
       {/* Profile Tab — lazy mount */}
       {activeTab === "profile" && (
         <div className="flex-1 overflow-y-auto animate-fade-in">
