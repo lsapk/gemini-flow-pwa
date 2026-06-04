@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Trophy } from 'lucide-react';
+import { Target, Trophy, Sparkles } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
