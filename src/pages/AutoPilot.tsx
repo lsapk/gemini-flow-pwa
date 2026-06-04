@@ -107,16 +107,31 @@ export default function AutoPilot({ embedded = false }: AutoPilotProps) {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Sparkles className="w-7 h-7 text-primary" />
-          DeepFlow Auto-Pilot
-        </h1>
-        <p className="text-muted-foreground">
-          Donne-moi un objectif vague. Je construis ton plan complet : objectif, tâches, habitudes, cadence hebdomadaire.
-        </p>
-      </div>
+    <div className={embedded ? "w-full" : "container mx-auto max-w-4xl px-4 py-8"}>
+      {isOnboarding && (
+        <Card className="p-5 mb-6 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5">
+          <div className="flex items-start gap-3">
+            <PartyPopper className="w-6 h-6 text-primary mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-base mb-1">Bienvenue sur DeepFlow 👋</h3>
+              <p className="text-sm text-muted-foreground">
+                Pour démarrer en force, décris-nous ton objectif principal. L'IA va construire ton plan complet : objectif, tâches, habitudes et cadence hebdomadaire. Tu pourras tout modifier ensuite.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+      {!embedded && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+            <Sparkles className="w-7 h-7 text-primary" />
+            DeepFlow Auto-Pilot
+          </h1>
+          <p className="text-muted-foreground">
+            Donne-moi un objectif vague. Je construis ton plan complet : objectif, tâches, habitudes, cadence hebdomadaire.
+          </p>
+        </div>
+      )}
 
       <Card className="p-6 mb-6 space-y-4">
         <div>
