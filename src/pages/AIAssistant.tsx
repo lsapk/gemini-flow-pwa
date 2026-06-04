@@ -216,7 +216,7 @@ export default function AIAssistant() {
 
       {/* Segmented Control */}
       <div className="bg-secondary/40 backdrop-blur-xl p-1 rounded-2xl mb-3 shrink-0 border border-border/20">
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
