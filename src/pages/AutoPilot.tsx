@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, CheckCircle2, Calendar as CalendarIcon, Repeat, Target, Loader2 } from "lucide-react";
+import { Sparkles, CheckCircle2, Calendar as CalendarIcon, Repeat, Target, Loader2, PartyPopper } from "lucide-react";
+
+interface AutoPilotProps {
+  embedded?: boolean;
+}
 
 interface PlanGoal {
   title: string;
@@ -40,14 +44,21 @@ interface Plan {
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-export default function AutoPilot() {
+export default function AutoPilot({ embedded = false }: AutoPilotProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [objective, setObjective] = useState("");
   const [horizon, setHorizon] = useState(12);
   const [intensity, setIntensity] = useState<"chill" | "balanced" | "intense">("balanced");
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const isOnboarding = searchParams.get("onboarding") === "1";
+
+  useEffect(() => {
+    const presetObjective = searchParams.get("objective");
+    if (presetObjective) setObjective(presetObjective);
+  }, [searchParams]);
 
   async function generate() {
     if (objective.trim().length < 5) {
@@ -96,16 +107,31 @@ export default function AutoPilot() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Sparkles className="w-7 h-7 text-primary" />
-          DeepFlow Auto-Pilot
-        </h1>
-        <p className="text-muted-foreground">
-          Donne-moi un objectif vague. Je construis ton plan complet : objectif, tâches, habitudes, cadence hebdomadaire.
-        </p>
-      </div>
+    <div className={embedded ? "w-full" : "container mx-auto max-w-4xl px-4 py-8"}>
+      {isOnboarding && (
+        <Card className="p-5 mb-6 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5">
+          <div className="flex items-start gap-3">
+            <PartyPopper className="w-6 h-6 text-primary mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-base mb-1">Bienvenue sur DeepFlow 👋</h3>
+              <p className="text-sm text-muted-foreground">
+                Pour démarrer en force, décris-nous ton objectif principal. L'IA va construire ton plan complet : objectif, tâches, habitudes et cadence hebdomadaire. Tu pourras tout modifier ensuite.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+      {!embedded && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+            <Sparkles className="w-7 h-7 text-primary" />
+            DeepFlow Auto-Pilot
+          </h1>
+          <p className="text-muted-foreground">
+            Donne-moi un objectif vague. Je construis ton plan complet : objectif, tâches, habitudes, cadence hebdomadaire.
+          </p>
+        </div>
+      )}
 
       <Card className="p-6 mb-6 space-y-4">
         <div>

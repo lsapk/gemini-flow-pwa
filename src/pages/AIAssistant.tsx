@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAICredits } from "@/hooks/useAICredits";
 import { Markdown } from "@/components/Markdown";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 import Analysis from "./Analysis";
 import Profile from "./Profile";
+import AutoPilot from "./AutoPilot";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -176,6 +177,7 @@ export default function AIAssistant() {
 
   const tabs = [
     { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "autopilot", label: "Auto-Pilot", icon: Rocket },
     { id: "analysis", label: "Analyse", icon: BarChart3 },
     { id: "profile", label: "Profil IA", icon: Brain },
   ];
@@ -214,7 +216,7 @@ export default function AIAssistant() {
 
       {/* Segmented Control */}
       <div className="bg-secondary/40 backdrop-blur-xl p-1 rounded-2xl mb-3 shrink-0 border border-border/20">
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -411,6 +413,13 @@ export default function AIAssistant() {
       {activeTab === "analysis" && (
         <div className="flex-1 overflow-y-auto animate-fade-in">
           <Analysis />
+        </div>
+      )}
+
+      {/* Auto-Pilot Tab */}
+      {activeTab === "autopilot" && (
+        <div className="flex-1 overflow-y-auto animate-fade-in">
+          <AutoPilot embedded />
         </div>
       )}
 

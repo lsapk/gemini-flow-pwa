@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Trophy } from 'lucide-react';
+import { Target, Trophy, Sparkles } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ function SortableGoalCard({
   onToggleExpanded,
   onRefresh 
 }: SortableGoalCardProps) {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -120,6 +122,23 @@ function SortableGoalCard({
             </div>
           </div>
           
+          {/* AI Roadmap shortcut */}
+          {!goal.completed && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                navigate(`/autopilot?objective=${encodeURIComponent(goal.title)}`);
+              }}
+              className="w-full h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Générer une roadmap IA
+            </Button>
+          )}
+
           {/* Subobjectives toggle */}
           <div className="pt-2 border-t">
             <button

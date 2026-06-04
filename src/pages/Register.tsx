@@ -68,7 +68,8 @@ export default function Register() {
         localStorage.removeItem("deepflow_pending_goal");
       }
 
-      toast({ title: "Inscription réussie !", description: "Vous pouvez maintenant vous connecter." });
+      localStorage.setItem("deepflow_onboarding_pending", "1");
+      toast({ title: "Inscription réussie !", description: "Connectez-vous pour démarrer avec l'Auto-Pilot IA." });
       navigate("/login");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erreur", description: error?.message || "Une erreur s'est produite." });
