@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, CheckCircle2, Calendar as CalendarIcon, Repeat, Target, Loader2 } from "lucide-react";
+import { Sparkles, CheckCircle2, Calendar as CalendarIcon, Repeat, Target, Loader2, PartyPopper } from "lucide-react";
+
+interface AutoPilotProps {
+  embedded?: boolean;
+}
 
 interface PlanGoal {
   title: string;
