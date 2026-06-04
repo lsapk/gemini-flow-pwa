@@ -59,6 +59,7 @@ function SortableGoalCard({
   onToggleExpanded,
   onRefresh 
 }: SortableGoalCardProps) {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
