@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAICredits } from "@/hooks/useAICredits";
 import { Markdown } from "@/components/Markdown";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import AISuggestionDialog from "@/components/AISuggestionDialog";
 import Analysis from "./Analysis";
 import Profile from "./Profile";
+import AutoPilot from "./AutoPilot";
 import { cn } from "@/lib/utils";
 
 interface Message {
