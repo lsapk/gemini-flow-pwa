@@ -44,14 +44,21 @@ interface Plan {
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-export default function AutoPilot() {
+export default function AutoPilot({ embedded = false }: AutoPilotProps) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [objective, setObjective] = useState("");
   const [horizon, setHorizon] = useState(12);
   const [intensity, setIntensity] = useState<"chill" | "balanced" | "intense">("balanced");
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const isOnboarding = searchParams.get("onboarding") === "1";
+
+  useEffect(() => {
+    const presetObjective = searchParams.get("objective");
+    if (presetObjective) setObjective(presetObjective);
+  }, [searchParams]);
 
   async function generate() {
     if (objective.trim().length < 5) {
