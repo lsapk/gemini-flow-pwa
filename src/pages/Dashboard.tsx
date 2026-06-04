@@ -20,14 +20,24 @@ import { toast } from "sonner";
 
 export default function Dashboard() {
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const navigate = useNavigate();
 
   const { 
     scores, level, taskCompletionRate, totalFocusTime, streakCount, activeHabits, isLoading 
   } = useUnifiedProductivityScore();
 
   useEffect(() => {
-    const KEY = "deepflow-welcome-shown";
     if (typeof window === "undefined") return;
+
+    // First-time onboarding: redirect to Auto-Pilot IA
+    const ONBOARDING_KEY = "deepflow_onboarding_pending";
+    if (localStorage.getItem(ONBOARDING_KEY)) {
+      localStorage.removeItem(ONBOARDING_KEY);
+      navigate("/autopilot?onboarding=1", { replace: true });
+      return;
+    }
+
+    const KEY = "deepflow-welcome-shown";
     if (localStorage.getItem(KEY)) return;
     localStorage.setItem(KEY, "1");
     setTimeout(() => {
@@ -36,7 +46,7 @@ export default function Dashboard() {
         duration: 6000,
       });
     }, 800);
-  }, []);
+  }, [navigate]);
 
   if (isLoading) {
     return (
