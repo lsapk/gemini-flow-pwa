@@ -14,7 +14,8 @@ import {
   LogOut,
   Calendar,
   Shield,
-  Sparkles
+  Sparkles,
+  Trophy
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -41,6 +42,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
     { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
     { icon: Sparkles, label: "Auto-Pilot", path: "/autopilot" },
+    { icon: Trophy, label: "Classement", path: "/leaderboard" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
 
