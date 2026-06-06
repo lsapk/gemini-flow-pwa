@@ -2846,6 +2846,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          leaderboard_opt_in: boolean
           photo_url: string | null
           updated_at: string | null
         }
@@ -2855,6 +2856,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          leaderboard_opt_in?: boolean
           photo_url?: string | null
           updated_at?: string | null
         }
@@ -2864,6 +2866,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          leaderboard_opt_in?: boolean
           photo_url?: string | null
           updated_at?: string | null
         }
@@ -3332,6 +3335,23 @@ export type Database = {
       consume_ai_credit: { Args: { amount: number }; Returns: number }
       decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       encrypt_token: { Args: { token: string }; Returns: string }
+      get_leaderboard: {
+        Args: { p_limit?: number; p_period?: string }
+        Returns: {
+          display_name: string
+          focus_minutes: number
+          goals_done: number
+          habits_done: number
+          is_me: boolean
+          journal_count: number
+          photo_url: string
+          rank: number
+          reflection_count: number
+          score: number
+          tasks_done: number
+          user_id: string
+        }[]
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       increment_daily_usage: { Args: { p_type: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
