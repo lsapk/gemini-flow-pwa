@@ -60,7 +60,7 @@ function SortableGoalCard({
   onToggleExpanded,
   onRefresh 
 }: SortableGoalCardProps) {
-  const navigate = useNavigate();
+  const [roadmapOpen, setRoadmapOpen] = useState(false);
   const {
     attributes,
     listeners,
