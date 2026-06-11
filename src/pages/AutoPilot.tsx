@@ -88,10 +88,10 @@ interface Plan {
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-export default function AutoPilot({ embedded = false }: RoadmapProps) {
+export default function AutoPilot({ embedded = false, presetObjective: presetObjectiveProp, onApplied }: RoadmapProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [objective, setObjective] = useState("");
+  const [objective, setObjective] = useState(presetObjectiveProp ?? "");
   const [horizon, setHorizon] = useState(12);
   const [intensity, setIntensity] = useState<"chill" | "balanced" | "intense">(
     "balanced",
@@ -104,9 +104,10 @@ export default function AutoPilot({ embedded = false }: RoadmapProps) {
   const isOnboarding = searchParams.get("onboarding") === "1";
 
   useEffect(() => {
+    if (presetObjectiveProp) return;
     const presetObjective = searchParams.get("objective");
     if (presetObjective) setObjective(presetObjective);
-  }, [searchParams]);
+  }, [searchParams, presetObjectiveProp]);
 
   useEffect(() => {
     if (plan) {
