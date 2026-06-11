@@ -38,6 +38,8 @@ import {
 
 interface RoadmapProps {
   embedded?: boolean;
+  presetObjective?: string;
+  onApplied?: () => void;
 }
 
 interface PlanGoal {
