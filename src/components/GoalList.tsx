@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Trophy, Sparkles } from 'lucide-react';
-import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import AutoPilot from '@/pages/AutoPilot';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
@@ -59,7 +60,7 @@ function SortableGoalCard({
   onToggleExpanded,
   onRefresh 
 }: SortableGoalCardProps) {
-  const navigate = useNavigate();
+  const [roadmapOpen, setRoadmapOpen] = useState(false);
   const {
     attributes,
     listeners,
@@ -130,7 +131,7 @@ function SortableGoalCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                navigate(`/autopilot?objective=${encodeURIComponent(goal.title)}`);
+                setRoadmapOpen(true);
               }}
               className="w-full h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
             >
@@ -170,6 +171,27 @@ function SortableGoalCard({
           </AnimatePresence>
         </div>
       </ItemCard>
+
+      <Dialog open={roadmapOpen} onOpenChange={setRoadmapOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Roadmap IA — {goal.title}
+            </DialogTitle>
+          </DialogHeader>
+          {roadmapOpen && (
+            <AutoPilot
+              embedded
+              presetObjective={goal.title}
+              onApplied={() => {
+                setRoadmapOpen(false);
+                onRefresh?.();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
