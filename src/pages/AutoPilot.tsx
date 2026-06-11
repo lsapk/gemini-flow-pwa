@@ -180,7 +180,8 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
       toast.success(
         `Roadmap appliquée : 1 objectif, ${data.task_ids.length} tâches, ${data.habit_ids.length} habitudes.`,
       );
-      navigate("/goals");
+      if (onApplied) onApplied();
+      else navigate("/goals");
     } catch (e: any) {
       toast.error(e?.message || "Erreur");
     } finally {
