@@ -171,6 +171,27 @@ function SortableGoalCard({
           </AnimatePresence>
         </div>
       </ItemCard>
+
+      <Dialog open={roadmapOpen} onOpenChange={setRoadmapOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Roadmap IA — {goal.title}
+            </DialogTitle>
+          </DialogHeader>
+          {roadmapOpen && (
+            <AutoPilot
+              embedded
+              presetObjective={goal.title}
+              onApplied={() => {
+                setRoadmapOpen(false);
+                onRefresh?.();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
