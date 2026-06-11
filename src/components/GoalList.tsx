@@ -131,7 +131,7 @@ function SortableGoalCard({
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                navigate(`/autopilot?objective=${encodeURIComponent(goal.title)}`);
+                setRoadmapOpen(true);
               }}
               className="w-full h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
             >
