@@ -1,5 +1,6 @@
-// AI Auto-Pilot: turn a vague objective into goal + tasks + habits + weekly plan.
-// Two modes via { action }: "preview" (default) returns plan only, "apply" inserts into DB.
+// AI Roadmap: turn an objective into a personalized roadmap with goal, tasks,
+// habits, weekly forecast (predicted productivity evolution), tailored advices and risks.
+// Modes via { action }: "preview" returns plan only, "apply" inserts into DB.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -15,9 +16,9 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const PLAN_TOOL = {
   type: "function",
   function: {
-    name: "build_plan",
+    name: "build_roadmap",
     description:
-      "Build a structured productivity plan: one main goal, supporting tasks, supporting habits, and a weekly cadence.",
+      "Build a personalized roadmap: SMART goal, supporting tasks, supporting habits, weekly cadence, weekly forecast of predicted productivity score, tailored advices and risks.",
     parameters: {
       type: "object",
       properties: {
@@ -27,10 +28,7 @@ const PLAN_TOOL = {
             title: { type: "string" },
             description: { type: "string" },
             category: { type: "string" },
-            target_date: {
-              type: "string",
-              description: "ISO date YYYY-MM-DD",
-            },
+            target_date: { type: "string", description: "ISO date YYYY-MM-DD" },
           },
           required: ["title", "description", "category", "target_date"],
           additionalProperties: false,
@@ -43,7 +41,7 @@ const PLAN_TOOL = {
               title: { type: "string" },
               description: { type: "string" },
               priority: { type: "string", enum: ["low", "medium", "high"] },
-              due_date: { type: "string", description: "ISO date YYYY-MM-DD" },
+              due_date: { type: "string" },
             },
             required: ["title", "priority"],
             additionalProperties: false,
@@ -56,14 +54,10 @@ const PLAN_TOOL = {
             properties: {
               title: { type: "string" },
               description: { type: "string" },
-              frequency: {
-                type: "string",
-                enum: ["daily", "weekly"],
-              },
+              frequency: { type: "string", enum: ["daily", "weekly"] },
               days_of_week: {
                 type: "array",
                 items: { type: "integer", minimum: 0, maximum: 6 },
-                description: "0=Sunday … 6=Saturday",
               },
               category: { type: "string" },
             },
@@ -73,14 +67,65 @@ const PLAN_TOOL = {
         },
         weekly_plan: {
           type: "string",
-          description: "Markdown-friendly weekly cadence (max 600 chars).",
+          description: "Cadence hebdomadaire courte (max 600 chars).",
+        },
+        forecast: {
+          type: "array",
+          description:
+            "Évolution hebdomadaire prédite. Une entrée par semaine de 1 à horizon. predicted_score = score productivité projeté (0-100), progress = % avancement de l'objectif (0-100). Milestone court (max 60 chars).",
+          items: {
+            type: "object",
+            properties: {
+              week: { type: "integer", minimum: 1 },
+              predicted_score: { type: "integer", minimum: 0, maximum: 100 },
+              progress: { type: "integer", minimum: 0, maximum: 100 },
+              milestone: { type: "string" },
+            },
+            required: ["week", "predicted_score", "progress", "milestone"],
+            additionalProperties: false,
+          },
+        },
+        advices: {
+          type: "array",
+          description: "3 à 6 conseils personnalisés, actionnables, en français.",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              content: { type: "string" },
+            },
+            required: ["title", "content"],
+            additionalProperties: false,
+          },
+        },
+        risks: {
+          type: "array",
+          description: "2 à 4 risques/obstacles probables avec mitigation.",
+          items: {
+            type: "object",
+            properties: {
+              risk: { type: "string" },
+              mitigation: { type: "string" },
+            },
+            required: ["risk", "mitigation"],
+            additionalProperties: false,
+          },
         },
         rationale: {
           type: "string",
-          description: "Why this plan, in French (max 500 chars).",
+          description: "Pourquoi cette roadmap, en français (max 500 chars).",
         },
       },
-      required: ["goal", "tasks", "habits", "weekly_plan", "rationale"],
+      required: [
+        "goal",
+        "tasks",
+        "habits",
+        "weekly_plan",
+        "forecast",
+        "advices",
+        "risks",
+        "rationale",
+      ],
       additionalProperties: false,
     },
   },
@@ -129,7 +174,18 @@ Deno.serve(async (req) => {
         .single();
       if (gErr) return json({ error: gErr.message }, 400);
 
-      const taskRows = (plan.tasks ?? []).slice(0, 50).map((t: any) => ({
+      const selectedTasks = Array.isArray(body.selected_task_indices)
+        ? (plan.tasks ?? []).filter((_: any, i: number) =>
+            body.selected_task_indices.includes(i),
+          )
+        : (plan.tasks ?? []);
+      const selectedHabits = Array.isArray(body.selected_habit_indices)
+        ? (plan.habits ?? []).filter((_: any, i: number) =>
+            body.selected_habit_indices.includes(i),
+          )
+        : (plan.habits ?? []);
+
+      const taskRows = selectedTasks.slice(0, 50).map((t: any) => ({
         user_id: userId,
         title: t.title,
         description: t.description ?? null,
@@ -137,7 +193,7 @@ Deno.serve(async (req) => {
         due_date: t.due_date ?? null,
         category: plan.goal.category ?? null,
       }));
-      const habitRows = (plan.habits ?? []).slice(0, 20).map((h: any) => ({
+      const habitRows = selectedHabits.slice(0, 20).map((h: any) => ({
         user_id: userId,
         title: h.title,
         description: h.description ?? null,
@@ -168,15 +224,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // === preview: call Lovable AI ===
+    // === preview ===
     const objective = (body.objective ?? "").toString().trim();
     if (!objective || objective.length < 5) {
       return json({ error: "Objective too short" }, 400);
     }
-    const horizonWeeks = Math.min(Math.max(Number(body.horizon_weeks) || 12, 1), 52);
+    const horizonWeeks = Math.min(
+      Math.max(Number(body.horizon_weeks) || 12, 1),
+      52,
+    );
     const intensity = ["chill", "balanced", "intense"].includes(body.intensity)
       ? body.intensity
       : "balanced";
+
+    // Pull lightweight user context for personalization
+    const [{ data: recentTasks }, { data: recentHabits }, { data: profile }] =
+      await Promise.all([
+        supabase
+          .from("tasks")
+          .select("title, status, priority, due_date")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(15),
+        supabase
+          .from("habits")
+          .select("title, frequency, category")
+          .eq("user_id", userId)
+          .limit(15),
+        supabase
+          .from("user_profiles")
+          .select("display_name, email")
+          .eq("id", userId)
+          .maybeSingle(),
+      ]);
 
     // Consume 1 credit (voluntary action)
     const { error: credErr } = await supabase.rpc("consume_ai_credit", {
@@ -187,16 +267,26 @@ Deno.serve(async (req) => {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const systemPrompt = `Tu es DeepFlow Auto-Pilot, un coach IA expert en productivité.
-À partir d'un objectif vague de l'utilisateur, tu construis un PLAN COMPLET et RÉALISTE en français.
+    const ctx = {
+      recent_tasks: (recentTasks ?? []).slice(0, 10),
+      recent_habits: (recentHabits ?? []).slice(0, 10),
+    };
+
+    const systemPrompt = `Tu es DeepFlow Roadmap IA, un coach expert en productivité.
+À partir d'un objectif utilisateur, construis une ROADMAP PERSONNALISÉE en français.
 
 Contraintes :
-- 1 objectif principal (SMART), date cible cohérente avec l'horizon (${horizonWeeks} semaines à partir du ${today}).
-- 5 à 12 tâches concrètes, étalées dans le temps, avec priorités équilibrées.
-- 2 à 5 habitudes de soutien (daily ou weekly).
-- Cadence hebdomadaire (weekly_plan) courte et actionnable.
+- 1 objectif principal SMART, date cible cohérente avec ${horizonWeeks} semaines depuis ${today}.
+- 5 à 12 tâches concrètes, étalées dans le temps.
+- 2 à 5 habitudes de soutien.
+- weekly_plan : cadence hebdo courte et actionnable.
+- forecast : EXACTEMENT ${horizonWeeks} entrées (week=1..${horizonWeeks}), progression réaliste et non linéaire (montée initiale, plateaux, accélération finale). predicted_score commence ~55-65 et évolue selon l'intensité (${intensity}).
+- advices : 3-6 conseils personnalisés basés sur le contexte utilisateur si dispo.
+- risks : 2-4 risques probables avec mitigation concrète.
 - Intensité demandée : ${intensity}.
-- Réponds UNIQUEMENT via l'outil build_plan.`;
+- Réponds UNIQUEMENT via l'outil build_roadmap.
+
+Contexte utilisateur : ${JSON.stringify(ctx)}`;
 
     const resp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -215,7 +305,7 @@ Contraintes :
           tools: [PLAN_TOOL],
           tool_choice: {
             type: "function",
-            function: { name: "build_plan" },
+            function: { name: "build_roadmap" },
           },
         }),
       },
@@ -239,7 +329,7 @@ Contraintes :
 
     return json({ ok: true, plan });
   } catch (e) {
-    console.error("autopilot error", e);
+    console.error("roadmap error", e);
     return json({ error: e instanceof Error ? e.message : "Unknown" }, 500);
   }
 });
