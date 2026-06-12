@@ -39,8 +39,10 @@ import {
 interface RoadmapProps {
   embedded?: boolean;
   presetObjective?: string;
+  presetGoalId?: string;
   onApplied?: () => void;
 }
+
 
 interface PlanGoal {
   title: string;
@@ -88,7 +90,7 @@ interface Plan {
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-export default function AutoPilot({ embedded = false, presetObjective: presetObjectiveProp, onApplied }: RoadmapProps) {
+export default function AutoPilot({ embedded = false, presetObjective: presetObjectiveProp, presetGoalId, onApplied }: RoadmapProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [objective, setObjective] = useState(presetObjectiveProp ?? "");
@@ -168,6 +170,8 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
         body: {
           action: "apply",
           plan,
+          goal_id: presetGoalId ?? null,
+          intensity,
           selected_task_indices: Array.from(selectedTasks),
           selected_habit_indices: Array.from(selectedHabits),
         },
@@ -178,10 +182,13 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
         return;
       }
       toast.success(
-        `Roadmap appliquée : 1 objectif, ${data.task_ids.length} tâches, ${data.habit_ids.length} habitudes.`,
+        presetGoalId
+          ? `Objectif mis à jour : ${data.task_ids.length} tâches et ${data.habit_ids.length} habitudes ajoutées.`
+          : `Roadmap appliquée : 1 objectif, ${data.task_ids.length} tâches, ${data.habit_ids.length} habitudes.`,
       );
       if (onApplied) onApplied();
       else navigate("/goals");
+
     } catch (e: any) {
       toast.error(e?.message || "Erreur");
     } finally {

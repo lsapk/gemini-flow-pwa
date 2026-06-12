@@ -184,12 +184,14 @@ function SortableGoalCard({
             <AutoPilot
               embedded
               presetObjective={goal.title}
+              presetGoalId={goal.id}
               onApplied={() => {
                 setRoadmapOpen(false);
                 onRefresh?.();
               }}
             />
           )}
+
         </DialogContent>
       </Dialog>
     </div>
