@@ -50,6 +50,7 @@ export default function Focus() {
   const pipWindowRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const completingRef = useRef(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const sound = useSoundService();
@@ -79,19 +80,25 @@ export default function Focus() {
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => { 
-          if (prev <= 1) { setIsActive(false); handleTimerComplete(); return 0; } 
-          const n = prev - 1; 
-          saveSessionState({ timeLeft: n }); 
-          return n; 
-        });
-      }, 1000);
-    }
-    return () => { if (interval) clearInterval(interval); };
+    if (!isActive || timeLeft <= 0) return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        const n = Math.max(0, prev - 1);
+        if (n > 0) saveSessionState({ timeLeft: n });
+        return n;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [isActive, timeLeft]);
+
+  // Detect completion exactly once when the timer reaches 0
+  useEffect(() => {
+    if (isActive && timeLeft === 0 && currentSessionId && !completingRef.current) {
+      completingRef.current = true;
+      setIsActive(false);
+      handleTimerComplete();
+    }
+  }, [timeLeft, isActive, currentSessionId]);
 
   useEffect(() => {
     if (isPipActive && canvasRef.current) {
@@ -106,6 +113,7 @@ export default function Focus() {
     if (!sessionTitle.trim()) { toast({ title: "Titre requis", description: "Veuillez entrer un titre pour votre session.", variant: "destructive" }); return; }
     if (!user) return;
     const sessionId = `focus_${Date.now()}`; const startTime = new Date();
+    completingRef.current = false;
     setIsActive(true); setCurrentSessionId(sessionId); setTimeLeft(duration * 60);
     localStorage.setItem('active_focus_session', JSON.stringify({ id: sessionId, title: sessionTitle, duration, startTime: startTime.getTime(), isActive: true, timeLeft: duration * 60, userId: user.id }));
     sound.playTimerStart();
@@ -133,17 +141,20 @@ export default function Focus() {
   };
 
   const handleTimerComplete = async () => {
-    if (!currentSessionId || !user) return;
-    const raw = localStorage.getItem('active_focus_session'); if (!raw) return;
-    const sd: ActiveFocusSession = JSON.parse(raw);
+    if (!currentSessionId || !user) { resetSession(); return; }
+    const raw = localStorage.getItem('active_focus_session');
+    const sd: ActiveFocusSession | null = raw ? JSON.parse(raw) : null;
+    const savedDuration = sd?.duration ?? duration;
+    const savedTitle = sd?.title ?? sessionTitle;
+    const savedStart = sd?.startTime ?? Date.now() - savedDuration * 60000;
     try {
-      await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: sd.duration, started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
+      await supabase.from('focus_sessions').insert({ user_id: user.id, title: savedTitle, duration: savedDuration, started_at: new Date(savedStart).toISOString(), completed_at: new Date().toISOString() });
       sound.playTimerComplete();
-      toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${duration} minutes complétée.` });
-    } catch (error) { console.error('Error completing session:', error); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); }
+      toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${savedDuration} minutes complétée.` });
+    } catch (error) { console.error('Error completing session:', error); toast({ variant: "destructive", title: "Erreur d'enregistrement" }); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); loadSessionsHistory(); loadWeeklyData(); }
   };
 
-  const resetSession = () => { setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); };
+  const resetSession = () => { completingRef.current = false; setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); };
 
   const loadSessionsHistory = async () => { if (!user) return; try { const { data, error } = await supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('started_at', { ascending: false }).limit(10); if (error) throw error; setSessionsHistory(data || []); } catch (error) { console.error(error); } };
 

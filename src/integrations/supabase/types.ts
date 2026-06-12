@@ -284,6 +284,59 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_roadmaps: {
+        Row: {
+          created_at: string
+          goal_id: string | null
+          habit_ids: string[]
+          horizon_weeks: number
+          id: string
+          intensity: string
+          objective: string
+          plan: Json
+          status: string
+          task_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id?: string | null
+          habit_ids?: string[]
+          horizon_weeks?: number
+          id?: string
+          intensity?: string
+          objective: string
+          plan: Json
+          status?: string
+          task_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string | null
+          habit_ids?: string[]
+          horizon_weeks?: number
+          id?: string
+          intensity?: string
+          objective?: string
+          plan?: Json
+          status?: string
+          task_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_roadmaps_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_by_period: {
         Row: {
           id: number
