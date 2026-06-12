@@ -216,13 +216,30 @@ Deno.serve(async (req) => {
           : Promise.resolve({ data: [], error: null } as any),
       ]);
 
+      const taskIds = (tIns.data ?? []).map((r: any) => r.id);
+      const habitIds = (hIns.data ?? []).map((r: any) => r.id);
+
+      // Save the roadmap snapshot for ongoing tracking on dashboard
+      await supabase.from("ai_roadmaps").insert({
+        user_id: userId,
+        goal_id: goalRow.id,
+        objective: plan.goal.title,
+        horizon_weeks: Array.isArray(plan.forecast) ? plan.forecast.length : 12,
+        intensity: body.intensity ?? "balanced",
+        plan,
+        task_ids: taskIds,
+        habit_ids: habitIds,
+        status: "active",
+      });
+
       return json({
         ok: true,
         goal_id: goalRow.id,
-        task_ids: (tIns.data ?? []).map((r: any) => r.id),
-        habit_ids: (hIns.data ?? []).map((r: any) => r.id),
+        task_ids: taskIds,
+        habit_ids: habitIds,
       });
     }
+
 
     // === preview ===
     const objective = (body.objective ?? "").toString().trim();
