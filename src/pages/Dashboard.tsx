@@ -159,6 +159,7 @@ export default function Dashboard() {
       </Card>
 
       <TodayActionsCard />
+      <RoadmapTrackingCard />
       <DailyBriefingCard />
 
       <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen}>
