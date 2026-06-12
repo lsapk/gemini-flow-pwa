@@ -161,18 +161,41 @@ Deno.serve(async (req) => {
       const plan = body.plan;
       if (!plan?.goal) return json({ error: "Missing plan" }, 400);
 
-      const { data: goalRow, error: gErr } = await supabase
-        .from("goals")
-        .insert({
-          user_id: userId,
-          title: plan.goal.title,
-          description: plan.goal.description ?? null,
-          category: plan.goal.category ?? "personal",
-          target_date: plan.goal.target_date ?? null,
-        })
-        .select()
-        .single();
-      if (gErr) return json({ error: gErr.message }, 400);
+      const existingGoalId: string | null = body.goal_id ?? null;
+      let goalRow: any;
+
+      if (existingGoalId) {
+        // Update the existing goal (do not create a new one)
+        const { data, error } = await supabase
+          .from("goals")
+          .update({
+            title: plan.goal.title,
+            description: plan.goal.description ?? null,
+            category: plan.goal.category ?? "personal",
+            target_date: plan.goal.target_date ?? null,
+          })
+          .eq("id", existingGoalId)
+          .eq("user_id", userId)
+          .select()
+          .single();
+        if (error) return json({ error: error.message }, 400);
+        goalRow = data;
+      } else {
+        const { data, error } = await supabase
+          .from("goals")
+          .insert({
+            user_id: userId,
+            title: plan.goal.title,
+            description: plan.goal.description ?? null,
+            category: plan.goal.category ?? "personal",
+            target_date: plan.goal.target_date ?? null,
+          })
+          .select()
+          .single();
+        if (error) return json({ error: error.message }, 400);
+        goalRow = data;
+      }
+
 
       const selectedTasks = Array.isArray(body.selected_task_indices)
         ? (plan.tasks ?? []).filter((_: any, i: number) =>
