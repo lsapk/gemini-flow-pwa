@@ -50,6 +50,7 @@ export default function Focus() {
   const pipWindowRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const completingRef = useRef(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const sound = useSoundService();
