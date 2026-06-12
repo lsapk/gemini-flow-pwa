@@ -13,6 +13,7 @@ import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
 import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
 import { CrossInsightsWidget } from "@/components/ai/CrossInsightsWidget";
 import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
+import { RoadmapTrackingCard } from "@/components/dashboard/RoadmapTrackingCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
