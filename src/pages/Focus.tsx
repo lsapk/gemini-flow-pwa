@@ -80,19 +80,25 @@ export default function Focus() {
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => { 
-          if (prev <= 1) { setIsActive(false); handleTimerComplete(); return 0; } 
-          const n = prev - 1; 
-          saveSessionState({ timeLeft: n }); 
-          return n; 
-        });
-      }, 1000);
-    }
-    return () => { if (interval) clearInterval(interval); };
+    if (!isActive || timeLeft <= 0) return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        const n = Math.max(0, prev - 1);
+        if (n > 0) saveSessionState({ timeLeft: n });
+        return n;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [isActive, timeLeft]);
+
+  // Detect completion exactly once when the timer reaches 0
+  useEffect(() => {
+    if (isActive && timeLeft === 0 && currentSessionId && !completingRef.current) {
+      completingRef.current = true;
+      setIsActive(false);
+      handleTimerComplete();
+    }
+  }, [timeLeft, isActive, currentSessionId]);
 
   useEffect(() => {
     if (isPipActive && canvasRef.current) {
