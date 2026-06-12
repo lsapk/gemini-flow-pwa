@@ -113,6 +113,7 @@ export default function Focus() {
     if (!sessionTitle.trim()) { toast({ title: "Titre requis", description: "Veuillez entrer un titre pour votre session.", variant: "destructive" }); return; }
     if (!user) return;
     const sessionId = `focus_${Date.now()}`; const startTime = new Date();
+    completingRef.current = false;
     setIsActive(true); setCurrentSessionId(sessionId); setTimeLeft(duration * 60);
     localStorage.setItem('active_focus_session', JSON.stringify({ id: sessionId, title: sessionTitle, duration, startTime: startTime.getTime(), isActive: true, timeLeft: duration * 60, userId: user.id }));
     sound.playTimerStart();
