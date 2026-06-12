@@ -141,17 +141,20 @@ export default function Focus() {
   };
 
   const handleTimerComplete = async () => {
-    if (!currentSessionId || !user) return;
-    const raw = localStorage.getItem('active_focus_session'); if (!raw) return;
-    const sd: ActiveFocusSession = JSON.parse(raw);
+    if (!currentSessionId || !user) { resetSession(); return; }
+    const raw = localStorage.getItem('active_focus_session');
+    const sd: ActiveFocusSession | null = raw ? JSON.parse(raw) : null;
+    const savedDuration = sd?.duration ?? duration;
+    const savedTitle = sd?.title ?? sessionTitle;
+    const savedStart = sd?.startTime ?? Date.now() - savedDuration * 60000;
     try {
-      await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: sd.duration, started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
+      await supabase.from('focus_sessions').insert({ user_id: user.id, title: savedTitle, duration: savedDuration, started_at: new Date(savedStart).toISOString(), completed_at: new Date().toISOString() });
       sound.playTimerComplete();
-      toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${duration} minutes complétée.` });
-    } catch (error) { console.error('Error completing session:', error); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); }
+      toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${savedDuration} minutes complétée.` });
+    } catch (error) { console.error('Error completing session:', error); toast({ variant: "destructive", title: "Erreur d'enregistrement" }); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); loadSessionsHistory(); loadWeeklyData(); }
   };
 
-  const resetSession = () => { setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); };
+  const resetSession = () => { completingRef.current = false; setIsActive(false); setCurrentSessionId(null); setTimeLeft(duration * 60); setSessionTitle(""); };
 
   const loadSessionsHistory = async () => { if (!user) return; try { const { data, error } = await supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('started_at', { ascending: false }).limit(10); if (error) throw error; setSessionsHistory(data || []); } catch (error) { console.error(error); } };
 
