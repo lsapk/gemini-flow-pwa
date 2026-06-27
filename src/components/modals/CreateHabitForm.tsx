@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Habit } from "@/types";
 import { Sparkles, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface CreateHabitFormProps {
   onSuccess: () => void;
@@ -35,6 +36,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
     linked_goal_id: 'none',
     days_of_week: [] as number[]
   });
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [userGroups, setUserGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
 
@@ -54,6 +57,7 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         days_of_week: habit.days_of_week || []
       });
       fetchHabitGoalLink(habit.id);
+      fetchHabitGroups(habit.id);
     } else {
       setFormData({
         title: '',
@@ -66,7 +70,19 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       });
     }
     fetchGoals();
+    fetchUserGroups();
   }, [habit]);
+
+  const fetchUserGroups = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('groups').select('id, name');
+    if (data) setUserGroups(data);
+  };
+
+  const fetchHabitGroups = async (habitId: string) => {
+    const { data } = await supabase.from('shared_habits').select('group_id').eq('habit_id', habitId);
+    if (data) setSelectedGroups(data.map(d => d.group_id));
+  };
 
   const fetchHabitGoalLink = async (habitId: string) => {
     if (!user) return;
@@ -149,6 +165,26 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         if (error) throw error;
         toast({ title: "Habitude créée", description: "Votre nouvelle habitude a été créée avec succès." });
       }
+
+      if (!habit) {
+        const { data: lastHabit } = await supabase.from('habits').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).single();
+        if (lastHabit) {
+          await supabase.from('shared_habits').delete().eq('habit_id', lastHabit.id);
+          if (selectedGroups.length > 0) {
+            await supabase.from('shared_habits').insert(
+              selectedGroups.map(groupId => ({ habit_id: lastHabit.id, group_id: groupId }))
+            );
+          }
+        }
+      } else {
+        await supabase.from('shared_habits').delete().eq('habit_id', habit.id);
+        if (selectedGroups.length > 0) {
+          await supabase.from('shared_habits').insert(
+            selectedGroups.map(groupId => ({ habit_id: habit.id, group_id: groupId }))
+          );
+        }
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Error saving habit:', error);
@@ -310,6 +346,30 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
           </SelectContent>
         </Select>
       </div>
+
+      {userGroups.length > 0 && (
+        <div className="space-y-2">
+          <Label>Partager avec des groupes</Label>
+          <div className="flex flex-wrap gap-2">
+            {userGroups.map(group => (
+              <Badge
+                key={group.id}
+                variant={selectedGroups.includes(group.id) ? "default" : "outline"}
+                className="cursor-pointer py-1.5 px-3 rounded-lg"
+                onClick={() => {
+                  setSelectedGroups(prev =>
+                    prev.includes(group.id)
+                      ? prev.filter(id => id !== group.id)
+                      : [...prev, group.id]
+                  );
+                }}
+              >
+                {group.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Sauvegarde..." : (habit ? "Modifier" : "Créer")}

@@ -30,11 +30,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // First-time onboarding: redirect to Auto-Pilot IA
+    // First-time onboarding: redirect to Auto-Pilot IA (merged into AI Assistant)
     const ONBOARDING_KEY = "deepflow_onboarding_pending";
     if (localStorage.getItem(ONBOARDING_KEY)) {
       localStorage.removeItem(ONBOARDING_KEY);
-      navigate("/autopilot?onboarding=1", { replace: true });
+      navigate("/ai-assistant?tab=autopilot&onboarding=1", { replace: true });
       return;
     }
 

@@ -39,6 +39,7 @@ export interface Task {
   user_id: string;
   created_at?: string;
   updated_at?: string;
+  linked_goal_id?: string | null;
 }
 
 export interface JournalEntry {

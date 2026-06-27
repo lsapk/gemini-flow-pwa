@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Goal } from "@/types";
 import { Sparkles, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface CreateGoalFormProps {
   onSuccess: () => void;
@@ -25,6 +26,8 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
   const [category, setCategory] = useState("");
   const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [userGroups, setUserGroups] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const { suggest, isLoading: isAILoading } = useAIItemAssistant();
@@ -36,8 +39,21 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
       setCategory(initialGoal.category);
       setProgress(initialGoal.progress || 0);
       setCompleted(initialGoal.completed);
+      fetchGoalGroups(initialGoal.id);
     }
+    fetchUserGroups();
   }, [initialGoal]);
+
+  const fetchUserGroups = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('groups').select('id, name');
+    if (data) setUserGroups(data);
+  };
+
+  const fetchGoalGroups = async (goalId: string) => {
+    const { data } = await supabase.from('shared_goals').select('group_id').eq('goal_id', goalId);
+    if (data) setSelectedGroups(data.map(d => d.group_id));
+  };
 
   const handleAISuggest = async () => {
     if (!title.trim()) {
@@ -80,6 +96,25 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
       }
 
       if (error) throw error;
+
+      if (!initialGoal) {
+        const { data: lastGoal } = await supabase.from('goals').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).single();
+        if (lastGoal) {
+          await supabase.from('shared_goals').delete().eq('goal_id', lastGoal.id);
+          if (selectedGroups.length > 0) {
+            await supabase.from('shared_goals').insert(
+              selectedGroups.map(groupId => ({ goal_id: lastGoal.id, group_id: groupId }))
+            );
+          }
+        }
+      } else {
+        await supabase.from('shared_goals').delete().eq('goal_id', initialGoal.id);
+        if (selectedGroups.length > 0) {
+          await supabase.from('shared_goals').insert(
+            selectedGroups.map(groupId => ({ goal_id: initialGoal.id, group_id: groupId }))
+          );
+        }
+      }
 
       toast.success(initialGoal ? 'Objectif modifié !' : 'Objectif créé !');
       onSuccess();
@@ -180,6 +215,30 @@ export default function CreateGoalForm({ onSuccess, initialGoal }: CreateGoalFor
             <Label htmlFor="completed">Objectif terminé</Label>
           </div>
         </>
+      )}
+
+      {userGroups.length > 0 && (
+        <div className="space-y-2">
+          <Label>Partager avec des groupes</Label>
+          <div className="flex flex-wrap gap-2">
+            {userGroups.map(group => (
+              <Badge
+                key={group.id}
+                variant={selectedGroups.includes(group.id) ? "default" : "outline"}
+                className="cursor-pointer py-1.5 px-3 rounded-lg"
+                onClick={() => {
+                  setSelectedGroups(prev =>
+                    prev.includes(group.id)
+                      ? prev.filter(id => id !== group.id)
+                      : [...prev, group.id]
+                  );
+                }}
+              >
+                {group.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
       )}
       
       <Button type="submit" disabled={isSubmitting || !title.trim() || !category} className="w-full">
