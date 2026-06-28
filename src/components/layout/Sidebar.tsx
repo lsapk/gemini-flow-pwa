@@ -15,7 +15,8 @@ import {
   Calendar,
   Shield,
   Sparkles,
-  Trophy
+  Trophy,
+  Users
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -41,8 +42,8 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Calendar, label: "Calendrier", path: "/calendar" },
     { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
     { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
-    { icon: Sparkles, label: "Roadmap IA", path: "/autopilot" },
     { icon: Trophy, label: "Classement", path: "/leaderboard" },
+    { icon: Users, label: "Groupes", path: "/groups" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +47,7 @@ const QUICK_ACTIONS = [
 
 export default function AIAssistant() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { credits: aiCredits, isLoading: creditsLoading, isAdmin: isAIAdmin } = useAICredits();
   const { canUseFeature, getRemainingUses, trackUsage, isPremium } = useSubscription();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,13 +56,28 @@ export default function AIAssistant() {
   const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('analysis');
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["chat", "autopilot", "analysis", "profile"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (activeTab === 'analysis') window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setSearchParams(prev => {
+      prev.set("tab", tabId);
+      return prev;
+    });
+  };
 
   const {
     habitsData, focusData,
@@ -220,7 +237,7 @@ export default function AIAssistant() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-300",
                 activeTab === tab.id

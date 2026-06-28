@@ -32,6 +32,8 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
   const [dueDate, setDueDate] = useState("");
   const [linkedGoalId, setLinkedGoalId] = useState("none");
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [userGroups, setUserGroups] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const { suggest, isLoading: isAILoading } = useAIItemAssistant();
@@ -42,10 +44,27 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setDescription(task.description || "");
       setPriority(task.priority);
       setDueDate(task.due_date ? toLocalDateKey(new Date(task.due_date)) : "");
-      fetchTaskGoalLink(task.id);
+      // Don't call fetchTaskGoalLink here because we already have linked_goal_id in the Task type
+      // and it avoids extra queries. Also ensure the Task type has linked_goal_id.
+      if ('linked_goal_id' in task && task.linked_goal_id) {
+        setLinkedGoalId(task.linked_goal_id);
+      }
+      fetchTaskGroups(task.id);
     }
     fetchGoals();
+    fetchUserGroups();
   }, [task]);
+
+  const fetchUserGroups = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('groups').select('id, name');
+    if (data) setUserGroups(data);
+  };
+
+  const fetchTaskGroups = async (taskId: string) => {
+    const { data } = await supabase.from('shared_tasks').select('group_id').eq('task_id', taskId);
+    if (data) setSelectedGroups(data.map(d => d.group_id));
+  };
 
   const fetchTaskGoalLink = async (taskId: string) => {
     if (!user) return;
@@ -109,11 +128,12 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
 
       let error;
       if (task) {
-        ({ error } = await supabase
+        // Ensure we are updating the correct row and only for the current user
+        const { error: updateError } = await supabase
           .from('tasks')
           .update(taskData)
-          .eq('id', task.id)
-          .eq('user_id', user.id));
+          .match({ id: task.id, user_id: user.id });
+        error = updateError;
       } else {
         ({ error } = await supabase
           .from('tasks')
@@ -121,6 +141,21 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       }
 
       if (error) throw error;
+
+      const taskId = task ? task.id : (error as any)?.data?.[0]?.id;
+
+      if (!error) {
+        const finalTaskId = task ? task.id : (await supabase.from('tasks').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).single()).data?.id;
+
+        if (finalTaskId) {
+          await supabase.from('shared_tasks').delete().eq('task_id', finalTaskId);
+          if (selectedGroups.length > 0) {
+            await supabase.from('shared_tasks').insert(
+              selectedGroups.map(groupId => ({ task_id: finalTaskId, group_id: groupId }))
+            );
+          }
+        }
+      }
 
       toast.success(task ? 'Tâche modifiée !' : 'Tâche créée !');
       onSuccess();
@@ -222,6 +257,30 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
           </SelectContent>
         </Select>
       </div>
+
+      {userGroups.length > 0 && (
+        <div className="space-y-2">
+          <Label>Partager avec des groupes</Label>
+          <div className="flex flex-wrap gap-2">
+            {userGroups.map(group => (
+              <Badge
+                key={group.id}
+                variant={selectedGroups.includes(group.id) ? "default" : "outline"}
+                className="cursor-pointer py-1.5 px-3 rounded-lg"
+                onClick={() => {
+                  setSelectedGroups(prev =>
+                    prev.includes(group.id)
+                      ? prev.filter(id => id !== group.id)
+                      : [...prev, group.id]
+                  );
+                }}
+              >
+                {group.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
       
       <Button type="submit" disabled={isSubmitting || !title.trim()} className="w-full">
         {isSubmitting ? "Sauvegarde..." : task ? "Modifier la tâche" : "Créer la tâche"}
