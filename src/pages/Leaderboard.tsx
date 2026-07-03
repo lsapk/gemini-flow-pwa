@@ -222,7 +222,7 @@ export default function Leaderboard() {
 
                     <div className="space-y-1 mb-6 px-4 w-full">
                       <div className="text-lg font-bold truncate text-white">{r.display_name}</div>
-                      {r.is_me && <Badge variant="primary" className="bg-primary/20 text-primary border-primary/30 rounded-lg text-[10px] uppercase tracking-widest font-black">Vous</Badge>}
+                      {r.is_me && <Badge variant="default" className="bg-primary/20 text-primary border-primary/30 rounded-lg text-[10px] uppercase tracking-widest font-black">Vous</Badge>}
                     </div>
 
                     <div className="flex flex-col items-center">
