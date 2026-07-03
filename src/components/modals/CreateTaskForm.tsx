@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Task } from "@/types";
 import { Sparkles, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface CreateTaskFormProps {
   onSuccess: () => void;

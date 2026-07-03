@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, UserPlus, MessageSquare, Target, CheckSquare,
   Flame, TrendingUp, Send, Settings, Brain, Crown, Plus,
-  Search, Mail, CheckCircle2, XCircle, Loader2, ChevronRight, Sparkles, Eye
+  Search, Mail, CheckCircle2, XCircle, Loader2, Sparkles, Eye, RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
