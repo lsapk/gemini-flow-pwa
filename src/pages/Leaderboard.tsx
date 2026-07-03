@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trophy, Medal, Crown, Flame, Target, BookOpen, Brain, CheckSquare, Sparkles, TrendingUp, Star } from "lucide-react";
+import { Trophy, Medal, Crown, Flame, Target, BookOpen, Brain, CheckSquare, Sparkles, TrendingUp, Star, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
