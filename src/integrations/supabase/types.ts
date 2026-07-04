@@ -1340,6 +1340,7 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          invite_code: string | null
           name: string
           updated_at: string
         }
@@ -1348,6 +1349,7 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
+          invite_code?: string | null
           name: string
           updated_at?: string
         }
@@ -1356,6 +1358,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          invite_code?: string | null
           name?: string
           updated_at?: string
         }
@@ -3634,6 +3637,16 @@ export type Database = {
       consume_ai_credit: { Args: { amount: number }; Returns: number }
       decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       encrypt_token: { Args: { token: string }; Returns: string }
+      generate_group_invite_code: { Args: never; Returns: string }
+      get_group_by_code: {
+        Args: { _code: string }
+        Returns: {
+          description: string
+          id: string
+          member_count: number
+          name: string
+        }[]
+      }
       get_leaderboard: {
         Args: { p_limit?: number; p_period?: string }
         Returns: {
@@ -3663,6 +3676,7 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      join_group_by_code: { Args: { _code: string }; Returns: string }
       reset_my_daily_ai_usage: { Args: never; Returns: undefined }
       sync_offline_item: {
         Args: {
