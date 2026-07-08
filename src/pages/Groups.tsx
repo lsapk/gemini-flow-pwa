@@ -186,10 +186,7 @@ export default function Groups() {
       return;
     }
 
-    const { error: memErr } = await supabase.from('group_members')
-      .insert({ group_id: data.id, user_id: user.id, role: 'admin' });
-    if (memErr) console.error(memErr);
-
+    // created_by and admin membership are set automatically by DB triggers
     setGroups(prev => [...prev, data]);
     setSelectedGroupId(data.id);
     setNewGroupName(""); setNewGroupDesc("");
