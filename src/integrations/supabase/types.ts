@@ -1366,25 +1366,25 @@ export type Database = {
       }
       habit_completions: {
         Row: {
-          completed_date: string | null
-          created_at: string | null
+          completed_date: string
+          created_at: string
           habit_id: string | null
           id: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
-          completed_date?: string | null
-          created_at?: string | null
+          completed_date?: string
+          created_at?: string
           habit_id?: string | null
           id?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
-          completed_date?: string | null
-          created_at?: string | null
+          completed_date?: string
+          created_at?: string
           habit_id?: string | null
           id?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -3635,6 +3635,24 @@ export type Database = {
         Returns: number
       }
       consume_ai_credit: { Args: { amount: number }; Returns: number }
+      create_group: {
+        Args: { _description?: string; _name: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          invite_code: string | null
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decrypt_token: { Args: { encrypted_token: string }; Returns: string }
       encrypt_token: { Args: { token: string }; Returns: string }
       generate_group_invite_code: { Args: never; Returns: string }

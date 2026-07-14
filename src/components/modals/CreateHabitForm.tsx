@@ -151,38 +151,49 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         linked_goal_id: formData.linked_goal_id === 'none' ? null : formData.linked_goal_id,
         days_of_week: formData.days_of_week.length > 0 ? formData.days_of_week : null
       };
+      const shareHabitWithGroups = async (habitId: string) => {
+        const { error: deleteError } = await supabase
+          .from('shared_habits')
+          .delete()
+          .eq('habit_id', habitId);
+
+        if (deleteError) throw deleteError;
+
+        if (selectedGroups.length === 0) return;
+
+        const { error: shareError } = await supabase.from('shared_habits').insert(
+          selectedGroups.map(groupId => ({
+            habit_id: habitId,
+            group_id: groupId,
+            shared_by: user.id,
+          }))
+        );
+
+        if (shareError) throw shareError;
+      };
 
       if (habit) {
-        const { error } = await supabase
+        const { data: updatedHabit, error } = await supabase
           .from('habits')
           .update({ ...habitData, updated_at: new Date().toISOString() })
           .eq('id', habit.id)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
         if (error) throw error;
+        if (!updatedHabit) throw new Error("Habitude introuvable ou non autorisée");
+        await shareHabitWithGroups(updatedHabit.id);
         toast({ title: "Habitude modifiée", description: "Votre habitude a été mise à jour avec succès." });
       } else {
-        const { error } = await supabase.from('habits').insert(habitData);
+        const { data: createdHabit, error } = await supabase
+          .from('habits')
+          .insert(habitData)
+          .select('id')
+          .single();
         if (error) throw error;
+        if (!createdHabit) throw new Error("Création de l'habitude impossible");
+        await shareHabitWithGroups(createdHabit.id);
         toast({ title: "Habitude créée", description: "Votre nouvelle habitude a été créée avec succès." });
-      }
-
-      if (!habit) {
-        const { data: lastHabit } = await supabase.from('habits').select('id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).single();
-        if (lastHabit) {
-          await supabase.from('shared_habits').delete().eq('habit_id', lastHabit.id);
-          if (selectedGroups.length > 0) {
-            await supabase.from('shared_habits').insert(
-              selectedGroups.map(groupId => ({ habit_id: lastHabit.id, group_id: groupId }))
-            );
-          }
-        }
-      } else {
-        await supabase.from('shared_habits').delete().eq('habit_id', habit.id);
-        if (selectedGroups.length > 0) {
-          await supabase.from('shared_habits').insert(
-            selectedGroups.map(groupId => ({ habit_id: habit.id, group_id: groupId }))
-          );
-        }
       }
 
       onSuccess();
