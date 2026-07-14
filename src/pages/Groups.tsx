@@ -175,9 +175,10 @@ export default function Groups() {
   const handleCreateGroup = async () => {
     if (!newGroupName.trim() || !user) return;
     setCreating(true);
-    const { data, error } = await supabase.from('groups')
-      .insert({ name: newGroupName.trim(), description: newGroupDesc.trim() || null, created_by: user.id })
-      .select().single();
+    const { data, error } = await supabase.rpc('create_group', {
+      _name: newGroupName.trim(),
+      _description: newGroupDesc.trim() || null,
+    });
 
     if (error || !data) {
       console.error(error);
@@ -186,9 +187,9 @@ export default function Groups() {
       return;
     }
 
-    // created_by and admin membership are set automatically by DB triggers
-    setGroups(prev => [...prev, data]);
-    setSelectedGroupId(data.id);
+    const createdGroup = Array.isArray(data) ? data[0] : data;
+    setGroups(prev => [...prev, createdGroup]);
+    setSelectedGroupId(createdGroup.id);
     setNewGroupName(""); setNewGroupDesc("");
     setShowCreateDialog(false);
     setCreating(false);
