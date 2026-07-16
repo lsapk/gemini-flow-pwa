@@ -176,7 +176,7 @@ export default function Groups() {
     if (!newGroupName.trim() || !user) return;
     setCreating(true);
     const { data, error } = await supabase.from('groups')
-      .insert({ name: newGroupName.trim(), description: newGroupDesc.trim() || null })
+      .insert({ name: newGroupName.trim(), description: newGroupDesc.trim() || null, created_by: user.id })
       .select().single();
 
     if (error || !data) {
