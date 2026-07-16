@@ -228,7 +228,11 @@ export default function Habits() {
   const toggleArchive = async (habitId: string, isArchived: boolean) => {
     if (!user) return;
     try {
-      const { error } = await supabase.from('habits').update({ is_archived: !isArchived }).eq('id', habitId);
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_archived: !isArchived })
+        .eq('id', habitId)
+        .eq('user_id', user.id);
       if (error) throw error;
       toast.success(isArchived ? 'Habitude restaurée !' : 'Habitude archivée !');
       fetchHabits();
@@ -278,7 +282,7 @@ export default function Habits() {
 
 
         const newStreak = await calculateStreak(habitId, user.id, normalizedDaysOfWeek);
-        await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId);
+        await supabase.from('habits').update({ streak: newStreak }).eq('id', habitId).eq('user_id', user.id);
         updateHabitInLists(habitId, { streak: newStreak });
 
         toast.info("L'habitude n'est plus marquée comme faite.");
@@ -300,7 +304,7 @@ export default function Habits() {
         await supabase.from('habits').update({ 
           last_completed_at: completedAt, 
           streak: newStreak 
-        }).eq('id', habitId);
+        }).eq('id', habitId).eq('user_id', user.id);
         updateHabitInLists(habitId, {
           streak: newStreak,
           last_completed_at: completedAt

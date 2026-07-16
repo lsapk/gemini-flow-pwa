@@ -175,10 +175,9 @@ export default function Groups() {
   const handleCreateGroup = async () => {
     if (!newGroupName.trim() || !user) return;
     setCreating(true);
-    const { data, error } = await supabase.rpc('create_group', {
-      _name: newGroupName.trim(),
-      _description: newGroupDesc.trim() || null,
-    });
+    const { data, error } = await supabase.from('groups')
+      .insert({ name: newGroupName.trim(), description: newGroupDesc.trim() || null, created_by: user.id })
+      .select().single();
 
     if (error || !data) {
       console.error(error);
@@ -187,9 +186,8 @@ export default function Groups() {
       return;
     }
 
-    const createdGroup = Array.isArray(data) ? data[0] : data;
-    setGroups(prev => [...prev, createdGroup]);
-    setSelectedGroupId(createdGroup.id);
+    setGroups(prev => [...prev, data]);
+    setSelectedGroupId(data.id);
     setNewGroupName(""); setNewGroupDesc("");
     setShowCreateDialog(false);
     setCreating(false);
