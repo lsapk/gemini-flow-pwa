@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Habit } from "@/types";
 import { Sparkles, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface CreateHabitFormProps {
   onSuccess: () => void;
@@ -36,8 +35,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
     linked_goal_id: 'none',
     days_of_week: [] as number[]
   });
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [userGroups, setUserGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
 
@@ -57,7 +54,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         days_of_week: habit.days_of_week || []
       });
       fetchHabitGoalLink(habit.id);
-      fetchHabitGroups(habit.id);
     } else {
       setFormData({
         title: '',
@@ -70,19 +66,9 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
       });
     }
     fetchGoals();
-    fetchUserGroups();
   }, [habit]);
 
-  const fetchUserGroups = async () => {
-    if (!user) return;
-    const { data } = await supabase.from('groups').select('id, name');
-    if (data) setUserGroups(data);
-  };
 
-  const fetchHabitGroups = async (habitId: string) => {
-    const { data } = await supabase.from('shared_habits').select('group_id').eq('habit_id', habitId);
-    if (data) setSelectedGroups(data.map(d => d.group_id));
-  };
 
   const fetchHabitGoalLink = async (habitId: string) => {
     if (!user) return;
@@ -151,26 +137,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         linked_goal_id: formData.linked_goal_id === 'none' ? null : formData.linked_goal_id,
         days_of_week: formData.days_of_week.length > 0 ? formData.days_of_week : null
       };
-      const shareHabitWithGroups = async (habitId: string) => {
-        const { error: deleteError } = await supabase
-          .from('shared_habits')
-          .delete()
-          .eq('habit_id', habitId);
-
-        if (deleteError) throw deleteError;
-
-        if (selectedGroups.length === 0) return;
-
-        const { error: shareError } = await supabase.from('shared_habits').insert(
-          selectedGroups.map(groupId => ({
-            habit_id: habitId,
-            group_id: groupId,
-            shared_by: user.id,
-          }))
-        );
-
-        if (shareError) throw shareError;
-      };
 
       if (habit) {
         const { data: updatedHabit, error } = await supabase
@@ -182,7 +148,6 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
           .single();
         if (error) throw error;
         if (!updatedHabit) throw new Error("Habitude introuvable ou non autorisée");
-        await shareHabitWithGroups(updatedHabit.id);
         toast({ title: "Habitude modifiée", description: "Votre habitude a été mise à jour avec succès." });
       } else {
         const { data: createdHabit, error } = await supabase
@@ -192,9 +157,9 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
           .single();
         if (error) throw error;
         if (!createdHabit) throw new Error("Création de l'habitude impossible");
-        await shareHabitWithGroups(createdHabit.id);
         toast({ title: "Habitude créée", description: "Votre nouvelle habitude a été créée avec succès." });
       }
+
 
       onSuccess();
     } catch (error) {
@@ -358,29 +323,8 @@ export default function CreateHabitForm({ onSuccess, habit }: CreateHabitFormPro
         </Select>
       </div>
 
-      {userGroups.length > 0 && (
-        <div className="space-y-2">
-          <Label>Partager avec des groupes</Label>
-          <div className="flex flex-wrap gap-2">
-            {userGroups.map(group => (
-              <Badge
-                key={group.id}
-                variant={selectedGroups.includes(group.id) ? "default" : "outline"}
-                className="cursor-pointer py-1.5 px-3 rounded-lg"
-                onClick={() => {
-                  setSelectedGroups(prev =>
-                    prev.includes(group.id)
-                      ? prev.filter(id => id !== group.id)
-                      : [...prev, group.id]
-                  );
-                }}
-              >
-                {group.name}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
+
+
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Sauvegarde..." : (habit ? "Modifier" : "Créer")}
