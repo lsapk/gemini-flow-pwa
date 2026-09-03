@@ -13,7 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAIItemAssistant } from "@/hooks/useAIItemAssistant";
 import { Goal } from "@/types";
 import { Sparkles, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface CreateGoalFormProps {
   onSuccess: () => void;
