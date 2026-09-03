@@ -42,8 +42,6 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Calendar, label: "Calendrier", path: "/calendar" },
     { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
     { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
-    { icon: Trophy, label: "Classement", path: "/leaderboard" },
-    { icon: Users, label: "Groupes", path: "/groups" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
   ];
 

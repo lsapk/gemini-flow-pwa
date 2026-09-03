@@ -32,8 +32,6 @@ const Support = lazy(() => import("./pages/Support"));
 const Developers = lazy(() => import("./pages/Developers"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const AutoPilot = lazy(() => import("./pages/AutoPilot"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Groups = lazy(() => import("./pages/Groups"));
 
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
@@ -118,8 +116,6 @@ function AppContent() {
                         <Route path="/support" element={<Support />} />
                         <Route path="/developers" element={<Developers />} />
                         <Route path="/autopilot" element={<Navigate to="/ai-assistant" replace />} />
-                        <Route path="/leaderboard" element={<Leaderboard />} />
-                        <Route path="/groups" element={<Groups />} />
                       </Route>
                       
                       {/* Redirects */}
