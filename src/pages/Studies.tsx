@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { GraduationCap, Plus, Trash2, Wand2, CalendarClock, BookOpen, Loader2, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { toLocalDateKey } from "@/lib/dateUtils";
+import { toLocalDateKey } from "@/utils/dateUtils";
 
 type Subject = { id: string; name: string; color: string | null; teacher: string | null; coefficient: number; room: string | null };
 type Assignment = { id: string; title: string; description: string | null; subject_id: string | null; kind: string; is_project: boolean; due_date: string | null; estimated_minutes: number | null; status: string };

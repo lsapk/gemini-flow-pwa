@@ -30,6 +30,7 @@ const Calendar = lazy(() => import("./pages/Calendar"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Support = lazy(() => import("./pages/Support"));
 const Developers = lazy(() => import("./pages/Developers"));
+const Studies = lazy(() => import("./pages/Studies"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const AutoPilot = lazy(() => import("./pages/AutoPilot"));
 
@@ -115,6 +116,7 @@ function AppContent() {
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/support" element={<Support />} />
                         <Route path="/developers" element={<Developers />} />
+                        <Route path="/etudes" element={<Studies />} />
                         <Route path="/autopilot" element={<Navigate to="/ai-assistant" replace />} />
                       </Route>
                       
