@@ -16,10 +16,12 @@ import {
   Shield,
   Sparkles
 
+  GraduationCap,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudentMode } from "@/hooks/useStudentMode";
 import deepflowLogo from "@/assets/deepflow-logo.png";
 
 interface SidebarProps {
@@ -31,6 +33,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, isAdmin } = useAuth();
+  const studentMode = useStudentMode();
 
   const navItems = [
     { icon: Home, label: "Tableau de bord", path: "/dashboard" },
@@ -39,6 +42,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     { icon: Target, label: "Objectifs", path: "/goals" },
     { icon: Timer, label: "Focus", path: "/focus" },
     { icon: Calendar, label: "Calendrier", path: "/calendar" },
+    ...(studentMode ? [{ icon: GraduationCap, label: "Études", path: "/etudes" }] : []),
     { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
     { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
     { icon: Settings, label: "Paramètres", path: "/settings" },
