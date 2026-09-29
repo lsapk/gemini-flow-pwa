@@ -497,6 +497,106 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_milestones: {
+        Row: {
+          assignment_id: string
+          completed: boolean
+          created_at: string
+          due_date: string | null
+          estimated_minutes: number | null
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          completed?: boolean
+          created_at?: string
+          due_date?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          completed?: boolean
+          created_at?: string
+          due_date?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_milestones_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          estimated_minutes: number | null
+          id: string
+          is_project: boolean
+          kind: string
+          status: string
+          subject_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          is_project?: boolean
+          kind?: string
+          status?: string
+          subject_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          is_project?: boolean
+          kind?: string
+          status?: string
+          subject_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_identity: {
         Row: {
           createdAt: string
@@ -635,6 +735,50 @@ export type Database = {
         }
         Relationships: []
       }
+      class_schedule: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          room: string | null
+          start_time: string
+          subject_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          room?: string | null
+          start_time: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          room?: string | null
+          start_time?: string
+          subject_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_schedule_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credentials_entity: {
         Row: {
           createdAt: string
@@ -739,6 +883,47 @@ export type Database = {
           updatedAt?: string
         }
         Relationships: []
+      }
+      exams: {
+        Row: {
+          chapters: string | null
+          created_at: string
+          exam_date: string
+          id: string
+          subject_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapters?: string | null
+          created_at?: string
+          exam_date: string
+          id?: string
+          subject_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapters?: string | null
+          created_at?: string
+          exam_date?: string
+          id?: string
+          subject_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       execution_annotation_tags: {
         Row: {
@@ -920,6 +1105,7 @@ export type Database = {
           duration: number
           id: string
           started_at: string | null
+          subject_id: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -930,6 +1116,7 @@ export type Database = {
           duration: number
           id?: string
           started_at?: string | null
+          subject_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -940,11 +1127,20 @@ export type Database = {
           duration?: number
           id?: string
           started_at?: string | null
+          subject_id?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "focus_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       folder: {
         Row: {
@@ -1028,6 +1224,7 @@ export type Database = {
           is_archived: boolean | null
           progress: number | null
           sort_order: number | null
+          subject_id: string | null
           target_date: string | null
           title: string
           updated_at: string | null
@@ -1042,6 +1239,7 @@ export type Database = {
           is_archived?: boolean | null
           progress?: number | null
           sort_order?: number | null
+          subject_id?: string | null
           target_date?: string | null
           title: string
           updated_at?: string | null
@@ -1056,12 +1254,21 @@ export type Database = {
           is_archived?: boolean | null
           progress?: number | null
           sort_order?: number | null
+          subject_id?: string | null
           target_date?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "goals_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       good_action_comments: {
         Row: {
@@ -1231,6 +1438,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      grades: {
+        Row: {
+          coefficient: number
+          created_at: string
+          graded_at: string
+          id: string
+          out_of: number
+          subject_id: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          coefficient?: number
+          created_at?: string
+          graded_at?: string
+          id?: string
+          out_of?: number
+          subject_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          coefficient?: number
+          created_at?: string
+          graded_at?: string
+          id?: string
+          out_of?: number
+          subject_id?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grades_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       habit_completions: {
         Row: {
@@ -2244,32 +2498,41 @@ export type Database = {
       }
       subjects: {
         Row: {
+          coefficient: number
           color: string | null
           created_at: string | null
           description: string | null
           id: string
           lessons_count: number | null
           name: string
+          room: string | null
+          teacher: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          coefficient?: number
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           lessons_count?: number | null
           name: string
+          room?: string | null
+          teacher?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          coefficient?: number
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           lessons_count?: number | null
           name?: string
+          room?: string | null
+          teacher?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2472,6 +2735,7 @@ export type Database = {
           parent_task_id: string | null
           priority: string | null
           sort_order: number | null
+          subject_id: string | null
           synced_at: string | null
           title: string
           updated_at: string | null
@@ -2489,6 +2753,7 @@ export type Database = {
           parent_task_id?: string | null
           priority?: string | null
           sort_order?: number | null
+          subject_id?: string | null
           synced_at?: string | null
           title: string
           updated_at?: string | null
@@ -2506,6 +2771,7 @@ export type Database = {
           parent_task_id?: string | null
           priority?: string | null
           sort_order?: number | null
+          subject_id?: string | null
           synced_at?: string | null
           title?: string
           updated_at?: string | null
@@ -2524,6 +2790,13 @@ export type Database = {
             columns: ["parent_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -2958,6 +3231,7 @@ export type Database = {
           language: string | null
           notifications_enabled: boolean | null
           sound_enabled: boolean | null
+          student_mode: boolean
           theme: string | null
           unlocked_features: Json | null
           updated_at: string | null
@@ -2973,6 +3247,7 @@ export type Database = {
           language?: string | null
           notifications_enabled?: boolean | null
           sound_enabled?: boolean | null
+          student_mode?: boolean
           theme?: string | null
           unlocked_features?: Json | null
           updated_at?: string | null
@@ -2988,6 +3263,7 @@ export type Database = {
           language?: string | null
           notifications_enabled?: boolean | null
           sound_enabled?: boolean | null
+          student_mode?: boolean
           theme?: string | null
           unlocked_features?: Json | null
           updated_at?: string | null
