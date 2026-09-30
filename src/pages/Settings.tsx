@@ -34,7 +34,7 @@ import {
   Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain,
   Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
   Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
-  Key, Trash2, Download, BarChart3
+  Key, Trash2, Download, BarChart3,
   GraduationCap,
 } from "lucide-react";
 
