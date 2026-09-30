@@ -132,3 +132,6 @@ verify_jwt = true
 
 [functions.ai-student]
 verify_jwt = true
+
+[functions.ical-proxy]
+verify_jwt = true
