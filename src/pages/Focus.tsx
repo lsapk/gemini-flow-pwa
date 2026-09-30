@@ -1,3 +1,4 @@
+import { useStudentMode } from "@/hooks/useStudentMode";
 import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toLocalDateKey } from "@/utils/dateUtils";
@@ -37,6 +38,15 @@ export default function Focus() {
   const [completedSessionsToday, setCompletedSessionsToday] = useState(0);
   const [minutesToday, setMinutesToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const studentMode = useStudentMode();
+  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+  const [subjectId, setSubjectId] = useState<string>("");
+  const subjectRef = useRef<string>("");
+  useEffect(() => { subjectRef.current = subjectId; }, [subjectId]);
+  useEffect(() => {
+    if (!user || !studentMode) return;
+    (supabase as any).from('subjects').select('id, name').eq('user_id', user.id).order('name').then(({ data }: any) => setSubjects(data || []));
+  }, [user, studentMode]);
   const [sessionsHistory, setSessionsHistory] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ name: string; minutes: number }[]>([]);
   const [isPipActive, setIsPipActive] = useState(false);
@@ -133,7 +143,7 @@ export default function Focus() {
     const raw = localStorage.getItem('active_focus_session'); if (!raw) return;
     const sd: ActiveFocusSession = JSON.parse(raw); const completed = sd.duration * 60 - timeLeft;
     try {
-      const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: Math.floor(completed / 60), started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString() });
+      const { error } = await supabase.from('focus_sessions').insert({ user_id: user.id, title: sd.title, duration: Math.floor(completed / 60), started_at: new Date(sd.startTime).toISOString(), completed_at: new Date().toISOString(), subject_id: subjectRef.current || null } as any);
       if (error) throw error;
       sound.playDelete();
       toast({ title: "Session arrêtée", description: `Session enregistrée de ${Math.floor(completed / 60)} minutes.` }); loadSessionsToday();
@@ -148,7 +158,7 @@ export default function Focus() {
     const savedTitle = sd?.title ?? sessionTitle;
     const savedStart = sd?.startTime ?? Date.now() - savedDuration * 60000;
     try {
-      await supabase.from('focus_sessions').insert({ user_id: user.id, title: savedTitle, duration: savedDuration, started_at: new Date(savedStart).toISOString(), completed_at: new Date().toISOString() });
+      await supabase.from('focus_sessions').insert({ user_id: user.id, title: savedTitle, duration: savedDuration, started_at: new Date(savedStart).toISOString(), completed_at: new Date().toISOString(), subject_id: subjectRef.current || null } as any);
       sound.playTimerComplete();
       toast({ title: "🎉 Session terminée !", description: `Félicitations ! Session de ${savedDuration} minutes complétée.` });
     } catch (error) { console.error('Error completing session:', error); toast({ variant: "destructive", title: "Erreur d'enregistrement" }); } finally { localStorage.removeItem('active_focus_session'); closePip(); resetSession(); loadSessionsToday(); loadSessionsHistory(); loadWeeklyData(); }
@@ -274,6 +284,12 @@ export default function Focus() {
               <motion.div key="setup" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="w-full space-y-10 flex flex-col items-center">
                 <div className="w-full space-y-4">
                   <Input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="Qu'allez-vous accomplir ?" className="h-14 text-lg text-center rounded-[2rem] bg-card/40 border-primary/20 focus:border-primary/40 focus:ring-primary/20 backdrop-blur-md" />
+                  {studentMode && subjects.length > 0 && (
+                    <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="mt-3 w-full h-11 rounded-2xl bg-card/40 px-4 text-base text-center">
+                      <option value="">Matière (optionnel)</option>
+                      {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  )}
                   <div className="flex flex-wrap justify-center gap-2 px-2">
                     {durationOptions.map((opt) => (
                       <button key={opt} onClick={() => { setDuration(opt); setIsCustomDuration(false); }} className={cn("px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300", duration === opt && !isCustomDuration ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "bg-secondary/40 text-muted-foreground hover:bg-secondary/60")}>{opt}m</button>
