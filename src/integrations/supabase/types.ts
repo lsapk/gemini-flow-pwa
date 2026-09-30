@@ -735,6 +735,36 @@ export type Database = {
         }
         Relationships: []
       }
+      but_grades: {
+        Row: {
+          id: string
+          module_code: string
+          program_id: string
+          semester: number
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          id?: string
+          module_code: string
+          program_id: string
+          semester: number
+          updated_at?: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          id?: string
+          module_code?: string
+          program_id?: string
+          semester?: number
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       class_schedule: {
         Row: {
           created_at: string
@@ -3221,11 +3251,13 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          but_program: string | null
           clock_format: string | null
           created_at: string | null
           dark_mode: boolean | null
           focus_mode: boolean | null
           gemini_api_key: string | null
+          ical_url: string | null
           id: string
           karma_points: number | null
           language: string | null
@@ -3237,11 +3269,13 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          but_program?: string | null
           clock_format?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           focus_mode?: boolean | null
           gemini_api_key?: string | null
+          ical_url?: string | null
           id: string
           karma_points?: number | null
           language?: string | null
@@ -3253,11 +3287,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          but_program?: string | null
           clock_format?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           focus_mode?: boolean | null
           gemini_api_key?: string | null
+          ical_url?: string | null
           id?: string
           karma_points?: number | null
           language?: string | null
