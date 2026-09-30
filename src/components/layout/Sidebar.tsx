@@ -14,7 +14,7 @@ import {
   LogOut,
   Calendar,
   Shield,
-  Sparkles
+  Sparkles,
 
   GraduationCap,
 } from "lucide-react";

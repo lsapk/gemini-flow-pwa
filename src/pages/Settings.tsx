@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { notifyStudentModeChange } from "@/hooks/useStudentMode";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -33,7 +34,8 @@ import {
   Settings as SettingsIcon, User, Bell, Palette, Moon, Sun, Volume2, Zap, Brain,
   Sparkles, LogOut, RefreshCw, Timer, Target, CheckSquare, Flame,
   Info, Mail, Copy, ExternalLink, FileText, Shield, HelpCircle,
-  Key, Trash2, Download, BarChart3
+  Key, Trash2, Download, BarChart3,
+  GraduationCap,
 } from "lucide-react";
 
 export default function Settings() {
@@ -47,7 +49,8 @@ export default function Settings() {
   const [formData, setFormData] = useState({
     notifications_enabled: true,
     sound_enabled: true,
-    focus_mode: false
+    focus_mode: false,
+    student_mode: false
   });
 
   const [stats, setStats] = useState({
@@ -81,7 +84,7 @@ export default function Settings() {
     try {
       const { data, error } = await supabase.from('user_settings').select('*').eq('id', user.id).maybeSingle();
       if (error && error.code !== 'PGRST116') return;
-      if (data) setFormData({ notifications_enabled: data.notifications_enabled ?? true, sound_enabled: data.sound_enabled ?? true, focus_mode: data.focus_mode ?? false });
+      if (data) setFormData({ notifications_enabled: data.notifications_enabled ?? true, sound_enabled: data.sound_enabled ?? true, focus_mode: data.focus_mode ?? false, student_mode: (data as any).student_mode ?? false });
     } catch (error) { console.error('Error fetching settings:', error); }
   };
 
@@ -122,6 +125,7 @@ export default function Settings() {
     const newFormData = { ...formData, [key]: value };
     setFormData(newFormData);
     autoSavePreferences(newFormData);
+    if (key === 'student_mode') notifyStudentModeChange(value);
     if (key === 'sound_enabled') {
       SoundService.getInstance().setEnabled(value);
     }
@@ -357,6 +361,16 @@ export default function Settings() {
                   </div>
                 </div>
                 <Switch checked={formData.focus_mode} onCheckedChange={(checked) => updatePreference('focus_mode', checked)} />
+              </div>
+              <div className="flex items-center justify-between p-3 mt-2 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10"><GraduationCap className="h-4 w-4 text-primary" /></div>
+                  <div>
+                    <span className="text-sm font-medium">Mode Étudiant</span>
+                    <p className="text-xs text-muted-foreground">Ajoute la section Études : devoirs, examens, emploi du temps, notes et coach IA</p>
+                  </div>
+                </div>
+                <Switch checked={formData.student_mode} onCheckedChange={(checked) => updatePreference('student_mode', checked)} />
               </div>
             </CardContent>
           </Card>
