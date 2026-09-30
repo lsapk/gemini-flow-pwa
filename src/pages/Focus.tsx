@@ -38,15 +38,6 @@ export default function Focus() {
   const [completedSessionsToday, setCompletedSessionsToday] = useState(0);
   const [minutesToday, setMinutesToday] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const studentMode = useStudentMode();
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
-  const [subjectId, setSubjectId] = useState<string>("");
-  const subjectRef = useRef<string>("");
-  useEffect(() => { subjectRef.current = subjectId; }, [subjectId]);
-  useEffect(() => {
-    if (!user || !studentMode) return;
-    (supabase as any).from('subjects').select('id, name').eq('user_id', user.id).order('name').then(({ data }: any) => setSubjects(data || []));
-  }, [user, studentMode]);
   const [sessionsHistory, setSessionsHistory] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<{ name: string; minutes: number }[]>([]);
   const [isPipActive, setIsPipActive] = useState(false);
@@ -62,6 +53,15 @@ export default function Focus() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const completingRef = useRef(false);
   const { user } = useAuth();
+  const studentMode = useStudentMode();
+  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+  const [subjectId, setSubjectId] = useState<string>("");
+  const subjectRef = useRef<string>("");
+  useEffect(() => { subjectRef.current = subjectId; }, [subjectId]);
+  useEffect(() => {
+    if (!user || !studentMode) return;
+    (supabase as any).from('subjects').select('id, name').eq('user_id', user.id).order('name').then(({ data }: any) => setSubjects(data || []));
+  }, [user, studentMode]);
   const { toast } = useToast();
   const sound = useSoundService();
 
