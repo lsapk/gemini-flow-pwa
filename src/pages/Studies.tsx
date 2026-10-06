@@ -13,6 +13,8 @@ import { GraduationCap, Plus, Trash2, Wand2, CalendarClock, BookOpen, Loader2, L
 import { toast } from "sonner";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toLocalDateKey } from "@/utils/dateUtils";
+import { IcalSchedule } from "@/components/studies/IcalSchedule";
+import { ButGrades } from "@/components/studies/ButGrades";
 
 type Subject = { id: string; name: string; color: string | null; teacher: string | null; coefficient: number; room: string | null };
 type Assignment = { id: string; title: string; description: string | null; subject_id: string | null; kind: string; is_project: boolean; due_date: string | null; estimated_minutes: number | null; status: string };
@@ -302,6 +304,7 @@ export default function Studies() {
 
         {/* EMPLOI DU TEMPS */}
         <TabsContent value="edt" className="space-y-4">
+          <IcalSchedule />
           <Card>
             <CardHeader><CardTitle className="text-lg">Ajouter un cours</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-5">
@@ -335,6 +338,8 @@ export default function Studies() {
 
         {/* NOTES */}
         <TabsContent value="notes" className="space-y-4">
+          <ButGrades />
+          <h3 className="text-sm font-semibold text-muted-foreground pt-2">Autres notes (contrôles libres)</h3>
           <Card>
             <CardHeader><CardTitle className="text-lg">Ajouter une note</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-6">
