@@ -23,7 +23,7 @@ export default function Privacy() {
       <main className="container mx-auto px-4 py-12 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Politique de Confidentialité</h1>
-          <p className="text-muted-foreground mb-8">Dernière mise à jour : Mars 2026</p>
+          <p className="text-muted-foreground mb-8">Dernière mise à jour : 4 novembre 2026</p>
 
           <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
             <section>
@@ -39,8 +39,9 @@ export default function Privacy() {
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                 <li><strong className="text-foreground">Données d'identification</strong> : email, nom d'utilisateur</li>
                 <li><strong className="text-foreground">Données d'utilisation</strong> : tâches, habitudes, sessions de focus, entrées de journal</li>
-                <li><strong className="text-foreground">Données de gamification</strong> : progression du pingouin, nourriture, accessoires</li>
-                <li><strong className="text-foreground">Données techniques</strong> : type d'appareil, version du navigateur</li>
+                <li><strong className="text-foreground">Données étudiantes</strong> : établissement renseigné, semestres, UE, notes, échéances et événements importés</li>
+                <li><strong className="text-foreground">Connexions facultatives</strong> : autorisations Google Calendar et Tasks, données consultées ou transférées à votre demande</li>
+                <li><strong className="text-foreground">Données techniques</strong> : session de connexion, préférences, état du minuteur et journaux techniques des services d’hébergement</li>
               </ul>
             </section>
 
@@ -63,9 +64,9 @@ export default function Privacy() {
               </p>
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                 <li><strong className="text-foreground">Supabase</strong> : hébergement de la base de données et authentification (UE/US)</li>
-                <li><strong className="text-foreground">Google AI (Gemini)</strong> : fonctionnalités d'IA — données anonymisées</li>
+                <li><strong className="text-foreground">Google AI (Gemini)</strong> : messages et contexte que vous choisissez de transmettre à l’IA. Ces contenus ne sont pas garantis anonymes. Les entrées du journal et réflexions sont exclues sauf activation explicite de leur partage. Le traitement dépend des <a href="https://aistudio.google.com/docs/terms" target="_blank" rel="noopener noreferrer" className="underline">conditions du service Gemini utilisé</a>.</li>
+                <li><strong className="text-foreground">Google Calendar et Tasks</strong> : connexion facultative, révocable depuis Connexions. Les transferts de tâches et modifications de calendrier nécessitent une action de votre part.</li>
                 <li><strong className="text-foreground">Stripe</strong> : traitement sécurisé des paiements par carte bancaire</li>
-                <li><strong className="text-foreground">PayPal</strong> : traitement alternatif des paiements</li>
               </ul>
             </section>
 
@@ -82,9 +83,9 @@ export default function Privacy() {
               <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                 <li><strong className="text-foreground">Accès</strong> : consulter vos données via la page Paramètres</li>
                 <li><strong className="text-foreground">Rectification</strong> : modifier votre profil à tout moment</li>
-                <li><strong className="text-foreground">Suppression</strong> : supprimer votre compte et toutes vos données depuis Paramètres → Données & Compte</li>
-                <li><strong className="text-foreground">Portabilité</strong> : exporter vos données au format JSON depuis Paramètres → Données & Compte</li>
-                <li><strong className="text-foreground">Retrait du consentement</strong> : à tout moment via les paramètres cookies</li>
+                <li><strong className="text-foreground">Suppression</strong> : demander la suppression de votre compte et de vos données à l’adresse de contact ci-dessous</li>
+                <li><strong className="text-foreground">Portabilité</strong> : exporter vos données principales depuis Paramètres et vos données étudiantes depuis Espace étudiant</li>
+                <li><strong className="text-foreground">Connexions et partage IA</strong> : déconnecter Google depuis Connexions et désactiver les options de contexte avant une nouvelle demande IA. Une désactivation ne retire pas les informations déjà envoyées.</li>
               </ul>
             </section>
 

@@ -1,172 +1,116 @@
-import React from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Session, User } from "@supabase/supabase-js";
+import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
-
-interface AuthContextType {
+const signIn = (email: string, password: string) =>
+  supabase.auth.signInWithPassword({ email: email.trim(), password });
+const signUp = (email: string, password: string, displayName?: string) =>
+  supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/dashboard`,
+      data: { display_name: displayName?.trim() },
+    },
+  });
+const resetPassword = (email: string) =>
+  supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/update-password`,
+  });
+type AuthContextType = {
   session: Session | null;
   user: User | null;
   isAdmin: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{
-    error: any;
-    data: any;
-  }>;
-  signUp: (email: string, password: string) => Promise<{
-    error: any;
-    data: any;
-  }>;
-  signOut: () => Promise<{ error: any }>;
-  resetPassword: (email: string) => Promise<{
-    error: any;
-    data: any;
-  }>;
-}
+  signIn: typeof signIn;
+  signUp: typeof signUp;
+  resetPassword: typeof resetPassword;
+  signOut: () => Promise<{ error: Error | null }>;
+};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  isAdmin: false,
-  isLoading: true,
-  signIn: async () => ({ error: null, data: null }),
-  signUp: async () => ({ error: null, data: null }),
-  signOut: async () => ({ error: null }),
-  resetPassword: async () => ({ error: null, data: null }),
-});
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-
-  const checkAdminRole = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
-      
-      if (error) {
-        console.error("Error checking admin role:", error);
-        setIsAdmin(false);
-        return;
-      }
-      
-      setIsAdmin(!!data);
-    } catch (error) {
-      console.error("Error checking admin role:", error);
-      setIsAdmin(false);
-    }
-  }, []);
+  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
+  const currentId = useRef<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    let mounted = true;
-    
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (!mounted) return;
-      
-      
-
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      
-      if (event === 'SIGNED_OUT') {
+    if (!isSupabaseConfigured) return;
+    let active = true;
+    let revision = 0;
+    const acceptSession = (next: Session | null) => {
+      if (!active) return;
+      revision += 1;
+      const id = next?.user.id ?? null;
+      if (currentId.current !== id) {
+        void queryClient.cancelQueries();
+        queryClient.clear();
         setIsAdmin(false);
-        setIsLoading(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        if (newSession?.user) {
-
-          checkAdminRole(newSession.user.id).finally(() => {
-            if (mounted) setIsLoading(false);
-          });
-        } else {
-          setIsLoading(false);
-        }
       }
-    });
-
-
-    const initSession = async () => {
-      try {
-        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting session:", error);
-          if (mounted) setIsLoading(false);
-          return;
-        }
-        
-        
-        if (mounted) {
-          setSession(existingSession);
-          setUser(existingSession?.user ?? null);
-          
-          if (existingSession?.user) {
-            await checkAdminRole(existingSession.user.id);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking auth:", error);
-      } finally {
-        if (mounted) setIsLoading(false);
+      currentId.current = id;
+      setSession(next);
+      setIsLoading(false);
+      if (id) {
+        // Do not await another Supabase operation inside the auth callback.
+        queueMicrotask(async () => {
+          const { data, error } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", id)
+            .eq("role", "admin")
+            .maybeSingle();
+          if (active && currentId.current === id)
+            setIsAdmin(!error && Boolean(data));
+        });
       }
     };
-
-    initSession();
-
-
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, next) => acceptSession(next));
+    const initialRevision = revision;
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (active && revision === initialRevision)
+          acceptSession(error ? null : data.session);
+      })
+      .catch(() => {
+        if (active && revision === initialRevision) acceptSession(null);
+      });
     return () => {
-      mounted = false;
+      active = false;
       subscription.unsubscribe();
     };
-  }, [checkAdminRole]);
-
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    return { data, error };
-  };
-
-  const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin
-      }
-    });
-
-    return { data, error };
-  };
+  }, [queryClient]);
 
   const signOut = async () => {
-
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    const userId = currentId.current;
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      try {
+        if (userId) {
+          localStorage.removeItem(`deepflow_ai_conversation_${userId}`);
+          localStorage.removeItem(`deepflow_focus_v2_${userId}`);
+        }
+        sessionStorage.removeItem("deepflow_admin_mode");
+      } catch {
+        // Restricted browser storage must not prevent local sign-out.
+      }
+      currentId.current = null;
+      queryClient.clear();
+      setSession(null);
+      setIsAdmin(false);
+    }
     return { error };
   };
-
-  const resetPassword = async (email: string) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    return { data, error };
-  };
-
   return (
     <AuthContext.Provider
       value={{
         session,
-        user,
+        user: session?.user ?? null,
         isAdmin,
         isLoading,
         signIn,
@@ -178,12 +122,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth doit être utilisé dans AuthProvider.");
   return context;
-};
+}

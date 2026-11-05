@@ -38,14 +38,12 @@ import {
 import { RoadmapHubStats } from "@/components/roadmap/RoadmapHubStats";
 import { RoadmapTrackingCard } from "@/components/dashboard/RoadmapTrackingCard";
 
-
 interface RoadmapProps {
   embedded?: boolean;
   presetObjective?: string;
   presetGoalId?: string;
   onApplied?: () => void;
 }
-
 
 interface PlanGoal {
   title: string;
@@ -93,7 +91,12 @@ interface Plan {
 
 const DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
 
-export default function AutoPilot({ embedded = false, presetObjective: presetObjectiveProp, presetGoalId, onApplied }: RoadmapProps) {
+export default function AutoPilot({
+  embedded = false,
+  presetObjective: presetObjectiveProp,
+  presetGoalId,
+  onApplied,
+}: RoadmapProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [objective, setObjective] = useState(presetObjectiveProp ?? "");
@@ -191,7 +194,6 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
       );
       if (onApplied) onApplied();
       else navigate("/goals");
-
     } catch (e: any) {
       toast.error(e?.message || "Erreur");
     } finally {
@@ -202,23 +204,23 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
   function toggleTask(i: number) {
     setSelectedTasks((s) => {
       const n = new Set(s);
-      n.has(i) ? n.delete(i) : n.add(i);
+      if (n.has(i)) n.delete(i);
+      else n.add(i);
       return n;
     });
   }
   function toggleHabit(i: number) {
     setSelectedHabits((s) => {
       const n = new Set(s);
-      n.has(i) ? n.delete(i) : n.add(i);
+      if (n.has(i)) n.delete(i);
+      else n.add(i);
       return n;
     });
   }
 
   return (
     <div
-      className={
-        embedded ? "w-full" : "container mx-auto max-w-5xl px-4 py-8"
-      }
+      className={embedded ? "w-full" : "container mx-auto max-w-5xl px-4 py-8"}
     >
       {isOnboarding && (
         <Card className="p-5 mb-6 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5">
@@ -262,7 +264,6 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
         </>
       )}
 
-
       <Card className="p-6 mb-6 space-y-4">
         <div>
           <Label>Ton objectif</Label>
@@ -278,9 +279,7 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
           <div>
             <Label className="flex justify-between mb-2">
               <span>Horizon</span>
-              <span className="text-muted-foreground">
-                {horizon} semaines
-              </span>
+              <span className="text-muted-foreground">{horizon} semaines</span>
             </Label>
             <Slider
               value={[horizon]}
@@ -427,7 +426,14 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
               {/* Milestones */}
               <div className="mt-4 grid sm:grid-cols-2 gap-2">
                 {plan.forecast
-                  .filter((_, i) => i === 0 || (i + 1) % Math.max(1, Math.ceil(plan.forecast.length / 4)) === 0 || i === plan.forecast.length - 1)
+                  .filter(
+                    (_, i) =>
+                      i === 0 ||
+                      (i + 1) %
+                        Math.max(1, Math.ceil(plan.forecast.length / 4)) ===
+                        0 ||
+                      i === plan.forecast.length - 1,
+                  )
                   .map((f) => (
                     <div
                       key={f.week}
@@ -604,11 +610,7 @@ export default function AutoPilot({ embedded = false, presetObjective: presetObj
             >
               Recommencer
             </Button>
-            <Button
-              onClick={apply}
-              disabled={applying}
-              className="flex-1"
-            >
+            <Button onClick={apply} disabled={applying} className="flex-1">
               {applying ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (

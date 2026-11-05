@@ -1,99 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { getAIUsage } from "@/utils/aiLimits";
 
-export interface AICredits {
-  id: string;
-  user_id: string;
-  credits: number;
-  created_at: string;
-  last_updated: string;
-}
-
+// Legacy adapter. Credits can only be reserved/refunded inside an authenticated AI endpoint.
 export const useAICredits = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { isAdmin, user } = useAuth();
-
-  const { data: aiCredits, isLoading } = useQuery({
-    queryKey: ["ai-credits", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-
-      const { data, error } = await supabase
-        .from("ai_credits")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as AICredits | null;
-    },
-    enabled: !!user,
-  });
-
-  const addCredits = useMutation({
-    mutationFn: async (amount: number) => {
-      if (!user) throw new Error("Not authenticated");
-
-      const currentCredits = aiCredits?.credits || 0;
-      const newCredits = currentCredits + amount;
-
-      if (aiCredits) {
-        const { error } = await supabase
-          .from("ai_credits")
-          .update({ credits: newCredits, last_updated: new Date().toISOString() })
-          .eq("user_id", user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("ai_credits")
-          .insert({ user_id: user.id, credits: newCredits });
-        if (error) throw error;
-      }
-
-      return newCredits;
-    },
-    onSuccess: (newCredits) => {
-      queryClient.invalidateQueries({ queryKey: ["ai-credits", user?.id] });
-      toast({
-        title: "🤖 Crédits IA Ajoutés !",
-        description: `Vous avez maintenant ${newCredits} crédits IA`,
-      });
-    },
-  });
-
-  const useCredits = useMutation({
-    mutationFn: async (amount: number) => {
-
-      if (isAdmin) {
-        return Infinity;
-      }
-
-      if (!user) throw new Error("Not authenticated");
-
-
-      const { data, error } = await supabase.rpc("consume_ai_credit", { amount });
-      if (error) throw error;
-      return (data as number) ?? 0;
-    },
-    onSuccess: () => {
-      if (!isAdmin) {
-        queryClient.invalidateQueries({ queryKey: ["ai-credits", user?.id] });
-      }
-    },
-  });
-
-
-  const effectiveCredits = isAdmin ? Infinity : (aiCredits?.credits || 0);
-
-  return {
-    credits: effectiveCredits,
-    isLoading,
-    addCredits: addCredits.mutate,
-    useCredits: useCredits.mutate,
-    hasCredits: (amount: number) => isAdmin || (aiCredits?.credits || 0) >= amount,
-    isAdmin,
-  };
+  const { user } = useAuth();
+  const usage = useQuery({ queryKey: ["ai-usage", user?.id], enabled: Boolean(user), queryFn: async () => {
+    const value = await getAIUsage();
+    if (!value) throw new Error("Le quota IA ne peut pas être vérifié.");
+    return value;
+  }});
+  const credits = usage.isError ? 0 : usage.data?.remaining ?? 0;
+  const unavailable = async (_amount: number): Promise<never> => { throw new Error("Les crédits sont gérés exclusivement par les demandes IA côté serveur."); };
+  return { credits, isLoading: usage.isLoading, error: usage.error, addCredits: unavailable, useCredits: unavailable,
+    hasCredits: (amount: number) => Number.isSafeInteger(amount) && amount > 0 && credits >= amount, isAdmin: false };
 };

@@ -24,8 +24,8 @@ pop3_port = 54326
 file_size_limit = "50MiB"
 
 [auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "http://127.0.0.1:8080"
+additional_redirect_urls = ["http://127.0.0.1:8080/dashboard", "http://127.0.0.1:8080/update-password", "http://localhost:8080/dashboard", "http://localhost:8080/update-password"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -34,16 +34,16 @@ enable_signup = true
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
 
 [auth.external.github]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_GITHUB_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GITHUB_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 redirect_uri = "http://localhost:54321/auth/v1/callback"
@@ -60,6 +60,39 @@ verify_jwt = true
 [functions.gemini-analysis]
 verify_jwt = true
 
+[functions.gemini-chat-enhanced]
+verify_jwt = true
+
+[functions.sync-offline-data]
+verify_jwt = true
+
+[functions.setup-admin]
+verify_jwt = true
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.google-oauth]
+verify_jwt = false
+
+[functions.google-api]
+verify_jwt = true
+
+[functions.google-calendar-api]
+verify_jwt = true
+
+[functions.google-tasks-api]
+verify_jwt = true
+
+[functions.google-calendar-oauth]
+verify_jwt = false
+
+[functions.google-tasks-oauth]
+verify_jwt = false
+
 [functions.create-checkout]
 verify_jwt = true
 
@@ -71,67 +104,3 @@ verify_jwt = true
 
 [functions.send-contact]
 verify_jwt = false
-
-[functions.google-calendar-oauth]
-verify_jwt = true
-
-[functions.google-calendar-api]
-verify_jwt = true
-
-[functions.gemini-chat-enhanced]
-verify_jwt = true
-
-[functions.google-tasks-oauth]
-verify_jwt = true
-
-[functions.google-tasks-api]
-verify_jwt = true
-
-# setup-admin removed for security — use one-time SQL migration instead
-
-[functions.verify-admin]
-verify_jwt = true
-
-[functions.paypal-create-order]
-verify_jwt = true
-
-[functions.paypal-capture-order]
-verify_jwt = true
-
-[functions.ai-cross-analysis]
-verify_jwt = true
-
-[functions.ai-item-assistant]
-verify_jwt = true
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.journal-weekly-summary]
-verify_jwt = true
-
-[functions.calendar-ai-suggestions]
-verify_jwt = true
-
-[functions.oauth-authorize]
-verify_jwt = false
-
-[functions.oauth-token]
-verify_jwt = false
-
-[functions.oauth-revoke]
-verify_jwt = false
-
-[functions.api-v1-router]
-verify_jwt = false
-
-[functions.ai-autopilot]
-verify_jwt = true
-
-
-
-[functions.ai-student]
-verify_jwt = true
-
-[functions.ical-proxy]
-verify_jwt = true

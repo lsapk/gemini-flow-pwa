@@ -23,7 +23,7 @@ export default function Terms() {
       <main className="container mx-auto px-4 py-12 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Conditions d'Utilisation</h1>
-          <p className="text-muted-foreground mb-8">Dernière mise à jour : Mars 2026</p>
+          <p className="text-muted-foreground mb-8">Dernière mise à jour : 4 novembre 2026</p>
 
           <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
             <section>
@@ -65,7 +65,7 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-bold mb-4">5. Abonnements et paiements</h2>
               <p className="text-muted-foreground leading-relaxed">
-                DeepFlow propose des formules gratuites et premium. Les paiements sont traités de manière sécurisée par Stripe ou PayPal. Vous pouvez annuler à tout moment, mais les paiements effectués ne sont pas remboursables, sauf dans les cas prévus par la loi.
+                Deepflow propose un accès gratuit et des formules payantes lorsqu’elles sont disponibles. Le prix et les conditions sont présentés avant confirmation dans le parcours de paiement Stripe. Les droits et quotas IA sont vérifiés côté serveur. Le portail d’abonnement permet de gérer un abonnement Stripe associé au compte.
               </p>
             </section>
 
@@ -86,7 +86,7 @@ export default function Terms() {
             <section>
               <h2 className="text-2xl font-bold mb-4">8. Résiliation et suppression de compte</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Nous pouvons suspendre ou résilier votre compte en cas de violation de ces conditions. Vous pouvez supprimer votre compte à tout moment depuis Paramètres → Données & Compte. Cette action supprime définitivement toutes vos données.
+                Vous pouvez exporter vos données depuis Paramètres et Espace étudiant, puis demander la suppression de votre compte à <a href="mailto:deepflow.ia@gmail.com" className="text-primary underline">deepflow.ia@gmail.com</a>. La déconnexion Google révoque l’accès de Deepflow ; elle ne supprime pas les événements et tâches déjà transférés.
               </p>
             </section>
 

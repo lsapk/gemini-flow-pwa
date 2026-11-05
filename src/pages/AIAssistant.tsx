@@ -1,458 +1,280 @@
-import React from "react";
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect, useRef, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowUp, Sparkles, Trash2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAnalyticsData } from "@/hooks/useAnalyticsData";
-import { useSubscription } from "@/hooks/useSubscription";
-import { Send, Bot, User, Loader2, Sparkles, BarChart3, Crown, Brain, MessageSquare, Zap, Trash2, Lightbulb, Target, Rocket } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useAICredits } from "@/hooks/useAICredits";
+import { getAIUsage } from "@/utils/aiLimits";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Markdown } from "@/components/Markdown";
-import { toast } from "sonner";
-import AISuggestionDialog from "@/components/AISuggestionDialog";
-import Analysis from "./Analysis";
-import Profile from "./Profile";
-import AutoPilot from "./AutoPilot";
-import { cn } from "@/lib/utils";
-
 interface Message {
   id: string;
+  role: "user" | "assistant";
   content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
 }
-
-interface AISuggestion {
-  type: "task" | "goal" | "habit";
-  title: string;
-  description?: string;
-  priority?: string;
-  frequency?: string;
-  category?: string;
-  reasoning: string;
-}
-
-type ChatMode = 'discussion' | 'analysis' | 'creation';
-
-const STORAGE_KEY = 'deepflow_ai_conversation';
-
-const QUICK_ACTIONS = [
-  { icon: BarChart3, label: "Analyse ma semaine", emoji: "📊" },
-  { icon: Target, label: "Que faire maintenant ?", emoji: "🎯" },
-  { icon: Sparkles, label: "Crée un plan", emoji: "✨" },
-  { icon: Lightbulb, label: "Conseils personnalisés", emoji: "💡" },
+const starters = [
+  "Aide-moi à décomposer un projet en petites étapes.",
+  "Comment organiser mes révisions cette semaine ?",
+  "Comment avancer quand je manque de motivation ?",
 ];
-
 export default function AIAssistant() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { credits: aiCredits, isLoading: creditsLoading, isAdmin: isAIAdmin } = useAICredits();
-  const { canUseFeature, getRemainingUses, trackUsage, isPremium } = useSubscription();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentSuggestion, setCurrentSuggestion] = useState<AISuggestion | null>(null);
-  const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
-  const [chatMode, setChatMode] = useState<ChatMode>('analysis');
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "chat");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
+  const [messages, setMessages] = useState<Message[]>([]),
+    [input, setInput] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [includeJournal, setIncludeJournal] = useState(false),
+    [personalize, setPersonalize] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+  const locked = useRef(false);
+  const client = useQueryClient();
+  const usage = useQuery({
+    queryKey: ["ai-usage", user?.id],
+    queryFn: async () => {
+      const data = await getAIUsage();
+      if (!data) throw new Error("Quota indisponible.");
+      return data;
+    },
+  });
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab && ["chat", "autopilot", "analysis", "profile"].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (activeTab === 'analysis') window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [activeTab]);
-
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-    setSearchParams(prev => {
-      prev.set("tab", tabId);
-      return prev;
-    });
-  };
-
-  const {
-    habitsData, focusData,
-    taskCompletionRate, totalFocusTime, streakCount, refetch
-  } = useAnalyticsData();
-
-  useEffect(() => {
-    if (user) {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setMessages(parsed.map((msg: Message) => ({ ...msg, timestamp: new Date(msg.timestamp) })));
-        } catch { /* ignore */ }
-      }
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user && messages.length > 0) {
-      localStorage.setItem(`${STORAGE_KEY}_${user.id}`, JSON.stringify(messages));
-    }
-  }, [messages, user]);
-
-  useEffect(() => {
-    if (activeTab === 'chat') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeTab]);
-
-  const clearConversation = () => {
-    setMessages([]);
-    if (user) localStorage.removeItem(`${STORAGE_KEY}_${user.id}`);
-    toast.success("Conversation effacée");
-  };
-
-  const getUserData = async () => {
-    if (!user) return {};
-    try {
-      const [tasksR, habitsR, goalsR, journalR, focusR, profileR, completionsR] = await Promise.allSettled([
-        supabase.from('tasks').select('*').eq('user_id', user.id),
-        supabase.from('habits').select('*').eq('user_id', user.id),
-        supabase.from('goals').select('*').eq('user_id', user.id),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('focus_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('habit_completions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-      ]);
-      return {
-        tasks: tasksR.status === 'fulfilled' ? (tasksR.value.data || []) : [],
-        habits: habitsR.status === 'fulfilled' ? (habitsR.value.data || []) : [],
-        goals: goalsR.status === 'fulfilled' ? (goalsR.value.data || []) : [],
-        journal_entries: journalR.status === 'fulfilled' ? (journalR.value.data || []) : [],
-        focus_sessions: focusR.status === 'fulfilled' ? (focusR.value.data || []) : [],
-        habit_completions: completionsR.status === 'fulfilled' ? (completionsR.value.data || []) : [],
-        profile: profileR.status === 'fulfilled' ? (profileR.value as any)?.data : null,
-        analytics: { taskCompletionRate, totalFocusTime, streakCount, habitsCount: habitsData?.length || 0, focusSessionsCount: focusData?.length || 0 }
-      };
-    } catch { return {}; }
-  };
-
-  const sendMessage = async (overrideInput?: string) => {
-    const text = overrideInput || input;
-    if (!text.trim() || !user) return;
-    if (!canUseFeature("chat")) {
-      toast.error("Limite quotidienne atteinte. Passez à Premium !");
-      return;
-    }
-
-    const newMessage: Message = { id: Date.now().toString(), content: text, role: 'user', timestamp: new Date() };
-    setMessages(prev => [...prev, newMessage]);
+    endRef.current?.scrollIntoView({ block: "nearest" });
+  }, [messages.length, busy]);
+  const send = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!input.trim() || locked.current || !usage.data?.remaining) return;
+    locked.current = true;
+    setBusy(true);
+    setError("");
+    const text = input.trim();
+    const history = messages
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content: content.slice(0, 4000) }));
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: "user", content: text },
+    ]);
     setInput("");
-    setIsLoading(true);
-    trackUsage("chat");
-
     try {
-      const userData = await getUserData();
-      const recentMessages = messages.slice(-10).map(msg => ({ role: msg.role, content: msg.content }));
-      let finalMessage = text;
-
-
-      if (chatMode === 'creation') finalMessage = `[MODE CRÉATION] ${text}`;
-      else finalMessage = `[MODE ANALYSE] ${text} - Analyse approfondie basée sur mes données.`;
-
-      const { data, error } = await supabase.functions.invoke('gemini-chat-enhanced', {
-        body: { message: finalMessage, context: { user_data: userData, recent_messages: recentMessages, creation_mode: chatMode === 'creation', analysis_mode: chatMode === 'analysis' } }
-      });
-      if (error) throw error;
-
-      let content = data?.response || "Désolé, je n'ai pas pu traiter votre demande.";
-      content = content.replace(/```json[\s\S]*?```/g, "").replace(/\{[\s\S]*?"suggestion"[\s\S]*?\}/g, "").replace(/```[\s\S]*?```/g, "").trim();
-
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), content, role: 'assistant', timestamp: new Date() }]);
-
-      if (chatMode === 'creation' && data?.suggestion?.type && data?.suggestion?.title && data?.suggestion?.reasoning) {
-        setCurrentSuggestion(data.suggestion);
-        setIsSuggestionDialogOpen(true);
+      const { data, error: problem } = await supabase.functions.invoke(
+        personalize || includeJournal ? "gemini-chat-enhanced" : "gemini-chat",
+        {
+          body: {
+            message: text,
+            context: {
+              recent_messages: history,
+              analysis_mode: personalize,
+              include_journal: includeJournal,
+            },
+          },
+        },
+      );
+      if (problem) {
+        let code: string | undefined;
+        if (problem.context instanceof Response) {
+          try {
+            code = (await problem.context.json()).code;
+          } catch {
+            /* generic error below */
+          }
+        }
+        throw new Error(
+          code === "AI_CREDITS_EXHAUSTED"
+            ? "Votre quota est épuisé. Consultez vos crédits pour connaître le prochain renouvellement."
+            : "L’assistant est indisponible. Vérifiez votre connexion ou réessayez plus tard.",
+        );
       }
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      let errContent = "Désolé, une erreur s'est produite.";
-      if (msg.includes('402') || msg.includes('credits')) errContent = "💳 **Crédits IA épuisés**";
-      else if (msg.includes('429')) errContent = "🚫 **Limite d'API atteinte**";
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), content: errContent, role: 'assistant', timestamp: new Date() }]);
-    } finally { setIsLoading(false); }
+      if (!data || typeof data.response !== "string" || !data.response.trim())
+        throw new Error("La réponse reçue est vide. Réessayez.");
+      setMessages((current) => [
+        ...current,
+        { id: crypto.randomUUID(), role: "assistant", content: data.response },
+      ]);
+    } catch (problem) {
+      setError(
+        problem instanceof Error ? problem.message : "La demande a échoué.",
+      );
+      setInput(text);
+    } finally {
+      locked.current = false;
+      setBusy(false);
+      await client.invalidateQueries({ queryKey: ["ai-usage", user?.id] });
+    }
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  };
-
-  const handleQuickAction = (label: string) => {
-    setInput(label);
-    sendMessage(label);
-  };
-
-  const tabs = [
-    { id: "chat", label: "Chat", icon: MessageSquare },
-    { id: "autopilot", label: "Roadmap", icon: Rocket },
-    { id: "analysis", label: "Analyse", icon: BarChart3 },
-    { id: "profile", label: "Profil IA", icon: Brain },
-  ];
-
-  const modes: { id: ChatMode; label: string; icon: React.ElementType }[] = [
-    { id: 'analysis', label: 'Analyse & Conseil', icon: BarChart3 },
-    { id: 'creation', label: 'Création', icon: Sparkles },
-  ];
-
   return (
-    <div className="flex flex-col max-w-7xl mx-auto h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] min-w-0">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-4 shrink-0 min-w-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="relative h-11 w-11 rounded-2xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-sm shrink-0">
-            <Brain className="h-5 w-5 text-primary" />
-            <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-bold tracking-tight leading-none truncate">Intelligence IA</h1>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">Coach personnel</p>
-          </div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-3">PENSEZ À VOIX HAUTE</p>
+          <h1 className="page-title">
+            Votre assistant<span className="text-primary">.</span>
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Des idées concrètes pour trouver votre prochain pas.
+          </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Badge variant="secondary" className="h-8 px-3 rounded-xl font-medium bg-secondary/60 backdrop-blur-sm border-border/30">
-            <Zap className="h-3.5 w-3.5 mr-1.5 text-amber-500 fill-amber-500" />
-            {isAIAdmin ? "∞" : aiCredits}
-          </Badge>
-          {isPremium && (
-            <Badge className="h-8 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white border-none shadow-sm">
-              <Crown className="h-3.5 w-3.5 mr-1 fill-white" />Pro
-            </Badge>
-          )}
-        </div>
+        <Link
+          to="/credits"
+          className="rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground"
+        >
+          {usage.isError
+            ? "Quota indisponible"
+            : usage.isLoading
+              ? "Vérification des crédits…"
+              : `${usage.data?.remaining} crédits disponibles`}
+        </Link>
       </div>
-
-      {/* Segmented Control */}
-      <div className="bg-secondary/40 backdrop-blur-xl p-1 rounded-2xl mb-3 shrink-0 border border-border/20">
-        <div className="grid grid-cols-4 gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={cn(
-                "flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-300",
-                activeTab === tab.id
-                  ? "bg-background shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <tab.icon className="h-3.5 w-3.5" />
-              {tab.label}
-            </button>
-          ))}
+      <section className="panel flex min-h-[480px] flex-col">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <span className="flex items-center gap-2 text-xs font-medium">
+            <Sparkles size={15} className="text-primary" />
+            Deepflow IA
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!messages.length || busy}
+            onClick={() => {
+              setMessages([]);
+              setError("");
+            }}
+            className="gap-2 text-xs"
+          >
+            <Trash2 size={13} />
+            Effacer
+          </Button>
         </div>
-      </div>
-
-      {/* Chat Tab */}
-      <div className={cn("flex flex-col flex-1 min-h-0 bg-card/30 backdrop-blur-sm rounded-2xl border border-border/30 shadow-lg overflow-hidden", activeTab !== "chat" && "hidden")}>
-          {/* Mode Pills + Clear */}
-          <div className="px-3 py-2.5 border-b border-border/20 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-1 bg-secondary/40 p-0.5 rounded-full">
-              {modes.map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => setChatMode(mode.id)}
-                  className={cn(
-                    "flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200",
-                    chatMode === mode.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <mode.icon className="h-3 w-3" />
-                  <span className="hidden sm:inline">{mode.label}</span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={clearConversation}
-              disabled={messages.length === 0}
-              className="h-8 w-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-0">
-            {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                <div className="relative">
-                  <div className="h-20 w-20 rounded-3xl bg-primary/10 backdrop-blur-xl border border-primary/20 flex items-center justify-center shadow-lg">
-                    <Bot className="h-9 w-9 text-primary" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-green-500 border-2 border-background flex items-center justify-center">
-                    <Sparkles className="h-3 w-3 text-white" />
-                  </div>
-                </div>
-                <div className="space-y-1.5 max-w-xs">
-                  <h3 className="text-base font-bold tracking-tight">Comment puis-je vous aider ?</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Votre assistant IA analyse vos données pour des conseils personnalisés.
-                  </p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-2 max-w-sm">
-                  {QUICK_ACTIONS.map((action) => (
-                    <button
-                      key={action.label}
-                      onClick={() => handleQuickAction(action.label)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/30 text-xs font-medium text-foreground hover:scale-[1.03] hover:shadow-md active:scale-[0.97] transition-all duration-200"
-                    >
-                      <span>{action.emoji}</span>
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
+        <div
+          className="max-h-[55dvh] flex-1 space-y-5 overflow-y-auto p-5 md:p-8"
+          role="log"
+          aria-label="Conversation avec l’assistant"
+          aria-live="polite"
+        >
+          {messages.length === 0 ? (
+            <div className="py-5">
+              <div className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Sparkles size={22} strokeWidth={1.5} />
               </div>
-            )}
-
-            <AnimatePresence initial={false}>
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
-                  className={cn("flex gap-2.5", message.role === 'user' ? "justify-end" : "justify-start")}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="h-7 w-7 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <Bot className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                  )}
-                  <div className="group flex flex-col max-w-[80%] md:max-w-[70%]">
-                    <div className={cn(
-                      "px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm",
-                      message.role === 'user'
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-card/80 backdrop-blur-sm border border-border/30 rounded-bl-md"
-                    )}>
-                      {message.role === 'assistant' ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:my-1">
-                          <Markdown content={message.content} />
-                        </div>
-                      ) : (
-                        <p>{message.content}</p>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground/40 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {message.role === 'user' && (
-                    <div className="h-7 w-7 rounded-xl bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="h-3.5 w-3.5 text-primary-foreground" />
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isLoading && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5">
-                <div className="h-7 w-7 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                  <Bot className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <div className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-2xl rounded-bl-md px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Quick actions above input when conversation has messages */}
-          {messages.length > 0 && messages.length < 3 && (
-            <div className="px-3 pb-1 flex gap-1.5 overflow-x-auto shrink-0">
-              {QUICK_ACTIONS.slice(0, 3).map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => handleQuickAction(action.label)}
-                  className="whitespace-nowrap flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/40 border border-border/20 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all shrink-0"
-                >
-                  <span>{action.emoji}</span>{action.label}
-                </button>
-              ))}
+              <h2 className="text-xl font-semibold tracking-tight">
+                Par où voulez-vous commencer ?
+              </h2>
+              <p className="mb-7 mt-2 text-sm text-muted-foreground">
+                Un projet flou, une semaine chargée ou simplement besoin de
+                recul.
+              </p>
+              <div className="flex flex-col gap-2">
+                {starters.map((text) => (
+                  <button
+                    key={text}
+                    onClick={() => setInput(text)}
+                    className="rounded-xl border px-4 py-3 text-left text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  >
+                    {text}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-
-          {/* Input Bar */}
-          <div className="p-3 shrink-0 border-t border-border/20">
-            <div className="relative flex items-center bg-secondary/40 backdrop-blur-sm rounded-2xl border border-border/20 pr-1.5">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder={chatMode === 'analysis' ? "Demandez une analyse ou un conseil..." : "Décrivez ce que vous souhaitez créer..."}
-                disabled={isLoading}
-                className="flex-1 bg-transparent h-11 px-4 text-sm placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
-                autoFocus
-              />
-              <button
-                onClick={() => sendMessage()}
-                disabled={isLoading || !input.trim()}
-                className={cn(
-                  "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
-                  input.trim()
-                    ? "bg-primary text-primary-foreground shadow-sm active:scale-[0.92]"
-                    : "text-muted-foreground/40"
-                )}
+          ) : (
+            messages.map((message) => (
+              <article
+                key={message.id}
+                className={
+                  message.role === "user"
+                    ? "ml-auto max-w-[90%] rounded-2xl bg-primary/10 px-5 py-4 text-sm"
+                    : "mr-auto max-w-full py-2 text-sm"
+                }
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              </button>
-            </div>
-            <div className="flex items-center justify-between mt-1.5 px-1">
-              <p className="text-[10px] text-muted-foreground/40">L'IA peut faire des erreurs</p>
-              {!isPremium && (
-                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-transparent text-muted-foreground/40 border-none">
-                  {getRemainingUses("chat")}/5
-                </Badge>
-              )}
-            </div>
+                <span className="sr-only">
+                  {message.role === "user" ? "Vous : " : "Assistant : "}
+                </span>
+                {message.role === "assistant" ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <p className="whitespace-pre-wrap break-words">
+                    {message.content}
+                  </p>
+                )}
+              </article>
+            ))
+          )}
+          {busy && (
+            <p role="status" className="text-sm text-muted-foreground">
+              L’assistant prépare sa réponse…
+            </p>
+          )}
+          <div ref={endRef} />
+        </div>
+        <div className="border-t px-5 py-4">
+          <div className="mb-4 flex flex-col gap-2">
+            <Label className="flex items-start gap-2 text-xs font-normal leading-relaxed">
+              <input
+                type="checkbox"
+                checked={personalize}
+                disabled={busy}
+                onChange={(event) => setPersonalize(event.target.checked)}
+                className="mt-0.5"
+              />
+              Inclure mes tâches, habitudes, objectifs et sessions pour
+              personnaliser la réponse.
+            </Label>
+            <Label className="flex items-start gap-2 text-xs font-normal leading-relaxed">
+              <input
+                type="checkbox"
+                checked={includeJournal}
+                disabled={busy}
+                onChange={(event) => setIncludeJournal(event.target.checked)}
+                className="mt-0.5"
+              />
+              J’autorise aussi l’envoi de mon journal et de mes réflexions au
+              fournisseur IA pour cette conversation.
+            </Label>
           </div>
-      </div>
-
-      {/* Analysis Tab — lazy mount to avoid recharts width=0 warnings */}
-      {activeTab === "analysis" && (
-        <div className="flex-1 overflow-y-auto animate-fade-in">
-          <Analysis />
+          {error && (
+            <p role="alert" className="mb-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          {usage.isError && (
+            <p role="alert" className="mb-3 text-sm text-destructive">
+              Le quota ne peut pas être vérifié.{" "}
+              <button
+                onClick={() => void usage.refetch()}
+                className="underline"
+              >
+                Actualiser
+              </button>
+            </p>
+          )}
+          <form onSubmit={send} className="relative">
+            <Textarea
+              name="message"
+              aria-label="Votre message à l’assistant"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              maxLength={4000}
+              rows={2}
+              placeholder="Une idée, une question, un projet…"
+              className="resize-none pr-14"
+              disabled={busy}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              aria-label="Envoyer le message"
+              disabled={busy || !input.trim() || !usage.data?.remaining}
+              className="absolute bottom-2 right-2 rounded-lg"
+            >
+              <ArrowUp size={18} />
+            </Button>
+          </form>
         </div>
-      )}
-
-      {/* Auto-Pilot Tab */}
-      {activeTab === "autopilot" && (
-        <div className="flex-1 overflow-y-auto animate-fade-in">
-          <AutoPilot embedded />
-        </div>
-      )}
-
-      {/* Profile Tab — lazy mount */}
-      {activeTab === "profile" && (
-        <div className="flex-1 overflow-y-auto animate-fade-in">
-          <Profile />
-        </div>
-      )}
-
-      <AISuggestionDialog
-        suggestion={currentSuggestion}
-        isOpen={isSuggestionDialogOpen}
-        onClose={() => { setIsSuggestionDialogOpen(false); setCurrentSuggestion(null); }}
-        onConfirm={() => { refetch(); toast.success("Élément créé ! 🎉"); }}
-      />
+      </section>
+      <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+        1 crédit par réponse réussie. L’IA peut se tromper ; vérifiez ses
+        conseils. La conversation reste en mémoire de cet onglet et n’est pas
+        enregistrée sur cet appareil.
+      </p>
     </div>
   );
 }

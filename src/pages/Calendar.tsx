@@ -1,300 +1,507 @@
-import React from "react";
-import { useState, useEffect } from "react";
-import { Loader2, Calendar as CalendarIcon, Link2, Sparkles, Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  calendarWeek,
+  localDay,
+  useCalendarData,
+} from "@/hooks/useCalendarData";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import {
+  deleteGoogleEvent,
+  getGoogleEvents,
+  getGoogleResources,
+  getGoogleStatus,
+  type GoogleEvent,
+} from "@/services/google";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { useCalendarData } from "@/hooks/useCalendarData";
-import { AppleCalendarView } from "@/components/AppleCalendarView";
-import { GoogleCalendarEventModal, EventFormData } from "@/components/GoogleCalendarEventModal";
-import { AISuggestedEvents } from "@/components/AISuggestedEvents";
-import { Markdown } from "@/components/Markdown";
-import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CalendarEventEditor } from "@/components/CalendarEventEditor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-interface CalendarEvent {
-  id: string;
-  summary: string;
-  description?: string;
-  start: { dateTime?: string; date?: string };
-  end: { dateTime?: string; date?: string };
+function message(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Cette action n’a pas pu aboutir. Réessayez.";
+}
+function displayDay(date: string) {
+  return new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+function eventTiming(event: GoogleEvent) {
+  if (event.start.date)
+    return `${displayDay(event.start.date)} · Toute la journée`;
+  return new Date(event.start.dateTime!).toLocaleString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function CalendarPage() {
-  const { user, session, isLoading: isAuthLoading } = useAuth();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [suggestedEvents, setSuggestedEvents] = useState<any[]>([]);
-  const [suggestionText, setSuggestionText] = useState<string>("");
-  const [initialEventData, setInitialEventData] = useState<any>(null);
-  const [isAISuggestionsExpanded, setIsAISuggestionsExpanded] = useState(true);
+  const { user } = useAuth();
+  const client = useQueryClient();
+  const [date, setDate] = useState(() => localDay(new Date()));
+  const [calendarId, setCalendarId] = useState("");
+  const [editor, setEditor] = useState<{ event?: GoogleEvent } | null>(null);
+  const [deleting, setDeleting] = useState<GoogleEvent | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const selectedDate = new Date(`${date}T12:00:00`);
+  const { start, end } = calendarWeek(selectedDate);
+  const local = useCalendarData(selectedDate);
+  const status = useQuery({
+    queryKey: ["google-status", user?.id],
+    queryFn: getGoogleStatus,
+    enabled: Boolean(user) && isSupabaseConfigured,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const connected = status.data?.connected && !status.data.needsReconnect;
+  const resources = useQuery({
+    queryKey: ["google-resources", user?.id],
+    queryFn: getGoogleResources,
+    enabled: Boolean(connected),
+    retry: false,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+  const selectedCalendar =
+    calendarId ||
+    resources.data?.calendars.find((calendar) => calendar.primary)?.id ||
+    resources.data?.calendars[0]?.id ||
+    "";
+  const calendar = resources.data?.calendars.find(
+    (item) => item.id === selectedCalendar,
+  );
+  const events = useQuery({
+    queryKey: [
+      "google-events",
+      user?.id,
+      selectedCalendar,
+      start.toISOString(),
+      end.toISOString(),
+    ],
+    queryFn: () =>
+      getGoogleEvents(selectedCalendar, start.toISOString(), end.toISOString()),
+    enabled:
+      Boolean(connected && selectedCalendar) &&
+      !resources.isFetching &&
+      !busy &&
+      !editor,
+    retry: false,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+  const working = busy || events.isFetching || resources.isFetching;
+  const canWrite = calendar?.writable && status.data?.canEditCalendar;
 
-  const { items: calendarItems, isLoading: isLoadingItems } = useCalendarData(selectedDate);
-
-  useEffect(() => {
-    if (user && session && !isAuthLoading) checkConnection();
-  }, [user, session, isAuthLoading]);
-
-  useEffect(() => {
-    if (isConnected && selectedDate && session && !isAuthLoading) loadEvents();
-  }, [isConnected, selectedDate, session, isAuthLoading]);
-
-  const checkConnection = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("google_calendar_tokens_safe").select("*").eq("user_id", user.id).maybeSingle();
-    setIsConnected(!!data);
-  };
-
-  const connectGoogle = async () => {
-    if (!user) return;
-    setIsConnecting(true);
+  function moveWeek(delta: number) {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + delta * 7);
+    setDate(localDay(next));
+  }
+  async function refresh() {
+    setError("");
+    await Promise.all([
+      local.reload(),
+      client.invalidateQueries({ queryKey: ["google-status", user?.id] }),
+      client.invalidateQueries({ queryKey: ["google-events", user?.id] }),
+    ]);
+  }
+  async function saved() {
+    setEditor(null);
+    setNotice("Votre événement est enregistré dans Google.");
+    await client.invalidateQueries({ queryKey: ["google-events", user?.id] });
+  }
+  async function remove() {
+    if (!deleting) return;
+    setBusy(true);
+    setError("");
     try {
-      const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
-        body: { action: "get_auth_url", user_id: user.id },
-      });
-      if (error) throw error;
-      if (data?.authUrl) window.location.href = data.authUrl;
-    } catch (error) {
-      toast.error("Erreur lors de la connexion");
-      setIsConnecting(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleCallback = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      const state = params.get("state");
-      if (code && state && user && state === user.id) {
-        setIsConnecting(true);
-        try {
-          const { error } = await supabase.functions.invoke("google-calendar-oauth", { body: { code, user_id: user.id } });
-          if (error) throw error;
-          toast.success("Calendrier Google connecté !");
-          setIsConnected(true);
-          window.history.replaceState({}, document.title, "/calendar");
-        } catch {
-          toast.error("Erreur de connexion au calendrier");
-        } finally {
-          setIsConnecting(false);
-        }
-      }
-    };
-    handleCallback();
-  }, [user]);
-
-  const loadEvents = async () => {
-    if (!user || !selectedDate || !session) return;
-    setIsLoading(true);
-    try {
-      const startDate = new Date(selectedDate);
-      startDate.setDate(startDate.getDate() - 7);
-      const endDate = new Date(selectedDate);
-      endDate.setDate(endDate.getDate() + 7);
-
-      const { data, error } = await supabase.functions.invoke("google-calendar-api", {
-        body: { action: "list", time_min: startDate.toISOString(), time_max: endDate.toISOString() },
-      });
-      if (error) throw error;
-      setEvents(data?.items || []);
-    } catch {
-      toast.error("Erreur lors du chargement des événements");
+      await deleteGoogleEvent(selectedCalendar, deleting);
+      setDeleting(null);
+      setNotice("L’événement a été supprimé de Google.");
+      await client.invalidateQueries({ queryKey: ["google-events", user?.id] });
+    } catch (problem) {
+      setError(message(problem));
     } finally {
-      setIsLoading(false);
+      setBusy(false);
     }
-  };
-
-  const getAISuggestions = async () => {
-    if (!user || !selectedDate || !session) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("calendar-ai-suggestions", {
-        body: { date: selectedDate.toISOString() },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
-      const cleanedSuggestion = (data.suggestion || "").replace(/```json[\s\S]*?```/g, "").trim();
-      setSuggestionText(cleanedSuggestion);
-      setSuggestedEvents(data.suggestedEvents || []);
-      toast.success("Suggestions générées avec succès");
-      setIsAISuggestionsExpanded(true);
-    } catch (error: any) {
-      let errorMessage = "Erreur lors de la récupération des suggestions";
-      if (error?.message) errorMessage = error.message;
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createEvent = async (eventData: EventFormData) => {
-    if (!user || !session) return;
-    setIsLoading(true);
-    try {
-      const googleEventData: any = { summary: eventData.title, description: eventData.description };
-      if (eventData.allDay) {
-        googleEventData.start = { date: eventData.startDate };
-        googleEventData.end = { date: eventData.endDate };
-      } else {
-        googleEventData.start = { dateTime: `${eventData.startDate}T${eventData.startTime}:00`, timeZone: eventData.timezone };
-        googleEventData.end = { dateTime: `${eventData.endDate}T${eventData.endTime}:00`, timeZone: eventData.timezone };
-      }
-      if (eventData.location) googleEventData.location = eventData.location;
-
-      const { error } = await supabase.functions.invoke("google-calendar-api", {
-        body: { action: "create", event_data: googleEventData },
-      });
-      if (error) throw error;
-      toast.success("Événement créé !");
-      setIsCreateDialogOpen(false);
-      loadEvents();
-    } catch {
-      toast.error("Erreur lors de la création de l'événement");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateEventFromCalendar = (date: Date, hour: number) => {
-    const hourStr = hour.toString().padStart(2, "0");
-    setInitialEventData({ date, startTime: `${hourStr}:00`, endTime: `${(hour + 1).toString().padStart(2, "0")}:00` });
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleAddClick = () => {
-    setInitialEventData({ date: selectedDate, startTime: "13:00", endTime: "14:00" });
-    setIsCreateDialogOpen(true);
-  };
-
+  }
+  const problem =
+    error ||
+    (status.error && message(status.error)) ||
+    (resources.error && message(resources.error)) ||
+    (events.error && message(events.error)) ||
+    (local.error && message(local.error));
   return (
-    <div className="h-full flex flex-col min-w-0 overflow-hidden bg-background/50">
-      {/* Banner if not connected to Google */}
-      {!isConnected && (
-        <div className="shrink-0 mx-4 mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-primary/5 border border-primary/20 backdrop-blur-md">
-          <div className="flex items-center gap-3 text-sm font-medium">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Link2 className="h-4 w-4 text-primary" />
-            </div>
-            <span>Connectez Google Calendar pour synchroniser vos événements</span>
-          </div>
-          <Button onClick={connectGoogle} disabled={isConnecting} size="sm" variant="outline" className="rounded-xl font-bold active:scale-95 transition-transform">
-            {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Connecter"}
+    <div className="mx-auto max-w-6xl space-y-8">
+      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div>
+          <p className="eyebrow">Votre semaine</p>
+          <h1 className="page-title">Calendrier</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Vos rendez-vous et vos échéances, dans un même espace.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => void refresh()}
+          disabled={working}
+        >
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${working ? "animate-spin" : ""}`}
+          />
+          Actualiser
+        </Button>
+      </header>
+      <section
+        className="panel flex flex-wrap items-center justify-between gap-4 p-4"
+        aria-label="Choisir la semaine"
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Semaine précédente"
+            onClick={() => moveWeek(-1)}
+            disabled={working}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">
+            Semaine du{" "}
+            {start.toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Semaine suivante"
+            onClick={() => moveWeek(1)}
+            disabled={working}
+          >
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-      )}
-
-      {/* AI Suggestions - Main Block */}
-      {isConnected && (
-        <div className="p-4 shrink-0">
-          <Card className="border-primary/20 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2rem]">
-            <CardHeader className="py-4 px-6 border-b border-primary/10 flex flex-row items-center justify-between space-y-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 animate-glow-pulse">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-heading tracking-tight">Optimisation IA</CardTitle>
-                  <p className="text-xs text-muted-foreground font-medium">Suggestions personnalisées pour votre agenda</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={getAISuggestions}
-                  disabled={isLoading}
-                  size="sm"
-                  className="rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Brain className="h-4 w-4 mr-2" /> Analyser</>}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsAISuggestionsExpanded(!isAISuggestionsExpanded)}
-                  className="rounded-xl"
-                >
-                  {isAISuggestionsExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </Button>
-              </div>
-            </CardHeader>
-            <AnimatePresence>
-              {isAISuggestionsExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                  <CardContent className="p-0 max-h-[400px] overflow-y-auto scrollbar-none">
-                    {!suggestionText && !suggestedEvents.length && !isLoading && (
-                      <div className="p-10 text-center flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 rounded-[2rem] bg-secondary/30 flex items-center justify-center mb-2">
-                          <Brain className="h-8 w-8 text-muted-foreground/40" />
-                        </div>
-                        <p className="text-sm text-muted-foreground font-medium max-w-[240px]">
-                          L'IA peut organiser votre journée en fonction de vos tâches et habitudes.
-                        </p>
-                      </div>
-                    )}
-
-                    {suggestionText && (
-                      <div className="p-6 border-b border-primary/5 bg-primary/[0.02]">
-                        <Markdown content={suggestionText} />
-                      </div>
-                    )}
-
-                    {suggestedEvents.length > 0 && (
-                      <div className="p-4">
-                        <AISuggestedEvents
-                          events={suggestedEvents}
-                          onCreateEvent={async (event) => {
-                            await createEvent({
-                              title: event.title, type: "event", description: event.description || "",
-                              calendar: "mon-agenda", allDay: false,
-                              startDate: event.startDateTime.split("T")[0],
-                              startTime: event.startDateTime.split("T")[1]?.slice(0, 5) || "13:00",
-                              endDate: event.endDateTime.split("T")[0],
-                              endTime: event.endDateTime.split("T")[1]?.slice(0, 5) || "14:00",
-                              timezone: "Europe/Paris", repeat: "none", guests: [], location: "", videoConference: false,
-                            });
-                          }}
-                        />
-                      </div>
-                    )}
-                  </CardContent>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Card>
+        <div className="flex items-center gap-3">
+          <Label htmlFor="calendar-date" className="sr-only">
+            Date à afficher
+          </Label>
+          <Input
+            id="calendar-date"
+            type="date"
+            className="w-auto"
+            value={date}
+            required
+            onChange={(event) => {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value))
+                setDate(event.target.value);
+            }}
+          />
+          <Button variant="ghost" onClick={() => setDate(localDay(new Date()))}>
+            Aujourd’hui
+          </Button>
         </div>
+      </section>
+      {problem && (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>{problem}</AlertDescription>
+        </Alert>
       )}
-
-      {/* Calendar View */}
-      <div className="flex-1 min-h-0 relative">
-        <AppleCalendarView
-          currentDate={selectedDate}
-          onDateChange={setSelectedDate}
-          googleEvents={isConnected ? events : []}
-          localItems={calendarItems}
-          onCreateEvent={isConnected ? handleCreateEventFromCalendar : undefined}
-          onAddClick={isConnected ? handleAddClick : undefined}
-          isLoading={isLoading || isLoadingItems}
-          showAI={false}
-        />
+      {notice && (
+        <p role="status" className="text-sm text-primary">
+          {notice}
+        </p>
+      )}
+      <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <section className="panel min-w-0 p-5 md:p-7">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Google Calendar</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Horaires : {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/connections">Gérer la connexion</Link>
+            </Button>
+          </div>
+          {status.isLoading ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              Chargement de la connexion…
+            </p>
+          ) : !connected ? (
+            <div className="rounded-xl border border-dashed p-7 text-center">
+              <CalendarDays className="mx-auto mb-3 h-7 w-7 text-primary" />
+              <h3 className="font-medium">
+                {status.data?.needsReconnect
+                  ? "Reconnecter votre agenda"
+                  : "Retrouvez vos rendez-vous Google"}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Connectez votre compte depuis la page Connexions pour consulter
+                et gérer vos événements.
+              </p>
+              <Button className="mt-5" asChild>
+                <Link to="/connections">Ouvrir les connexions</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="calendar-google">Agenda</Label>
+                  <Select
+                    value={selectedCalendar}
+                    onValueChange={setCalendarId}
+                    disabled={working}
+                  >
+                    <SelectTrigger id="calendar-google">
+                      <SelectValue
+                        placeholder={
+                          resources.isLoading
+                            ? "Chargement…"
+                            : "Choisir un agenda"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resources.data?.calendars.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.summary}
+                          {!item.writable ? " · lecture seule" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  disabled={!canWrite || working}
+                  onClick={() => {
+                    setNotice("");
+                    setEditor({});
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Événement
+                </Button>
+              </div>
+              {!status.data?.canEditCalendar && (
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Reconnectez Google depuis Connexions pour autoriser la
+                  modification des événements.
+                </p>
+              )}
+              {calendar && !calendar.writable && (
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Cet agenda est en lecture seule pour votre compte Google.
+                </p>
+              )}
+              {events.isFetching ? (
+                <p
+                  role="status"
+                  className="py-8 text-center text-sm text-muted-foreground"
+                >
+                  Chargement des événements…
+                </p>
+              ) : events.data?.events.length ? (
+                <ol className="divide-y">
+                  {events.data.events.map((event) => (
+                    <li key={event.id} className="py-5">
+                      <p className="text-xs text-muted-foreground">
+                        {eventTiming(event)}
+                      </p>
+                      <h3 className="mt-2 break-words font-medium">{event.summary}</h3>
+                      {event.location && (
+                        <p className="mt-1 break-words text-sm text-muted-foreground">
+                          {event.location}
+                        </p>
+                      )}
+                      {event.recurring && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Occurrence d’un événement récurrent
+                        </p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {canWrite && event.editable && event.etag && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={working}
+                              onClick={() => setEditor({ event })}
+                            >
+                              Modifier
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={working}
+                              onClick={() => {
+                                setError("");
+                                setDeleting(event);
+                              }}
+                            >
+                              Supprimer
+                            </Button>
+                          </>
+                        )}
+                        {event.htmlLink && (
+                          <a
+                            href={event.htmlLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Ouvrir dans Google{" "}
+                            <ExternalLink className="h-3 w-3" />
+                            <span className="sr-only">
+                              {" "}
+                              : {event.summary} (nouvel onglet)
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : !events.error && selectedCalendar ? (
+                <p className="rounded-xl border border-dashed px-5 py-10 text-center text-sm text-muted-foreground">
+                  Aucun rendez-vous Google cette semaine.
+                </p>
+              ) : null}
+              <p className="mt-5 text-xs leading-5 text-muted-foreground">
+                Les événements avec invités et les types spéciaux se gèrent dans
+                Google. Aucune invitation n’est envoyée depuis Deepflow.
+              </p>
+            </>
+          )}
+        </section>
+        <section className="panel min-w-0 p-5 md:p-7">
+          <h2 className="text-xl font-semibold">Échéances Deepflow</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Vos tâches et objectifs datés. Ces éléments restent dans Deepflow.
+          </p>
+          {local.isLoading ? (
+            <p role="status" className="py-8 text-sm text-muted-foreground">
+              Chargement des échéances…
+            </p>
+          ) : local.items.length ? (
+            <ol className="mt-5 divide-y">
+              {local.items.map((item) => (
+                <li key={`${item.type}-${item.id}`} className="py-4">
+                  <p className="text-xs text-muted-foreground">
+                    {displayDay(item.date)} ·{" "}
+                    {item.type === "task" ? "Tâche" : "Objectif"}
+                  </p>
+                  <Link
+                    to={item.type === "task" ? "/tasks" : "/goals"}
+                    className={`mt-2 inline-block text-sm font-medium hover:underline ${item.completed ? "text-muted-foreground line-through" : ""}`}
+                  >
+                    {item.title}
+                  </Link>
+                  {item.completed && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      Terminé
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            !local.error && (
+              <p className="mt-6 rounded-xl bg-muted/40 p-5 text-sm text-muted-foreground">
+                Aucune échéance cette semaine. Ajoutez une date à une tâche pour
+                la retrouver ici.
+              </p>
+            )
+          )}
+          <Button variant="outline" className="mt-5" asChild>
+            <Link to="/tasks">Voir mes tâches</Link>
+          </Button>
+        </section>
       </div>
-
-      {isConnected && (
-        <GoogleCalendarEventModal
-          open={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-          onSave={createEvent}
-          initialData={initialEventData}
+      {editor && calendar && (
+        <CalendarEventEditor
+          key={editor.event?.id || "new"}
+          calendarId={selectedCalendar}
+          calendarName={calendar.summary}
+          date={date}
+          event={editor.event}
+          onClose={() => setEditor(null)}
+          onSaved={saved}
         />
       )}
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDeleting(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet événement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              « {deleting?.summary} » sera supprimé de votre agenda Google.
+              {deleting?.recurring
+                ? " Seule cette occurrence est concernée."
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={() => void remove()}
+            >
+              {busy ? "Suppression…" : "Supprimer de Google"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

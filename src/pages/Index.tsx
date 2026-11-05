@@ -1,315 +1,226 @@
-import React from "react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAuth } from "@/hooks/useAuth";
-import { 
-  ArrowRight, 
-  Brain, 
-  Target, 
+import { Link, Navigate } from "react-router-dom";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  CalendarDays,
+  GraduationCap,
   Sparkles,
-  Clock,
-  Zap,
+  Timer,
   ShieldCheck,
-  TrendingUp,
-  Cpu
+  Menu,
 } from "lucide-react";
-import { motion } from "framer-motion";
-import InteractiveBackground from "@/components/layout/InteractiveBackground";
-import deepflowLogo from "@/assets/deepflow-logo.png";
-
-const Index = () => {
+import { Brand } from "@/components/layout/Sidebar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+const features = [
+  {
+    icon: GraduationCap,
+    title: "Votre semestre, en clair.",
+    description:
+      "Retrouvez vos UE, notes, examens et emploi du temps. Importez un fichier ICS depuis votre université.",
+  },
+  {
+    icon: CalendarDays,
+    title: "Tout se rejoint.",
+    description:
+      "Consultez Google Calendar et transférez vos tâches Google Tasks, avec votre accord et des contrôles explicites.",
+  },
+  {
+    icon: Timer,
+    title: "Du temps pour avancer.",
+    description:
+      "Choisissez une tâche, lancez une session et retrouvez le fil. Une pause reste toujours à portée de main.",
+  },
+];
+export default function Index() {
   const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const [initialGoal, setInitialGoal] = useState("");
-
-  useEffect(() => {
-    if (isLoading) return;
-    const shouldRemember = localStorage.getItem("deepflow_remember_me") === "true";
-    if (user && shouldRemember) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [user, isLoading, navigate]);
-
-  const handleStartFlow = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (initialGoal.trim()) {
-      localStorage.setItem("deepflow_pending_goal", initialGoal.trim());
-    }
-    navigate("/register");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
+  if (user) return <Navigate to="/dashboard" replace />;
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505] text-white selection:bg-primary/30 overflow-x-hidden font-sans">
-      <InteractiveBackground />
-
-      {/* Navigation */}
-      <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl">
-        <nav className="bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] px-6 py-3 flex justify-between items-center shadow-2xl">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-white rounded-xl sm:rounded-2xl">
-              <img src={deepflowLogo} alt="DeepFlow Logo" className="h-5 w-5 sm:h-7 sm:h-7 object-contain" />
-            </div>
-            <span className="text-lg sm:text-2xl font-bold tracking-tight text-white/90">
-              DeepFlow
-            </span>
-          </div>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link to="/login" className="hidden sm:block text-sm font-medium text-white/60 hover:text-white transition-colors">
-              Connexion
+    <div className="min-h-dvh bg-background">
+      <a href="#content" className="skip-link">
+        Aller au contenu
+      </a>
+      <header className="border-b border-border/70">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-5 md:px-9">
+          <Link to="/" aria-label="Deepflow, accueil">
+            <Brand />
+          </Link>
+          <nav
+            aria-label="Navigation du site"
+            className="flex items-center gap-3"
+          >
+            <Link
+              to="/preview"
+              className="hidden text-xs text-muted-foreground hover:text-primary sm:block"
+            >
+              Découvrir l’interface
             </Link>
-            <Link to="/register">
-              <Button size="sm" className="sm:hidden rounded-full bg-primary hover:bg-primary/90 text-white font-bold px-5 h-9">
-                Commencer
-              </Button>
-              <Button size="lg" className="hidden sm:flex rounded-full bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                Commencer
-              </Button>
-            </Link>
-          </div>
-        </nav>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/login">Connexion</Link>
+            </Button>
+            <Button asChild size="sm" className="text-xs">
+              <Link to="/register">Créer mon espace</Link>
+            </Button>
+          </nav>
+        </div>
       </header>
-
-      <main className="flex-grow">
-        {/* HERO */}
-        <section className="relative min-h-screen flex items-center pt-32 px-6 pb-20">
-          <div className="container max-w-6xl mx-auto relative z-10">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="max-w-5xl mx-auto text-center"
-            >
-              <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-10 text-primary font-semibold text-sm tracking-wide uppercase">
-                <Sparkles className="h-4 w-4" />
-                L'intelligence artificielle au service de votre focus
-              </motion.div>
-
-              <motion.h1 variants={itemVariants} className="text-5xl sm:text-7xl md:text-8xl font-black mb-8 leading-[0.95] tracking-tighter">
-                Reprenez le contrôle de votre temps. <br />
-                <span className="bg-gradient-to-r from-primary via-blue-400 to-purple-500 bg-clip-text text-transparent italic">
-                  Sans effort.
+      <main id="content">
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:px-9 md:py-24 lg:grid-cols-[1fr_1fr]">
+          <div>
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              POUR VOS ÉTUDES. ET TOUT LE RESTE.
+            </div>
+            <h1 className="text-[48px] font-semibold leading-[1.06] tracking-[-2.6px] sm:text-[64px]">
+              Un esprit clair.
+              <br />
+              <span className="text-primary">Une journée à vous.</span>
+            </h1>
+            <p className="mb-8 mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
+              Vos cours, vos tâches, vos idées. Deepflow rassemble l’essentiel
+              pour vous aider à avancer, à votre rythme.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="gap-2 rounded-xl text-sm">
+                <Link to="/register">
+                  Créer mon espace
+                  <ArrowRight size={16} />
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                asChild
+                size="lg"
+                className="gap-2 text-sm"
+              >
+                <Link to="/preview">
+                  Explorer l’interface
+                  <ArrowUpRight size={16} />
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-5 text-xs text-muted-foreground">
+              Pensé pour les études en France. Ouvert à tous vos projets.
+            </p>
+          </div>
+          <div className="relative isolate">
+            <div
+              aria-hidden="true"
+              className="absolute -inset-7 -z-10 rounded-full bg-primary/[0.04] blur-3xl"
+            />
+            <div className="panel overflow-hidden !rounded-[24px] shadow-[0_25px_80px_-30px_rgba(55,55,100,0.25)]">
+              <div className="flex items-center justify-between border-b px-6 py-5">
+                <Brand small />
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] text-emerald-700">
+                  Votre espace de clarté
                 </span>
-              </motion.h1>
-
-              <motion.p variants={itemVariants} className="text-lg sm:text-2xl md:text-3xl text-white/40 mb-14 max-w-3xl mx-auto leading-tight px-4 sm:px-0 font-medium">
-                L'espace de travail minimaliste qui élimine les distractions et dope votre focus.
-              </motion.p>
-
-              <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 sm:gap-8 max-w-2xl mx-auto w-full">
-                <form onSubmit={handleStartFlow} className="w-full relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-primary to-purple-600 rounded-[2.5rem] blur opacity-25 group-focus-within:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative flex flex-col sm:flex-row gap-3 p-2 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] sm:rounded-full">
-                    <Input
-                      placeholder="Quel est votre objectif principal aujourd'hui ?"
-                      className="h-14 sm:h-16 bg-transparent border-0 text-lg sm:text-xl focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-white/20 px-6"
-                      value={initialGoal}
-                      onChange={(e) => setInitialGoal(e.target.value)}
-                    />
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="h-14 sm:h-16 px-8 sm:px-12 text-lg sm:text-xl font-bold rounded-full bg-primary hover:bg-primary/90 shadow-lg transition-all duration-500 hover:scale-[1.02] active:scale-95 whitespace-nowrap"
+              </div>
+              <div className="p-6 sm:p-8">
+                <p className="eyebrow mb-2">UN APERÇU DE VOTRE JOURNÉE</p>
+                <h2 className="text-2xl font-semibold tracking-[-.7px]">
+                  De la place pour l’essentiel.
+                </h2>
+                <div className="mt-6 rounded-2xl bg-[#efedf9] p-5 dark:bg-primary/10">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-primary">
+                      CONCENTRATION
+                    </span>
+                    <Timer size={16} className="text-primary" />
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <p className="text-5xl font-light tracking-[-2px]">
+                      25<span className="text-muted-foreground/50">:00</span>
+                    </p>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+                      <ArrowRight size={16} />
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Un moment pour avancer sur votre projet.
+                  </p>
+                </div>
+                <div className="mt-4 space-y-1">
+                  {[
+                    "Préparer le prochain TD",
+                    "Faire le point sur mes priorités",
+                    "Garder du temps pour souffler",
+                  ].map((text, i) => (
+                    <div
+                      key={text}
+                      className="flex items-center gap-3 border-b border-border/60 py-3"
                     >
-                      Démarrer mon flow
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </div>
-                </form>
-                
-                <div className="flex flex-wrap justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
-                   <div className="flex items-center gap-2 text-sm font-medium">
-                      <ShieldCheck className="h-5 w-5 text-primary" /> Sécurisé & Privé
-                   </div>
-                   <div className="flex items-center gap-2 text-sm font-medium">
-                      <Cpu className="h-5 w-5 text-primary" /> IA de Pointe
-                   </div>
-                   <div className="flex items-center gap-2 text-sm font-medium">
-                      <TrendingUp className="h-5 w-5 text-primary" /> +40% Productivité
-                   </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Dashboard Preview */}
-        <section className="py-32 px-6 relative">
-          <div className="container max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 60 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              viewport={{ once: true }}
-              className="bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[3.5rem] p-6 sm:p-12 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden relative"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-purple-500/10 pointer-events-none" />
-
-              {/* Browser Header */}
-              <div className="flex items-center gap-3 mb-8 px-2">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-white/20"></div>
-                  <div className="w-3 h-3 rounded-full bg-white/20"></div>
-                  <div className="w-3 h-3 rounded-full bg-white/20"></div>
-                </div>
-                <div className="flex-1 max-w-md mx-auto bg-white/5 rounded-full h-8 flex items-center justify-center border border-white/10">
-                  <span className="text-[10px] text-white/40 font-mono tracking-widest uppercase">system.deepflow.app</span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors">
-                  <div className="text-white/40 text-xs font-bold uppercase tracking-widest mb-4">Focus Score</div>
-                  <div className="text-6xl font-bold text-primary mb-2">94%</div>
-                  <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
-                    <Zap className="h-4 w-4" /> Performance Optimale
-                  </div>
-                </div>
-                
-                <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
-                  <div className="flex justify-between items-center">
-                    <div className="text-white/40 text-xs font-bold uppercase tracking-widest">Tâches Intelligentes</div>
-                    <div className="h-2 w-24 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full w-3/4 bg-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                      <span
+                        className={`grid h-4 w-4 place-items-center rounded border ${i === 2 ? "border-primary/20 bg-primary/10 text-primary" : ""}`}
+                      >
+                        {i === 2 && <Check size={11} />}
+                      </span>
+                      <span
+                        className={`text-xs ${i === 2 ? "text-muted-foreground line-through" : ""}`}
+                      >
+                        {text}
+                      </span>
                     </div>
-                  </div>
-                  <div className="space-y-4">
-                    {[
-                      { t: "Architecture Vision 2026", p: "Urgent", c: "bg-red-500/20 text-red-400" },
-                      { t: "Optimisation des Flux Cognitifs", p: "IA", c: "bg-primary/20 text-primary" },
-                      { t: "Deep Work Session (2h)", p: "Focus", c: "bg-purple-500/20 text-purple-400" }
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
-                        <div className="h-5 w-5 rounded-full border-2 border-white/20 group-hover:border-primary transition-colors" />
-                        <span className="text-sm font-medium text-white/80">{item.t}</span>
-                        <span className={`ml-auto text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider ${item.c}`}>
-                          {item.p}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
+                <p className="mt-5 text-right text-[9px] text-muted-foreground">
+                  Illustration de l’interface · données d’exemple
+                </p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
-
-        {/* Persuasion Section */}
-        <section className="py-40 px-6">
-          <div className="container max-w-5xl mx-auto">
-            <div className="text-center mb-32">
-              <h2 className="text-5xl md:text-7xl font-bold mb-10 leading-[1] tracking-tight">
-                Éliminez la <br />
-                <span className="text-white/30 italic">friction cognitive.</span>
-              </h2>
-              <p className="text-xl text-white/60">
-                Chaque minute de distraction est une opportunité perdue. Votre temps est votre ressource la plus précieuse.
+        <section className="mx-auto max-w-6xl border-t border-border/70 px-5 py-16 md:px-9">
+          <p className="eyebrow mb-4">MOINS D’ONGLETS, PLUS DE CLARTÉ</p>
+          <h2 className="mb-10 text-3xl font-semibold tracking-[-1px]">
+            Un quotidien qui respire.
+          </h2>
+          <div className="grid gap-5 md:grid-cols-3">
+            {features.map((feature) => (
+              <article key={feature.title} className="panel p-7">
+                <span className="mb-6 grid h-10 w-10 place-items-center rounded-xl bg-primary/5 text-primary">
+                  <feature.icon size={21} strokeWidth={1.5} />
+                </span>
+                <h3 className="mb-3 text-base font-semibold tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-secondary/60 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={21} className="shrink-0 text-primary" />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Vous gardez la main sur vos connexions et les données partagées
+                avec l’IA.
               </p>
             </div>
-
-            <div className="grid md:grid-cols-2 gap-10">
-              <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[3rem] p-12 hover:bg-white/5 transition-all group duration-500">
-                <div className="h-16 w-16 rounded-3xl bg-primary/10 flex items-center justify-center mb-10 group-hover:scale-110 transition-transform border border-primary/20">
-                  <Brain className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">Videz votre charge mentale</h3>
-                <p className="text-white/60 leading-relaxed">
-                  Arrêtez de gaspiller de l'énergie à vous souvenir. Notre IA gère la complexité pour que votre cerveau reste libre pour la création.
-                </p>
-              </div>
-
-              <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[3rem] p-12 hover:bg-white/5 transition-all group duration-500">
-                <div className="h-16 w-16 rounded-3xl bg-purple-500/10 flex items-center justify-center mb-10 group-hover:scale-110 transition-transform border border-purple-500/20">
-                  <Clock className="h-7 w-7 text-purple-400" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">Gagnez 5h par semaine</h3>
-                <p className="text-white/60 leading-relaxed">
-                  En éliminant l'indécision et les frictions organisationnelles, nos utilisateurs retrouvent en moyenne une demi-journée de liberté par semaine.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Motivation CTA */}
-        <section className="py-32 px-6">
-          <div className="container max-w-6xl mx-auto">
-            <div className="bg-gradient-to-br from-primary/40 to-purple-600/40 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-12 md:p-24 text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent pointer-events-none" />
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
-                viewport={{ once: true }}
-              >
-                <h2 className="text-4xl md:text-7xl font-bold mb-8">
-                  Devenez inarrêtable.
-                </h2>
-                <p className="text-xl md:text-2xl text-white/80 mb-12 max-w-2xl mx-auto font-medium">
-                  Rejoignez l'élite qui a déjà choisi de transformer son chaos en avantage compétitif.
-                </p>
-                <form onSubmit={handleStartFlow}>
-                  <Button
-                    size="lg"
-                    className="h-20 px-16 text-2xl font-black rounded-full bg-white text-black hover:bg-white/90 shadow-2xl transition-all hover:scale-110 active:scale-95"
-                  >
-                    Ouvrir mon accès gratuit
-                  </Button>
-                </form>
-                <p className="mt-8 text-white/50 text-sm font-medium">
-                  Installation en 30 secondes • Sans engagement • Gratuit pour toujours
-                </p>
-              </motion.div>
-            </div>
+            <Link
+              to="/preview"
+              className="inline-flex items-center gap-2 text-xs font-medium text-primary"
+            >
+              Découvrir Deepflow
+              <ArrowRight size={14} />
+            </Link>
           </div>
         </section>
       </main>
-
-      {/* Footer */}
-      <footer className="py-20 border-t border-white/5 px-6">
-        <div className="container max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3 opacity-60">
-            <div className="p-1 bg-white rounded-lg">
-              <img src={deepflowLogo} alt="DeepFlow Logo" className="h-6 w-6 object-contain" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">DeepFlow</span>
-          </div>
-          <p className="text-sm text-white/40 font-medium">
-            &copy; {new Date().getFullYear()} DeepFlow Engineering. Tous droits réservés.
-          </p>
-          <div className="flex gap-8 text-sm font-medium text-white/40">
-            <Link to="/legal/privacy" className="hover:text-white transition-colors">Confidentialité</Link>
-            <Link to="/legal/terms" className="hover:text-white transition-colors">Conditions</Link>
-          </div>
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-7 text-xs text-muted-foreground md:px-9">
+          <span>© {new Date().getFullYear()} Deepflow</span>
+          <span>Votre rythme. Vos priorités. Votre espace.</span>
+          <nav aria-label="Informations légales" className="flex gap-4">
+            <Link to="/legal/privacy" className="hover:text-primary">Confidentialité</Link>
+            <Link to="/legal/terms" className="hover:text-primary">Conditions</Link>
+          </nav>
+          <Link to="/login" className="hover:text-primary">
+            Ouvrir mon espace ↗
+          </Link>
         </div>
       </footer>
     </div>
   );
-};
-
-export default Index;
+}

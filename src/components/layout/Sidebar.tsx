@@ -1,130 +1,155 @@
-import React from "react";
-
-import { cn } from "@/lib/utils";
-import { 
-  Home, 
-  CheckSquare, 
-  Target, 
-  BarChart3, 
-  BookOpen, 
-  Settings,
-  MessageSquare,
-  Timer,
-  Brain,
-  LogOut,
-  Calendar,
-  Shield,
-  Sparkles,
-
+import { useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  CheckSquare2,
   GraduationCap,
+  Timer,
+  BookOpen,
+  Sparkles,
+  Settings2,
+  Link2,
+  ArrowUpRight,
+  Target,
+  Activity,
+  Award,
+  ChevronDown,
+  Coins,
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { useStudentMode } from "@/hooks/useStudentMode";
-import deepflowLogo from "@/assets/deepflow-logo.png";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   className?: string;
   onItemClick?: () => void;
 }
+const primary = [
+  { icon: LayoutDashboard, label: "Vue d’ensemble", path: "/dashboard" },
+  { icon: CheckSquare2, label: "Mes tâches", path: "/tasks" },
+  { icon: GraduationCap, label: "Espace étudiant", path: "/student" },
+  { icon: CalendarDays, label: "Calendrier", path: "/calendar" },
+  { icon: Timer, label: "Concentration", path: "/focus" },
+  { icon: BookOpen, label: "Journal", path: "/journal" },
+];
+const secondary = [
+  { icon: Target, label: "Objectifs", path: "/goals" },
+  { icon: Activity, label: "Habitudes", path: "/habits" },
 
-export default function Sidebar({ className, onItemClick }: SidebarProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { signOut, isAdmin } = useAuth();
-  const studentMode = useStudentMode();
+  { icon: Activity, label: "Analyse", path: "/analysis" },
 
-  const navItems = [
-    { icon: Home, label: "Tableau de bord", path: "/dashboard" },
-    { icon: CheckSquare, label: "Tâches", path: "/tasks" },
-    { icon: BarChart3, label: "Habitudes", path: "/habits" },
-    { icon: Target, label: "Objectifs", path: "/goals" },
-    { icon: Timer, label: "Focus", path: "/focus" },
-    { icon: Calendar, label: "Calendrier", path: "/calendar" },
-    ...(studentMode ? [{ icon: GraduationCap, label: "Études", path: "/etudes" }] : []),
-    { icon: BookOpen, label: "Journal/Réflexion", path: "/journal" },
-    { icon: Brain, label: "Intelligence IA", path: "/ai-assistant" },
-    { icon: Settings, label: "Paramètres", path: "/settings" },
-  ];
-
-  const allNavItems = isAdmin 
-    ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
-    : navItems;
-
-  const handleItemClick = (path: string) => {
-    navigate(path);
-    onItemClick?.();
-  };
-
+  { icon: Sparkles, label: "Profil IA", path: "/profile" },
+];
+export function Brand({ small = false }: { small?: boolean }) {
   return (
-    <div className={cn(
-      "w-72 h-[calc(100vh-2rem)] m-4 rounded-[2.5rem] bg-black/60 backdrop-blur-3xl border border-white/5 flex flex-col transition-all duration-300 shadow-2xl overflow-hidden",
-      className
-    )}>
-      <div className="p-10 pb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-white rounded-2xl">
-            <img src={deepflowLogo} alt="DeepFlow Logo" className="h-7 w-7 object-contain" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white/90">DeepFlow</h1>
-        </div>
-      </div>
-      
-      <nav className="flex-1 px-6 py-4 space-y-1.5 overflow-y-auto scrollbar-hidden">
-        {allNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const isAdminItem = item.path === "/admin";
-
-          return (
-            <button
-              key={item.path}
-              className={cn(
-                "w-full flex items-center gap-4 h-12 px-5 rounded-2xl text-[15px] font-medium transition-all duration-300 relative group",
-                isActive 
-                  ? "text-white bg-white/10"
-                  : "text-white/40 hover:bg-white/5 hover:text-white/70",
-                isAdminItem && !isActive && "text-destructive/70 hover:text-destructive hover:bg-destructive/10",
-                "active:scale-[0.98]"
-              )}
-              onClick={() => handleItemClick(item.path)}
-            >
-              <item.icon className={cn(
-                "h-[18px] w-[18px] flex-shrink-0 transition-transform duration-300 group-hover:scale-110",
-                isActive ? "text-white" : "text-white/40"
-              )} />
-              <span className="truncate">{item.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="activeNav"
-                  className="absolute left-2 w-1 h-5 bg-primary rounded-full"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
-      </nav>
-      
-      <div className="p-6 mt-auto border-t border-white/5 bg-black/20">
-        <div className="mb-4 px-4 py-3 rounded-2xl bg-white/5 border border-white/5">
-          <div className="text-xs text-white/40 mb-1">Session actuelle</div>
-          <div className="text-sm font-medium text-white/80 truncate">
-            {location.pathname === '/dashboard' ? 'Tableau de bord' : 'Focus Actif'}
-          </div>
-        </div>
+    <span className="inline-flex items-center gap-2.5">
+      <span className={cn("brand-mark", small && "h-7 w-7")} aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
+      <span
+        className="text-[21px] font-semibold tracking-[-0.9px]"
+        translate="no"
+      >
+        deepflow<span className="text-primary">.</span>
+      </span>
+    </span>
+  );
+}
+export default function Sidebar({ className, onItemClick }: SidebarProps) {
+  const [expanded, setExpanded] = useState(false);
+  const location = useLocation();
+  const renderLink = (item: (typeof primary)[number]) => (
+    <NavLink
+      key={item.path}
+      to={item.path}
+      onClick={onItemClick}
+      className={({ isActive }) =>
+        cn(
+          "sidebar-link",
+          (isActive ||
+            (location.pathname === "/preview" && item.path === "/dashboard")) &&
+            "sidebar-link-active",
+        )
+      }
+    >
+      <item.icon size={18} strokeWidth={1.65} aria-hidden="true" />
+      <span>{item.label}</span>
+    </NavLink>
+  );
+  return (
+    <aside
+      className={cn(
+        "deepflow-sidebar flex h-dvh w-[244px] flex-col",
+        className,
+      )}
+    >
+      <Link
+        to="/"
+        className="sidebar-brand px-7 pb-9 pt-8"
+        aria-label="Deepflow, accueil"
+        onClick={onItemClick}
+      >
+        <Brand />
+      </Link>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4">
+        <p className="nav-caption">VOTRE ESPACE</p>
+        <nav aria-label="Navigation principale" className="space-y-1">
+          {primary.map(renderLink)}
+        </nav>
         <button
-          className="w-full flex items-center gap-4 h-12 px-5 rounded-2xl text-[15px] font-medium text-white/40 hover:bg-white/5 hover:text-destructive/80 transition-all duration-300 active:scale-[0.98]"
-          onClick={async () => {
-            await signOut();
-            navigate('/login');
-            onItemClick?.();
-          }}
+          className="sidebar-expand mt-5 flex min-h-11 w-full items-center justify-between px-3 text-xs font-medium text-muted-foreground"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
         >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
-          <span>Se déconnecter</span>
+          Développement personnel
+          <ChevronDown size={14} className={expanded ? "rotate-180" : ""} />
         </button>
+        {expanded && (
+          <nav aria-label="Développement personnel" className="space-y-1">
+            {secondary.map(renderLink)}
+          </nav>
+        )}
+        <p className="nav-caption sidebar-services-caption mt-7">
+          AVEC DEEPFLOW
+        </p>
+        <nav aria-label="Services" className="space-y-1">
+          {renderLink({
+            icon: Sparkles,
+            label: "Assistant IA",
+            path: "/ai-assistant",
+          })}
+          {renderLink({
+            icon: Link2,
+            label: "Connexions",
+            path: "/connections",
+          })}
+          {renderLink({ icon: Coins, label: "Crédits IA", path: "/credits" })}
+        </nav>
       </div>
-    </div>
+      <div className="sidebar-message m-4 rounded-2xl border border-primary/10 bg-primary/[0.04] p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Un peu plus de clarté.
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Une tâche à la fois, à votre rythme.
+        </p>
+        <Link
+          to="/focus"
+          onClick={onItemClick}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary"
+        >
+          Entrer dans le flow <ArrowUpRight size={13} />
+        </Link>
+      </div>
+      <div className="border-t border-border/70 p-4">
+        {renderLink({
+          icon: Settings2,
+          label: "Paramètres",
+          path: "/settings",
+        })}
+      </div>
+    </aside>
   );
 }

@@ -1,168 +1,52 @@
-import React from "react";
-
-import { useEffect, useState } from "react";
-import { useAnalyticsData } from "./useAnalyticsData";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { aiRequestQueue } from "@/utils/aiRequestQueue";
-import { toast } from "sonner";
-
-export type AIInsight = {
-  id: string;
-  title: string;
-  insight: string;
-  recommendation: string;
-  priority: "high" | "medium" | "low";
-  category?: string;
-  metric?: string;
-};
+import { requestAI } from "@/services/ai";
+import { insightSchema, parseAIJson, type AIInsight } from "@/lib/ai-response";
+export type { AIInsight } from "@/lib/ai-response";
 
 export function useAIProductivityInsights() {
   const { user } = useAuth();
-  const { 
-    taskCompletionRate,
-    totalFocusTime,
-    streakCount,
-    habitsData,
-    focusData,
-    activityData
-  } = useAnalyticsData();
-
   const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [insightOwner, setInsightOwner] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
+  const activeUser = useRef(user?.id);
+  activeUser.current = user?.id;
+  const pending = useRef<string | null>(null);
   useEffect(() => {
-    if (!user) return;
-    
-
-    let cancelled = false;
-    
-
-    const loadSavedInsights = async () => {
-      if (cancelled) return true;
-      
-      const { data } = await supabase
-        .from('ai_productivity_insights')
-        .select('insights_data, updated_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (data?.insights_data) {
-        const savedInsights = data.insights_data as { insights: AIInsight[], generatedAt: string };
-        const hoursSinceGeneration = (Date.now() - new Date(savedInsights.generatedAt).getTime()) / (1000 * 60 * 60);
-        
-
-
-        if (hoursSinceGeneration < 6) {
-          setInsights(savedInsights.insights);
-          return true;
-        }
+    setInsights([]);
+    setError(null);
+    setIsLoading(false);
+  }, [user?.id]);
+  const generateInsights = async () => {
+    if (!user || pending.current === user.id) return;
+    pending.current = user.id;
+    setIsLoading(true);
+    setError(null);
+    const owner = user.id;
+    try {
+      const response = await requestAI(
+        'Analyse les tâches, habitudes, objectifs et séances de focus fournis. Donne 3 conseils courts basés uniquement sur des observations vérifiables. Si les données sont insuffisantes, dis-le clairement. Retourne uniquement un tableau JSON de 3 objets : {"id":"unique","title":"titre","insight":"observation factuelle","recommendation":"action possible","priority":"high|medium|low","category":"performance|habits|focus|motivation|optimization"}. Aucune prétention de diagnostic, de comparaison avec les autres utilisateurs ni de tendance non mesurée.',
+      );
+      const value = parseAIJson(response, insightSchema);
+      if (activeUser.current === owner) {
+        setInsights(value);
+        setInsightOwner(owner);
       }
-      return false;
-    };
-
-
-    async function fetchAIInsights() {
-      if (cancelled) return;
-      
-      const hasCachedData = await loadSavedInsights();
-      if (hasCachedData || cancelled) return;
-
-      setIsLoading(true);
-      try {
-
-        const userData = {
-          taskCompletionRate,
-          totalFocusTime,
-          streakCount,
-          habitsData,
-          focusData,
-          activityData
-        };
-
-
-        const { data, error } = await aiRequestQueue.add(() =>
-          supabase.functions.invoke("gemini-chat-enhanced", {
-            body: {
-              message: `Analyse ces données et donne 3 conseils COURTS (max 15 mots chacun). Format JSON uniquement:
-[{"id":"1","title":"Titre court","recommendation":"Action concrète","priority":"high|medium|low","category":"focus|habits|performance"}]
-
-Données: Tâches ${taskCompletionRate}% | Focus ${totalFocusTime}min | Streak ${streakCount} | Habitudes actives ${habitsData?.length || 0}`,
-              context: { user_data: userData, recent_messages: [] }
-            }
-          })
+    } catch (failure) {
+      if (activeUser.current === owner)
+        setError(
+          failure instanceof Error ? failure.message : "L’analyse a échoué.",
         );
-
-        if (cancelled) return;
-
-
-        if (error) {
-          console.error('AI request error:', error);
-          
-
-          if (error.message?.includes('402') || error.message?.includes('credits exhausted') || error.message?.includes('Payment Required')) {
-            toast.error('💳 Crédits IA épuisés. Ajoutez des crédits dans Settings → Cloud → Usage.');
-            return;
-          }
-          
-
-          if (error.message?.includes('Rate limit') || error.message?.includes('429')) {
-            toast.error('🚫 Limite d\'API atteinte. Réessayez plus tard.');
-            return;
-          }
-          
-          setInsights([]);
-          return;
-        }
-
-        let insightsList: AIInsight[] = [];
-        if (data?.response) {
-
-          const jsonMatch = data.response.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            insightsList = JSON.parse(jsonMatch[0]);
-          }
-        }
-
-        if (cancelled) return;
-
-        if (Array.isArray(insightsList) && insightsList.length > 0) {
-          setInsights(insightsList);
-          
-
-          await supabase
-            .from('ai_productivity_insights')
-            .upsert({
-              user_id: user.id,
-              insights_data: {
-                insights: insightsList,
-                generatedAt: new Date().toISOString()
-              }
-            }, {
-              onConflict: 'user_id'
-            });
-        } else {
-          setInsights([]);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setInsights([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
+    } finally {
+      if (pending.current === owner) pending.current = null;
+      if (activeUser.current === owner) setIsLoading(false);
     }
-
-    fetchAIInsights();
-    
-    return () => {
-      cancelled = true;
-    };
-
-
-  }, [user]);
-
-  return { insights, isLoading };
+  };
+  return {
+    insights: insightOwner === user?.id ? insights : [],
+    isLoading,
+    error,
+    generateInsights,
+  };
 }

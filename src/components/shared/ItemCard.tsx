@@ -1,11 +1,11 @@
 import React from "react";
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { CheckCircle } from './CheckCircle';
-import { ProgressRing } from './ProgressRing';
-import { DragHandle } from './DragHandle';
-import { ItemCardActions } from './ItemCardActions';
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { CheckCircle } from "./CheckCircle";
+import { ProgressRing } from "./ProgressRing";
+import { DragHandle } from "./DragHandle";
+import { ItemCardActions } from "./ItemCardActions";
 import {
   PriorityBadge,
   DueDateBadge,
@@ -13,10 +13,10 @@ import {
   FrequencyBadge,
   CategoryBadge,
   SubtaskBadge,
-} from './ItemCardBadges';
+} from "./ItemCardBadges";
 
-export type ItemType = 'task' | 'habit' | 'goal';
-export type ItemVariant = 'compact' | 'standard' | 'expanded';
+export type ItemType = "task" | "habit" | "goal";
+export type ItemVariant = "compact" | "standard" | "expanded";
 
 interface BaseItemData {
   id: string;
@@ -26,13 +26,13 @@ interface BaseItemData {
 }
 
 interface TaskData extends BaseItemData {
-  priority?: 'high' | 'medium' | 'low';
+  priority?: "high" | "medium" | "low";
   due_date?: string;
   created_at?: string;
 }
 
 interface HabitData extends BaseItemData {
-  frequency: 'daily' | 'weekly' | 'monthly';
+  frequency: "daily" | "weekly" | "monthly";
   streak?: number;
   is_completed_today?: boolean;
   category?: string;
@@ -69,15 +69,15 @@ interface ItemCardProps {
 }
 
 const priorityDotColors = {
-  high: 'bg-red-500',
-  medium: 'bg-yellow-500',
-  low: 'bg-green-500',
+  high: "bg-red-500",
+  medium: "bg-yellow-500",
+  low: "bg-green-500",
 };
 
 export function ItemCard({
   type,
   data,
-  variant = 'standard',
+  variant = "standard",
   onComplete,
   onEdit,
   onDelete,
@@ -90,62 +90,56 @@ export function ItemCard({
   subtaskCompleted = 0,
   className,
 }: ItemCardProps) {
-  const isCompleted = type === 'habit' 
-    ? (data as HabitData).is_completed_today 
-    : data.completed;
+  const isCompleted =
+    type === "habit" ? (data as HabitData).is_completed_today : data.completed;
 
-  const taskData = type === 'task' ? (data as TaskData) : null;
-  const habitData = type === 'habit' ? (data as HabitData) : null;
-  const goalData = type === 'goal' ? (data as GoalData) : null;
+  const taskData = type === "task" ? (data as TaskData) : null;
+  const habitData = type === "habit" ? (data as HabitData) : null;
+  const goalData = type === "goal" ? (data as GoalData) : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
-      animate={{ 
-        opacity: isDragging ? 0.7 : 1, 
+      animate={{
+        opacity: isDragging ? 0.7 : 1,
         y: 0,
         scale: isDragging ? 1.02 : 1,
       }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className={cn(
-        'group',
-        isDragging && 'z-50',
-        className
-      )}
+      className={cn("group", isDragging && "z-50", className)}
     >
       <Card
         className={cn(
-          'relative overflow-hidden transition-all duration-300',
-          'backdrop-blur-2xl bg-white/5 border-white/10 rounded-[2rem]',
-          'hover:bg-white/10 hover:border-white/20',
-          'active:scale-[0.98]',
+          "relative overflow-hidden transition-all duration-300",
+          "backdrop-blur-2xl bg-muted/50 border-border rounded-[2rem]",
+          "hover:bg-secondary hover:border-white/20",
+          "active:scale-[0.98]",
 
-          isCompleted && 'bg-muted/30 opacity-75',
+          isCompleted && "bg-muted/30 opacity-75",
 
-          isArchived && 'opacity-60',
+          isArchived && "opacity-60",
 
-          isDragging && 'shadow-xl ring-2 ring-primary/20'
+          isDragging && "shadow-xl ring-2 ring-primary/20",
         )}
       >
         {/* Priority dot indicator */}
         {taskData?.priority && (
-          <div className={cn(
-            'absolute top-3 right-3 h-2 w-2 rounded-full',
-            priorityDotColors[taskData.priority],
-            'opacity-0 group-hover:opacity-100 transition-opacity duration-200'
-          )} />
+          <div
+            className={cn(
+              "absolute top-3 right-3 h-2 w-2 rounded-full",
+              priorityDotColors[taskData.priority],
+              "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+            )}
+          />
         )}
 
-        <CardContent className={cn(
-          'p-4',
-          variant === 'compact' && 'p-3'
-        )}>
+        <CardContent className={cn("p-4", variant === "compact" && "p-3")}>
           <div className="flex items-start gap-3">
             {/* Drag Handle */}
             {dragHandleProps && (
-              <DragHandle 
-                listeners={dragHandleProps.listeners} 
+              <DragHandle
+                listeners={dragHandleProps.listeners}
                 attributes={dragHandleProps.attributes}
                 className="flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               />
@@ -153,11 +147,8 @@ export function ItemCard({
 
             {/* Checkbox / Progress Ring */}
             <div className="flex-shrink-0 mt-0.5">
-              {type === 'goal' ? (
-                <ProgressRing 
-                  progress={goalData?.progress || 0} 
-                  size="md"
-                />
+              {type === "goal" ? (
+                <ProgressRing progress={goalData?.progress || 0} size="md" />
               ) : (
                 <CheckCircle
                   checked={!!isCompleted}
@@ -173,13 +164,13 @@ export function ItemCard({
               <div className="flex items-start justify-between gap-2">
                 <h3
                   className={cn(
-                    'font-semibold text-sm sm:text-base leading-tight',
-                    isCompleted && 'line-through text-muted-foreground'
+                    "font-semibold text-sm sm:text-base leading-tight",
+                    isCompleted && "line-through text-muted-foreground",
                   )}
                 >
                   {data.title}
                 </h3>
-                
+
                 {/* Actions - visible on hover */}
                 <ItemCardActions
                   onEdit={onEdit}
@@ -191,11 +182,13 @@ export function ItemCard({
               </div>
 
               {/* Description */}
-              {variant !== 'compact' && data.description && (
-                <p className={cn(
-                  'text-xs sm:text-sm text-muted-foreground line-clamp-2',
-                  isCompleted && 'line-through'
-                )}>
+              {variant !== "compact" && data.description && (
+                <p
+                  className={cn(
+                    "text-xs sm:text-sm text-muted-foreground line-clamp-2",
+                    isCompleted && "line-through",
+                  )}
+                >
                   {data.description}
                 </p>
               )}
@@ -237,13 +230,21 @@ export function ItemCard({
                 )}
 
                 {subtaskCount > 0 && (
-                  <SubtaskBadge completed={subtaskCompleted} total={subtaskCount} />
+                  <SubtaskBadge
+                    completed={subtaskCompleted}
+                    total={subtaskCount}
+                  />
                 )}
               </div>
 
               {/* Expandable content */}
               {children && (
-                <div className={cn("mt-3", variant === 'expanded' && "pt-3 border-t border-border/30")}>
+                <div
+                  className={cn(
+                    "mt-3",
+                    variant === "expanded" && "pt-3 border-t border-border/30",
+                  )}
+                >
                   {children}
                 </div>
               )}
@@ -255,9 +256,9 @@ export function ItemCard({
   );
 }
 
-export { CheckCircle } from './CheckCircle';
-export { ProgressRing } from './ProgressRing';
-export { DragHandle } from './DragHandle';
-export { ItemCardActions, ExpandToggle, AddButton } from './ItemCardActions';
-export { FilterBar, type ViewMode } from './FilterBar';
-export * from './ItemCardBadges';
+export { CheckCircle } from "./CheckCircle";
+export { ProgressRing } from "./ProgressRing";
+export { DragHandle } from "./DragHandle";
+export { ItemCardActions, ExpandToggle, AddButton } from "./ItemCardActions";
+export { FilterBar, type ViewMode } from "./FilterBar";
+export * from "./ItemCardBadges";
