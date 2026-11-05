@@ -1,35 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
-
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'recharts': ['recharts'],
-          'framer': ['framer-motion'],
-          'markdown': ['react-markdown', 'react-syntax-highlighter', 'remark-gfm'],
-          'dates': ['date-fns'],
-        },
-      },
-    },
-  },
-  plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "framer-motion"],
-  },
-}));
+import path from "node:path";
+export default defineConfig({
+  server: { host: "127.0.0.1", port: 8080, strictPort: true },
+  preview: { host: "127.0.0.1", port: 4173, strictPort: true },
+  plugins: [react()],
+  resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
+  build: { target: ["es2020", "safari16"] },
+});

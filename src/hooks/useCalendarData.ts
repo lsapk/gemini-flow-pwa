@@ -1,147 +1,102 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { Task, Habit, Goal } from "@/types";
 
 export interface CalendarItem {
   id: string;
   title: string;
   description?: string;
   date: string;
-  type: 'task' | 'habit' | 'goal' | 'google_event';
+  type: "task" | "habit" | "goal" | "google_event";
   completed?: boolean;
   priority?: string;
   category?: string;
-  source?: 'local' | 'google';
+  source?: "local" | "google";
+}
+
+export function localDay(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+export function calendarWeek(selectedDate: Date) {
+  const start = new Date(selectedDate);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return { start, end };
 }
 
 export function useCalendarData(selectedDate: Date) {
   const { user } = useAuth();
-  const [items, setItems] = useState<CalendarItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (user && selectedDate) {
-      loadCalendarData();
-    }
-  }, [user, selectedDate]);
-
-  const loadCalendarData = async () => {
-    if (!user) return;
-
-    setIsLoading(true);
-    try {
-
-      const startOfWeek = new Date(selectedDate);
-      startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay() + 1);
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-
-
-      const { data: tasks } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('due_date', startOfWeek.toISOString())
-        .lte('due_date', endOfWeek.toISOString());
-
-
-      const { data: goals } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('target_date', startOfWeek.toISOString())
-        .lte('target_date', endOfWeek.toISOString());
-
-
-      const googleEvents = await loadGoogleEvents(startOfWeek, endOfWeek);
-
-      const calendarItems: CalendarItem[] = [];
-
-
-      tasks?.forEach((task: any) => {
-        calendarItems.push({
-          id: task.id,
-          title: task.title,
-          description: task.description || undefined,
-          date: task.due_date,
-          type: 'task',
-          completed: task.completed,
-          priority: task.priority || undefined,
-          source: 'local'
-        });
-      });
-
-
-      goals?.forEach((goal: any) => {
-        calendarItems.push({
-          id: goal.id,
-          title: goal.title,
-          description: goal.description || undefined,
-          date: goal.target_date,
-          type: 'goal',
-          completed: goal.completed,
-          category: goal.category,
-          source: 'local'
-        });
-      });
-
-
-      calendarItems.push(...googleEvents);
-
-      setItems(calendarItems);
-    } catch (error) {
-      console.error('Error loading calendar data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadGoogleEvents = async (startDate: Date, endDate: Date): Promise<CalendarItem[]> => {
-    if (!user) return [];
-    
-    try {
-
-      const { data: tokenData } = await supabase
-        .from("google_calendar_tokens_safe")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!tokenData) return [];
-
-      const { data: eventsData, error } = await supabase.functions.invoke("google-calendar-api", {
-        body: {
-          action: "list",
-          user_id: user.id,
-          time_min: startDate.toISOString(),
-          time_max: endDate.toISOString(),
-        },
-      });
-
-      if (error) {
-        console.error("Error fetching Google events:", error);
-        return [];
+  const { start, end } = calendarWeek(selectedDate);
+  const first = localDay(start),
+    last = localDay(end);
+  const query = useQuery({
+    queryKey: ["calendar-local", user?.id, first, last],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const tasks: CalendarItem[] = [],
+        goals: CalendarItem[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from("tasks")
+          .select("id,title,description,due_date,completed")
+          .eq("user_id", user!.id)
+          .gte("due_date", first)
+          .lt("due_date", last)
+          .order("id")
+          .range(offset, offset + 499);
+        if (error)
+          throw new Error(
+            "Vos échéances ne peuvent pas être chargées. Réessayez.",
+          );
+        tasks.push(
+          ...(data || []).map((task) => ({
+            id: task.id,
+            title: task.title,
+            description: task.description || undefined,
+            date: task.due_date!,
+            completed: task.completed,
+            type: "task" as const,
+            source: "local" as const,
+          })),
+        );
+        if (!data || data.length < 500) break;
       }
-
-      return (eventsData?.items || []).map((event: any) => ({
-        id: event.id,
-        title: event.summary || 'Sans titre',
-        date: event.start?.dateTime || event.start?.date,
-        type: 'google_event' as const,
-        completed: false,
-        description: event.description,
-        source: 'google' as const
-      }));
-    } catch (error) {
-      console.error("Error loading Google events:", error);
-      return [];
-    }
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from("goals")
+          .select("id,title,description,target_date,completed")
+          .eq("user_id", user!.id)
+          .gte("target_date", first)
+          .lt("target_date", last)
+          .order("id")
+          .range(offset, offset + 499);
+        if (error)
+          throw new Error(
+            "Vos objectifs ne peuvent pas être chargés. Réessayez.",
+          );
+        goals.push(
+          ...(data || []).map((goal) => ({
+            id: goal.id,
+            title: goal.title,
+            description: goal.description || undefined,
+            date: goal.target_date!,
+            completed: goal.completed,
+            type: "goal" as const,
+            source: "local" as const,
+          })),
+        );
+        if (!data || data.length < 500) break;
+      }
+      return [...tasks, ...goals].sort((a, b) => a.date.localeCompare(b.date));
+    },
+    retry: false,
+  });
+  return {
+    items: query.data || [],
+    isLoading: query.isLoading,
+    error: query.error,
+    reload: query.refetch,
   };
-
-  return { items, isLoading, reload: loadCalendarData };
 }

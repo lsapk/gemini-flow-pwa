@@ -1,185 +1,449 @@
-import React from "react";
-import { useUnifiedProductivityScore } from "@/hooks/useUnifiedProductivityScore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { 
-  CheckCircle2, Target, Clock, Brain, Zap, BookOpen, ListTodo, Flame, ChevronDown
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  Circle,
+  Clock3,
+  GraduationCap,
+  Plus,
+  Sparkles,
+  Timer,
 } from "lucide-react";
-import { SmartInsightsWidget } from "@/components/SmartInsightsWidget";
-import { Link, useNavigate } from "react-router-dom";
-import { AdminAnnouncementPanel } from "@/components/dashboard/AdminAnnouncementPanel";
-import { MonthlyAIReport } from "@/components/dashboard/MonthlyAIReport";
-import { DailyBriefingCard } from "@/components/ai/DailyBriefingCard";
-import { CrossInsightsWidget } from "@/components/ai/CrossInsightsWidget";
-import { TodayActionsCard } from "@/components/dashboard/TodayActionsCard";
-import { RoadmapTrackingCard } from "@/components/dashboard/RoadmapTrackingCard";
-import { StudiesCard } from "@/components/dashboard/StudiesCard";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { parisDateKey } from "@/lib/task-planning";
 
-export default function Dashboard() {
-  const [insightsOpen, setInsightsOpen] = useState(false);
-  const navigate = useNavigate();
-
-  const { 
-    scores, level, taskCompletionRate, totalFocusTime, streakCount, activeHabits, isLoading 
-  } = useUnifiedProductivityScore();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // First-time onboarding: redirect to Auto-Pilot IA (merged into AI Assistant)
-    const ONBOARDING_KEY = "deepflow_onboarding_pending";
-    if (localStorage.getItem(ONBOARDING_KEY)) {
-      localStorage.removeItem(ONBOARDING_KEY);
-      navigate("/ai-assistant?tab=autopilot&onboarding=1", { replace: true });
-      return;
-    }
-
-    const KEY = "deepflow-welcome-shown";
-    if (localStorage.getItem(KEY)) return;
-    localStorage.setItem(KEY, "1");
-    setTimeout(() => {
-      toast("Bienvenue sur DeepFlow 👋", {
-        description: "Commencez par créer une tâche ou une habitude. Besoin d'aide ? Voir /support.",
-        duration: 6000,
-      });
-    }, 800);
-  }, [navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-6 p-4">
-        <div className="h-8 bg-muted rounded w-1/4"></div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-muted rounded"></div>
-          ))}
+export interface OverviewTask {
+  id: string;
+  title: string;
+  priority: string | null;
+  due_date: string | null;
+  completed: boolean;
+}
+export interface OverviewData {
+  tasks: OverviewTask[];
+  focusMinutes: number;
+  habitCount: number;
+  week: number[];
+}
+export const emptyOverview: OverviewData = {
+  tasks: [],
+  focusMinutes: 0,
+  habitCount: 0,
+  week: [0, 0, 0, 0, 0, 0, 0],
+};
+const dateLabel = (date: Date) =>
+  new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+export function DashboardView({
+  data,
+  name,
+  preview = false,
+  onToggle,
+}: {
+  data: OverviewData;
+  name: string;
+  preview?: boolean;
+  onToggle?: (task: OverviewTask) => void;
+}) {
+  const today = parisDateKey(new Date());
+  const pending = data.tasks.filter((task) => !task.completed);
+  const completed = data.tasks.length - pending.length;
+  const urgent = pending.filter(
+    (task) => task.due_date && task.due_date.slice(0, 10) <= today,
+  );
+  const visible = [
+    ...urgent,
+    ...pending.filter((task) => !urgent.includes(task)),
+  ].slice(0, 4);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - 6 + index);
+    return new Intl.DateTimeFormat("fr-FR", { weekday: "narrow" }).format(date);
+  });
+  const max = Math.max(30, ...data.week);
+  const mainLink = preview ? "/register" : "/tasks";
+  return (
+    <div className="space-y-7">
+      {preview && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs">
+          <span>
+            Aperçu du design · données illustratives, aucune donnée de compte.
+          </span>
+          <Link to="/register" className="font-semibold text-primary">
+            Créer mon espace →
+          </Link>
         </div>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-3">{dateLabel(new Date())}</p>
+          <h1 className="page-title">
+            Bonjour {name}
+            <span className="font-normal text-primary">.</span>
+          </h1>
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            Faites de la place pour ce qui compte aujourd’hui.
+          </p>
+        </div>
+        <Button asChild className="gap-2 rounded-xl text-xs shadow-sm">
+          <Link to={mainLink}>
+            <Plus size={15} />
+            Nouvelle tâche
+          </Link>
+        </Button>
+      </div>
+      <section
+        aria-label="Vos indicateurs"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        {[
+          {
+            icon: CheckCheck,
+            label: "Tâches terminées",
+            value: completed,
+            note: `sur ${data.tasks.length} tâches`,
+            color:
+              "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+          },
+          {
+            icon: Timer,
+            label: "Temps de concentration",
+            value: `${Math.floor(data.focusMinutes / 60)}h ${data.focusMinutes % 60}`,
+            note: "sur les 7 derniers jours",
+            color: "bg-primary/10 text-primary",
+          },
+          {
+            icon: CalendarDays,
+            label: "À traiter aujourd’hui",
+            value: urgent.length,
+            note: "échéances et retards",
+            color:
+              "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+          },
+          {
+            icon: Circle,
+            label: "Habitudes actives",
+            value: data.habitCount,
+            note: "pour garder votre rythme",
+            color:
+              "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+          },
+        ].map((item) => (
+          <article key={item.label} className="panel p-4 md:p-5">
+            <div className="mb-5 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {item.label}
+              </span>
+              <span
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${item.color}`}
+              >
+                <item.icon size={14} strokeWidth={1.7} aria-hidden="true" />
+              </span>
+            </div>
+            <div className="stat-value">
+              {item.value}
+              <span className="sr-only"> {item.label}</span>
+            </div>
+            <p className="mt-2.5 text-[10px] text-muted-foreground">
+              {item.note}
+            </p>
+          </article>
+        ))}
+      </section>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]">
+        <section className="panel min-w-0">
+          <div className="panel-heading">
+            <h2 className="text-sm font-semibold">
+              Votre prochain pas
+              <span className="ml-2.5 rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+                {pending.length}
+              </span>
+            </h2>
+            <Link className="subtle-link" to={mainLink}>
+              Tout voir <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          {visible.length ? (
+            <div className="px-6 pb-3">
+              {visible.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 border-t border-border/60 py-4"
+                >
+                  <button
+                    type="button"
+                    disabled={preview}
+                    aria-label={`Terminer : ${task.title}`}
+                    className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-input hover:border-primary disabled:cursor-default"
+                    onClick={() => onToggle?.(task)}
+                  >
+                    <span className="sr-only">Terminer</span>
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-medium">
+                      {task.title}
+                    </p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {task.due_date
+                        ? new Intl.DateTimeFormat("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                          }).format(
+                            new Date(task.due_date.slice(0, 10) + "T12:00:00"),
+                          )
+                        : "Sans échéance"}
+                    </p>
+                  </div>
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${task.priority === "high" ? "bg-amber-500" : task.priority === "medium" ? "bg-primary/60" : "bg-emerald-500"}`}
+                    aria-label={`Priorité ${task.priority === "high" ? "haute" : task.priority === "low" ? "basse" : "moyenne"}`}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state min-h-[215px]">
+              <Check size={28} strokeWidth={1.3} />
+              <p className="text-sm font-medium">
+                L’esprit libre, la liste aussi.
+              </p>
+              <p className="mb-5 mt-2 max-w-xs text-xs leading-relaxed text-muted-foreground">
+                Ajoutez une première tâche pour choisir votre prochain pas.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={mainLink}>
+                  <Plus className="mr-2 h-3.5 w-3.5" />
+                  Créer une tâche
+                </Link>
+              </Button>
+            </div>
+          )}
+        </section>
+        <section className="relative isolate overflow-hidden rounded-[18px] border border-primary/10 bg-[#eeedf9] p-6 dark:bg-[#25243a]">
+          <div className="relative z-10">
+            <p className="eyebrow !text-primary">UN MOMENT POUR VOUS</p>
+            <h2 className="mt-4 max-w-44 text-[24px] font-semibold leading-tight tracking-[-.7px]">
+              Moins de bruit.
+              <br />
+              Plus de flow.
+            </h2>
+            <p className="mt-3 max-w-44 text-xs leading-relaxed text-muted-foreground">
+              25 minutes pour avancer,
+              <br />
+              une chose à la fois.
+            </p>
+            <Button asChild className="mt-6 gap-2 rounded-xl text-xs">
+              <Link to={preview ? "/register" : "/focus"}>
+                <Timer size={14} />
+                Lancer une session
+              </Link>
+            </Button>
+          </div>
+          <div
+            aria-hidden="true"
+            className="absolute -right-12 top-[20%] h-56 w-56 rounded-full border-[22px] border-primary/[0.07]"
+          >
+            <div className="absolute inset-5 rounded-full border-[20px] border-primary/10">
+              <div className="absolute inset-6 rounded-full bg-primary/10" />
+            </div>
+          </div>
+        </section>
+      </div>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(240px,.85fr)]">
+        <section className="panel">
+          <div className="panel-heading">
+            <h2 className="text-sm font-semibold">Votre semaine en focus</h2>
+            <Clock3 size={15} className="text-muted-foreground" />
+          </div>
+          <div className="px-6 pb-6">
+            <p className="mb-5 text-xs text-muted-foreground">
+              <span className="text-lg font-semibold text-foreground">
+                {data.focusMinutes}
+              </span>{" "}
+              minutes de concentration
+            </p>
+            <div
+              role="img"
+              aria-label={`Minutes de concentration sur 7 jours : ${data.week.join(", ")}`}
+              className="flex h-24 items-end gap-3"
+            >
+              {data.week.map((value, i) => (
+                <div
+                  key={i}
+                  className="flex h-full flex-1 flex-col justify-end gap-2"
+                >
+                  <div
+                    className={`w-full min-w-2 rounded-t-[5px] ${i === 6 ? "bg-primary" : "bg-primary/15"}`}
+                    style={{
+                      height: `${Math.max(value ? 7 : 2, (value / max) * 70)}px`,
+                    }}
+                  />
+                  <span className="text-center text-[9px] text-muted-foreground">
+                    {days[i]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading">
+            <h2 className="text-sm font-semibold">
+              Votre campus, au même endroit
+            </h2>
+            <GraduationCap size={16} className="text-primary" />
+          </div>
+          <div className="px-6 pb-6">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Emploi du temps, UE, notes et examens. Un espace qui suit votre
+              semestre.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {["Emploi du temps", "Notes /20", "Révisions"].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-md bg-muted px-2 py-1.5 text-[10px] text-muted-foreground"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <Link
+              to={preview ? "/register" : "/student"}
+              className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-primary"
+            >
+              Ouvrir mon espace étudiant <ArrowRight size={13} />
+            </Link>
+          </div>
+        </section>
+        <section className="panel">
+          <div className="panel-heading">
+            <h2 className="text-sm font-semibold">Un coup de pouce ?</h2>
+            <Sparkles size={16} className="text-primary" />
+          </div>
+          <div className="px-6 pb-6">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Décomposez un projet ou préparez votre semaine avec l’assistant.
+            </p>
+            <Link
+              to={preview ? "/register" : "/ai-assistant"}
+              className="mt-6 inline-flex items-center gap-2 text-xs font-medium text-primary"
+            >
+              En parler avec l’IA <ArrowUpRight size={13} />
+            </Link>
+            <p className="mt-3 text-[10px] text-muted-foreground">
+              Votre quota reste visible et maîtrisé.
+            </p>
+          </div>
+        </section>
+      </div>
+      <p className="pb-2 text-center text-[10px] text-muted-foreground/70">
+        Votre rythme. Vos priorités. Votre espace.
+      </p>
+    </div>
+  );
+}
+export default function Dashboard() {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: ["overview", user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      since.setHours(0, 0, 0, 0);
+      const [tasks, habits, focus] = await Promise.all([
+        supabase
+          .from("tasks")
+          .select("id,title,priority,due_date,completed")
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("habits")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user!.id)
+          .eq("is_archived", false),
+        supabase
+          .from("focus_sessions")
+          .select("duration,created_at")
+          .eq("user_id", user!.id)
+          .gte("created_at", since.toISOString()),
+      ]);
+      for (const result of [tasks, habits, focus])
+        if (result.error) throw new Error(result.error.message);
+      const dates = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - 6 + index);
+        return parisDateKey(date);
+      });
+      const week = dates.map((date) =>
+        Math.round(
+          (focus.data || [])
+            .filter(
+              (session) => parisDateKey(new Date(session.created_at)) === date,
+            )
+            .reduce((sum, session) => sum + session.duration, 0),
+        ),
+      );
+      return {
+        tasks: tasks.data || [],
+        habitCount: habits.count || 0,
+        week,
+        focusMinutes: week.reduce((a, b) => a + b, 0),
+      };
+    },
+  });
+  if (query.isLoading)
+    return (
+      <div
+        role="status"
+        className="py-20 text-center text-sm text-muted-foreground"
+      >
+        Chargement de votre journée…
       </div>
     );
-  }
-
-  const quickLinks = [
-    { icon: ListTodo, label: "Tâches", path: "/tasks", color: "bg-success/10 text-success" },
-    { icon: Target, label: "Objectifs", path: "/goals", color: "bg-primary/10 text-primary" },
-    { icon: Flame, label: "Habitudes", path: "/habits", color: "bg-warning/10 text-warning" },
-    { icon: Brain, label: "Focus", path: "/focus", color: "bg-info/10 text-info" },
-    { icon: BookOpen, label: "Journal/Réflexion", path: "/journal", color: "bg-purple-500/10 text-purple-500" },
-    { icon: Zap, label: "Analyse IA", path: "/ai-assistant", color: "bg-amber-500/10 text-amber-500" },
-  ];
-
+  if (query.isError)
+    return (
+      <div role="alert" className="panel p-8">
+        <h1 className="text-lg font-semibold">
+          Votre espace n’a pas pu être chargé.
+        </h1>
+        <p className="my-3 text-sm text-muted-foreground">
+          Vérifiez votre connexion et la configuration de la base de données.
+        </p>
+        <Button onClick={() => void query.refetch()}>Réessayer</Button>
+      </div>
+    );
+  const toggle = async (task: OverviewTask) => {
+    const result = await supabase
+      .from("tasks")
+      .update({ completed: true })
+      .eq("id", task.id)
+      .eq("user_id", user!.id);
+    if (!result.error) void query.refetch();
+    else {
+      const { toast } = await import("sonner");
+      toast.error("La tâche n’a pas pu être mise à jour.");
+    }
+  };
   return (
-    <div className="space-y-6 md:space-y-10">
-      <AdminAnnouncementPanel />
-
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold gradient-text mb-1 animate-fade-in">
-            Tableau de Bord
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Vue d'ensemble de votre productivité</p>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <h2 className="text-lg font-heading font-semibold">Accès rapide</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-          {quickLinks.map((link) => (
-            <Link key={link.path} to={link.path} className="group">
-              <Card className="dashboard-card border-border/30 hover:border-primary/30 cursor-pointer">
-                <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-2">
-                  <div className={`p-2 sm:p-3 rounded-xl ${link.color} transition-transform duration-300 group-hover:scale-110`}>
-                    <link.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-medium text-center group-hover:text-primary transition-colors">{link.label}</span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <Card className="dashboard-card border-primary/20 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-info/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <CardHeader className="pb-3 relative z-10">
-          <CardTitle className="flex items-center gap-2 text-xl font-heading">
-            <div className="p-2 rounded-lg bg-primary/10 animate-glow-pulse">
-              <Zap className="h-5 w-5 text-primary" />
-            </div>
-            Score de Productivité
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 relative z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-5xl font-heading font-extrabold gradient-text">{scores.overall}</div>
-              <p className={`text-sm font-medium mt-1 ${level.color}`}>{level.label}</p>
-            </div>
-            <Badge variant="secondary" className="text-lg px-4 py-2 rounded-xl bg-gradient-to-br from-warning/20 to-warning/10 border-warning/30 animate-float">
-              {streakCount} jours 🔥
-            </Badge>
-          </div>
-          
-          <Progress value={scores.overall} className="h-3 rounded-full" />
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div className="space-y-1 p-3 rounded-xl bg-success/5 hover:bg-success/10 transition-colors border border-success/20">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span>Tâches</span>
-              </div>
-              <div className="text-xl font-bold text-success">{Math.round(taskCompletionRate)}%</div>
-            </div>
-            <div className="space-y-1 p-3 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="h-4 w-4 text-primary" />
-                <span>Focus</span>
-              </div>
-              <div className="text-xl font-bold text-primary">{Math.round(totalFocusTime / 60)}h</div>
-            </div>
-            <div className="space-y-1 p-3 rounded-xl bg-warning/5 hover:bg-warning/10 transition-colors border border-warning/20">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Zap className="h-4 w-4 text-warning" />
-                <span>Série</span>
-              </div>
-              <div className="text-xl font-bold text-warning">{streakCount}j</div>
-            </div>
-            <div className="space-y-1 p-3 rounded-xl bg-info/5 hover:bg-info/10 transition-colors border border-info/20">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Target className="h-4 w-4 text-info" />
-                <span>Habitudes</span>
-              </div>
-              <div className="text-xl font-bold text-info">{activeHabits}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <TodayActionsCard />
-      <StudiesCard />
-      <RoadmapTrackingCard />
-      <DailyBriefingCard />
-
-      <Collapsible open={insightsOpen} onOpenChange={setInsightsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Insights IA & Rapports
-            </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${insightsOpen ? 'rotate-180' : ''}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-4 mt-4">
-          <CrossInsightsWidget />
-          <SmartInsightsWidget />
-          <MonthlyAIReport />
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+    <DashboardView
+      data={query.data || emptyOverview}
+      name={String(
+        user?.user_metadata?.display_name ||
+          user?.email?.split("@")[0] ||
+          "vous",
+      )}
+      onToggle={toggle}
+    />
   );
 }

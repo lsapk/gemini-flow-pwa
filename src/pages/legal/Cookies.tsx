@@ -1,115 +1,89 @@
-import React from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Cookie } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function Cookies() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Retour</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Cookie className="w-5 h-5 text-primary" />
-            <span className="font-heading font-bold">DeepFlow</span>
-          </div>
-        </div>
+    <div className="min-h-dvh bg-background">
+      <header className="border-b px-5 py-5">
+        <Link
+          to="/"
+          className="mx-auto flex max-w-3xl items-center gap-2 text-sm text-primary"
+        >
+          <ArrowLeft size={16} />
+          Retour à Deepflow
+        </Link>
       </header>
-
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Politique des Cookies</h1>
-          <p className="text-muted-foreground mb-8">Dernière mise à jour : Mars 2026</p>
-
-          <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
-            <section>
-              <h2 className="text-2xl font-bold mb-4">1. Qu'est-ce qu'un cookie ?</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Un cookie est un petit fichier texte stocké sur votre appareil lorsque vous visitez un site web. DeepFlow utilise également le stockage local (localStorage) du navigateur pour stocker des données techniques nécessaires au fonctionnement de l'application.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">2. Cookies et stockage utilisés</h2>
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <h3 className="font-bold text-foreground mb-2">Cookies essentiels / Stockage technique</h3>
-                  <p className="text-muted-foreground text-sm mb-3">
-                    Nécessaires au fonctionnement de l'application. Ne peuvent pas être désactivés.
-                  </p>
-                  <table className="w-full text-xs text-muted-foreground">
-                    <thead><tr className="border-b border-border/30"><th className="text-left py-1 text-foreground">Clé</th><th className="text-left py-1 text-foreground">Usage</th></tr></thead>
-                    <tbody>
-                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow-auth-session</td><td className="py-1">Session d'authentification Supabase</td></tr>
-                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow_remember_me</td><td className="py-1">Persistance de la connexion</td></tr>
-                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow_cookie_consent</td><td className="py-1">Choix du bandeau cookies</td></tr>
-                    </tbody>
-                  </table>
-                  <div className="mt-2"><span className="inline-block px-2 py-1 rounded bg-success/10 text-success text-xs">Obligatoires</span></div>
-                </div>
-
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <h3 className="font-bold text-foreground mb-2">Cookies de préférences</h3>
-                  <p className="text-muted-foreground text-sm mb-3">
-                    Mémorisent vos préférences (thème, style de design) pour personnaliser votre expérience.
-                  </p>
-                  <table className="w-full text-xs text-muted-foreground">
-                    <thead><tr className="border-b border-border/30"><th className="text-left py-1 text-foreground">Clé</th><th className="text-left py-1 text-foreground">Usage</th></tr></thead>
-                    <tbody>
-                      <tr className="border-b border-border/20"><td className="py-1 font-mono">theme</td><td className="py-1">Thème clair/sombre</td></tr>
-                      <tr className="border-b border-border/20"><td className="py-1 font-mono">deepflow-design-mode</td><td className="py-1">Style de design (futuriste/minimal)</td></tr>
-                    </tbody>
-                  </table>
-                  <div className="mt-2"><span className="inline-block px-2 py-1 rounded bg-primary/10 text-primary text-xs">Fonctionnels</span></div>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">3. Durée de conservation</h2>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-border/50"><th className="text-left py-2 text-foreground">Type</th><th className="text-left py-2 text-foreground">Durée</th></tr></thead>
-                <tbody className="text-muted-foreground">
-                  <tr className="border-b border-border/30"><td className="py-2">Session d'authentification</td><td className="py-2">7 jours (ou 30 si « Se souvenir de moi »)</td></tr>
-                  <tr className="border-b border-border/30"><td className="py-2">Préférences utilisateur</td><td className="py-2">1 an</td></tr>
-                  <tr className="border-b border-border/30"><td className="py-2">Consentement cookies</td><td className="py-2">1 an</td></tr>
-                </tbody>
-              </table>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">4. Gérer vos cookies</h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Vous pouvez contrôler et supprimer les cookies via les paramètres de votre navigateur :
-              </p>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><strong className="text-foreground">Chrome</strong> : Paramètres → Confidentialité et sécurité → Cookies</li>
-                <li><strong className="text-foreground">Firefox</strong> : Options → Vie privée et sécurité → Cookies</li>
-                <li><strong className="text-foreground">Safari</strong> : Préférences → Confidentialité → Cookies</li>
-                <li><strong className="text-foreground">Edge</strong> : Paramètres → Cookies et autorisations de site</li>
-              </ul>
-              <p className="text-muted-foreground leading-relaxed mt-4 p-4 bg-warning/10 rounded-lg border border-warning/30">
-                ⚠️ La désactivation des cookies essentiels peut empêcher l'application de fonctionner correctement.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-bold mb-4">5. Contact</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Pour toute question : <a href="mailto:deepflow.ia@gmail.com" className="text-primary hover:underline">deepflow.ia@gmail.com</a>
-              </p>
-            </section>
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-border/50 flex gap-4">
-            <Button asChild variant="outline"><Link to="/legal/privacy">Politique de confidentialité</Link></Button>
-            <Button asChild variant="outline"><Link to="/legal/terms">Conditions d'utilisation</Link></Button>
-          </div>
-        </motion.div>
+      <main className="mx-auto max-w-3xl space-y-8 px-5 py-12">
+        <div>
+          <h1 className="page-title">Cookies et stockage local</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Dernière mise à jour : 4 novembre 2026
+          </p>
+        </div>
+        <section className="space-y-3 text-sm leading-relaxed">
+          <h2 className="text-lg font-semibold">
+            Ce que votre navigateur conserve
+          </h2>
+          <ul className="list-disc space-y-3 pl-5 text-muted-foreground">
+            <li>
+              La session Supabase, dans une clé commençant par <code>sb-</code>,
+              permet de rester connecté. Sa validité dépend de la configuration
+              du service d’authentification. La déconnexion retire la session
+              locale.
+            </li>
+            <li>
+              La préférence <code>theme</code> conserve votre choix clair,
+              sombre ou système sur cet appareil.
+            </li>
+            <li>
+              Une session de concentration en cours est conservée dans une clé
+              propre à votre compte, commençant par{" "}
+              <code>deepflow_focus_v2_</code>. Elle permet de reprendre le
+              minuteur après rechargement ; elle est retirée à la fin de la
+              session ou à la déconnexion.
+            </li>
+            <li>
+              Le service worker met en cache des fichiers publics de
+              l’interface. Il ne met pas en cache les réponses
+              d’authentification, API ou les données privées de votre espace.
+            </li>
+            <li>
+              La connexion Google utilise temporairement un cookie technique de
+              vérification OAuth, inaccessible au JavaScript de la page. Les
+              jetons Google sont conservés côté serveur.
+            </li>
+          </ul>
+        </section>
+        <section className="space-y-3 text-sm leading-relaxed">
+          <h2 className="text-lg font-semibold">Conservation et suppression</h2>
+          <p className="text-muted-foreground">
+            Le thème et les fichiers publics restent jusqu’à leur remplacement
+            ou à la suppression des données du site. Vous pouvez effacer les
+            cookies, le stockage local et les données hors connexion depuis les
+            paramètres de votre navigateur. Cela déconnecte cet appareil et peut
+            supprimer l’état d’un minuteur non enregistré.
+          </p>
+          <p className="text-muted-foreground">
+            Cette version n’installe pas de service publicitaire ou de mesure
+            d’audience dans l’interface.
+          </p>
+        </section>
+        <section className="space-y-3 text-sm">
+          <h2 className="text-lg font-semibold">Contact</h2>
+          <a
+            href="mailto:deepflow.ia@gmail.com"
+            className="text-primary underline"
+          >
+            deepflow.ia@gmail.com
+          </a>
+        </section>
+        <nav
+          aria-label="Documents associés"
+          className="flex flex-wrap gap-5 border-t pt-6 text-sm text-primary"
+        >
+          <Link to="/legal/privacy">Confidentialité</Link>
+          <Link to="/legal/terms">Conditions d’utilisation</Link>
+        </nav>
       </main>
     </div>
   );

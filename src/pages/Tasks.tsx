@@ -1,22 +1,24 @@
-import React from "react";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus, Cloud, CloudOff, RefreshCw, CheckSquare, Clock, CheckCircle2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import TaskList from "@/components/TaskList";
-import { useQuery } from "@tanstack/react-query";
-import CreateModal from "@/components/modals/CreateModal";
-import EditTaskModal from "@/components/modals/EditTaskModal";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { useGoogleTasks } from "@/hooks/useGoogleTasks";
+  CheckCheck,
+  Filter,
+  Plus,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,338 +29,282 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: "low" | "medium" | "high" | null;
-  due_date: string | null;
-  completed: boolean;
-  created_at: string;
-  updated_at?: string;
-  user_id: string;
-  parent_task_id?: string | null;
-  sort_order?: number;
-  google_task_id?: string | null;
-}
-
-interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-  sort_order: number;
-  description?: string;
-  priority?: string;
-  parent_task_id: string;
-}
-
+import CreateTaskForm from "@/components/modals/CreateTaskForm";
+import TaskList from "@/components/TaskList";
+import { planTasks } from "@/lib/task-planning";
+import { readAllPages } from "@/lib/pagination";
+import type { Task } from "@/types";
+import { toast } from "sonner";
+const filters = [
+  { key: "pending", label: "À faire" },
+  { key: "today", label: "Aujourd’hui" },
+  { key: "overdue", label: "En retard" },
+  { key: "completed", label: "Terminées" },
+  { key: "all", label: "Toutes" },
+];
 export default function Tasks() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  
-  const [subtasks, setSubtasks] = useState<{ [taskId: string]: Subtask[] }>({});
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [activeTab, setActiveTab] = useState("pending");
-  const [showSyncDialog, setShowSyncDialog] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
-  const googleTasks = useGoogleTasks();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    
-    if (code && !googleTasks.isConnected) {
-      googleTasks.handleOAuthCallback(code);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
-
-  const { data: tasks = [], isLoading, refetch } = useQuery({
-    queryKey: ['tasks', user?.id],
+  const [params, setParams] = useSearchParams();
+  const [editing, setEditing] = useState<Task | null>(null),
+    [dialog, setDialog] = useState(false),
+    [deleting, setDeleting] = useState<string | null>(null),
+    [busy, setBusy] = useState(false);
+  const client = useQueryClient();
+  const status = filters.some((f) => f.key === params.get("status"))
+    ? params.get("status")!
+    : "pending";
+  const sort = params.get("sort") || "due",
+    search = params.get("q") || "";
+  const setFilter = (key: string, value: string) =>
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      },
+      { replace: true },
+    );
+  const query = useQuery({
+    queryKey: ["tasks", user?.id],
+    enabled: Boolean(user),
     queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false });
-
-      if (error) throw new Error(error.message);
-
-      const mappedTasks = (data || []).map(task => ({
-        ...task,
-        priority: task.priority as "low" | "medium" | "high" | null
-      })) as Task[];
-
-      return mappedTasks.sort((a, b) => {
-        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
-        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
-        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
-        return bPriority - aPriority;
-      });
-    },
-    enabled: !!user,
-  });
-
-  const pendingTasks = tasks.filter(task => !task.completed);
-  const completedTasks = tasks.filter(task => task.completed);
-  const currentTasks = activeTab === "pending" ? pendingTasks : completedTasks;
-  const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
-
-  const fetchSubtasks = async () => {
-    if (!user || tasks.length === 0) return;
-    const taskIds = tasks.map(task => task.id);
-    
-    const { data, error } = await supabase
-      .from('subtasks')
-      .select('*')
-      .in('parent_task_id', taskIds)
-      .eq('user_id', user.id)
-      .order('sort_order');
-
-    if (error) { console.error('Error fetching subtasks:', error); return; }
-
-    const subtasksByTask: { [taskId: string]: Subtask[] } = {};
-    data?.forEach((subtask) => {
-      if (!subtasksByTask[subtask.parent_task_id]) subtasksByTask[subtask.parent_task_id] = [];
-      subtasksByTask[subtask.parent_task_id].push(subtask);
-    });
-    setSubtasks(subtasksByTask);
-  };
-
-
-  const taskIdsKey = tasks.map(t => t.id).join(',');
-  useEffect(() => { fetchSubtasks(); }, [user, taskIdsKey]);
-
-  const handleEdit = (task: Task) => { setEditingTask(task); setIsEditModalOpen(true); };
-
-  const requestDelete = (id: string) => {
-    setTaskToDelete(id);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!taskToDelete) return;
-    try {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskToDelete).eq('user_id', user?.id ?? '');
-      if (error) throw new Error(error.message);
-      toast({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' });
-      refetch();
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
-      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setTaskToDelete(null);
-    }
-  };
-
-  const handleToggleComplete = async (id: string, completed: boolean) => {
-    try {
-      const { error } = await supabase.from('tasks').update({ completed: !completed }).eq('id', id);
-      if (error) throw new Error(error.message);
-      refetch();
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Erreur inconnue';
-      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
-    }
-  };
-
-  const handleRefreshSubtasks = () => fetchSubtasks();
-  const handleTaskCreated = () => { setIsCreateModalOpen(false); refetch(); fetchSubtasks(); };
-  const handleTaskEdited = () => { setIsEditModalOpen(false); setEditingTask(null); refetch(); fetchSubtasks(); };
-
-  const handleReorder = async (reorderedTasks: Task[]) => {
-    try {
-      const updates = reorderedTasks.map((task, index) => 
-        supabase.from('tasks').update({ sort_order: index }).eq('id', task.id).eq('user_id', user?.id)
+      const rows = await readAllPages((from, to) =>
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("user_id", user!.id)
+          .order("id")
+          .range(from, to),
       );
-      await Promise.all(updates);
-      refetch();
-    } catch (error) {
-      console.error('Error saving task order:', error);
-      toast({ title: 'Erreur', description: "Erreur lors de la sauvegarde de l'ordre", variant: 'destructive' });
-    }
+      return rows.map((task) => ({
+        ...task,
+        priority: task.priority || "medium",
+      })) as Task[];
+    },
+  });
+  const tasks = query.data || [];
+  const subtaskQuery = useQuery({
+    queryKey: ["subtasks", user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const rows = await readAllPages((from, to) =>
+        supabase
+          .from("subtasks")
+          .select("*")
+          .eq("user_id", user!.id)
+          .order("sort_order")
+          .order("id")
+          .range(from, to),
+      );
+      return rows.reduce(
+        (groups, subtask) => {
+          (groups[subtask.parent_task_id] ||= []).push(subtask);
+          return groups;
+        },
+        {} as Record<string, typeof rows>,
+      );
+    },
+  });
+  const refresh = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["tasks", user?.id] }),
+      client.invalidateQueries({ queryKey: ["subtasks", user?.id] }),
+      client.invalidateQueries({ queryKey: ["overview", user?.id] }),
+    ]);
   };
-
-  const handleSyncWithGoogle = async () => {
-    if (!googleTasks.isConnected) {
-      toast({ title: "Non connecté", description: "Veuillez d'abord vous connecter à Google Tasks", variant: "destructive" });
-      return;
-    }
+  const toggle = async (id: string, completed: boolean) => {
+    if (busy) return;
+    setBusy(true);
     try {
-      await googleTasks.loadTasks();
-      let syncedToGoogle = 0;
-      let syncedFromGoogle = 0;
-      for (const task of pendingTasks) {
-        if (task.google_task_id) continue;
-        const googleTaskId = await googleTasks.createTask({ title: task.title, notes: task.description || undefined, due: task.due_date || undefined });
-        if (googleTaskId) {
-          await supabase.from('tasks').update({ google_task_id: googleTaskId }).eq('id', task.id);
-          syncedToGoogle++;
-        }
-      }
-      for (const googleTask of googleTasks.tasks) {
-        if (googleTask.status === 'completed') continue;
-        const existingTask = tasks.find(t => t.google_task_id === googleTask.id);
-        if (!existingTask && user) {
-          await supabase.from('tasks').insert({ user_id: user.id, title: googleTask.title, description: googleTask.notes || null, due_date: googleTask.due || null, completed: false, google_task_id: googleTask.id });
-          syncedFromGoogle++;
-        }
-      }
-      await refetch();
-      toast({ title: "Synchronisation réussie", description: `${syncedToGoogle} tâche(s) envoyée(s) vers Google, ${syncedFromGoogle} tâche(s) importée(s) depuis Google` });
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast({ title: "Erreur", description: "Erreur lors de la synchronisation", variant: "destructive" });
+      const result = await supabase
+        .from("tasks")
+        .update({ completed: !completed, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", user!.id)
+        .select("id")
+        .single();
+      if (result.error) throw result.error;
+      await refresh();
+    } catch {
+      toast.error("La tâche n’a pas pu être modifiée. Réessayez.");
+    } finally {
+      setBusy(false);
     }
   };
-
+  const remove = async () => {
+    if (!deleting || busy) return;
+    setBusy(true);
+    try {
+      const result = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", deleting)
+        .eq("user_id", user!.id)
+        .select("id")
+        .single();
+      if (result.error) throw result.error;
+      setDeleting(null);
+      toast.success("Tâche supprimée.");
+      await refresh();
+    } catch {
+      toast.error("La tâche n’a pas pu être supprimée. Réessayez.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const visible = planTasks(tasks, { status, sort, search });
   return (
-    <>
-      <div className="space-y-6">
-        <div className="max-w-7xl mx-auto min-w-0">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2 mb-6 flex-wrap">
-            <div className="space-y-1 min-w-0 flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate">Tâches</h1>
-              {tasks.length > 0 && (
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {completedTasks.length}/{tasks.length} complétées
-                  </span>
-                  <Progress value={completionRate} className="w-24 h-1.5" />
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap shrink-0">
-              {googleTasks.isConnected ? (
-                <>
-                  <Button onClick={() => setShowSyncDialog(true)} size="icon" variant="outline" disabled={googleTasks.isLoading} className="rounded-xl sm:size-auto sm:px-3" aria-label="Synchroniser">
-                    <RefreshCw className={`h-4 w-4 sm:mr-2 ${googleTasks.isLoading ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">Synchroniser</span>
-                  </Button>
-                  <Button onClick={googleTasks.disconnect} size="icon" variant="outline" className="rounded-xl sm:size-auto sm:px-3" aria-label="Déconnecter">
-                    <CloudOff className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Déconnecter</span>
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={googleTasks.connectToGoogle} size="icon" variant="outline" className="rounded-xl sm:size-auto sm:px-3" aria-label="Google Tasks">
-                  <Cloud className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Google Tasks</span>
-                </Button>
-              )}
-              <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Nouvelle tâche</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pending" className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
-                <Clock className="h-4 w-4 shrink-0" />
-                <span className="truncate">En cours ({pendingTasks.length})</span>
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0">
-                <CheckSquare className="h-4 w-4 shrink-0" />
-                <span className="truncate">Terminées ({completedTasks.length})</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+    <div className="space-y-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow mb-3">UN PAS APRÈS L’AUTRE</p>
+          <h1 className="page-title">
+            Mes tâches<span className="text-primary">.</span>
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Une liste claire pour vous concentrer sur l’essentiel.
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setDialog(true);
+          }}
+          className="gap-2"
+        >
+          <Plus size={16} />
+          Nouvelle tâche
+        </Button>
+      </div>
+      <div className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div
+            className="flex flex-wrap gap-1"
+            role="group"
+            aria-label="Filtrer les tâches"
+          >
+            {filters.map((filter) => (
+              <Button
+                key={filter.key}
+                size="sm"
+                variant={status === filter.key ? "secondary" : "ghost"}
+                aria-pressed={status === filter.key}
+                onClick={() => setFilter("status", filter.key)}
+                className="text-xs"
               >
-                <TabsContent value={activeTab} className="mt-4">
-                  {currentTasks.length === 0 && !isLoading ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center bg-card/30 rounded-3xl border border-border/40 backdrop-blur-sm">
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <CheckCircle2 className="w-8 h-8 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">{activeTab === "pending" ? "Pas encore de tâches" : "Aucune tâche terminée"}</h3>
-                      <p className="text-muted-foreground mb-6 max-w-sm">{activeTab === "pending" ? "Créez votre première tâche pour commencer à organiser votre journée." : "Les tâches que vous terminez apparaîtront ici."}</p>
-                      {activeTab === "pending" && (
-                        <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="rounded-xl">
-                          <Plus className="h-4 w-4 mr-2" />Nouvelle tâche
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <TaskList
-                      tasks={currentTasks}
-                      loading={isLoading}
-                      onEdit={handleEdit}
-                      onDelete={requestDelete}
-                      onToggleComplete={handleToggleComplete}
-                      subtasks={subtasks}
-                      onRefreshSubtasks={handleRefreshSubtasks}
-                      onReorder={handleReorder}
-                    />
-                  )}
-                </TabsContent>
-              </motion.div>
-            </AnimatePresence>
-          </Tabs>
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {visible.length} tâche{visible.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">
+          <div className="relative flex-1">
+            <Search
+              size={15}
+              className="absolute left-3 top-3 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              aria-label="Rechercher une tâche"
+              placeholder="Rechercher une tâche…"
+              value={search}
+              onChange={(event) => setFilter("q", event.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <select
+            aria-label="Trier les tâches"
+            value={sort}
+            onChange={(event) => setFilter("sort", event.target.value)}
+            className="rounded-lg border bg-card px-3 py-2 text-sm"
+          >
+            <option value="due">Échéance puis priorité</option>
+            <option value="priority">Priorité puis échéance</option>
+            <option value="recent">Plus récentes</option>
+          </select>
         </div>
       </div>
-
-      {isCreateModalOpen && <CreateModal type="task" onSuccess={handleTaskCreated} />}
-      {isEditModalOpen && (
-        <EditTaskModal task={editingTask} isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSuccess={handleTaskEdited} />
+      {query.isError ? (
+        <div role="alert" className="panel p-6">
+          <p>Les tâches n’ont pas pu être chargées.</p>
+          <Button
+            variant="outline"
+            className="mt-3"
+            onClick={() => void query.refetch()}
+          >
+            Réessayer
+          </Button>
+        </div>
+      ) : (
+        <TaskList
+          tasks={visible}
+          loading={query.isLoading}
+          onEdit={(task) => {
+            setEditing(tasks.find((item) => item.id === task.id) || null);
+            setDialog(true);
+          }}
+          onDelete={setDeleting}
+          onToggleComplete={toggle}
+          subtasks={subtaskQuery.data || {}}
+          onRefreshSubtasks={() => void refresh()}
+        />
       )}
-
-      <AlertDialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Synchroniser avec Google Tasks</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action va synchroniser vos tâches DeepFlow avec Google Tasks dans les deux sens :
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Les tâches DeepFlow seront ajoutées à Google Tasks</li>
-                <li>Les tâches Google Tasks seront importées dans DeepFlow</li>
-              </ul>
-              Voulez-vous continuer ?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSyncWithGoogle}>Synchroniser</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {subtaskQuery.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          Les sous-tâches ne sont pas disponibles. Rechargez la page pour
+          réessayer.
+        </p>
+      )}
+      <Dialog open={dialog} onOpenChange={setDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Modifier la tâche" : "Votre prochain pas"}
+            </DialogTitle>
+            <DialogDescription>
+              Une action précise, avec une échéance si nécessaire.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateTaskForm
+            task={editing}
+            onSuccess={() => {
+              setDialog(false);
+              void refresh();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est définitive. La tâche et ses sous-tâches seront supprimées.
+              La tâche et ses sous-tâches seront supprimées définitivement.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                void remove();
+              }}
+            >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }

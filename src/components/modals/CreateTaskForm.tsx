@@ -2,7 +2,7 @@ import React from "react";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { toLocalDateKey } from "@/utils/dateUtils";
+import { taskDateKey } from "@/lib/task-planning";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,7 +41,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
       setTitle(task.title);
       setDescription(task.description || "");
       setPriority(task.priority);
-      setDueDate(task.due_date ? toLocalDateKey(new Date(task.due_date)) : "");
+      setDueDate(taskDateKey(task.due_date) || "");
       // Don't call fetchTaskGoalLink here because we already have linked_goal_id in the Task type
       // and it avoids extra queries. Also ensure the Task type has linked_goal_id.
       if ('linked_goal_id' in task && task.linked_goal_id) {
@@ -118,7 +118,7 @@ export default function CreateTaskForm({ onSuccess, task }: CreateTaskFormProps)
         const { error: updateError } = await supabase
           .from('tasks')
           .update(taskData)
-          .match({ id: task.id, user_id: user.id });
+          .match({ id: task.id, user_id: user.id }).select("id").single();
         error = updateError;
       } else {
         ({ error } = await supabase

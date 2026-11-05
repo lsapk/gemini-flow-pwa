@@ -1,78 +1,18 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import { syncOfflineData } from "./lib/api";
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                if (confirm('Une nouvelle version est disponible. Mettre à jour ?')) {
-                  window.location.reload();
-                }
-              }
-            });
-          }
-        });
-      })
-      .catch(error => console.error('SW registration failed:', error));
-  });
-
-
-  let deferredPrompt: BeforeInstallPromptEvent | null = null;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    const installButton = document.getElementById('install-pwa');
-    if (installButton) {
-      e.preventDefault();
-      deferredPrompt = e as BeforeInstallPromptEvent;
-      installButton.style.display = 'block';
-      installButton.addEventListener('click', () => {
-        deferredPrompt?.prompt();
-        deferredPrompt = null;
-        installButton.style.display = 'none';
-      });
-    }
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // The app remains usable when a browser disables offline storage.
+    });
   });
 }
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: string }>;
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    document.getElementById('offline-banner')?.remove();
-    syncOfflineData()
-      .catch(err => console.error('Sync error:', err));
-  });
-  
-  window.addEventListener('offline', () => {
-    if (!document.getElementById('offline-banner')) {
-      const banner = document.createElement('div');
-      banner.id = 'offline-banner';
-      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:white;padding:10px;text-align:center;z-index:9999';
-      banner.textContent = 'Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.';
-      document.body.appendChild(banner);
-    }
-  });
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    window.dispatchEvent(new CustomEvent('app-visible'));
-  }
-});
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
-)
+);

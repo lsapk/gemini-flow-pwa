@@ -1,125 +1,32 @@
-
-import { serve } from "https://deno.land/std@0.186.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
-
-const ALLOWED_ORIGINS = [
-  "https://deepflowia.lovable.app",
-  "https://deepflow.app",
-  "http://localhost:8080",
-];
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-// Read price IDs from environment variables
-const PRICE_IDS: Record<string, { priceId: string; mode: "payment" | "subscription" }> = {
-  monthly: { priceId: Deno.env.get("STRIPE_PRICE_MONTHLY") || "", mode: "subscription" },
-  yearly: { priceId: Deno.env.get("STRIPE_PRICE_YEARLY") || "", mode: "subscription" },
-  lifetime: { priceId: Deno.env.get("STRIPE_PRICE_LIFETIME") || "", mode: "payment" },
-};
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+import { appUrl, authenticate, endpoint, HttpError, json, jsonBody, serviceClient } from "../_shared/http.ts";
+import { plans, priceFor, stripeClient, type Plan, Stripe } from "../_shared/stripe.ts";
+Deno.serve(endpoint(async (req) => {
+  const { user } = await authenticate(req);
+  if (!user.email || !user.email_confirmed_at) throw new HttpError(403, "A verified email is required for billing");
+  const body = await jsonBody(req, 4096);
+  if (!plans.includes(body.planType as Plan)) throw new HttpError(400, "Invalid subscription plan");
+  const plan = body.planType as Plan;
+  const price = priceFor(plan);
+  const baseUrl = appUrl();
+  const stripe = stripeClient();
+  const admin = serviceClient();
+  const { data: existing, error } = await admin.from("subscribers").select("stripe_customer_id").eq("user_id", user.id).maybeSingle();
+  if (error) throw new HttpError(503, "Unable to load billing account");
+  let customerId = existing?.stripe_customer_id;
+  if (!customerId) {
+    const customer = await stripe.customers.create({ email: user.email, metadata: { user_id: user.id } }, { idempotencyKey: `deepflow-customer-${user.id}` });
+    customerId = customer.id;
+    const { error: saveError } = await admin.from("subscribers").upsert({ user_id: user.id, email: user.email, stripe_customer_id: customerId, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (saveError) throw new HttpError(503, "Unable to save billing account");
   }
-
-  try {
-    if (!stripeSecretKey) {
-      throw new Error("Stripe secret key not configured");
-    }
-
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: "2023-10-16" });
-    
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || "");
-    
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Authorization header is required");
-    }
-    
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !userData.user) {
-      throw new Error("Authentication failed");
-    }
-    
-    const user = userData.user;
-    const { productId } = await req.json();
-    
-    // Determine price config from env vars
-    let priceConfig: { priceId: string; mode: "payment" | "subscription" } | undefined;
-    
-    if (productId.includes("monthly")) {
-      priceConfig = PRICE_IDS.monthly;
-    } else if (productId.includes("yearly")) {
-      priceConfig = PRICE_IDS.yearly;
-    } else if (productId.includes("lifetime")) {
-      priceConfig = PRICE_IDS.lifetime;
-    }
-
-    if (!priceConfig || !priceConfig.priceId) {
-      throw new Error("Invalid product ID or price not configured. Set STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY, STRIPE_PRICE_LIFETIME in Edge Function secrets.");
-    }
-
-    // Check if a customer already exists for this user
-    const { data: customerData } = await supabase
-      .from('subscribers')
-      .select('stripe_customer_id')
-      .eq('user_id', user.id)
-      .single();
-      
-    let customerId = customerData?.stripe_customer_id;
-    
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { user_id: user.id }
-      });
-      
-      customerId = customer.id;
-      
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-      
-      await supabaseAdmin
-        .from('subscribers')
-        .upsert({
-          user_id: user.id,
-          email: user.email,
-          stripe_customer_id: customerId,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-    }
-
-    const origin = req.headers.get("origin") || "";
-    const safeOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      line_items: [{ price: priceConfig.priceId, quantity: 1 }],
-      mode: priceConfig.mode,
-      success_url: `${safeOrigin}/settings?payment=success`,
-      cancel_url: `${safeOrigin}/settings?payment=cancelled`,
-      metadata: { user_id: user.id, product_id: productId }
-    });
-
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Error creating checkout session:", (error as Error).message);
-    
-    return new Response(
-      JSON.stringify({ error: "Une erreur est survenue lors de la création de la session de paiement." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
+  const customer = await stripe.customers.retrieve(customerId);
+  if (customer.deleted || customer.metadata.user_id !== user.id) throw new HttpError(403, "Billing account ownership could not be verified");
+  const active = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
+  if (active.has_more || active.data.some((subscription: Stripe.Subscription) => ["active", "trialing", "past_due", "unpaid", "incomplete", "paused"].includes(subscription.status))) throw new HttpError(409, "Manage your existing subscription in the customer portal");
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId, client_reference_id: user.id, mode: "subscription", line_items: [{ price, quantity: 1 }],
+    success_url: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/payment-canceled`, metadata: { user_id: user.id, plan }, subscription_data: { metadata: { user_id: user.id } },
+  }, { idempotencyKey: `deepflow-checkout-${user.id}-${plan}-${Math.floor(Date.now() / 300000)}` });
+  return json(req, { url: session.url });
+}));

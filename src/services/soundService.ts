@@ -2,7 +2,7 @@
 class SoundService {
   private static instance: SoundService;
   private ctx: AudioContext | null = null;
-  private enabled: boolean = true;
+  private enabled: boolean = false;
 
   static getInstance(): SoundService {
     if (!SoundService.instance) {

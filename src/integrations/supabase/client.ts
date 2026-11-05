@@ -1,25 +1,32 @@
-import React from "react";
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
 
-const SUPABASE_URL = "https://xzgdfetnjnwrberyddmf.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6Z2RmZXRuam53cmJlcnlkZG1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMjk4MTksImV4cCI6MjA1NzkwNTgxOX0.XJFYvBiZHo1vcfCV6Fn79C9U6LP4Vuf05PCixBWqaYU";
+const url = import.meta.env.VITE_SUPABASE_URL?.trim();
+const key =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+export const isSupabaseConfigured = Boolean(url && key);
 
-const STORAGE_KEY = 'deepflow-auth-session';
-
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-
-    persistSession: true,
-
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: STORAGE_KEY,
-
-    autoRefreshToken: true,
-
-    detectSessionInUrl: true,
-
-    flowType: 'pkce',
+// Never send private data to a previous project's backend when configuration is missing.
+export const supabase = createClient<Database>(
+  url || "http://127.0.0.1:54321",
+  key || "configuration-required",
+  {
+    auth: {
+      persistSession: isSupabaseConfigured,
+      autoRefreshToken: isSupabaseConfigured,
+      detectSessionInUrl: isSupabaseConfigured,
+    },
+    ...(!isSupabaseConfigured
+      ? {
+          global: {
+            fetch: async () => {
+              throw new Error(
+                "Configurez VITE_SUPABASE_URL et VITE_SUPABASE_PUBLISHABLE_KEY.",
+              );
+            },
+          },
+        }
+      : {}),
   },
-});
+);
