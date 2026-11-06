@@ -68,8 +68,18 @@ async function invoke<T>(
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     if ("context" in error && error.context instanceof Response) {
+      const status = error.context.status;
       try {
         const details = await error.context.json();
+        if (
+          status === 404 &&
+          ["NOT_FOUND", "FUNCTION_NOT_FOUND"].includes(details.code)
+        ) {
+          throw new GoogleConnectionError(
+            "L’intégration Google n’est pas encore activée sur cette version de Deepflow.",
+            "function_missing",
+          );
+        }
         if (typeof details.error === "string")
           throw new GoogleConnectionError(
             details.error,
@@ -78,9 +88,15 @@ async function invoke<T>(
       } catch (detailsError) {
         if (detailsError instanceof GoogleConnectionError) throw detailsError;
       }
+      if (status === 401) {
+        throw new GoogleConnectionError(
+          "Votre session Deepflow a expiré. Reconnectez-vous, puis réessayez.",
+          "session_expired",
+        );
+      }
     }
     throw new GoogleConnectionError(
-      "Le service Google est inaccessible. Vérifiez votre connexion et la configuration des fonctions serveur.",
+      "Deepflow ne peut pas joindre le service Google. Réessayez ou ouvrez Connexions pour vérifier son état.",
       "request_failed",
     );
   }

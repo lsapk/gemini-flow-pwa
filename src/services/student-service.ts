@@ -52,7 +52,7 @@ function fail(error: { message: string; code?: string } | null) {
   if (!error) return;
   if (["42P01", "PGRST205", "PGRST202"].includes(error.code || ""))
     throw new Error(
-      "L’espace étudiant n’est pas encore activé sur cette base. Appliquez la migration student_workspace puis rechargez la page.",
+      "L’espace étudiant n’est pas encore disponible. Réessayez dans un instant ou contactez le support Deepflow.",
     );
   throw new Error(error.message);
 }

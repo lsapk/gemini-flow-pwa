@@ -2,6 +2,11 @@
 
 Base de code : `lsapk/gemini-flow-pwa@147390a`. Projet constaté en lecture seule : `xzgdfetnjnwrberyddmf`, compte Leny.grivel. Aucune migration, modification Auth ou fonction corrigée n’a été appliquée à ce projet pendant la préparation locale.
 
+Le 6 novembre 2026, la migration étudiante seule a été appliquée au projet hébergé sous le nom `student_workspace`. Les cinq tables, leur RLS et les droits des deux fonctions étudiant ont été vérifiés. Ne pas rejouer cette migration sur ce projet. Les autres étapes de déploiement restent à faire.
+
+- **Import étudiant par URL**. Le projet héberge encore l’ancien `ical-proxy`. Utiliser les fichiers `.ics` en attendant le déploiement du proxy authentifié et la configuration de `ICS_ALLOWED_HOSTS` avec les serveurs universitaires approuvés.
+- **Crédits IA et abonnements**. Le registre `ai_credit_usage` de la refonte est encore absent du projet hébergé. Valider et appliquer le durcissement de la base, puis déployer les fonctions IA et de paiement compatibles avant de tester le quota et l’abonnement.
+
 ## Ordre de déploiement
 
 1. Sauvegarder la base existante et créer un environnement de préproduction reflétant son schéma. Vérifier la provenance des rôles administrateur et les correspondances clients/abonnements Stripe existantes.

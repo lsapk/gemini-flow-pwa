@@ -10,13 +10,16 @@ import {
   Clock3,
   GraduationCap,
   Plus,
+  Repeat2,
   Sparkles,
+  Target,
   Timer,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { parisDateKey } from "@/lib/task-planning";
+import { parisDateKey, planTasks, taskDateKey } from "@/lib/task-planning";
+import { readAllPages } from "@/lib/pagination";
 
 export interface OverviewTask {
   id: string;
@@ -39,10 +42,50 @@ export const emptyOverview: OverviewData = {
 };
 const dateLabel = (date: Date) =>
   new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
     weekday: "long",
     day: "numeric",
     month: "long",
   }).format(date);
+
+function OverviewShortcuts() {
+  const shortcuts = [
+    { to: "/goals", label: "Objectifs", icon: Target },
+    { to: "/habits", label: "Habitudes", icon: Repeat2 },
+    { to: "/ai-assistant", label: "Assistant IA", icon: Sparkles },
+  ];
+  return (
+    <nav aria-labelledby="overview-shortcuts">
+      <h2 id="overview-shortcuts" className="mb-3 text-sm font-semibold">
+        Raccourcis
+      </h2>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {shortcuts.map(({ to, label, icon: Icon }) => (
+          <Button
+            key={to}
+            asChild
+            variant="outline"
+            className="h-12 justify-start gap-3 bg-card px-4"
+          >
+            <Link to={to}>
+              <Icon
+                size={17}
+                className="shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              {label}
+              <ArrowUpRight
+                size={14}
+                className="ml-auto text-muted-foreground"
+                aria-hidden="true"
+              />
+            </Link>
+          </Button>
+        ))}
+      </div>
+    </nav>
+  );
+}
 export function DashboardView({
   data,
   name,
@@ -55,15 +98,17 @@ export function DashboardView({
   onToggle?: (task: OverviewTask) => void;
 }) {
   const today = parisDateKey(new Date());
-  const pending = data.tasks.filter((task) => !task.completed);
+  const pending = planTasks(data.tasks, {
+    status: "pending",
+    search: "",
+    sort: "due",
+  });
   const completed = data.tasks.length - pending.length;
-  const urgent = pending.filter(
-    (task) => task.due_date && task.due_date.slice(0, 10) <= today,
-  );
-  const visible = [
-    ...urgent,
-    ...pending.filter((task) => !urgent.includes(task)),
-  ].slice(0, 4);
+  const urgent = pending.filter((task) => {
+    const due = taskDateKey(task.due_date);
+    return due !== null && due <= today;
+  });
+  const visible = pending.slice(0, 4);
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - 6 + index);
@@ -95,12 +140,13 @@ export function DashboardView({
           </p>
         </div>
         <Button asChild className="gap-2 rounded-xl text-xs shadow-sm">
-          <Link to={mainLink}>
+          <Link to={preview ? mainLink : "/tasks?new=1"}>
             <Plus size={15} />
             Nouvelle tâche
           </Link>
         </Button>
       </div>
+      <OverviewShortcuts />
       <section
         aria-label="Vos indicateurs"
         className="grid grid-cols-2 gap-3 lg:grid-cols-4"
@@ -362,11 +408,14 @@ export default function Dashboard() {
       since.setDate(since.getDate() - 6);
       since.setHours(0, 0, 0, 0);
       const [tasks, habits, focus] = await Promise.all([
-        supabase
-          .from("tasks")
-          .select("id,title,priority,due_date,completed")
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false }),
+        readAllPages((from, to) =>
+          supabase
+            .from("tasks")
+            .select("id,title,priority,due_date,completed")
+            .eq("user_id", user!.id)
+            .order("id")
+            .range(from, to),
+        ),
         supabase
           .from("habits")
           .select("id", { count: "exact", head: true })
@@ -378,7 +427,7 @@ export default function Dashboard() {
           .eq("user_id", user!.id)
           .gte("created_at", since.toISOString()),
       ]);
-      for (const result of [tasks, habits, focus])
+      for (const result of [habits, focus])
         if (result.error) throw new Error(result.error.message);
       const dates = Array.from({ length: 7 }, (_, index) => {
         const date = new Date();
@@ -395,7 +444,7 @@ export default function Dashboard() {
         ),
       );
       return {
-        tasks: tasks.data || [],
+        tasks,
         habitCount: habits.count || 0,
         week,
         focusMinutes: week.reduce((a, b) => a + b, 0),
@@ -413,14 +462,17 @@ export default function Dashboard() {
     );
   if (query.isError)
     return (
-      <div role="alert" className="panel p-8">
-        <h1 className="text-lg font-semibold">
-          Votre espace n’a pas pu être chargé.
-        </h1>
-        <p className="my-3 text-sm text-muted-foreground">
-          Vérifiez votre connexion et la configuration de la base de données.
-        </p>
-        <Button onClick={() => void query.refetch()}>Réessayer</Button>
+      <div className="space-y-6">
+        <OverviewShortcuts />
+        <div role="alert" className="panel p-8">
+          <h1 className="text-lg font-semibold">
+            Votre espace n’a pas pu être chargé.
+          </h1>
+          <p className="my-3 text-sm text-muted-foreground">
+            Vérifiez votre connexion et la configuration de la base de données.
+          </p>
+          <Button onClick={() => void query.refetch()}>Réessayer</Button>
+        </div>
       </div>
     );
   const toggle = async (task: OverviewTask) => {
@@ -428,7 +480,9 @@ export default function Dashboard() {
       .from("tasks")
       .update({ completed: true })
       .eq("id", task.id)
-      .eq("user_id", user!.id);
+      .eq("user_id", user!.id)
+      .select("id")
+      .single();
     if (!result.error) void query.refetch();
     else {
       const { toast } = await import("sonner");

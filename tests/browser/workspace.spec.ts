@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
     console.error(`Browser error: ${error.message}`),
   );
 });
-async function backend(page: Page) {
+async function backend(page: Page, { missingGoogle = false } = {}) {
   const tasks: Record<string, unknown>[] = [];
   let credits = 5;
   await page.route("http://127.0.0.1:54321/**", async (route) => {
@@ -67,7 +67,12 @@ async function backend(page: Page) {
         resets_at: new Date(Date.now() + 86400000).toISOString(),
       });
     if (path.endsWith("/functions/v1/google-api"))
-      return reply({ configured: false, connected: false });
+      return missingGoogle
+        ? reply(
+            { code: "NOT_FOUND", message: "Requested function was not found" },
+            404,
+          )
+        : reply({ configured: false, connected: false });
     if (path.endsWith("/functions/v1/check-subscription"))
       return reply({ subscribed: false, subscription_tier: "free" });
     if (path.endsWith("/functions/v1/ical-proxy"))
@@ -179,12 +184,22 @@ test("public preview, navigation and responsive layout", async ({
 test("authenticated task CRUD, student, Google and credits error states", async ({
   page,
 }) => {
-  await backend(page);
+  await backend(page, { missingGoogle: true });
   await login(page);
-  await page.goto("/tasks");
-  await page
-    .getByRole("button", { name: "Nouvelle tâche", exact: true })
-    .click();
+  const shortcuts = page.getByRole("navigation", {
+    name: "Raccourcis",
+    exact: true,
+  });
+  await expect(
+    shortcuts.getByRole("link", { name: "Objectifs" }),
+  ).toHaveAttribute("href", "/goals");
+  await expect(
+    shortcuts.getByRole("link", { name: "Habitudes" }),
+  ).toHaveAttribute("href", "/habits");
+  await expect(
+    shortcuts.getByRole("link", { name: "Assistant IA" }),
+  ).toHaveAttribute("href", "/ai-assistant");
+  await page.getByRole("link", { name: "Nouvelle tâche", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titre").fill("Préparer le TD de statistiques");
   await dialog.getByRole("button", { name: /Créer/ }).click();
@@ -225,7 +240,12 @@ test("authenticated task CRUD, student, Google and credits error states", async 
     page.getByRole("heading", { name: /calendrier/i }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText(/Google.*connect|connect.*Google/i).first(),
+    page.getByRole("heading", { name: "Connexion Google indisponible" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "L’intégration Google n’est pas encore activée sur cette version de Deepflow.",
+    ),
   ).toBeVisible();
   await page.goto("/connections");
   await expect(

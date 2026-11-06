@@ -259,7 +259,13 @@ export default function Tasks() {
           réessayer.
         </p>
       )}
-      <Dialog open={dialog} onOpenChange={setDialog}>
+      <Dialog
+        open={dialog || params.get("new") === "1"}
+        onOpenChange={(open) => {
+          setDialog(open);
+          if (!open && params.has("new")) setFilter("new", "");
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -273,6 +279,7 @@ export default function Tasks() {
             task={editing}
             onSuccess={() => {
               setDialog(false);
+              if (params.has("new")) setFilter("new", "");
               void refresh();
             }}
           />
