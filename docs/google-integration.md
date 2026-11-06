@@ -4,6 +4,8 @@ Le code de `/connections` et `/calendar` utilise les API Google Calendar et Task
 
 ## Préparer Google Cloud
 
+Sur le projet Deepflow `xzgdfetnjnwrberyddmf`, la vérification du 6 novembre 2026 a confirmé l’absence de `google-api`, de `google-oauth` et du stockage `google_private`. Reconnecter un compte dans l’interface ne peut pas corriger cette situation. Après les réglages ci-dessous, appliquer [la migration Google](../supabase/migrations/20261103202446_google_connections.sql) sur le projet cible et déployer les deux fonctions du dépôt depuis la branche de refonte.
+
 1. Créer ou sélectionner un projet Google Cloud, puis activer **Google Calendar API** et **Google Tasks API** dans la bibliothèque des API.
 2. Configurer l’écran de consentement Google Auth Platform : nom Deepflow, adresse de support, domaine de l’application, politique de confidentialité et audience. En mode de test, ajouter chaque compte de test à la liste autorisée.
 3. Créer un client OAuth de type **Application Web**. Renseigner l’URI de redirection exacte :
@@ -11,6 +13,8 @@ Le code de `/connections` et `/calendar` utilise les API Google Calendar et Task
    ```text
    https://<project-ref>.supabase.co/functions/v1/google-oauth/callback
    ```
+
+   Pour le projet Deepflow, inscrire exactement `https://xzgdfetnjnwrberyddmf.supabase.co/functions/v1/google-oauth/callback` dans les URI de redirection autorisés du client.
 
    Pour Supabase local, l’URI correspondante est `http://127.0.0.1:54321/functions/v1/google-oauth/callback`. Utiliser le même nom d’hôte pendant tout le parcours : le cookie de sécurité est lié à cet hôte.
 
@@ -62,6 +66,15 @@ verify_jwt = false
 [functions.google-api]
 verify_jwt = true
 ```
+
+Depuis la copie de la branche `codex/deepflow-modernization`, avec la CLI Supabase connectée au compte qui gère ce projet, déployer les fonctions avec ces commandes PowerShell :
+
+```powershell
+npm.cmd exec -- supabase functions deploy google-api --project-ref xzgdfetnjnwrberyddmf
+npm.cmd exec -- supabase functions deploy google-oauth --project-ref xzgdfetnjnwrberyddmf --no-verify-jwt
+```
+
+Ouvrir ensuite Deepflow depuis l’origine renseignée dans `APP_URL`, se connecter au compte Deepflow, puis choisir **Connexions → Connecter Google**. En cas de `redirect_uri_mismatch`, comparer le callback exact de l’étape 3 avec celui du client OAuth Google.
 
 `google-oauth` doit recevoir les redirections de Google sans JWT. Son action POST `start` vérifie elle-même la session avec `auth.getUser()`. Ses routes GET n’autorisent aucun accès aux tâches Deepflow. `google-api` vérifie également le JWT utilisateur côté serveur pour toutes les actions. Voir [autorisation des fonctions Supabase](https://supabase.com/docs/guides/functions/auth-headers).
 

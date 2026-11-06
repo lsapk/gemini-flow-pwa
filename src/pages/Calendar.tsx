@@ -267,6 +267,14 @@ export default function CalendarPage() {
             <p role="status" className="text-sm text-muted-foreground">
               Chargement de la connexion…
             </p>
+          ) : status.isError || status.data?.configured === false ? (
+            <div className="rounded-xl border border-dashed p-7">
+              <h3 className="font-medium">Connexion Google indisponible</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Vos échéances Deepflow restent disponibles. L’état de
+                l’intégration est indiqué dans Connexions.
+              </p>
+            </div>
           ) : !connected ? (
             <div className="rounded-xl border border-dashed p-7 text-center">
               <CalendarDays className="mx-auto mb-3 h-7 w-7 text-primary" />
@@ -348,7 +356,9 @@ export default function CalendarPage() {
                       <p className="text-xs text-muted-foreground">
                         {eventTiming(event)}
                       </p>
-                      <h3 className="mt-2 break-words font-medium">{event.summary}</h3>
+                      <h3 className="mt-2 break-words font-medium">
+                        {event.summary}
+                      </h3>
                       {event.location && (
                         <p className="mt-1 break-words text-sm text-muted-foreground">
                           {event.location}

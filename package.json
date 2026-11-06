@@ -10,7 +10,7 @@
     "lint": "eslint src",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "node --wasm-lazy-compilation --liftoff-only --no-wasm-tier-up --test --test-concurrency=1 tests/*.test.mjs",
+    "test": "node --wasm-num-compilation-tasks=1 --wasm-lazy-compilation --liftoff-only --no-wasm-tier-up --test --test-concurrency=1 tests/*.test.mjs",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
