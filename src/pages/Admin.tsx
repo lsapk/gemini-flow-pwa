@@ -103,7 +103,7 @@ export default function Admin() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div>
+      <div className="page-intro">
         <p className="eyebrow mb-3">SUPERVISION</p>
         <h1 className="page-title">
           Administration<span className="text-primary">.</span>

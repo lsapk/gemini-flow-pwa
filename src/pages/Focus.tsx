@@ -155,7 +155,7 @@ export default function Focus() {
   };
   return (
     <div className="mx-auto max-w-3xl space-y-7">
-      <div>
+      <div className="page-intro">
         <p className="eyebrow mb-3">UNE CHOSE À LA FOIS</p>
         <h1 className="page-title">
           Entrez dans le flow<span className="text-primary">.</span>
@@ -164,7 +164,7 @@ export default function Focus() {
           Un moment de calme pour avancer sur ce qui compte.
         </p>
       </div>
-      <section className="panel overflow-hidden">
+      <section className="focus-room panel overflow-hidden">
         <div className="flex items-center gap-2 border-b px-6 py-4 text-xs text-muted-foreground">
           <span
             className={`h-1.5 w-1.5 rounded-full ${session?.deadline ? "bg-emerald-500" : "bg-primary/50"}`}
@@ -189,7 +189,7 @@ export default function Focus() {
           <div
             role="timer"
             aria-label={`${Math.floor(seconds / 60)} minutes et ${seconds % 60} secondes`}
-            className="my-8 text-[76px] font-light leading-none tracking-[-4px] tabular-nums sm:text-[106px]"
+            className="focus-clock my-8 font-light leading-none tabular-nums"
           >
             {String(Math.floor(seconds / 60)).padStart(2, "0")}
             <span className="text-muted-foreground/40">:</span>

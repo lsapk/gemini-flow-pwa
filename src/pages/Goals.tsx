@@ -119,7 +119,7 @@ export default function Goals() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="page-intro flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Objectifs</h1>
           {goals.length > 0 && (

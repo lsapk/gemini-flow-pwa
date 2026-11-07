@@ -37,18 +37,18 @@ export default function Index() {
   const { user, isLoading } = useAuth();
   if (user) return <Navigate to="/dashboard" replace />;
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="landing-scene min-h-dvh">
       <a href="#content" className="skip-link">
         Aller au contenu
       </a>
-      <header className="border-b border-border/70">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-5 md:px-9">
+      <header className="landing-header glass-material">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
           <Link to="/" aria-label="Deepflow, accueil">
             <Brand />
           </Link>
           <nav
             aria-label="Navigation du site"
-            className="flex items-center gap-3"
+            className="flex flex-wrap items-center gap-1 sm:gap-3"
           >
             <Link
               to="/preview"
@@ -66,13 +66,13 @@ export default function Index() {
         </div>
       </header>
       <main id="content">
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:px-9 md:py-24 lg:grid-cols-[1fr_1fr]">
+        <section className="landing-hero mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:px-9 md:py-24 lg:grid-cols-[1.04fr_.96fr]">
           <div>
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               POUR VOS ÉTUDES. ET TOUT LE RESTE.
             </div>
-            <h1 className="text-[48px] font-semibold leading-[1.06] tracking-[-2.6px] sm:text-[64px]">
+            <h1 className="landing-display">
               Un esprit clair.
               <br />
               <span className="text-primary">Une journée à vous.</span>
@@ -104,16 +104,13 @@ export default function Index() {
               Pensé pour les études en France. Ouvert à tous vos projets.
             </p>
           </div>
-          <div className="relative isolate">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-7 -z-10 rounded-full bg-primary/[0.04] blur-3xl"
-            />
-            <div className="panel overflow-hidden !rounded-[24px] shadow-[0_25px_80px_-30px_rgba(55,55,100,0.25)]">
+          <div className="landing-stage">
+            <div className="landing-orbit" aria-hidden="true" />
+            <div className="landing-preview glass-material overflow-hidden">
               <div className="flex items-center justify-between border-b px-6 py-5">
                 <Brand small />
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] text-emerald-700">
-                  Votre espace de clarté
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                  APERÇU
                 </span>
               </div>
               <div className="p-6 sm:p-8">
@@ -121,7 +118,7 @@ export default function Index() {
                 <h2 className="text-2xl font-semibold tracking-[-.7px]">
                   De la place pour l’essentiel.
                 </h2>
-                <div className="mt-6 rounded-2xl bg-[#efedf9] p-5 dark:bg-primary/10">
+                <div className="landing-focus mt-6 rounded-2xl p-5">
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-[10px] font-medium text-primary">
                       CONCENTRATION
@@ -172,16 +169,19 @@ export default function Index() {
         </section>
         <section className="mx-auto max-w-6xl border-t border-border/70 px-5 py-16 md:px-9">
           <p className="eyebrow mb-4">MOINS D’ONGLETS, PLUS DE CLARTÉ</p>
-          <h2 className="mb-10 text-3xl font-semibold tracking-[-1px]">
+          <h2 className="landing-section-title mb-10">
             Un quotidien qui respire.
           </h2>
-          <div className="grid gap-5 md:grid-cols-3">
-            {features.map((feature) => (
-              <article key={feature.title} className="panel p-7">
-                <span className="mb-6 grid h-10 w-10 place-items-center rounded-xl bg-primary/5 text-primary">
+          <div className="feature-index">
+            {features.map((feature, index) => (
+              <article key={feature.title} className="feature-row">
+                <span className="feature-number" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="feature-icon" aria-hidden="true">
                   <feature.icon size={21} strokeWidth={1.5} />
                 </span>
-                <h3 className="mb-3 text-base font-semibold tracking-tight">
+                <h3 className="text-lg font-semibold tracking-tight">
                   {feature.title}
                 </h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
@@ -213,8 +213,12 @@ export default function Index() {
           <span>© {new Date().getFullYear()} Deepflow</span>
           <span>Votre rythme. Vos priorités. Votre espace.</span>
           <nav aria-label="Informations légales" className="flex gap-4">
-            <Link to="/legal/privacy" className="hover:text-primary">Confidentialité</Link>
-            <Link to="/legal/terms" className="hover:text-primary">Conditions</Link>
+            <Link to="/legal/privacy" className="hover:text-primary">
+              Confidentialité
+            </Link>
+            <Link to="/legal/terms" className="hover:text-primary">
+              Conditions
+            </Link>
           </nav>
           <Link to="/login" className="hover:text-primary">
             Ouvrir mon espace ↗

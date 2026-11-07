@@ -223,7 +223,7 @@ export default function Settings() {
   };
   return (
     <div className="max-w-4xl space-y-7">
-      <div>
+      <div className="page-intro">
         <p className="eyebrow mb-3">À VOTRE IMAGE</p>
         <h1 className="page-title">
           Paramètres<span className="text-primary">.</span>

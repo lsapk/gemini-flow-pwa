@@ -104,7 +104,7 @@ export default function AIAssistant() {
   };
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="page-intro flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow mb-3">PENSEZ À VOIX HAUTE</p>
           <h1 className="page-title">
@@ -125,7 +125,7 @@ export default function AIAssistant() {
               : `${usage.data?.remaining} crédits disponibles`}
         </Link>
       </div>
-      <section className="panel flex min-h-[480px] flex-col">
+      <section className="assistant-surface panel flex min-h-[480px] flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <span className="flex items-center gap-2 text-xs font-medium">
             <Sparkles size={15} className="text-primary" />
@@ -246,7 +246,7 @@ export default function AIAssistant() {
               </button>
             </p>
           )}
-          <form onSubmit={send} className="relative">
+          <form onSubmit={send} className="assistant-compose relative">
             <Textarea
               name="message"
               aria-label="Votre message à l’assistant"

@@ -128,7 +128,7 @@ export function DashboardView({
           </Link>
         </div>
       )}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="page-intro flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow mb-3">{dateLabel(new Date())}</p>
           <h1 className="page-title">

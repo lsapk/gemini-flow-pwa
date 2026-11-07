@@ -13,7 +13,6 @@ import {
   ArrowUpRight,
   Target,
   Activity,
-  Award,
   ChevronDown,
   Coins,
 } from "lucide-react";
@@ -48,7 +47,7 @@ export function Brand({ small = false }: { small?: boolean }) {
         <span />
       </span>
       <span
-        className="text-[21px] font-semibold tracking-[-0.9px]"
+        className="brand-word text-[21px] font-semibold tracking-[-0.9px]"
         translate="no"
       >
         deepflow<span className="text-primary">.</span>
@@ -63,6 +62,7 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
     <NavLink
       key={item.path}
       to={item.path}
+      title={item.label}
       onClick={onItemClick}
       className={({ isActive }) =>
         cn(
@@ -74,15 +74,12 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
       }
     >
       <item.icon size={18} strokeWidth={1.65} aria-hidden="true" />
-      <span>{item.label}</span>
+      <span className="sidebar-link-label">{item.label}</span>
     </NavLink>
   );
   return (
     <aside
-      className={cn(
-        "deepflow-sidebar flex h-dvh w-[244px] flex-col",
-        className,
-      )}
+      className={cn("deepflow-sidebar glass-material flex flex-col", className)}
     >
       <Link
         to="/"
@@ -101,8 +98,9 @@ export default function Sidebar({ className, onItemClick }: SidebarProps) {
           className="sidebar-expand mt-5 flex min-h-11 w-full items-center justify-between px-3 text-xs font-medium text-muted-foreground"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
+          title="Développement personnel"
         >
-          Développement personnel
+          <span className="sidebar-link-label">Développement personnel</span>
           <ChevronDown size={14} className={expanded ? "rotate-180" : ""} />
         </button>
         {expanded && (

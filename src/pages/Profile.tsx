@@ -13,8 +13,11 @@ export default function Profile() {
   const includeJournal = consent.userId === user?.id && consent.enabled;
   const generate = () => generateProfile({ includeJournal });
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Pistes de réflexion personnelles</h1>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <header className="page-intro">
+        <p className="eyebrow mb-3">PROFIL IA</p>
+        <h1 className="page-title">Pistes de réflexion personnelles</h1>
+      </header>
       <Card>
         <CardHeader>
           <CardTitle>Explorer vos habitudes de travail</CardTitle>

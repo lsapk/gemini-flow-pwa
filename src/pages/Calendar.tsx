@@ -169,7 +169,7 @@ export default function CalendarPage() {
     (local.error && message(local.error));
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <header className="page-intro flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="eyebrow">Votre semaine</p>
           <h1 className="page-title">Calendrier</h1>
@@ -189,7 +189,7 @@ export default function CalendarPage() {
         </Button>
       </header>
       <section
-        className="panel flex flex-wrap items-center justify-between gap-4 p-4"
+        className="calendar-toolbar panel flex flex-wrap items-center justify-between gap-4 p-4"
         aria-label="Choisir la semaine"
       >
         <div className="flex items-center gap-2">

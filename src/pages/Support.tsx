@@ -58,7 +58,7 @@ export default function Support() {
       <motion.header
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        className="page-intro space-y-3"
       >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -71,7 +71,7 @@ export default function Support() {
         </p>
       </motion.header>
 
-      <Card className="p-6 backdrop-blur-xl bg-card/60 border-border/40 rounded-2xl">
+      <Card className="p-6">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <Mail className="w-5 h-5 text-primary" />
