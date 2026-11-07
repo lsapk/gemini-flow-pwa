@@ -75,6 +75,12 @@ async function backend(page: Page, { missingGoogle = false } = {}) {
         : reply({ configured: false, connected: false });
     if (path.endsWith("/functions/v1/check-subscription"))
       return reply({ subscribed: false, subscription_tier: "free" });
+    if (path.endsWith("/functions/v1/verify-admin"))
+      return reply(
+        request.postDataJSON()?.action === "directory"
+          ? { profiles: [] }
+          : { isAdmin: true },
+      );
     if (path.endsWith("/functions/v1/ical-proxy"))
       return reply({ error: "Feed host unavailable" }, 503);
     if (/\/functions\/v1\/gemini-chat/.test(path)) {
@@ -164,12 +170,17 @@ test("public preview, navigation and responsive layout", async ({
   });
   await page.getByRole("button", { name: "Activer le thème clair" }).click();
   if (info.project.name === "mobile") {
-    await page.getByRole("button", { name: "Ouvrir le menu" }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page
-      .getByRole("dialog")
-      .getByRole("link", { name: "Espace étudiant" })
-      .click();
+    const dock = page.getByRole("navigation", { name: "Navigation rapide" });
+    await expect(dock.getByRole("link", { name: "Accueil" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await dock.getByRole("button", { name: "Plus" }).click();
+    const sheet = page.getByRole("dialog", { name: "Tout Deepflow" });
+    await expect(sheet.getByRole("link", { name: "Habitudes" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dock.getByRole("button", { name: "Plus" })).toBeFocused();
+    await dock.getByRole("link", { name: "Études" }).click();
   } else {
     await expect(
       page.getByRole("link", { name: "Crédits IA", exact: true }),
@@ -258,6 +269,102 @@ test("authenticated task CRUD, student, Google and credits error states", async 
     page.getByRole("heading", { name: "Paramètres." }),
   ).toBeVisible();
 });
+test("all primary screens stay inside the viewport with the new materials", async ({
+  page,
+}, info) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  if (info.project.name === "mobile")
+    await page.setViewportSize({ width: 320, height: 720 });
+  await backend(page);
+
+  async function visit(path: string) {
+    await test.step(path, async () => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(
+        page.getByText("Cet écran n’a pas pu s’afficher."),
+      ).toHaveCount(0);
+      const viewport = await page.evaluate(() => ({
+        width: window.innerWidth,
+        scroll: document.documentElement.scrollWidth,
+      }));
+      expect(
+        viewport.scroll,
+        `Horizontal overflow on ${path}`,
+      ).toBeLessThanOrEqual(viewport.width + 1);
+    });
+  }
+
+  for (const path of [
+    "/",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/update-password",
+    "/legal/privacy",
+    "/legal/terms",
+    "/legal/cookies",
+    "/oauth/consent",
+    "/page-inconnue",
+  ]) {
+    await visit(path);
+    if (path === "/" || path === "/login")
+      await page.screenshot({
+        path: info.outputPath(path === "/" ? "landing.png" : "login.png"),
+      });
+  }
+  await login(page);
+  if (info.project.name === "mobile") {
+    await page
+      .getByRole("navigation", { name: "Navigation rapide" })
+      .getByRole("button", { name: "Créer" })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Créer" })
+      .getByRole("link", { name: "Nouvelle tâche" })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Votre prochain pas" }),
+    ).toBeVisible();
+    await page
+      .getByRole("dialog", { name: "Votre prochain pas" })
+      .getByRole("button", { name: "Fermer" })
+      .click();
+  } else {
+    await page.setViewportSize({ width: 820, height: 900 });
+    await visit("/dashboard");
+    await expect(
+      page.getByRole("navigation", { name: "Navigation principale" }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+  for (const path of [
+    "/dashboard",
+    "/tasks",
+    "/student",
+    "/calendar",
+    "/goals",
+    "/habits",
+    "/journal",
+    "/focus",
+    "/ai-assistant",
+    "/analysis",
+    "/profile",
+    "/connections",
+    "/credits",
+    "/settings",
+    "/support",
+    "/developers",
+    "/admin",
+  ]) {
+    await visit(path);
+  }
+  expect(errors).toEqual([]);
+});
+
 test("explicit AI request spends one displayed credit, no automatic calls", async ({
   page,
 }) => {

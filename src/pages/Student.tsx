@@ -419,7 +419,7 @@ export default function Student() {
         aria-label="Espace étudiant"
         className="mx-auto max-w-7xl space-y-7 px-4 pb-12 pt-6 md:px-8 md:pt-8"
       >
-        <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <header className="page-intro flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               <GraduationCap className="h-4 w-4" /> Espace étudiant
@@ -480,7 +480,7 @@ export default function Student() {
           </Empty>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm">
+            <div className="semester-band flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 text-sm">
               <span className="font-medium">
                 {profile?.institution || "Votre établissement"}
               </span>

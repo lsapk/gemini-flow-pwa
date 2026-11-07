@@ -1,3 +1,4 @@
+import AuthFrame from "@/components/layout/AuthFrame";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
@@ -46,7 +47,7 @@ export default function UpdatePassword() {
     }
   };
   return (
-    <div className="mx-auto max-w-sm px-5 py-20">
+    <AuthFrame>
       <Brand />
       <h1 className="mb-8 mt-9 text-2xl font-semibold">Nouveau mot de passe</h1>
       {done ? (
@@ -98,6 +99,6 @@ export default function UpdatePassword() {
           .
         </p>
       )}
-    </div>
+    </AuthFrame>
   );
 }

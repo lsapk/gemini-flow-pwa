@@ -244,7 +244,7 @@ export default function Connections() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <header className="page-intro flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Votre espace, connecté

@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Menu, Moon, Sun, ArrowUpRight } from "lucide-react";
+import { Moon, Sun, ArrowUpRight, ChevronRight, WifiOff } from "lucide-react";
 import Sidebar, { Brand } from "./Sidebar";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import MobileDock from "./MobileDock";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -22,16 +17,21 @@ const titles: Record<string, string> = {
   "/focus": "Concentration",
   "/journal": "Journal",
   "/settings": "Paramètres",
+  "/calendar": "Calendrier",
+  "/goals": "Objectifs",
+  "/habits": "Habitudes",
+  "/ai-assistant": "Assistant IA",
+  "/analysis": "Analyse",
+  "/profile": "Profil IA",
+  "/support": "Aide et support",
+  "/developers": "API développeurs",
+  "/admin": "Administration",
 };
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const { user } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const location = useLocation();
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
     window.addEventListener("online", update);
@@ -46,39 +46,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     user?.email?.split("@")[0] ||
     "Visiteur";
   return (
-    <div className="app-shell min-h-dvh">
+    <div className="app-shell min-h-dvh" data-area={location.pathname.slice(1)}>
       <a className="skip-link" href="#main-content">
         Aller au contenu
       </a>
-      <div className="fixed inset-y-0 left-0 z-30 hidden md:block">
+      <div className="workspace-rail fixed inset-y-0 left-0 z-30 hidden md:block">
         <Sidebar />
       </div>
-      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent side="left" className="w-[280px] p-0">
-          <SheetTitle className="sr-only">Navigation Deepflow</SheetTitle>
-          <SheetDescription className="sr-only">
-            Accéder aux espaces de l’application
-          </SheetDescription>
-          <Sidebar onItemClick={() => setMenuOpen(false)} />
-        </SheetContent>
-      </Sheet>
-      <div className="min-w-0 md:pl-[244px]">
-        <header className="workspace-header flex items-center justify-between gap-3 px-5 md:px-9">
+      <div className="workspace-column min-w-0">
+        <header className="workspace-header glass-material flex items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
+            <Link
+              to={location.pathname === "/preview" ? "/preview" : "/dashboard"}
               className="md:hidden"
-              aria-label="Ouvrir le menu"
-              onClick={() => setMenuOpen(true)}
+              aria-label="Vue d’ensemble Deepflow"
             >
-              <Menu size={20} />
-            </Button>
-            <span className="md:hidden">
               <Brand small />
-            </span>
+            </Link>
             <span className="hidden items-center gap-3 text-sm text-muted-foreground md:flex">
-              Mon espace <span className="text-border">/</span>
+              <Link
+                to={
+                  location.pathname === "/preview" ? "/preview" : "/dashboard"
+                }
+              >
+                Mon espace
+              </Link>
+              <ChevronRight size={14} aria-hidden="true" />
               <span className="text-foreground">
                 {titles[location.pathname] || "Développement personnel"}
               </span>
@@ -128,10 +121,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         {!online && (
-          <div
-            role="status"
-            className="border-b bg-amber-50 px-6 py-3 text-sm text-amber-900"
-          >
+          <div role="status" className="offline-banner">
+            <WifiOff size={16} className="shrink-0" aria-hidden="true" />
             Vous êtes hors ligne. Les modifications et connexions nécessitent
             Internet.
           </div>
@@ -139,11 +130,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="workspace-content mx-auto w-full max-w-[1500px] p-5 md:p-9"
+          className="workspace-content mx-auto w-full max-w-[1440px] p-4 sm:p-6 xl:p-9"
         >
           {children}
         </main>
       </div>
+      <MobileDock />
     </div>
   );
 }

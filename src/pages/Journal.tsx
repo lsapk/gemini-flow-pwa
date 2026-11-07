@@ -387,7 +387,7 @@ export default function Journal() {
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-6 max-w-4xl min-h-[calc(100vh-100px)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="page-intro flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-[1.25rem] bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <BookOpen className="h-6 w-6" />
@@ -401,11 +401,13 @@ export default function Journal() {
             </p>
           </div>
         </div>
-        <div className="flex bg-secondary/40 backdrop-blur-xl p-1 rounded-2xl border border-border/20 self-stretch sm:self-auto">
+        <div className="flex bg-secondary p-1 rounded-2xl border self-stretch sm:self-auto" role="group" aria-label="Mode du journal">
           <button
+            type="button"
+            aria-pressed={activeTab === "journal"}
             onClick={() => setActiveTab("journal")}
             className={cn(
-              "flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300",
+              "flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-150",
               activeTab === "journal"
                 ? "bg-background shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -414,9 +416,11 @@ export default function Journal() {
             Journal
           </button>
           <button
+            type="button"
+            aria-pressed={activeTab === "reflection"}
             onClick={() => setActiveTab("reflection")}
             className={cn(
-              "flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300",
+              "flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-150",
               activeTab === "reflection"
                 ? "bg-background shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -464,7 +468,7 @@ export default function Journal() {
                   </Button>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <form onSubmit={handleJournalSubmit} className="space-y-6">
+                  <form onSubmit={handleJournalSubmit} className="journal-paper space-y-6">
                     <Input
                       placeholder="Titre de votre journée"
                       value={title}

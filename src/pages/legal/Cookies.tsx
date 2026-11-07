@@ -3,8 +3,8 @@ import { ArrowLeft } from "lucide-react";
 
 export default function Cookies() {
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="border-b px-5 py-5">
+    <div className="reading-scene min-h-dvh">
+      <header className="reading-header glass-material px-5 py-5">
         <Link
           to="/"
           className="mx-auto flex max-w-3xl items-center gap-2 text-sm text-primary"
@@ -13,7 +13,7 @@ export default function Cookies() {
           Retour à Deepflow
         </Link>
       </header>
-      <main className="mx-auto max-w-3xl space-y-8 px-5 py-12">
+      <main className="reading-card panel mx-auto my-6 w-[calc(100%_-_2rem)] max-w-3xl space-y-8">
         <div>
           <h1 className="page-title">Cookies et stockage local</h1>
           <p className="mt-3 text-sm text-muted-foreground">

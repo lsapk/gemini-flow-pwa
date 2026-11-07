@@ -156,7 +156,7 @@ export default function Tasks() {
   const visible = planTasks(tasks, { status, sort, search });
   return (
     <div className="space-y-7">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="page-intro flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow mb-3">UN PAS APRÈS L’AUTRE</p>
           <h1 className="page-title">

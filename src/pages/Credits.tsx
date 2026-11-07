@@ -23,7 +23,7 @@ export default function Credits() {
   });
   return (
     <div className="max-w-4xl space-y-7">
-      <div>
+      <div className="page-intro">
         <p className="eyebrow mb-3">SIMPLE ET TRANSPARENT</p>
         <h1 className="page-title">
           Vos crédits IA<span className="text-primary">.</span>
@@ -32,7 +32,7 @@ export default function Credits() {
           Un quota partagé entre l’assistant et les analyses.
         </p>
       </div>
-      <section className="panel p-7">
+      <section className="quota-panel panel p-7">
         <div className="mb-7 flex items-center justify-between">
           <span className="rounded-lg bg-primary/10 p-3 text-primary">
             <Coins size={21} />

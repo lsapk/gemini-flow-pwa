@@ -1,13 +1,12 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Privacy() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+    <div className="reading-scene min-h-dvh">
+      <header className="reading-header glass-material">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
             <ArrowLeft className="w-5 h-5" />
@@ -21,8 +20,8 @@ export default function Privacy() {
       </header>
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-4xl font-bold font-heading mb-2 gradient-text">Politique de Confidentialité</h1>
+        <div className="reading-card panel">
+          <h1 className="page-title mb-3">Politique de Confidentialité</h1>
           <p className="text-muted-foreground mb-8">Dernière mise à jour : 4 novembre 2026</p>
 
           <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
@@ -97,11 +96,11 @@ export default function Privacy() {
             </section>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-border/50 flex gap-4">
+          <div className="mt-12 pt-8 border-t flex flex-wrap gap-3">
             <Button asChild variant="outline"><Link to="/legal/terms">Conditions d'utilisation</Link></Button>
             <Button asChild variant="outline"><Link to="/legal/cookies">Politique des cookies</Link></Button>
           </div>
-        </motion.div>
+        </div>
       </main>
     </div>
   );
