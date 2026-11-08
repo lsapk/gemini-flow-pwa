@@ -24,11 +24,18 @@ function required(name: string): string {
 export function config() {
   const origin = appOrigin(required("APP_URL"));
   const supabaseUrl = required("SUPABASE_URL").replace(/\/$/, "");
+  const dedicatedClient =
+    Deno.env.get("GOOGLE_SYNC_CLIENT_ID") !== undefined ||
+    Deno.env.get("GOOGLE_SYNC_CLIENT_SECRET") !== undefined;
   return {
     origin,
     supabaseUrl,
-    clientId: required("GOOGLE_CLIENT_ID"),
-    clientSecret: required("GOOGLE_CLIENT_SECRET"),
+    clientId: required(
+      dedicatedClient ? "GOOGLE_SYNC_CLIENT_ID" : "GOOGLE_CLIENT_ID",
+    ),
+    clientSecret: required(
+      dedicatedClient ? "GOOGLE_SYNC_CLIENT_SECRET" : "GOOGLE_CLIENT_SECRET",
+    ),
     encryptionKey: required("GOOGLE_TOKEN_ENCRYPTION_KEY"),
     redirectUri: `${supabaseUrl}/functions/v1/google-oauth/callback`,
   };
