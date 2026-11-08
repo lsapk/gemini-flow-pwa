@@ -1,10 +1,10 @@
 # Google Calendar et Google Tasks
 
-Le code de `/connections` et `/calendar` utilise les API Google Calendar et Tasks. Connexions affiche les 14 prochains jours et transfère les tâches sur demande ; Calendrier permet de parcourir les semaines et de créer, modifier ou supprimer des événements personnels. L’activation réelle nécessite les migrations, les fonctions déployées et les identifiants OAuth décrits ci-dessous. Les tests locaux simulent les frontières réseau ; aucun compte Google réel n’a été connecté pendant cette refonte.
+Le code de `/connections` et `/calendar` utilise les API Google Calendar et Tasks. Connexions affiche les 14 prochains jours et transfère les tâches sur demande ; Calendrier permet de parcourir les semaines et de créer, modifier ou supprimer des événements personnels. Le parcours OAuth, la lecture des agendas et le chargement des listes de tâches ont été vérifiés sur `www.deepflow.fr`. Les tests locaux simulent les opérations d’écriture auprès de Google.
 
 ## Préparer Google Cloud
 
-Sur le projet Deepflow `xzgdfetnjnwrberyddmf`, la vérification du 6 novembre 2026 a confirmé l’absence de `google-api`, de `google-oauth` et du stockage `google_private`. Reconnecter un compte dans l’interface ne peut pas corriger cette situation. Après les réglages ci-dessous, appliquer [la migration Google](../supabase/migrations/20261103202446_google_connections.sql) sur le projet cible et déployer les deux fonctions du dépôt depuis la branche de refonte.
+Sur le projet Deepflow `xzgdfetnjnwrberyddmf`, le stockage `google_private` et les fonctions `google-api` et `google-oauth` sont déployés. Pour installer l’intégration sur une nouvelle base, appliquer [la migration Google](../supabase/migrations/20261103202446_google_connections.sql) et déployer les deux fonctions après avoir configuré OAuth.
 
 1. Créer ou sélectionner un projet Google Cloud, puis activer **Google Calendar API** et **Google Tasks API** dans la bibliothèque des API.
 2. Configurer l’écran de consentement Google Auth Platform : nom Deepflow, adresse de support, domaine de l’application, politique de confidentialité et audience. En mode de test, ajouter chaque compte de test à la liste autorisée.
@@ -41,11 +41,13 @@ Les variables suivantes sont des secrets **Supabase Edge Functions**. Elles ne d
 | Variable                      | Valeur                                                                                                                              |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `APP_URL`                     | Origine exacte de Deepflow, par exemple `https://deepflow.example` ou `http://localhost:8080`. Aucun chemin, paramètre ou fragment. |
-| `GOOGLE_CLIENT_ID`            | ID du client OAuth Web Google.                                                                                                      |
-| `GOOGLE_CLIENT_SECRET`        | Secret du même client.                                                                                                              |
+| `GOOGLE_SYNC_CLIENT_ID`        | ID du client OAuth Web dédié à la synchronisation Google.                                                                            |
+| `GOOGLE_SYNC_CLIENT_SECRET`    | Secret du même client.                                                                                                              |
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | Clé aléatoire de 32 octets encodée en base64.                                                                                       |
 | `SUPABASE_URL`                | Fournie automatiquement par Supabase.                                                                                               |
 | `SUPABASE_SERVICE_ROLE_KEY`   | Fournie automatiquement par Supabase ; reste exclusivement côté serveur.                                                            |
+
+Renseigner les deux variables `GOOGLE_SYNC_*` ensemble. Si elles sont toutes les deux absentes, les fonctions utilisent la paire historique `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Le client dédié permet de préserver la configuration des autres intégrations Google.
 
 Générer une clé localement avec Node, puis la saisir dans le gestionnaire de secrets :
 
